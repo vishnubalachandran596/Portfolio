@@ -123,13 +123,20 @@ Everything below is editable from `/admin` after logging in:
   about summary, links, photo.
 - **Courses** (`/admin/courses`) — create/edit/delete/publish courses
   shown on `/courses`.
-- **Bookings** (`/admin/bookings`) — view every booking request and set
-  its status (pending/confirmed/cancelled).
+- **Bookings** (`/admin/bookings`) — view every consultancy booking and
+  its payment status (pending payment/confirmed/cancelled).
 - **Availability** (`/admin/availability`) — the weekly recurring rules
   (day, time window, slot length) that generate the bookable slots shown
-  on `/booking`. The public booking form re-validates the chosen slot
-  server-side against these rules and a unique DB constraint on the slot
-  start time, so two visitors can never double-book the same slot.
+  on `/booking`. The chosen slot is re-validated server-side against
+  these rules on every checkout, and a unique DB constraint on the slot
+  start time means two visitors can never both pay for the same slot.
+
+Booking a consultancy session or buying a course requires an account
+(`/login`, email + password — `core/repo/users.go`). Logging in with the
+email/password that matches the `admins` table opens the admin dashboard
+*and* a matching visitor session in one step, so the site owner can browse
+the rest of the site (buy/preview courses, book sessions) exactly like any
+other logged-in visitor.
 
 Skills, experience, and education are currently seed-managed (edit
 `core/db/migrations/*.sql` or the rows directly); they weren't wired
@@ -138,9 +145,16 @@ explicitly asked for (courses, bookings, profile).
 
 ## Paid courses (Razorpay)
 
-A course can be marked `is_paid` with a `min_price_cents` floor — the
-visitor picks any amount at or above that minimum ("pay what you want"),
-pays via Razorpay Checkout, and is redirected to `/courses/<slug>/learn`.
+Every published course is paid, priced by depth/advancement rather than a
+flat rate — a `min_price_cents`/`min_price_cents_inr` floor per course
+(the visitor can pay more, never less): Java Fundamentals (₹500/$6) →
+Technical Architecture & Design (₹1,000/$12) → System Design & Deployment
+(₹1,000/$12) → Java SSE Ultimate Guide, the advanced DSA/LLD/HLD
+interview-prep course (₹750/$9) → Kafka/Messaging/Caching with Redis
+(₹1,500/$18) → Resiliency & High-Scale Design, the advanced capstone
+(₹2,000/$24). The visitor picks any amount at or above that minimum ("pay
+what you want"), pays via Razorpay Checkout, and is redirected to
+`/courses/<slug>/learn`.
 
 - **Payment flow:** `POST /courses/<slug>/checkout/order` creates a
   Razorpay order and a `purchases` row (`core/payments`, `core/repo/purchases.go`).
@@ -173,6 +187,19 @@ pays via Razorpay Checkout, and is redirected to `/courses/<slug>/learn`.
   purchase button is hidden until both are set. See `/admin/purchases`
   for a log of every order and its status.
 
+## Consultancy (paid 1:1 booking)
+
+`/consultancy` is the only page with a "Book Now" call to action; it links
+to `/booking`, which requires login and shows the price up front (₹3,000/hr
+India, $40/hr elsewhere — `models.ConsultancyRegionalPrice`, the same
+geo-header-driven regional pricing pattern as courses) before any slot is
+picked. Picking a slot reserves it (`status='pending_payment'`) the moment
+a Razorpay order is created — the same unique-slot-start constraint used
+for the old free flow now doubles as the anti-double-booking guarantee
+during checkout — and confirms it once the payment signature verifies
+(`core/handlers/consultancy.go`). An abandoned checkout frees the slot
+automatically 20 minutes later; no cleanup job needed.
+
 ## Domain architecture (one subdomain per page group)
 
 Each part of the site lives on its own subdomain. Set `DOMAIN=yourdomain.com`
@@ -183,10 +210,11 @@ host for that path (the apex, `www`, or another page's subdomain) gets a
 
 | Subdomain | Serves |
 |---|---|
-| `home.yourdomain.com` | Home, search, and the legal pages (privacy/terms/refund/cookies) — the landing subdomain and catch-all for anything not listed below |
-| `about.yourdomain.com` | About |
+| `home.yourdomain.com` | Home, search, login/signup, and the legal pages (privacy/terms/refund/cookies) — the landing subdomain and catch-all for anything not listed below |
+| `about.yourdomain.com` | About Me |
 | `courses.yourdomain.com` | Courses list/detail, checkout, and gated paid-course content |
-| `booking.yourdomain.com` | Book a session |
+| `consultancy.yourdomain.com` | The consultancy page and the (login-required) booking/checkout flow |
+| `contact.yourdomain.com` | Contact |
 | `admin.yourdomain.com` | The admin portal |
 
 The bare apex (`yourdomain.com`) and `www.yourdomain.com` both redirect to

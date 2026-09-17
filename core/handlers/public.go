@@ -4,20 +4,16 @@ import (
 	"html/template"
 	"log"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/vishnubalachandran596/portfolio/core/models"
 	"github.com/vishnubalachandran596/portfolio/core/repo"
-	"github.com/vishnubalachandran596/portfolio/core/scheduler"
 )
 
 type HomeData struct {
 	BaseData
-	Profile  models.Profile
-	Features []models.HomeFeature
-	Courses  []models.Course
-	JSONLD   template.JS
+	Profile models.Profile
+	JSONLD  template.JS
 }
 
 func (a *App) Home(w http.ResponseWriter, r *http.Request) {
@@ -26,19 +22,6 @@ func (a *App) Home(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		a.serverError(w, "load profile", err)
 		return
-	}
-	features, err := a.Features.List(ctx)
-	if err != nil {
-		a.serverError(w, "load features", err)
-		return
-	}
-	courses, err := a.Courses.ListPublished(ctx)
-	if err != nil {
-		a.serverError(w, "load courses", err)
-		return
-	}
-	if len(courses) > 3 {
-		courses = courses[:3]
 	}
 
 	base := a.base(r, profile.Name+" — "+profile.Title, profile.HeroSubtitle, "home")
@@ -53,8 +36,6 @@ func (a *App) Home(w http.ResponseWriter, r *http.Request) {
 	a.View.Render(w, http.StatusOK, "home", HomeData{
 		BaseData: base,
 		Profile:  profile,
-		Features: features,
-		Courses:  courses,
 		JSONLD:   personAndWebsiteJSONLD(profile.Name, profile.Title, base.CanonicalURL, profile.Location, sameAs),
 	})
 }
@@ -168,103 +149,6 @@ func (a *App) CourseDetail(w http.ResponseWriter, r *http.Request) {
 		ResolvedMinWhole:   minCents / 100,
 		ResolvedMinDisplay: models.FormatMoney(minCents, currency),
 	})
-}
-
-type BookingData struct {
-	BaseData
-	Days    []scheduler.DaySlots
-	Success bool
-	Error   string
-}
-
-func (a *App) BookingPage(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-	rules, err := a.Availability.ListActive(ctx)
-	if err != nil {
-		a.serverError(w, "load availability", err)
-		return
-	}
-
-	from := time.Now().In(a.Timezone)
-	to := from.AddDate(0, 0, 15)
-	taken, err := a.Bookings.BookedSlots(ctx, from, to)
-	if err != nil {
-		a.serverError(w, "load bookings", err)
-		return
-	}
-
-	days := scheduler.ComputeDays(rules, taken, a.Timezone, 14)
-
-	a.View.Render(w, http.StatusOK, "booking", BookingData{
-		BaseData: a.base(r, "Book Time — "+a.Cfg.SiteName, "Book a 1:1 session directly on my calendar.", "booking"),
-		Days:     days,
-		Success:  r.URL.Query().Get("booked") == "1",
-		Error:    r.URL.Query().Get("error"),
-	})
-}
-
-func (a *App) BookingSubmit(w http.ResponseWriter, r *http.Request) {
-	if err := r.ParseForm(); err != nil {
-		http.Redirect(w, r, "/booking?error=Invalid+form+submission", http.StatusSeeOther)
-		return
-	}
-
-	name := strings.TrimSpace(r.FormValue("name"))
-	email := strings.TrimSpace(r.FormValue("email"))
-	message := strings.TrimSpace(r.FormValue("message"))
-	slotRaw := strings.TrimSpace(r.FormValue("slot"))
-
-	if name == "" || email == "" || slotRaw == "" || !strings.Contains(email, "@") {
-		http.Redirect(w, r, "/booking?error=Please+fill+in+your+name%2C+a+valid+email%2C+and+pick+a+time", http.StatusSeeOther)
-		return
-	}
-
-	slotStart, err := time.Parse(time.RFC3339, slotRaw)
-	if err != nil {
-		http.Redirect(w, r, "/booking?error=That+time+slot+is+no+longer+valid%2C+please+pick+another", http.StatusSeeOther)
-		return
-	}
-
-	ctx := r.Context()
-	rules, err := a.Availability.ListActive(ctx)
-	if err != nil {
-		a.serverError(w, "load availability", err)
-		return
-	}
-	if !a.slotIsOffered(rules, slotStart) {
-		http.Redirect(w, r, "/booking?error=That+time+slot+is+not+available%2C+please+pick+another", http.StatusSeeOther)
-		return
-	}
-	if slotStart.Before(time.Now()) {
-		http.Redirect(w, r, "/booking?error=That+time+has+already+passed%2C+please+pick+another", http.StatusSeeOther)
-		return
-	}
-
-	slotMinutes := 30
-	for _, rr := range rules {
-		if rr.Weekday == slotStart.In(a.Timezone).Weekday() {
-			slotMinutes = rr.SlotMinutes
-			break
-		}
-	}
-
-	_, err = a.Bookings.Create(ctx, models.Booking{
-		Name:      name,
-		Email:     email,
-		Message:   message,
-		SlotStart: slotStart,
-		SlotEnd:   slotStart.Add(time.Duration(slotMinutes) * time.Minute),
-	})
-	if err != nil {
-		if err == repo.ErrSlotTaken {
-			http.Redirect(w, r, "/booking?error=That+time+was+just+booked+by+someone+else%2C+please+pick+another", http.StatusSeeOther)
-			return
-		}
-		a.serverError(w, "create booking", err)
-		return
-	}
-
-	http.Redirect(w, r, "/booking?booked=1", http.StatusSeeOther)
 }
 
 // slotIsOffered re-derives the schedule server-side so a booking can never

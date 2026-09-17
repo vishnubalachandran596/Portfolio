@@ -22,9 +22,18 @@ func (a *App) Routes() http.Handler {
 	mux.HandleFunc("POST /courses/{slug}/checkout/order", a.CheckoutCreateOrder)
 	mux.HandleFunc("POST /courses/{slug}/checkout/verify", a.CheckoutVerify)
 	mux.Handle("GET /courses/{slug}/learn", noindex(http.HandlerFunc(a.CourseLearn)))
-	mux.HandleFunc("GET /booking", a.BookingPage)
-	mux.HandleFunc("POST /booking", a.BookingSubmit)
+	mux.HandleFunc("GET /consultancy", a.ConsultancyPage)
+	mux.Handle("GET /booking", a.Auth.RequireUser(http.HandlerFunc(a.BookingPage)))
+	mux.HandleFunc("POST /booking/checkout/order", a.BookingCheckoutOrder)
+	mux.HandleFunc("POST /booking/checkout/verify", a.BookingCheckoutVerify)
+	mux.HandleFunc("GET /contact", a.ContactPage)
 	mux.HandleFunc("GET /search", a.Search)
+
+	// Visitor auth.
+	mux.HandleFunc("GET /login", a.LoginPage)
+	mux.HandleFunc("POST /login", a.LoginSubmit)
+	mux.HandleFunc("POST /signup", a.SignupSubmit)
+	mux.HandleFunc("POST /logout", a.UserLogout)
 
 	// SEO.
 	mux.HandleFunc("GET /sitemap.xml", a.Sitemap)

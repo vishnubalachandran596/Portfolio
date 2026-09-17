@@ -1,0 +1,1674 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Java Fundamentals for Interview &amp; Production Code</title>
+<meta name="description" content="Core Java fundamentals for developers early in their career and for first backend interviews — language basics, OOP, collections, generics, exceptions, Java 8+, concurrency basics, JVM memory, and clean code, with 9 runnable code labs."/>
+<style>
+
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap');
+
+:root{
+  --bg:#F8FAFC; --fg:#0F172A; --card:#FFFFFF; --border:#E2E8F0; --muted:#475569;
+  --primary:#F59E0B; --primary-fg:#0F172A; --accent:#8B5CF6; --accent-fg:#ffffff;
+  --ok:#0F9D58; --bad:#D93025;
+  --code-bg:#0F172A; --code-fg:#F8FAFC; --code-border:#334155;
+  --font:'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --mono:ui-monospace, 'SFMono-Regular', 'SF Mono', Consolas, 'Liberation Mono', monospace;
+  --radius:12px;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#0F172A; --fg:#F8FAFC; --card:#222735; --border:#334155; --muted:#94A3B8;
+    --primary:#F59E0B; --primary-fg:#0F172A; --accent:#8B5CF6; --accent-fg:#ffffff;
+    --ok:#34D399; --bad:#F87171;
+    --code-bg:#0B1220; --code-fg:#E2E8F0; --code-border:#334155;
+  }
+}
+*, *::before, *::after{ box-sizing:border-box; }
+html{ scroll-behavior:smooth; }
+body{
+  margin:0; background:var(--bg); color:var(--fg); font-family:var(--font);
+  font-size:16px; line-height:1.6; -webkit-font-smoothing:antialiased;
+}
+a{ color:var(--accent); }
+::selection{ background:var(--accent); color:var(--accent-fg); }
+:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; border-radius:4px; }
+
+.course{ max-width:920px; margin:0 auto; padding:2rem 1rem 5rem; }
+@media (min-width:640px){ .course{ padding:3rem 1.5rem 6rem; } }
+
+.hero{ margin-bottom:1.75rem; }
+.hero h1{
+  margin:0 0 .5rem; font-size:clamp(1.6rem, 4vw, 2.35rem); font-weight:700;
+  letter-spacing:-.01em; line-height:1.15;
+}
+.hero .subtitle{ margin:0; color:var(--muted); font-size:1.05rem; max-width:62ch; }
+.hero .badge-row{ display:flex; flex-wrap:wrap; gap:.4rem; margin-top:.9rem; }
+.badge{
+  font-size:.72rem; font-weight:600; letter-spacing:.03em; text-transform:uppercase;
+  padding:.28rem .6rem; border-radius:999px; border:1px solid var(--border);
+  color:var(--muted); background:var(--card);
+}
+
+.local-toc{
+  border:1px solid var(--border); border-radius:var(--radius); background:var(--card);
+  padding:1rem 1.1rem; margin-bottom:2.25rem;
+}
+.local-toc h2{ margin:0 0 .6rem; font-size:.78rem; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); font-weight:600; }
+.local-toc ol{ margin:0; padding-left:0; list-style:none; display:grid; gap:.3rem; grid-template-columns:1fr; }
+@media (min-width:600px){ .local-toc ol{ grid-template-columns:1fr 1fr; } }
+.local-toc a{
+  display:block; padding:.3rem .4rem; border-radius:8px; text-decoration:none;
+  color:var(--fg); font-size:.92rem; transition:background .18s ease, color .18s ease;
+}
+.local-toc a:hover{ background:var(--bg); color:var(--accent); }
+.local-toc a span{ color:var(--muted); font-variant-numeric:tabular-nums; margin-right:.4rem; }
+
+section.module{ margin:0 0 3rem; scroll-margin-top:1.25rem; }
+section.module > h2{
+  font-size:1.4rem; font-weight:700; margin:0 0 .4rem; letter-spacing:-.01em;
+  border-left:4px solid var(--primary); padding-left:.65rem;
+}
+.section-intro{ color:var(--muted); margin:0 0 1.1rem; max-width:70ch; font-size:.98rem; }
+
+.concept-grid{ display:grid; gap:.6rem; }
+.concept-card{
+  background:var(--card); border:1px solid var(--border); border-radius:var(--radius);
+  padding:.15rem 0; transition:border-color .2s ease, box-shadow .2s ease;
+}
+.concept-card[open]{ border-color:var(--accent); }
+.concept-card summary{
+  cursor:pointer; list-style:none; padding:.85rem 1.1rem; font-weight:600; font-size:1rem;
+  display:flex; align-items:center; gap:.6rem; transition:color .18s ease;
+}
+.concept-card summary::-webkit-details-marker{ display:none; }
+.concept-card summary::before{
+  content:'+'; color:var(--accent); font-weight:700; font-size:1.05rem; line-height:1;
+  width:1.1rem; flex:none; transition:transform .2s ease;
+}
+.concept-card[open] summary::before{ content:'\2212'; }
+.concept-card summary:hover{ color:var(--accent); }
+.concept-body{ padding:0 1.1rem 1.05rem; color:var(--fg); }
+.concept-body p{ margin:.55rem 0; color:var(--muted); font-size:.96rem; }
+.concept-body p:first-child{ margin-top:0; }
+
+pre.code{
+  margin:.7rem 0 0; padding:.85rem 1rem; overflow-x:auto; border-radius:10px;
+  background:var(--code-bg); color:var(--code-fg); border:1px solid var(--code-border);
+  font-family:var(--mono); font-size:.8rem; line-height:1.55;
+}
+pre.code code{ font-family:inherit; background:none; padding:0; }
+code{
+  font-family:var(--mono); font-size:.87em; background:var(--border);
+  padding:.1em .35em; border-radius:5px;
+}
+:root{ --code-inline-bg:rgba(148,163,184,.18); }
+.concept-body code, .problem-stmt code, .lab-hint code, .walkthrough code{
+  background:var(--code-inline-bg);
+}
+
+.btn{
+  font-family:var(--font); font-weight:600; font-size:.85rem; cursor:pointer;
+  border-radius:9px; padding:.5rem .95rem; border:1px solid var(--border);
+  background:var(--card); color:var(--fg); transition:border-color .18s ease, background .18s ease, transform .12s ease;
+}
+.btn:hover{ border-color:var(--accent); }
+.btn:active{ transform:translateY(1px); }
+.btn-accent{ background:var(--accent); color:var(--accent-fg); border-color:var(--accent); }
+.btn-accent:hover{ filter:brightness(1.06); }
+.btn-primary-outline{ border-color:var(--primary); color:var(--primary); background:transparent; }
+
+.labs-intro{ color:var(--muted); max-width:70ch; margin:0 0 1.5rem; }
+.lab-block{
+  border:1px solid var(--border); border-radius:var(--radius); background:var(--card);
+  padding:1.25rem 1.25rem 1.4rem; margin:0 0 1.9rem;
+}
+.lab-block h3{ margin:0 0 .3rem; font-size:1.15rem; font-weight:700; }
+.lab-tag{
+  display:inline-block; font-size:.68rem; font-weight:700; letter-spacing:.05em; text-transform:uppercase;
+  color:var(--primary-fg); background:var(--primary); padding:.15rem .5rem; border-radius:6px; margin-bottom:.55rem;
+}
+.problem-stmt p{ margin:.4rem 0; color:var(--muted); font-size:.96rem; }
+.problem-stmt p:first-child{ margin-top:0; }
+
+details.java-ref{ margin:.8rem 0 0; border:1px solid var(--border); border-radius:10px; padding:.15rem 0; background:var(--bg); }
+details.java-ref summary{ cursor:pointer; list-style:none; padding:.6rem .9rem; font-size:.82rem; font-weight:600; color:var(--accent); }
+details.java-ref summary::-webkit-details-marker{ display:none; }
+details.java-ref[open] summary{ border-bottom:1px solid var(--border); }
+details.java-ref pre.code{ margin:0; border:none; border-radius:0 0 10px 10px; }
+
+details.walkthrough{ margin-top:1rem; border-top:1px dashed var(--border); padding-top:.85rem; }
+details.walkthrough summary{ cursor:pointer; list-style:none; font-weight:600; font-size:.88rem; color:var(--primary-fg); background:var(--primary); display:inline-block; padding:.35rem .7rem; border-radius:7px; }
+details.walkthrough summary::-webkit-details-marker{ display:none; }
+details.walkthrough .walkthrough-body{ margin-top:.7rem; }
+details.walkthrough .walkthrough-body p{ margin:.5rem 0; color:var(--muted); font-size:.94rem; }
+
+.code-lab{ margin-top:1rem; }
+.lab-toolbar{ display:flex; flex-wrap:wrap; gap:.5rem; align-items:center; margin-bottom:.6rem; }
+.lab-summary{ margin-left:auto; font-family:var(--mono); font-size:.78rem; color:var(--muted); }
+.lab-editor{
+  width:100%; min-height:190px; resize:vertical; padding:.75rem .85rem; border-radius:10px;
+  border:1px solid var(--code-border); background:var(--code-bg); color:var(--code-fg);
+  font-family:var(--mono); font-size:.8rem; line-height:1.55; tab-size:2;
+}
+.lab-error{
+  margin:.5rem 0 0; color:var(--bad); font-family:var(--mono); font-size:.78rem;
+  white-space:pre-wrap; min-height:1em;
+}
+.lab-table-wrap{ overflow-x:auto; margin-top:.85rem; }
+table.lab-tests{ width:100%; border-collapse:collapse; font-size:.82rem; }
+table.lab-tests th, table.lab-tests td{
+  text-align:left; padding:.45rem .55rem; border-bottom:1px solid var(--border); vertical-align:top;
+}
+table.lab-tests th{ color:var(--muted); font-weight:600; font-size:.72rem; text-transform:uppercase; letter-spacing:.04em; }
+table.lab-tests td code{ font-size:.76rem; word-break:break-word; }
+table.lab-tests tr.pass{ background:color-mix(in srgb, var(--ok) 10%, transparent); }
+table.lab-tests tr.fail{ background:color-mix(in srgb, var(--bad) 10%, transparent); }
+.pass-mark{ color:var(--ok); font-weight:700; }
+.fail-mark{ color:var(--bad); font-weight:700; }
+
+.closing-note{
+  border:1px solid var(--border); border-radius:var(--radius); background:var(--card);
+  padding:1.25rem 1.4rem; margin-top:2.5rem;
+}
+.closing-note h2{ margin:0 0 .5rem; font-size:1.1rem; }
+.closing-note p{ margin:.4rem 0; color:var(--muted); font-size:.95rem; }
+
+@media (max-width:480px){
+  .lab-block{ padding:1rem .9rem 1.2rem; }
+  .concept-card summary{ padding:.75rem .85rem; font-size:.95rem; }
+  .concept-body{ padding:0 .85rem .9rem; }
+}
+
+</style>
+</head>
+<body>
+<div class="course">
+
+  <header class="hero">
+    <h1>Java Fundamentals for Interview &amp; Production Code</h1>
+    <p class="subtitle">Core Java, done properly: the language, the object model, the standard library, and the habits that separate code that compiles from code that's actually production-ready — the on-ramp before advanced DSA, LLD, and system-design interview prep.</p>
+    <div class="badge-row">
+      <span class="badge">9 Modules</span>
+      <span class="badge">9 Runnable Labs</span>
+      <span class="badge">Java 8+</span>
+    </div>
+  </header>
+
+  <nav class="local-toc" aria-label="Course contents">
+    <h2>On this page</h2>
+    <ol>
+        <li><a href="#foundations"><span>01</span>Java Language Foundations</a></li>
+        <li><a href="#oop"><span>02</span>OOP in Java, Done Right</a></li>
+        <li><a href="#collections"><span>03</span>The Collections Framework</a></li>
+        <li><a href="#generics"><span>04</span>Generics</a></li>
+        <li><a href="#exceptions"><span>05</span>Exception Handling</a></li>
+        <li><a href="#java8"><span>06</span>Java 8+ Essentials</a></li>
+        <li><a href="#concurrency"><span>07</span>Concurrency Basics</a></li>
+        <li><a href="#memory"><span>08</span>Memory and the JVM</a></li>
+        <li><a href="#clean-code"><span>09</span>Writing Clean, Production-Grade Java</a></li>
+        <li><a href="#labs"><span>10</span>Hands-On Labs</a></li>
+    </ol>
+  </nav>
+
+    <section class="module" id="foundations">
+      <h2>1. Java Language Foundations</h2>
+      <p class="section-intro">The building blocks everything else in this course assumes you already have solid: how Java actually runs, why primitives and objects behave differently, and the immutability rules that shape idiomatic Java code.</p>
+      <div class="concept-grid">
+      <details class="concept-card">
+        <summary>JVM vs JRE vs JDK</summary>
+        <div class="concept-body">
+          <p>The JDK (Java Development Kit) is what you install to write Java: it bundles the compiler (<code>javac</code>), debugging and profiling tools, and a full JRE. The JRE (Java Runtime Environment) is what you need to run Java: the JVM plus the standard class library (<code>java.lang</code>, <code>java.util</code>, and the rest) as compiled <code>.class</code> files. The JVM (Java Virtual Machine) is the actual execution engine — a specification, with implementations like HotSpot and OpenJ9, that loads bytecode, verifies it, interprets or JIT-compiles it to native machine code, and manages memory through garbage collection.</p>
+      <p>In practice: you develop against a JDK, you ship a JRE (or, increasingly, a slimmer custom runtime built with <code>jlink</code> containing only the modules your app needs), and the JVM is what's actually running when <code>java -jar app.jar</code> executes. This distinction is a real production concern, not just trivia — a slim container base image built with <code>jlink</code> doesn't need the full JDK on it, which is a genuine reduction in image size and attack surface.</p>
+      <pre class="code"><code>// javac compiles .java source to .class bytecode (a JDK tool)
+// java   launches the JVM, which loads and executes that bytecode
+public class Hello {
+    public static void main(String[] args) {
+        System.out.println("Compiled by javac, executed by the JVM");
+    }
+}</code></pre>
+        </div>
+      </details>
+      <details class="concept-card">
+        <summary>Compilation, Bytecode, and JIT</summary>
+        <div class="concept-body">
+          <p><code>javac</code> doesn't produce machine code — it produces bytecode: a portable instruction set for a stack-based virtual machine, stored in <code>.class</code> files. When the JVM loads a class, a bytecode verifier checks it's well-formed and doesn't violate memory or type safety before anything executes. Initially the JVM interprets bytecode instruction by instruction, which is slow; the JIT (Just-In-Time) compiler in HotSpot watches which methods run often — "hot" methods — and compiles those to native machine code at runtime, applying optimizations like inlining and dead-code elimination that a purely static, ahead-of-time compiler couldn't, because the JIT has real runtime profile data (which branch actually gets taken, whether a call site is monomorphic).</p>
+      <p>This is why a long-running Java service often gets measurably faster in its first minutes of traffic as the JIT warms up, and why naive microbenchmarks that skip a warm-up phase produce misleading numbers.</p>
+      <pre class="code"><code>javac Hello.java   // -&gt; Hello.class (bytecode, not native machine code)
+java Hello          // JVM loads Hello.class, verifies it, interprets/JIT-compiles it</code></pre>
+        </div>
+      </details>
+      <details class="concept-card">
+        <summary>Primitives, Wrappers, and Autoboxing Pitfalls</summary>
+        <div class="concept-body">
+          <p>Java has eight primitive types (<code>int</code>, <code>long</code>, <code>double</code>, <code>boolean</code>, <code>char</code>, <code>byte</code>, <code>short</code>, <code>float</code>) that are not objects — no header, no identity, no <code>null</code>, stored directly on the stack or inline inside objects. Each has a corresponding wrapper class (<code>Integer</code>, <code>Long</code>, <code>Double</code>, ...) used wherever the language needs an <code>Object</code>: generics, collections, and anywhere "no value" needs to be representable. Autoboxing/unboxing converts between them automatically, and the automation hides two real bugs.</p>
+      <p>First, <code>Integer</code> caches boxed values from -128 to 127 (the Integer Cache), so two <code>Integer</code> variables both boxed from <code>100</code> can be <code>==</code> (same cached object), while the same code with <code>200</code> is not, because 200 falls outside the cache range and two distinct objects get allocated. Second, unboxing a <code>null</code> wrapper throws <code>NullPointerException</code> at the unboxing point — extremely common when a nullable <code>Integer</code> field (say, from a database column that allows <code>NULL</code>) gets used directly in primitive arithmetic.</p>
+      <pre class="code"><code>Integer a = 127, b = 127;
+System.out.println(a == b); // true - both come from the cache
+
+Integer c = 200, d = 200;
+System.out.println(c == d); // false - outside the cached range, distinct objects
+
+Integer count = null;
+int total = count + 1; // throws NullPointerException at the unboxing</code></pre>
+        </div>
+      </details>
+      <details class="concept-card">
+        <summary>String Immutability and the String Pool</summary>
+        <div class="concept-body">
+          <p><code>String</code> objects are immutable — every apparent "modification" (concatenation, <code>substring</code>, <code>replace</code>, <code>toUpperCase</code>) returns a brand-new <code>String</code>, leaving the original untouched. This is deliberate: immutability makes <code>String</code> safe to share across threads with no synchronization, safe to use as a <code>HashMap</code> key (its <code>hashCode</code> is computed once and cached, since content can never change), and safe to pool.</p>
+      <p>String literals are automatically interned into a shared pool, so two identical literals reference the exact same object; <code>new String(...)</code>, on the other hand, forces a fresh heap allocation outside the pool even when the content is identical. Because of immutability, concatenating in a loop with <code>+</code> is a classic performance trap — every <code>+</code> allocates a new <code>String</code> — which is exactly why <code>StringBuilder</code> exists for building strings incrementally.</p>
+      <pre class="code"><code>String a = "hello";
+String b = "hello";
+System.out.println(a == b); // true - both point at the pooled literal
+
+String c = new String("hello");
+System.out.println(a == c);       // false - c is a distinct heap object
+System.out.println(a.equals(c));  // true - same content</code></pre>
+        </div>
+      </details>
+      <details class="concept-card">
+        <summary>== vs .equals()</summary>
+        <div class="concept-body">
+          <p><code>==</code> on objects compares references — whether two variables point at the exact same object in memory. <code>.equals()</code> compares whatever a class defines as "meaningfully equal" — <code>Object</code>'s default <code>.equals()</code> is just <code>==</code> unless a class overrides it, but <code>String</code> and the wrapper classes override it to compare content. This is why <code>new String("x").equals("x")</code> is <code>true</code> even though <code>==</code> between them is <code>false</code>.</p>
+      <p>The classic interview trap is comparing boxed <code>Integer</code> objects outside the cache range with <code>==</code> and being surprised by <code>false</code> — always use <code>.equals()</code> (or unbox to a primitive <code>int</code>, where <code>==</code> correctly compares values) when you want value equality. For your own classes, <code>==</code> remains reference identity unless you deliberately override <code>equals()</code>; using such a class in a <code>HashSet</code> or as a <code>HashMap</code> key without a correct <code>equals()</code>/<code>hashCode()</code> pair silently breaks lookups.</p>
+      <pre class="code"><code>String s1 = new String("abc");
+String s2 = new String("abc");
+System.out.println(s1 == s2);       // false: different objects
+System.out.println(s1.equals(s2));  // true: same content
+
+Integer i1 = 1000, i2 = 1000;
+System.out.println(i1 == i2);       // false: outside the Integer cache
+System.out.println(i1.equals(i2));  // true</code></pre>
+        </div>
+      </details>
+      <details class="concept-card">
+        <summary>Arrays vs Collections</summary>
+        <div class="concept-body">
+          <p>Arrays are fixed-size, can hold primitives directly (<code>int[]</code> stores raw <code>int</code>s inline, no boxing), and have a compact, cache-friendly memory layout with O(1) index access — but they cannot be resized, and a raw array of object references gives up nearly all the type safety and convenience methods a collection provides. Collections (<code>ArrayList</code>, <code>HashMap</code>, ...) are dynamically sized, hold only objects (primitives get autoboxed, costing memory and allocation overhead — an <code>ArrayList&lt;Integer&gt;</code> stores boxed <code>Integer</code> objects, not raw <code>int</code>s), and come with a large, well-tested API surface: sorting, searching, streaming, thread-safe variants.</p>
+      <p>Reach for an array when the size is known up front, you need maximum performance in a tight numeric loop, or you're working with a fixed-size low-level structure. Reach for a collection everywhere else — especially the common case where size isn't known ahead of time, or the data needs to grow, shrink, or pass through APIs expecting <code>Collection</code>/<code>List</code> types.</p>
+      <pre class="code"><code>int[] scores = new int[5];       // fixed size, primitive, fast, no autoboxing
+scores[0] = 100;
+
+List&lt;Integer&gt; dynamicScores = new ArrayList&lt;&gt;(); // grows, but boxes every int
+dynamicScores.add(100);
+dynamicScores.add(95);</code></pre>
+        </div>
+      </details>
+      </div>
+    </section>
+
+    <section class="module" id="oop">
+      <h2>2. OOP in Java, Done Right</h2>
+      <p class="section-intro">Object-oriented design in Java is often taught as syntax — extends, implements, private fields — without the reasoning behind it. This module is about the reasoning: what each mechanism actually buys you, and where it commonly goes wrong.</p>
+      <div class="concept-grid">
+      <details class="concept-card">
+        <summary>Encapsulation Protects Invariants, Not Just Fields</summary>
+        <div class="concept-body">
+          <p>Encapsulation is usually taught as "make fields private, add getters and setters," but that's the mechanism, not the point. Real encapsulation means a class controls its own internal state so it can guarantee its invariants stay true no matter what callers do — an invariant being a rule that must always hold, like an account balance that can never go negative. Expose a mutable field directly, or provide an unvalidated setter, and any caller can push the object into an invalid state; every method on that class now has to defensively re-check whether the object is actually valid instead of being able to trust it.</p>
+      <p>Getters and setters with zero logic don't give you encapsulation at all — they just add ceremony around what's functionally still a public field. Good encapsulation means the smallest public surface possible, validated mutation, and, ideally, a design where invalid states simply can't be constructed.</p>
+      <pre class="code"><code>public class Account {
+    private double balance;
+
+    public Account(double openingBalance) {
+        if (openingBalance &lt; 0) throw new IllegalArgumentException("negative balance");
+        this.balance = openingBalance;
+    }
+
+    public void withdraw(double amount) {
+        if (amount &gt; balance) throw new IllegalStateException("insufficient funds");
+        balance -= amount; // the ONLY place balance can change
+    }
+
+    public double getBalance() { return balance; }
+}</code></pre>
+        </div>
+      </details>
+      <details class="concept-card">
+        <summary>Inheritance vs Composition</summary>
+        <div class="concept-body">
+          <p>Inheritance ("is-a") lets a subclass reuse a superclass's implementation automatically, but it couples the subclass to the superclass's internals — a change to the base class can silently break every subclass (the fragile base class problem) — and Java allows only single inheritance, so committing a class to <code>extends Vehicle</code> uses up its one shot. Composition ("has-a") — a class holding a reference to another object and delegating to it — avoids this: you depend only on the collaborator's public interface, you can swap implementations at runtime, and you can compose from multiple unrelated collaborators freely.</p>
+      <p>"Favor composition over inheritance" doesn't mean never use inheritance — use it when there's a genuine, stable is-a relationship and you want polymorphism. But default to composition for code reuse, because it's more flexible and doesn't leak implementation details across class boundaries.</p>
+      <pre class="code"><code>// Inheritance: tightly coupled to Car's internals, single inheritance slot used up
+class SportsCar extends Car { /* inherits ALL of Car's implementation */ }
+
+// Composition: depends only on Engine's public contract, swappable
+class Car {
+    private final Engine engine; // has-a
+    Car(Engine engine) { this.engine = engine; }
+    void start() { engine.ignite(); }
+}</code></pre>
+        </div>
+      </details>
+      <details class="concept-card">
+        <summary>Interfaces vs Abstract Classes</summary>
+        <div class="concept-body">
+          <p>An abstract class can hold instance state (fields), a constructor, and a mix of implemented and abstract methods, but a class can extend only one. An interface historically could only declare method signatures plus constants, but since Java 8 it can also provide default methods (an inheritable default implementation a class may override) and static methods — and a class can implement any number of interfaces.</p>
+      <p>The practical rule: use an interface to define a contract or capability that unrelated classes can share (<code>Comparable</code>, <code>Runnable</code>, <code>Closeable</code>). Use an abstract class when you have real shared state or shared implementation logic across a closely related family of types and want to force subclasses to fill in specific pieces (the Template Method pattern). Default methods blurred the line — you can now add behavior to an interface without breaking every implementer — but interfaces still can't hold instance fields, so state always pushes you toward an abstract class or composition.</p>
+      <pre class="code"><code>interface PaymentProcessor {
+    boolean charge(double amount);
+    default boolean chargeWithLogging(double amount) { // Java 8+ default method
+        System.out.println("Charging " + amount);
+        return charge(amount);
+    }
+}
+
+abstract class BaseReport {
+    protected final String title; // shared state - needs an abstract class
+    BaseReport(String title) { this.title = title; }
+    abstract String body(); // subclasses must implement
+    String render() { return title + "\n" + body(); } // shared implementation
+}</code></pre>
+        </div>
+      </details>
+      <details class="concept-card">
+        <summary>Polymorphism: Overloading vs Overriding</summary>
+        <div class="concept-body">
+          <p>Overloading (compile-time / static polymorphism) is multiple methods sharing a name but differing in parameter list, resolved by the compiler based on the declared types of the arguments at the call site. Overriding (runtime / dynamic polymorphism) is a subclass supplying its own implementation of a method with the exact same signature as its superclass; which implementation actually runs is decided at runtime, based on the object's real type, through dynamic dispatch.</p>
+      <p>This is the core of what makes polymorphism useful: code written against a <code>Shape</code> reference can call <code>shape.area()</code> and get <code>Circle</code>'s or <code>Square</code>'s implementation depending on what's actually stored in the variable, with no type-checking <code>if</code>/<code>else</code> chain needed. A classic trap: overloaded methods are resolved using the declared (static) type, not the runtime type — so a <code>Circle</code> passed through a variable typed as <code>Shape</code> calls the <code>Shape</code>-typed overload, not the <code>Circle</code>-specific one you might expect.</p>
+      <pre class="code"><code>class Shape { double area() { return 0; } }
+class Circle extends Shape {
+    double radius;
+    @Override double area() { return Math.PI * radius * radius; } // overriding
+}
+
+void print(Shape s) { System.out.println("shape"); }
+void print(Circle c) { System.out.println("circle"); } // overloading
+
+Shape s = new Circle();
+s.area();     // dynamic dispatch -&gt; Circle.area() at runtime
+print(s);     // resolved at COMPILE time by declared type -&gt; "shape", not "circle"</code></pre>
+        </div>
+      </details>
+      <details class="concept-card">
+        <summary>The equals / hashCode / toString Contract</summary>
+        <div class="concept-body">
+          <p><code>Object</code> provides default implementations of <code>equals()</code> (reference equality), <code>hashCode()</code> (typically derived from memory address), and <code>toString()</code> (class name plus a hash) that are rarely what a value-like class wants. The rule enforced by convention, not the compiler: if two objects are equal according to <code>equals()</code>, they *must* return the same <code>hashCode()</code>. Break this and hash-based collections silently misbehave — insert an object into a <code>HashSet</code>, then look it up with an equal-but-different-hashCode instance, and <code>contains()</code> returns <code>false</code> even though <code>equals()</code> would say <code>true</code>, because the set never even checks the right bucket.</p>
+      <p>Modern Java (records, or Lombok's <code>@EqualsAndHashCode</code>) can generate a correct pair for you, which is exactly why a broken hand-written <code>equals</code>/<code>hashCode</code> pair is such a common "spot the bug" interview exercise. <code>toString()</code> has no contract to violate, but overriding it for a readable representation is one of the highest-value, lowest-effort things you can do for debuggability.</p>
+      <pre class="code"><code>public class Point {
+    final int x, y;
+    Point(int x, int y) { this.x = x; this.y = y; }
+
+    @Override public boolean equals(Object o) {
+        if (!(o instanceof Point p)) return false;
+        return x == p.x &amp;&amp; y == p.y;
+    }
+    @Override public int hashCode() { return Objects.hash(x, y); } // MUST match equals
+    @Override public String toString() { return "Point(" + x + ", " + y + ")"; }
+}</code></pre>
+        </div>
+      </details>
+      <details class="concept-card">
+        <summary>Access Modifiers and a Minimal Public Surface</summary>
+        <div class="concept-body">
+          <p>Java has four access levels: <code>private</code> (same class only), package-private — no modifier — (same package), <code>protected</code> (package plus subclasses in other packages), and <code>public</code> (everywhere). The design principle: make every field and method as restrictive as it can possibly be, widening only when something genuinely needs external access.</p>
+      <p>A large public API surface is a maintenance liability — every public method is a promise to callers that constrains how freely you can later change it, while private methods can be freely refactored since nothing outside the class depends on their exact shape. Package-private is underused but valuable for helpers meant to be shared within a package without leaking further. <code>protected</code> is mostly meaningful for framework code designed for extension; in application code, reaching for <code>protected</code> instead of composition is often a sign inheritance is being used where it shouldn't be.</p>
+      <pre class="code"><code>public class OrderService {
+    private final OrderRepository repo;        // implementation detail, hidden
+    OrderService(OrderRepository repo) { this.repo = repo; } // package-private ctor
+    public Order placeOrder(OrderRequest req) { // the actual public contract
+        validate(req);       // private helper - free to change
+        return repo.save(toOrder(req));
+    }
+    private void validate(OrderRequest req) { /* ... */ }
+    private Order toOrder(OrderRequest req) { return null; }
+}</code></pre>
+        </div>
+      </details>
+      </div>
+    </section>
+
+    <section class="module" id="collections">
+      <h2>3. The Collections Framework</h2>
+      <p class="section-intro">Picking the right collection is one of the highest-leverage decisions in everyday Java code — it determines the complexity of every operation you'll perform on that data for the rest of its lifetime.</p>
+      <div class="concept-grid">
+      <details class="concept-card">
+        <summary>ArrayList vs LinkedList</summary>
+        <div class="concept-body">
+          <p><code>ArrayList</code> is backed by a resizable array: <code>get(index)</code> is O(1), direct index arithmetic into contiguous memory, which also makes iteration cache-friendly. Insertion/removal at the end is amortized O(1); insertion/removal at the front or middle is O(n), because every following element has to shift. <code>LinkedList</code> is a doubly-linked list: insertion/removal at a known position (given a node reference) is O(1), just pointer rewiring, but <code>get(index)</code> is O(n) — there's no random access, it has to walk from the nearest end.</p>
+      <p>In practice, <code>ArrayList</code> is the right default for almost everything. <code>LinkedList</code> earns its place only for frequent insertion/removal at both ends with rarely-needed index access — and even then, <code>ArrayDeque</code> usually outperforms it for stack/queue use, since <code>LinkedList</code>'s scattered per-node heap allocations give it worse cache locality than a contiguous array.</p>
+      <pre class="code"><code>List&lt;Integer&gt; arrayList = new ArrayList&lt;&gt;();
+arrayList.add(0, 1); // O(n) - shifts every element right
+
+List&lt;Integer&gt; linkedList = new LinkedList&lt;&gt;();
+linkedList.add(0, 1); // O(1) - just relinks the head pointer
+linkedList.get(500);  // O(n) - walks the list from the nearest end</code></pre>
+        </div>
+      </details>
+      <details class="concept-card">
+        <summary>HashMap vs TreeMap vs LinkedHashMap</summary>
+        <div class="concept-body">
+          <p><code>HashMap</code> offers average O(1) <code>get</code>/<code>put</code> with no ordering guarantee at all — iteration order can even change between JVM runs. <code>TreeMap</code> keeps keys in sorted order (natural ordering via <code>Comparable</code>, or a supplied <code>Comparator</code>) at O(log n) <code>get</code>/<code>put</code>, backed by a red-black tree; reach for it when you need range queries (<code>headMap</code>, <code>tailMap</code>, <code>firstKey</code>), not just fast lookup. <code>LinkedHashMap</code> keeps <code>HashMap</code>'s O(1)-average performance while additionally maintaining a linked list through the entries, preserving either insertion order (default) or access order (a constructor flag) — access order plus its <code>removeEldestEntry()</code> hook is the standard way to build a simple LRU cache without extra machinery.</p>
+      <p>Default to <code>HashMap</code>; reach for <code>LinkedHashMap</code> when you need predictable iteration order or an LRU cache; reach for <code>TreeMap</code> only when you genuinely need sorted keys or range operations, since the O(log n) cost isn't free.</p>
+      <pre class="code"><code>Map&lt;String, Integer&gt; hash = new HashMap&lt;&gt;();               // fastest, no order
+Map&lt;String, Integer&gt; sorted = new TreeMap&lt;&gt;();              // O(log n), sorted keys
+Map&lt;String, Integer&gt; insertionOrdered = new LinkedHashMap&lt;&gt;(); // preserves insertion order</code></pre>
+        </div>
+      </details>
+      <details class="concept-card">
+        <summary>HashMap / HashSet Internals</summary>
+        <div class="concept-body">
+          <p>A <code>HashMap</code> stores entries in an array of buckets; a key's <code>hashCode()</code> is spread through an internal function and reduced modulo the array length to pick a bucket index. Collisions (multiple keys hashing to the same bucket) historically degraded a bucket to a linked list — O(n) worst case within that bucket. Since Java 8, once a bucket grows past a threshold (8 entries, with the table large enough), it's "treeified" into a small red-black tree, capping worst-case lookup within a bucket at O(log n).</p>
+      <p>The load factor (default 0.75) controls when the table resizes: once size exceeds <code>capacity × loadFactor</code>, the table doubles and every entry gets rehashed into the new array — an expensive operation avoidable by sizing the map up front with <code>new HashMap&lt;&gt;(expectedSize)</code> when the approximate entry count is known. <code>HashSet</code> is literally implemented as a <code>HashMap</code> internally, with every element stored as a key against a shared dummy value — everything about <code>HashMap</code>'s internals applies directly to it.</p>
+      <pre class="code"><code>// If you know you'll insert ~10,000 entries, size it up front to avoid
+// repeated resize + rehash during insertion:
+Map&lt;String, Order&gt; orders = new HashMap&lt;&gt;(16000); // capacity hint, not exact count
+
+Set&lt;String&gt; visited = new HashSet&lt;&gt;(); // internally: a HashMap&lt;String, Object&gt;</code></pre>
+        </div>
+      </details>
+      <details class="concept-card">
+        <summary>Fail-Fast Iteration and ConcurrentModificationException</summary>
+        <div class="concept-body">
+          <p>Java's standard collections are fail-fast: each maintains an internal <code>modCount</code> that increments on every structural modification. An <code>Iterator</code> captures <code>modCount</code> at creation and checks it on every <code>next()</code> call; a mismatch throws <code>ConcurrentModificationException</code> immediately, rather than silently letting the collection change underneath the iteration and risk skipped or revisited elements.</p>
+      <p>This commonly bites code that calls <code>list.remove(item)</code> directly inside a for-each loop over that same list — the for-each desugars to an <code>Iterator</code>, and the list's own <code>remove()</code> bumps <code>modCount</code> without the iterator knowing. The fix: use the <code>Iterator</code>'s own <code>remove()</code> (which stays in sync), or in modern code, <code>Collection.removeIf(predicate)</code>, which handles this correctly internally.</p>
+      <pre class="code"><code>List&lt;Integer&gt; nums = new ArrayList&lt;&gt;(List.of(1, 2, 3, 4, 5));
+
+// Throws ConcurrentModificationException:
+for (Integer n : nums) {
+    if (n % 2 == 0) nums.remove(n);
+}
+
+// Correct: Iterator.remove() keeps the iterator in sync
+Iterator&lt;Integer&gt; it = nums.iterator();
+while (it.hasNext()) {
+    if (it.next() % 2 == 0) it.remove();
+}
+
+// Correct and simpler in modern code:
+nums.removeIf(n -&gt; n % 2 == 0);</code></pre>
+        </div>
+      </details>
+      <details class="concept-card">
+        <summary>Comparable vs Comparator</summary>
+        <div class="concept-body">
+          <p><code>Comparable</code> is implemented by the class being compared itself (<code>compareTo(T other)</code>) and defines a single "natural ordering" — <code>Integer</code>, <code>String</code>, and <code>LocalDate</code> all implement it. <code>Comparator</code> is a separate object passed to a sort/collection method (<code>compare(T a, T b)</code>) and defines an ordering from the outside, meaning a type can have as many different orderings as needed without being modified, and you can sort types you don't own.</p>
+      <p><code>Comparator.comparing(...)</code> combined with <code>thenComparing(...)</code> builds multi-key sorts declaratively — sort by last name, then first name as a tiebreak — instead of a hand-written <code>compareTo</code> full of nested <code>if</code> statements. Being asked to "sort a list of custom objects" in an interview is really testing whether you reach for <code>Comparator.comparing</code> with a method reference instead of an error-prone manual comparator.</p>
+      <pre class="code"><code>class Employee { String lastName, firstName; int salary; }
+
+// Comparable: one true natural ordering, defined by the class
+class EmployeeById implements Comparable&lt;EmployeeById&gt; {
+    int id;
+    public int compareTo(EmployeeById other) { return Integer.compare(id, other.id); }
+}
+
+// Comparator: as many orderings as needed, defined externally, composable
+employees.sort(
+    Comparator.comparing((Employee e) -&gt; e.lastName)
+              .thenComparing(e -&gt; e.firstName)
+              .thenComparingInt(e -&gt; -e.salary) // descending salary as final tiebreak
+);</code></pre>
+        </div>
+      </details>
+      <details class="concept-card">
+        <summary>Choosing the Right Collection</summary>
+        <div class="concept-body">
+          <p>Ask three questions, in order. First: key-value lookup, or just a group of values? Key-value → a <code>Map</code> variant; a group → <code>List</code> or <code>Set</code>. Second: do duplicates matter, and does order matter? Duplicates with insertion order → <code>List</code>; uniqueness with no particular order → <code>HashSet</code>; uniqueness with insertion/access order → <code>LinkedHashSet</code>; uniqueness with sorted order → <code>TreeSet</code>. Third: what's the access pattern? Frequent random access by index → <code>ArrayList</code>; frequent insertion/removal at both ends → <code>ArrayDeque</code> (which beats <code>LinkedList</code> for stack/queue use in nearly all cases, despite looking like the "obvious" fit); frequent lookup by key → <code>HashMap</code>, unless sorted keys (<code>TreeMap</code>) or predictable iteration/LRU behavior (<code>LinkedHashMap</code>) are required.</p>
+      <p>Interviewers care less about a memorized table than about hearing this reasoning — access pattern → time complexity → concrete class — spoken out loud.</p>
+      <pre class="code"><code>Deque&lt;Integer&gt; stack = new ArrayDeque&lt;&gt;(); // preferred over LinkedList or java.util.Stack
+stack.push(1);
+stack.push(2);
+stack.pop(); // 2 - LIFO, O(1), better cache behavior than a linked structure</code></pre>
+        </div>
+      </details>
+      </div>
+    </section>
+
+    <section class="module" id="generics">
+      <h2>4. Generics</h2>
+      <p class="section-intro">Generics give compile-time type safety with zero runtime cost — but that trade-off (type erasure) has real, testable consequences that show up constantly in interviews and in library code.</p>
+      <div class="concept-grid">
+      <details class="concept-card">
+        <summary>Type Erasure</summary>
+        <div class="concept-body">
+          <p>Generic type information exists only at compile time — the compiler uses it to catch type errors and insert automatic casts, but by the time bytecode is generated, the information is erased: <code>List&lt;String&gt;</code> and <code>List&lt;Integer&gt;</code> both compile to the same raw <code>List</code> bytecode, and a type parameter <code>T</code> is erased to its bound (<code>Object</code> if unbounded, or the bound type itself if constrained).</p>
+      <p>This is why you can't <code>instanceof</code> a parameterized type — the JVM has no runtime way to check it — why you can't create a generic array directly, and why overloaded methods differing only by generic type parameter don't compile, since after erasure they'd have an identical signature. Erasure exists for backward compatibility: it let generics ship in Java 5 while remaining binary-compatible with pre-generics code and bytecode.</p>
+      <pre class="code"><code>List&lt;String&gt; strings = new ArrayList&lt;&gt;();
+List&lt;Integer&gt; ints = new ArrayList&lt;&gt;();
+System.out.println(strings.getClass() == ints.getClass()); // true - same raw class at runtime
+
+// Doesn't compile - the type argument isn't available at runtime to check against:
+// if (strings instanceof List&lt;String&gt;) { }</code></pre>
+        </div>
+      </details>
+      <details class="concept-card">
+        <summary>Bounded Type Parameters</summary>
+        <div class="concept-body">
+          <p>A bounded type parameter, <code>&lt;T extends SomeType&gt;</code>, restricts what <code>T</code> can be while giving generic code access to <code>SomeType</code>'s methods on it — without a bound, <code>T</code> behaves as <code>Object</code>, and only <code>Object</code>'s methods are callable. This is essential for generic algorithms that need to actually do something with the type: <code>&lt;T extends Comparable&lt;T&gt;&gt;</code> says "<code>T</code> can be anything, as long as it knows how to compare itself to another <code>T</code>," exactly what's needed for a generic <code>max()</code> or binary search.</p>
+      <p>Multiple bounds are possible (one class plus any number of interfaces, class first): <code>&lt;T extends Number &amp; Comparable&lt;T&gt;&gt;</code>, useful when both numeric operations and ordering are needed. The bound is enforced at compile time; erasure then replaces <code>T</code> with the bound in generated bytecode.</p>
+      <pre class="code"><code>static &lt;T extends Comparable&lt;T&gt;&gt; T max(List&lt;T&gt; items) {
+    T best = items.get(0);
+    for (T item : items) {
+        if (item.compareTo(best) &gt; 0) best = item; // only legal because of the bound
+    }
+    return best;
+}
+
+Integer highest = max(List.of(3, 7, 2)); // works: Integer implements Comparable&lt;Integer&gt;</code></pre>
+        </div>
+      </details>
+      <details class="concept-card">
+        <summary>Wildcards and PECS</summary>
+        <div class="concept-body">
+          <p><code>List&lt;Object&gt;</code> and <code>List&lt;String&gt;</code> are NOT related by subtyping despite <code>String</code> being a subtype of <code>Object</code> — intentional, because otherwise you could insert an <code>Integer</code> into what was declared <code>List&lt;String&gt;</code> through an <code>Object</code>-typed reference, breaking type safety. Wildcards solve the real problem of writing methods that work across a family of related generic types: <code>? extends T</code> (upper-bounded) means "some unknown subtype of <code>T</code>" — safe to read <code>T</code> out of, but nothing can be added, since the compiler can't guarantee compatibility with the unknown subtype. <code>? super T</code> (lower-bounded) means "some unknown supertype of <code>T</code>" — safe to write <code>T</code> into, but reading only yields <code>Object</code>.</p>
+      <p>The mnemonic is PECS — Producer Extends, Consumer Super: a parameter that's only a data source uses <code>extends</code>; one that's only a data sink uses <code>super</code>.</p>
+      <pre class="code"><code>// Producer: reading Numbers out, so "extends" - works for List&lt;Integer&gt;, List&lt;Double&gt;, ...
+static double sum(List&lt;? extends Number&gt; numbers) {
+    double total = 0;
+    for (Number n : numbers) total += n.doubleValue();
+    return total;
+}
+
+// Consumer: writing Integers in, so "super" - works for List&lt;Integer&gt;, List&lt;Number&gt;, ...
+static void fillWithOnes(List&lt;? super Integer&gt; list, int count) {
+    for (int i = 0; i &lt; count; i++) list.add(1);
+}</code></pre>
+        </div>
+      </details>
+      <details class="concept-card">
+        <summary>Why You Can't Do new T[]</summary>
+        <div class="concept-body">
+          <p>Because of type erasure, the JVM has no idea what <code>T</code> actually is at runtime inside a generic class — it's already erased to <code>Object</code> (or its bound). Array creation, unlike collection creation, is not erased: every array carries its real component type at runtime, which is what makes <code>ArrayStoreException</code> possible — arrays are "reified" and enforce their element type, whereas generics are not. <code>new T[]</code> would need <code>T</code>'s real runtime type to allocate correctly, and that information no longer exists by the time the code runs, so the compiler forbids it outright.</p>
+      <p>The standard workarounds: build an <code>Object[]</code> internally and cast with a suppressed unchecked warning (safe as long as the array never escapes as its raw type), or accept a <code>Class&lt;T&gt;</code> token or <code>IntFunction&lt;T[]&gt;</code> generator from the caller — exactly what <code>Stream.toArray(IntFunction)</code> does.</p>
+      <pre class="code"><code>class Box&lt;T&gt; {
+    // Doesn't compile: T's runtime type is erased, the JVM can't allocate it
+    // private T[] items = new T[10];
+
+    // Workaround 1: build an Object[] internally, cast with a suppressed warning
+    @SuppressWarnings("unchecked")
+    private T[] items = (T[]) new Object[10];
+
+    // Workaround 2: caller supplies how to build the array (see Stream.toArray)
+    T[] toArray(IntFunction&lt;T[]&gt; generator) {
+        T[] result = generator.apply(items.length);
+        System.arraycopy(items, 0, result, 0, items.length);
+        return result;
+    }
+}</code></pre>
+        </div>
+      </details>
+      </div>
+    </section>
+
+    <section class="module" id="exceptions">
+      <h2>5. Exception Handling</h2>
+      <p class="section-intro">Exceptions are a control-flow mechanism with real rules about when to use them — and a set of anti-patterns that show up in almost every production codebase.</p>
+      <div class="concept-grid">
+      <details class="concept-card">
+        <summary>Checked vs Unchecked Exceptions</summary>
+        <div class="concept-body">
+          <p>Checked exceptions (any <code>Exception</code> subclass that isn't also a <code>RuntimeException</code>) must be caught or declared in a <code>throws</code> clause — compiler-enforced, meant to force callers to consciously handle recoverable, expected failures like a missing file (<code>IOException</code>). Unchecked exceptions (<code>RuntimeException</code> and its subclasses, plus <code>Error</code>) require no declaration and typically represent programming bugs (<code>NullPointerException</code>, <code>IllegalArgumentException</code>) that should be fixed, not routinely caught.</p>
+      <p>Checked exceptions are genuinely controversial: meant to improve reliability, they often push developers toward empty catch blocks just to satisfy the compiler, or wrapping every checked exception in a <code>RuntimeException</code> — which many modern APIs deliberately do, since checked exceptions don't compose with lambdas (a <code>Function&lt;T,R&gt;</code> can't declare one). Most teams settle on: use checked exceptions sparingly, for conditions the immediate caller can genuinely recover from; default to unchecked otherwise.</p>
+      <pre class="code"><code>// Checked - caller MUST handle or declare it
+void readConfig() throws IOException {
+    Files.readAllLines(Path.of("config.yml"));
+}
+
+// Unchecked - no declaration required, represents a programming error
+void setAge(int age) {
+    if (age &lt; 0) throw new IllegalArgumentException("age cannot be negative: " + age);
+}</code></pre>
+        </div>
+      </details>
+      <details class="concept-card">
+        <summary>try-with-resources and AutoCloseable</summary>
+        <div class="concept-body">
+          <p>Before Java 7, releasing a resource reliably meant a manual <code>try</code>/<code>finally</code> block, easy to get subtly wrong — especially when <code>close()</code> itself could throw, potentially masking the original exception. try-with-resources fixes this: any <code>AutoCloseable</code> (single method <code>close()</code>) declared in the <code>try(...)</code> parentheses is guaranteed to have <code>close()</code> called when the block exits, normally or via exception, in reverse declaration order for multiple resources, and correctly *suppresses* (rather than silently discards) a <code>close()</code>-time exception when one was already in flight.</p>
+      <p>This isn't just cleaner syntax — it eliminates an entire category of resource-leak bugs that used to require careful, easy-to-get-wrong <code>finally</code> blocks.</p>
+      <pre class="code"><code>// Old, error-prone pattern
+BufferedReader br = new BufferedReader(new FileReader("data.txt"));
+try {
+    return br.readLine();
+} finally {
+    br.close(); // if this throws, and try already threw, one exception is lost
+}
+
+// try-with-resources: close() is guaranteed, exceptions from it are suppressed, not lost
+try (BufferedReader reader = new BufferedReader(new FileReader("data.txt"))) {
+    return reader.readLine();
+}</code></pre>
+        </div>
+      </details>
+      <details class="concept-card">
+        <summary>Writing Custom Exceptions</summary>
+        <div class="concept-body">
+          <p>A custom exception earns its place when catching it *as its own type* carries real information a generic exception wouldn't — a caller can catch <code>InsufficientFundsException</code> specifically and offer to top up the balance, which a generic <code>RuntimeException</code> doesn't support. Extend <code>RuntimeException</code> (unchecked) unless there's a specific reason to force every caller to handle it.</p>
+      <p>Always provide a constructor accepting a message and, critically, a cause (<code>Throwable</code>), and always chain the original exception when wrapping one rather than discarding it — losing the original stack trace makes debugging production incidents needlessly harder. Keep fields meaningful (an order ID, not just a string) so catch blocks can act on structured data instead of parsing a message.</p>
+      <pre class="code"><code>public class InsufficientFundsException extends RuntimeException {
+    private final double shortfall;
+    public InsufficientFundsException(double shortfall, Throwable cause) {
+        super("insufficient funds, short by " + shortfall, cause); // message AND cause
+        this.shortfall = shortfall;
+    }
+    public double getShortfall() { return shortfall; }
+}</code></pre>
+        </div>
+      </details>
+      <details class="concept-card">
+        <summary>Anti-Pattern: Swallowing Exceptions</summary>
+        <div class="concept-body">
+          <p>An empty catch block, or one that only logs and silently continues, is one of the most damaging habits in production code: the failure genuinely happened, but nothing about the program's behavior reflects that, so the caller proceeds as if it succeeded — often corrupting downstream state or producing a confusing failure much later, far from the real cause. Catching <code>Exception</code> or <code>Throwable</code> broadly compounds this: <code>Exception</code> covers every checked and unchecked type in the codebase, including ones the code has no idea how to handle, and <code>Throwable</code> additionally catches <code>Error</code> subtypes like <code>OutOfMemoryError</code>, which generally shouldn't be caught at all.</p>
+      <p>The fix isn't "never catch broadly" — a top-level request handler legitimately needs a last-resort catch-all. It's catching the narrowest type you can actually act on, and letting anything else propagate rather than swallowing it.</p>
+      <pre class="code"><code>// Anti-pattern: failure is invisible, code proceeds as if nothing happened
+try {
+    paymentGateway.charge(order);
+} catch (Exception e) {
+    // silently swallowed - order is now "paid" even though the charge failed
+}
+
+// Better: handle what you can, propagate what you can't
+try {
+    paymentGateway.charge(order);
+} catch (GatewayTimeoutException e) {
+    retryQueue.enqueue(order); // specific, recoverable case handled explicitly
+} catch (PaymentDeclinedException e) {
+    throw new OrderFailedException("payment declined for order " + order.getId(), e);
+}</code></pre>
+        </div>
+      </details>
+      <details class="concept-card">
+        <summary>Anti-Pattern: Exceptions as Control Flow</summary>
+        <div class="concept-body">
+          <p>Exceptions are for exceptional, unexpected conditions — using them for ordinary control flow (looping until an exception signals "done," using a thrown exception instead of a boolean return) is both a readability and a real performance problem. Constructing a <code>Throwable</code> captures a full stack trace by default, walking and recording every frame — measurably expensive compared to a normal return — and code relying on catching an exception for a routine outcome forces every reader to trace an invisible control-flow jump instead of a normal <code>if</code>/<code>return</code>.</p>
+      <p>The classic example: parsing a string as a number in a loop and catching <code>NumberFormatException</code> as the exit condition, when a validating check or an <code>Optional</code>-returning parse method expresses the same intent directly and cheaply.</p>
+      <pre class="code"><code>// Anti-pattern: exception as the loop's exit signal
+List&lt;Integer&gt; parsed = new ArrayList&lt;&gt;();
+try {
+    int i = 0;
+    while (true) {
+        parsed.add(Integer.parseInt(tokens[i])); // relies on the array running out to stop
+        i++;
+    }
+} catch (ArrayIndexOutOfBoundsException e) { /* "done" */ }
+
+// Correct: express the actual condition directly
+for (String token : tokens) {
+    parsed.add(Integer.parseInt(token));
+}</code></pre>
+        </div>
+      </details>
+      </div>
+    </section>
+
+    <section class="module" id="java8">
+      <h2>6. Java 8+ Essentials</h2>
+      <p class="section-intro">Lambdas and the Streams API changed how idiomatic Java looks. Used well they make transformation code shorter and clearer; used carelessly they make it harder to debug than the loop they replaced.</p>
+      <div class="concept-grid">
+      <details class="concept-card">
+        <summary>Lambdas and Functional Interfaces</summary>
+        <div class="concept-body">
+          <p>A functional interface is any interface with exactly one abstract method (plus any number of default or static methods) — <code>Runnable</code>, <code>Comparator</code>, and everything in <code>java.util.function</code> (<code>Function&lt;T,R&gt;</code>, <code>Predicate&lt;T&gt;</code>, <code>Consumer&lt;T&gt;</code>, <code>Supplier&lt;T&gt;</code>, <code>BiFunction&lt;T,U,R&gt;</code>, and more). A lambda supplies an inline implementation of that one method without a named class — <code>(a, b) -&gt; a + b</code> is shorthand for "an object implementing this interface whose one method does this."</p>
+      <p><code>@FunctionalInterface</code> is optional but valuable — it makes the compiler enforce exactly one abstract method, catching an accidental second one at compile time instead of it silently breaking every lambda that uses the interface. Knowing the four core <code>java.util.function</code> shapes — <code>Function</code>: T → R, <code>Predicate</code>: T → boolean, <code>Consumer</code>: T → void, <code>Supplier</code>: () → T — is what makes reading and writing stream pipelines fast.</p>
+      <pre class="code"><code>@FunctionalInterface
+interface Validator&lt;T&gt; {
+    boolean isValid(T value); // exactly one abstract method
+}
+
+Validator&lt;String&gt; notBlank = s -&gt; s != null &amp;&amp; !s.isBlank(); // lambda implementing it
+
+Function&lt;String, Integer&gt; length = String::length;   // T -&gt; R
+Predicate&lt;String&gt; isEmpty = String::isEmpty;          // T -&gt; boolean
+Consumer&lt;String&gt; printer = System.out::println;       // T -&gt; void
+Supplier&lt;List&lt;String&gt;&gt; emptyList = ArrayList::new;     // () -&gt; T</code></pre>
+        </div>
+      </details>
+      <details class="concept-card">
+        <summary>The Streams API: map / filter / reduce / collect</summary>
+        <div class="concept-body">
+          <p>A <code>Stream</code> doesn't hold data — it's a pipeline description over a source. Operations split into two kinds: intermediate operations (<code>filter</code>, <code>map</code>, <code>sorted</code>, <code>distinct</code>, ...) return a new <code>Stream</code> and are lazy, just building up a chain; terminal operations (<code>collect</code>, <code>reduce</code>, <code>forEach</code>, <code>count</code>, ...) actually trigger execution, pulling elements through the whole pipeline.</p>
+      <p><code>filter(Predicate)</code> keeps matching elements; <code>map(Function)</code> transforms each element, possibly to a different type; <code>reduce(identity, BinaryOperator)</code> combines every element into a single result; <code>collect(Collector)</code> is the general-purpose terminal operation for building a result container, and what you reach for whenever the result isn't a single scalar. A stream can only be consumed once — a second terminal operation on the same stream throws <code>IllegalStateException</code>, because the pipeline isn't reusable data, it's a one-shot execution plan.</p>
+      <pre class="code"><code>List&lt;String&gt; names = List.of("Alice", "Bob", "Charlie", "Dave", "Eve");
+
+List&lt;String&gt; result = names.stream()
+    .filter(name -&gt; name.length() &gt; 3)   // intermediate, lazy
+    .map(String::toUpperCase)            // intermediate, lazy
+    .collect(Collectors.toList());       // terminal - triggers execution
+// -&gt; ["ALICE", "CHARLIE", "DAVE"]
+
+int totalLength = names.stream()
+    .mapToInt(String::length)
+    .reduce(0, Integer::sum); // terminal, combines into a single int</code></pre>
+        </div>
+      </details>
+      <details class="concept-card">
+        <summary>Optional: Using It Well</summary>
+        <div class="concept-body">
+          <p><code>Optional&lt;T&gt;</code> makes "this might not have a value" explicit in a return type, forcing the caller to consciously handle absence instead of risking a <code>NullPointerException</code> several calls later. Used well: a return type from methods that legitimately might not find something, consumed through <code>map</code>/<code>filter</code>/<code>orElse</code>/<code>orElseThrow</code> chains rather than an unconditional <code>.get()</code> — which throws <code>NoSuchElementException</code> on empty and defeats the entire point, relocating the exact null-check problem <code>Optional</code> exists to solve.</p>
+      <p><code>Optional</code> was explicitly not designed as a field type (not <code>Serializable</code>, adds allocation for no benefit over a documented nullable field), a method parameter type (overloading or a builder is almost always cleaner), or inside a collection (<code>List&lt;Optional&lt;T&gt;&gt;</code> is nearly always better as a filtered <code>List&lt;T&gt;</code>). Rule of thumb: <code>Optional</code> is for return types you actually consume with its API, not a general-purpose nullable wrapper.</p>
+      <pre class="code"><code>// Good: Optional as a return type, consumed properly
+Optional&lt;User&gt; findById(long id) { return Optional.empty(); }
+
+String email = findById(42)
+    .map(User::getEmail)
+    .filter(e -&gt; !e.isBlank())
+    .orElse("no-email@example.com");
+
+// Anti-pattern: defeats the purpose entirely
+User u = findById(42).get(); // throws NoSuchElementException if empty - no safer than null</code></pre>
+        </div>
+      </details>
+      <details class="concept-card">
+        <summary>Method References: the Four Kinds</summary>
+        <div class="concept-body">
+          <p>A method reference is shorthand for a lambda that does nothing but call an existing method. Static (<code>ClassName::staticMethod</code>) is shorthand for <code>args -&gt; ClassName.staticMethod(args)</code>. Bound instance (<code>instance::method</code>, on an already-existing object) is shorthand for <code>args -&gt; instance.method(args)</code>. Unbound instance (<code>ClassName::instanceMethod</code>, on an arbitrary object of a type supplied as the lambda's first parameter) is shorthand for <code>(obj, args) -&gt; obj.instanceMethod(args)</code> — the one that trips people up, since the receiver becomes the first parameter rather than being captured. Constructor references (<code>ClassName::new</code>) are shorthand for <code>args -&gt; new ClassName(args)</code>.</p>
+      <p>They're pure syntactic sugar — use them when the lambda body is literally "call this one method," and switch to a real lambda the moment there's any actual logic.</p>
+      <pre class="code"><code>Function&lt;String, Integer&gt; a = Integer::parseInt;        // static method
+Consumer&lt;String&gt; b = System.out::println;               // bound instance method
+Function&lt;String, Integer&gt; c = String::length;            // unbound instance method
+Supplier&lt;ArrayList&lt;String&gt;&gt; d = ArrayList::new;          // constructor reference
+
+List&lt;String&gt; names = List.of("bob", "alice");
+names.stream().map(String::toUpperCase).forEach(System.out::println);</code></pre>
+        </div>
+      </details>
+      <details class="concept-card">
+        <summary>Collectors: toList, toMap, groupingBy, joining</summary>
+        <div class="concept-body">
+          <p><code>Collectors</code> is the standard library of ready-made <code>Collector</code> implementations for <code>Stream.collect()</code>. <code>toList()</code>/<code>toSet()</code> build the obvious result. <code>joining(delimiter, prefix, suffix)</code> builds a single <code>String</code> from a stream of strings — the idiomatic replacement for a manual loop with <code>StringBuilder.append</code>. <code>toMap(keyFn, valueFn)</code> builds a <code>Map</code>, but throws <code>IllegalStateException</code> on a duplicate key unless a third merge-function argument is supplied — forgetting it is a common runtime surprise on data with duplicate keys.</p>
+      <p><code>groupingBy(classifierFn)</code> is the stream equivalent of SQL's <code>GROUP BY</code> — it returns <code>Map&lt;K, List&lt;T&gt;&gt;</code> — and combines with a downstream collector (<code>groupingBy(classifier, summingInt(...))</code>) to aggregate within each group in a single pass instead of grouping and then looping again.</p>
+      <pre class="code"><code>record Order(String customer, double amount) {}
+List&lt;Order&gt; orders = List.of(
+    new Order("Alice", 50), new Order("Bob", 30), new Order("Alice", 20)
+);
+
+Map&lt;String, Double&gt; totalByCustomer = orders.stream()
+    .collect(Collectors.groupingBy(Order::customer, Collectors.summingDouble(Order::amount)));
+// {"Alice": 70.0, "Bob": 30.0}
+
+String summary = orders.stream()
+    .map(o -&gt; o.customer() + ":" + o.amount())
+    .collect(Collectors.joining(", ", "[", "]")); // "[Alice:50.0, Bob:30.0, Alice:20.0]"</code></pre>
+        </div>
+      </details>
+      <details class="concept-card">
+        <summary>Loop to Stream: When It's Actually Clearer</summary>
+        <div class="concept-body">
+          <p>A typical imperative loop — iterate orders, skip cancelled ones, extract customer name, collect unique sorted names — interleaves four concerns in one block that has to be read top to bottom to understand what it produces. As a stream pipeline (<code>filter</code> → <code>map</code> → <code>distinct</code>/<code>sorted</code> → <code>collect</code>), each concern is a separate, named step read left to right, often matching how you'd describe the transformation in English.</p>
+      <p>But streams aren't strictly better: a pipeline with heavy branching, multiple accumulator variables, or early-exit logic usually reads *worse* as a stream than as a plain loop, and can be harder to debug (stepping through a lambda mid-pipeline is less pleasant than a breakpoint in a loop body). Use streams for genuine data-transformation pipelines; keep a plain <code>for</code> loop when the logic is inherently imperative.</p>
+      <pre class="code"><code>// Imperative
+Set&lt;String&gt; names = new TreeSet&lt;&gt;();
+for (Order o : orders) {
+    if (!o.isCancelled()) {
+        names.add(o.getCustomerName());
+    }
+}
+
+// Stream equivalent - reads as a sequence of named steps
+Set&lt;String&gt; names = orders.stream()
+    .filter(o -&gt; !o.isCancelled())
+    .map(Order::getCustomerName)
+    .collect(Collectors.toCollection(TreeSet::new));</code></pre>
+        </div>
+      </details>
+      </div>
+    </section>
+
+    <section class="module" id="concurrency">
+      <h2>7. Concurrency Basics</h2>
+      <p class="section-intro">Most Java interview and production concurrency bugs come from just two root causes: unsynchronized access to shared mutable state, and stale visibility across threads. This module builds the vocabulary to spot both.</p>
+      <div class="concept-grid">
+      <details class="concept-card">
+        <summary>Thread vs Runnable</summary>
+        <div class="concept-body">
+          <p>There are two ways to define a task the JVM can run on a thread: extend <code>Thread</code> and override <code>run()</code>, or implement <code>Runnable</code>'s single <code>run()</code> method and hand it to a <code>Thread</code> — or, in real code, to an <code>ExecutorService</code>. Extending <code>Thread</code> burns Java's single-inheritance slot on something that's really just "a task," conflating what the task does with the mechanism that runs it.</p>
+      <p>Implementing <code>Runnable</code> keeps those concerns separate: the same <code>Runnable</code> can be handed to a plain <code>Thread</code>, submitted to a thread pool, or invoked directly and synchronously in a test, and the class remains free to extend something else. In production code you rarely construct <code>Thread</code> objects directly at all — you submit <code>Runnable</code> (or <code>Callable&lt;T&gt;</code>, its cousin that returns a value and can throw a checked exception) to an <code>ExecutorService</code>, which owns thread lifecycle for you.</p>
+      <pre class="code"><code>// Prefer this: task and execution mechanism stay separate
+Runnable task = () -&gt; System.out.println("running on: " + Thread.currentThread().getName());
+new Thread(task).start();
+
+// Over this: couples the task to Thread itself, burns single inheritance
+class MyTask extends Thread {
+    @Override public void run() { System.out.println("running"); }
+}</code></pre>
+        </div>
+      </details>
+      <details class="concept-card">
+        <summary>The synchronized Keyword</summary>
+        <div class="concept-body">
+          <p>Every object in Java has an implicit intrinsic lock (monitor). <code>synchronized</code> on an instance method acquires the lock on <code>this</code> before the body runs and releases it on return, normally or via exception; <code>synchronized</code> on a static method locks the <code>Class</code> object instead; a <code>synchronized(someObject) { ... }</code> block locks whatever object you specify, giving finer control over exactly what's protected.</p>
+      <p>The guarantee is mutual exclusion — only one thread can hold a given lock at a time, so two threads can never execute blocks guarded by the same lock simultaneously, which prevents interleaved reads/writes from corrupting shared state. It's not free: an uncontended lock is cheap on modern JVMs, but a heavily contended one serializes threads that could otherwise run in parallel, directly limiting throughput — which is why a <code>synchronized</code> block's scope should be as small as it can be while staying correct.</p>
+      <pre class="code"><code>class Counter {
+    private int count = 0;
+    public synchronized void increment() { count++; } // locks on 'this'
+    public synchronized int get() { return count; }
+}
+
+// Finer-grained: only the actually-shared state is protected
+class Cache {
+    private final Map&lt;String, String&gt; data = new HashMap&lt;&gt;();
+    private final Object lock = new Object();
+    void put(String k, String v) {
+        synchronized (lock) { data.put(k, v); }
+    }
+}</code></pre>
+        </div>
+      </details>
+      <details class="concept-card">
+        <summary>Visibility and volatile</summary>
+        <div class="concept-body">
+          <p>Even without a race on a compound operation, a separate problem exists: a value one thread writes might never become visible to another thread, because CPU cores can cache values locally and the compiler/JIT can reorder or cache reads, as long as it doesn't change single-threaded observable behavior — a guarantee that says nothing about what a second thread sees. <code>volatile</code> fixes visibility for a single field: every write is guaranteed immediately visible to every subsequent read by any thread, establishing a happens-before edge and preventing register-caching or reordering around it.</p>
+      <p>What <code>volatile</code> does *not* give you is atomicity for compound operations — <code>volatile int count; count++;</code> is still three separate steps, and two threads can still interleave them and lose an update, exactly as without <code>volatile</code>. It's the right tool for a simple flag one thread sets and another polls; for read-modify-write, you need <code>synchronized</code> or an atomic type.</p>
+      <pre class="code"><code>class Worker extends Thread {
+    private volatile boolean running = true; // visibility guaranteed across threads
+    public void run() {
+        while (running) { /* do work */ }
+    }
+    public void stopWorker() { running = false; } // visible to the worker thread promptly
+}
+
+// volatile does NOT make this safe under concurrent increments:
+volatile int count = 0;
+count++; // still read-modify-write, still racy with concurrent callers</code></pre>
+        </div>
+      </details>
+      <details class="concept-card">
+        <summary>The Java Memory Model, in Plain Language</summary>
+        <div class="concept-body">
+          <p>The Java Memory Model (JMM) defines what guarantees you actually get about when one thread's writes become visible to another, and in what order operations can appear to happen. The central concept is happens-before: if action A happens-before action B, A's effects — including all its memory writes — are guaranteed visible to B.</p>
+      <p>Several things establish happens-before: a write to a <code>volatile</code> field happens-before every subsequent read of it; unlocking a monitor happens-before a later lock of that same monitor by another thread; starting a thread happens-before anything that thread does; everything a thread does happens-before another thread observing it via <code>Thread.join()</code>. With no happens-before relationship between a cross-thread write and read, the JMM makes no guarantee the read ever sees the write — not "it might be slow," genuinely undefined, which is why data races aren't "usually fine, rarely fails" but formally unspecified behavior.</p>
+      <pre class="code"><code>class Flag {
+    private boolean ready = false; // NOT volatile - no happens-before guarantee
+    void writer() { ready = true; }     // thread A
+    void reader() { while (!ready) {} } // thread B - may spin forever, may see stale value
+}
+// Fix: make ready volatile, protect both access points with the same lock, or use a
+// higher-level construct (e.g. CountDownLatch) that establishes happens-before for you</code></pre>
+        </div>
+      </details>
+      <details class="concept-card">
+        <summary>ExecutorService and Thread Pools</summary>
+        <div class="concept-body">
+          <p>Creating a raw <code>Thread</code> per task is expensive — each OS thread costs real memory for its stack and has real creation/teardown overhead — and gives no control over how many run concurrently, which under load means an unbounded flood of threads competing for CPU and memory. <code>ExecutorService</code> decouples what work needs to run (submit a <code>Runnable</code>/<code>Callable</code>) from how it's executed (a pool of reusable worker threads, a task queue, a defined shutdown lifecycle).</p>
+      <p><code>Executors.newFixedThreadPool(n)</code> gives a fixed number of threads with an unbounded queue — predictable resource usage, but memory grows if submission outpaces capacity for a sustained period. <code>Executors.newCachedThreadPool()</code> creates threads on demand and reuses idle ones, handling bursts well but with no bound at all — under sustained load it can create an unbounded number of threads, the same resource-exhaustion problem it was meant to avoid, which is why production code generally prefers an explicitly sized <code>ThreadPoolExecutor</code> with a bounded queue and rejection policy.</p>
+      <pre class="code"><code>ExecutorService pool = Executors.newFixedThreadPool(8);
+try {
+    List&lt;Future&lt;Integer&gt;&gt; results = new ArrayList&lt;&gt;();
+    for (int i = 0; i &lt; 100; i++) {
+        int taskId = i;
+        results.add(pool.submit(() -&gt; processTask(taskId))); // queued, run by 8 workers
+    }
+    for (Future&lt;Integer&gt; f : results) f.get(); // wait for completion
+} finally {
+    pool.shutdown(); // always shut the pool down when done with it
+}</code></pre>
+        </div>
+      </details>
+      <details class="concept-card">
+        <summary>Two Concrete Pitfalls: Race Condition and Deadlock</summary>
+        <div class="concept-body">
+          <p>A race condition happens when threads access shared mutable state without coordination and the outcome depends on unpredictable interleaving — the textbook case is <code>count++</code> from multiple threads: each increment is a read, an add, and a write, and two threads both reading the same value before either writes back silently loses one increment. The fix is making the whole sequence atomic — <code>synchronized</code>, or <code>AtomicInteger</code>, which uses a hardware compare-and-swap instruction to make the increment indivisible.</p>
+      <p>A deadlock happens when two threads each hold a lock the other needs, and neither releases what it's holding: thread A holds lock1 and waits for lock2, thread B holds lock2 and waits for lock1 — both block forever. The standard fix is lock ordering: if every thread that ever needs both locks always acquires them in the same global order, the circular wait that causes deadlock can never form.</p>
+      <pre class="code"><code>// Race condition, and the fix
+class Counter {
+    private final AtomicInteger count = new AtomicInteger(0);
+    void increment() { count.incrementAndGet(); } // atomic - no lost updates
+}
+
+// Deadlock risk (inconsistent lock order) and the fix (consistent order)
+class Account {
+    void transferTo(Account other, double amount) {
+        // BUG: if two accounts transfer to each other concurrently, this can deadlock
+        // synchronized (this) { synchronized (other) { ... } }
+
+        // Fix: always lock in a consistent, deterministic order
+        Account first = System.identityHashCode(this) &lt; System.identityHashCode(other) ? this : other;
+        Account second = first == this ? other : this;
+        synchronized (first) {
+            synchronized (second) { /* perform transfer */ }
+        }
+    }
+}</code></pre>
+        </div>
+      </details>
+      </div>
+    </section>
+
+    <section class="module" id="memory">
+      <h2>8. Memory and the JVM</h2>
+      <p class="section-intro">Garbage collection doesn't mean Java can't leak memory — it just means the leaks look different from a manual-memory language. This module covers how the heap is actually managed and the three leak patterns that show up despite GC.</p>
+      <div class="concept-grid">
+      <details class="concept-card">
+        <summary>Stack vs Heap</summary>
+        <div class="concept-body">
+          <p>Each thread has its own call stack — stack frames, one per active method call, holding local variables and object *references* (not the objects themselves) plus the return address. Stack allocation is fast, just moving a pointer, and automatically reclaimed the instant a method returns, with no garbage collector involvement. The heap is a single region shared across all threads, where every object created with <code>new</code> actually lives, staying there until nothing references it and the collector reclaims the space.</p>
+      <p>A <code>StackOverflowError</code> happens when a thread's call stack grows past its size limit — almost always unbounded or excessive recursion. It's a stack problem, distinct from <code>OutOfMemoryError</code>, which is heap (or another memory pool) exhaustion.</p>
+      <pre class="code"><code>void recurse(int n) {
+    System.out.println(n);
+    recurse(n + 1); // no base case - eventually: StackOverflowError
+}
+
+void example() {
+    int local = 5;              // lives on the stack
+    Point p = new Point(1, 2);  // the Point OBJECT lives on the heap;
+                                 // `p` itself (the reference) lives on the stack
+}</code></pre>
+        </div>
+      </details>
+      <details class="concept-card">
+        <summary>Garbage Collection, Conceptually</summary>
+        <div class="concept-body">
+          <p>Most JVM GC algorithms are built around the generational hypothesis: empirically, most objects die young (a request-scoped object, a temporary <code>String</code>) while a small minority live a long time (caches, singletons, connection pools). The heap splits accordingly into a young generation, where new objects are allocated, and an old generation, for objects that have survived several collections and are presumed long-lived.</p>
+      <p>A minor GC collects only the young generation — fast and frequent, since it's small and most of what's in it is already garbage. Objects surviving enough minor GCs get promoted to the old generation. A major (or full) GC collects the old generation — far more expensive, since it's larger with a much higher proportion of live data to trace and preserve, which is why full GCs are the ones that cause noticeable application pauses.</p>
+      <pre class="code"><code>// Conceptually:
+// 1. new SomeObject() -&gt; allocated in the young generation (Eden space)
+// 2. Eden fills up -&gt; minor GC runs, live objects copied to a survivor space
+// 3. an object surviving several minor GCs -&gt; promoted to the old generation
+// 4. old generation fills up -&gt; major/full GC runs (expensive, causes pauses)
+//
+// This is why short-lived objects (loop-local variables, request-scoped DTOs)
+// are cheap in Java: usually reclaimed by a fast minor GC, never reaching old gen.</code></pre>
+        </div>
+      </details>
+      <details class="concept-card">
+        <summary>Leak Cause #1: Static References and Unbounded Caches</summary>
+        <div class="concept-body">
+          <p>The garbage collector reclaims an object only when nothing reachable from a GC root still references it — static fields are GC roots living for the entire application lifetime, so anything reachable from one is never collected, no matter how long ago it stopped being useful. The classic version is a static <code>Map</code> used as an ad-hoc cache with no eviction policy: every entry inserted stays reachable forever, silently growing until it consumes all available heap and the process dies with <code>OutOfMemoryError</code> — often days into production, long after the code was reviewed and forgotten.</p>
+      <p>An unbounded cache should never be a plain static <code>HashMap</code> in real code — use a size- or time-bounded structure so old entries actually get evicted instead of accumulating forever.</p>
+      <pre class="code"><code>public class UserCache {
+    // Leak: grows forever, entries are never evicted, and this static field
+    // keeps every entry reachable for the entire life of the JVM process
+    private static final Map&lt;Long, User&gt; cache = new HashMap&lt;&gt;();
+
+    public static User get(long id) {
+        return cache.computeIfAbsent(id, UserCache::loadFromDb);
+    }
+    private static User loadFromDb(long id) { return null; }
+}
+// Fix: bound it - a LinkedHashMap with removeEldestEntry, or a proper caching library</code></pre>
+        </div>
+      </details>
+      <details class="concept-card">
+        <summary>Leak Cause #2: Unclosed Resources</summary>
+        <div class="concept-body">
+          <p>Objects wrapping an OS resource — a <code>FileInputStream</code>, a database <code>Connection</code>, a <code>Socket</code> — typically hold native (off-heap) handles alongside their on-heap footprint. Failing to close them leaks the underlying OS resource too, often a scarcer, hard-limited pool (file descriptors, connection pool slots). The garbage collector reclaiming the Java object itself doesn't guarantee the resource is released promptly, if at all.</p>
+      <p>This is exactly the problem try-with-resources solves: it guarantees <code>close()</code> runs deterministically, right when the block exits, instead of "eventually, maybe, when the GC gets around to it." A connection pool that slowly exhausts under load, or a service that mysteriously runs out of file descriptors after days of uptime, is almost always this bug.</p>
+      <pre class="code"><code>// Leak: if executeUpdate throws, close() is never reached - the connection
+// silently consumes one slot in a finite pool forever
+Connection conn = dataSource.getConnection();
+Statement stmt = conn.createStatement();
+stmt.executeUpdate(sql);
+conn.close(); // never reached if executeUpdate throws
+
+// Fix: try-with-resources guarantees close() runs no matter what
+try (Connection conn = dataSource.getConnection();
+     Statement stmt = conn.createStatement()) {
+    stmt.executeUpdate(sql);
+}</code></pre>
+        </div>
+      </details>
+      <details class="concept-card">
+        <summary>Leak Cause #3: Listener and Callback Leaks</summary>
+        <div class="concept-body">
+          <p>Registering a listener (an event bus subscriber, an observer added to a long-lived subject) creates a reference from the long-lived object back to whatever registered it. If that registration is never undone, the long-lived object keeps the listener — and everything reachable from it, potentially an entire object graph — alive for as long as it lives itself, even after the original owner has logically finished and should be garbage.</p>
+      <p>It's a variation of the static-reference leak, but subtler: the reference isn't a static field you can grep for, it's held inside some framework's internal subscriber list. The fix is disciplined symmetry — every <code>addListener</code>/<code>subscribe</code> needs a matching <code>removeListener</code>/<code>unsubscribe</code> at the point the subscriber's own lifecycle ends, ideally in the same cleanup method as any other teardown.</p>
+      <pre class="code"><code>class ReportPanel {
+    ReportPanel(EventBus bus) {
+        bus.subscribe(this::onDataChanged); // registers a reference FROM bus TO this panel
+    }
+    void onDataChanged(Event e) { /* ... */ }
+    void dispose() {
+        bus.unsubscribe(this::onDataChanged); // required, or `this` stays reachable forever
+    }
+}</code></pre>
+        </div>
+      </details>
+      </div>
+    </section>
+
+    <section class="module" id="clean-code">
+      <h2>9. Writing Clean, Production-Grade Java</h2>
+      <p class="section-intro">The difference between code that passes a code review and code that's pleasant to maintain a year later usually comes down to a handful of habits — not cleverness.</p>
+      <div class="concept-grid">
+      <details class="concept-card">
+        <summary>Meaningful Naming</summary>
+        <div class="concept-body">
+          <p>Java's naming conventions carry real information: classes are nouns (<code>Order</code>, <code>PaymentProcessor</code>), methods are verbs or verb phrases (<code>calculateTotal</code>), and boolean-returning methods should read as a predicate (<code>isValid</code>, <code>hasPermission</code> — never bare <code>valid</code> or <code>flag</code>, which forces every call site to guess the polarity). A good name says what something is or does without opening the implementation — <code>int d</code> versus <code>int elapsedDays</code> is the difference between a mental lookup table and code that reads like the domain it models.</p>
+      <p>Avoid abbreviations that save the author keystrokes at every future reader's expense, and avoid Hungarian-notation-style prefixes that Java's static typing already makes redundant. A useful heuristic: if a name needs a comment to explain what it means, the name is wrong — rename it instead.</p>
+      <pre class="code"><code>// Poor: requires the reader to infer intent
+if (u.s == 1 &amp;&amp; u.a &gt; 18) { p(u); }
+
+// Good: reads like the business rule it implements, no comment needed
+if (user.getStatus() == UserStatus.ACTIVE &amp;&amp; user.getAge() &gt; MINIMUM_AGE) {
+    processUser(user);
+}</code></pre>
+        </div>
+      </details>
+      <details class="concept-card">
+        <summary>Immutability by Default</summary>
+        <div class="concept-body">
+          <p>An immutable object — every field <code>final</code>, no setters, mutable fields defensively copied on the way in and out — can't be put into an invalid state after construction, can be freely shared across threads with zero synchronization, and is safe as a <code>Map</code> key or <code>Set</code> element, since its <code>hashCode</code> is stable for its whole lifetime. Defensive copying matters specifically for fields that are themselves mutable (a <code>Date</code>, an array, a mutable <code>List</code>): storing the exact reference a caller passed in lets that caller mutate your "immutable" object's internal state from outside, silently, after construction.</p>
+      <p>The fix is copying on the way in (constructor) and, if exposed via a getter, copying or returning an unmodifiable view on the way out too. Records give this for free for simple data carriers, though they still need manual defensive copying if any component is itself mutable.</p>
+      <pre class="code"><code>public final class DateRange {
+    private final Date start; // Date is mutable - a raw reference is a leak
+    private final Date end;
+
+    public DateRange(Date start, Date end) {
+        this.start = new Date(start.getTime()); // defensive copy IN
+        this.end = new Date(end.getTime());
+    }
+    public Date getStart() { return new Date(start.getTime()); } // defensive copy OUT
+}</code></pre>
+        </div>
+      </details>
+      <details class="concept-card">
+        <summary>Dependency Injection, Conceptually</summary>
+        <div class="concept-body">
+          <p>A class that constructs its own collaborators internally is tightly coupled to that exact implementation — no substituting a fake for a test, no swapping implementations without editing the class. Dependency injection flips this: a class declares what it needs, typically as constructor parameters typed to an interface, and something external supplies the actual implementation. It's really "program to an interface, not an implementation" combined with inversion of control — control over which concrete dependency gets used shifts from the class itself to whatever assembles the object graph.</p>
+      <p>Constructor injection (dependencies passed in, stored in <code>final</code> fields) is generally preferred over field injection, because it makes required dependencies explicit, produces objects that are fully valid the instant they're constructed, and works identically whether or not a DI framework is involved — which is exactly what makes constructor-injected classes trivial to unit test.</p>
+      <pre class="code"><code>interface PaymentGateway { boolean charge(double amount); }
+
+class OrderService {
+    private final PaymentGateway gateway; // depends on an abstraction, not an implementation
+
+    OrderService(PaymentGateway gateway) { // constructor injection - explicit, testable
+        this.gateway = gateway;
+    }
+    boolean checkout(double amount) { return gateway.charge(amount); }
+}
+
+// In a test: no framework needed, just supply a fake
+OrderService service = new OrderService(amount -&gt; true); // fake PaymentGateway lambda</code></pre>
+        </div>
+      </details>
+      <details class="concept-card">
+        <summary>Why null Is Dangerous</summary>
+        <div class="concept-body">
+          <p><code>null</code> carries no information about *why* a value is absent — "not found," "not yet computed," and "deliberately empty" are all indistinguishable — and every reference type is nullable by default, so any method call is a potential <code>NullPointerException</code> unless proven otherwise, which the compiler does nothing to help verify. Two mitigations do most of the work: fail fast at the boundary with <code>Objects.requireNonNull</code> so a <code>null</code> that shouldn't be there throws immediately, with a clear message, at the point it entered the system — not three calls later as a confusing NPE with no context — and prefer <code>Optional</code> as a return type over returning <code>null</code> for "might not be present," forcing the caller to explicitly handle absence.</p>
+      <p>The deepest anti-pattern is letting <code>null</code> represent "not found" as a sentinel passed several layers deep before anything checks it — by the time it NPEs, the stack trace points at an innocent line, not the real root cause.</p>
+      <pre class="code"><code>public class OrderService {
+    private final OrderRepository repo;
+
+    public OrderService(OrderRepository repo) {
+        this.repo = Objects.requireNonNull(repo, "repo must not be null"); // fail fast
+    }
+
+    public Optional&lt;Order&gt; findOrder(long id) {
+        return Optional.ofNullable(repo.findById(id)); // absence is explicit, not a silent null
+    }
+}</code></pre>
+        </div>
+      </details>
+      <details class="concept-card">
+        <summary>Unit Testing Philosophy</summary>
+        <div class="concept-body">
+          <p>A good unit test verifies observable behavior — given this input/state, the method produces this output or effect — not internal implementation details like which private helper got called. Tests coupled to implementation details break on every refactor even when behavior didn't change, which trains developers to distrust, then ignore, the test suite. The arrange-act-assert shape — set up preconditions, perform the one action under test, assert on the result — keeps each test focused on a single behavior and readable top to bottom.</p>
+      <p>Test names should describe the scenario and expected outcome in plain language, so a failing test's name alone tells you what broke. The goal isn't coverage as a number: a suite of brittle, implementation-coupled tests with high coverage is worse than a smaller suite of well-targeted behavioral tests, because the former costs time on every refactor while providing false confidence.</p>
+      <pre class="code"><code>@Test
+void withdraw_whenAmountExceedsBalance_throwsInsufficientFundsException() {
+    // Arrange
+    Account account = new Account(100.0);
+
+    // Act + Assert - testing observable behavior, not internal state
+    assertThrows(InsufficientFundsException.class, () -&gt; account.withdraw(150.0));
+}</code></pre>
+        </div>
+      </details>
+      </div>
+    </section>
+
+  <section class="module" id="labs">
+    <h2>Hands-On Labs</h2>
+    <p class="section-intro">Each lab runs entirely in your browser — no Java toolchain required. The problems are written Java-style; you implement the solution in JavaScript so it can run instantly against real test cases, with a reference Java solution alongside each one so you can see the idiomatic production version too.</p>
+
+    <article class="lab-block" id="lab-palindrome">
+      <span class="lab-tag">Hands-on lab</span>
+      <h3>Lab 1 · Palindrome Check</h3>
+      <div class="problem-stmt">
+        <p>Implement <code>isPalindrome(str)</code>, returning <code>true</code> if <code>str</code> reads the same forwards and backwards, ignoring letter case and skipping any character that is not a letter or digit (so punctuation and spaces don't count).</p>
+      </div>
+      <details class="java-ref">
+        <summary>Java reference solution</summary>
+        <pre class="code"><code>public static boolean isPalindrome(String str) {
+    String cleaned = str.toLowerCase().replaceAll("[^a-z0-9]", "");
+    int left = 0, right = cleaned.length() - 1;
+    while (left &lt; right) {
+        if (cleaned.charAt(left) != cleaned.charAt(right)) return false;
+        left++;
+        right--;
+    }
+    return true;
+}</code></pre>
+      </details>
+      <div class="lab-mount" data-lab="palindrome"></div>
+      <details class="walkthrough">
+        <summary>Idiomatic walkthrough</summary>
+        <div class="walkthrough-body">
+          <p>The idiomatic solution is the two-pointer technique: clean the input once (O(n)), then walk one pointer in from each end, comparing characters and stopping at the first mismatch. That's O(n) time and O(n) space for the cleaned copy — no repeated string allocation inside the loop, which matters because of <code>String</code> immutability (covered in Module 1): building the cleaned string with <code>.replaceAll(...)</code> once, up front, avoids the classic mistake of concatenating inside a loop.</p>
+      <p>An alternative some candidates reach for is reversing the whole string with <code>StringBuilder</code> and comparing — also O(n), also correct, but it does more work than necessary since it can't short-circuit on the first mismatch the way two pointers can. In an interview, either is acceptable; the two-pointer version is generally preferred because it demonstrates the pattern (used constantly in string/array problems) directly.</p>
+        </div>
+      </details>
+    </article>
+
+    <article class="lab-block" id="lab-group-anagrams">
+      <span class="lab-tag">Hands-on lab</span>
+      <h3>Lab 2 · Group Anagrams</h3>
+      <div class="problem-stmt">
+        <p>Implement <code>groupAnagrams(words)</code>. Given an array of lowercase words, group the ones that are anagrams of each other (same letters, different order) and return an array of groups. Preserve the order each group's key is first seen in, and preserve each word's original order within its group.</p>
+      </div>
+      <details class="java-ref">
+        <summary>Java reference solution</summary>
+        <pre class="code"><code>public static List&lt;List&lt;String&gt;&gt; groupAnagrams(String[] words) {
+    Map&lt;String, List&lt;String&gt;&gt; groups = new LinkedHashMap&lt;&gt;();
+    for (String word : words) {
+        char[] chars = word.toLowerCase().toCharArray();
+        Arrays.sort(chars);
+        String key = new String(chars);
+        groups.computeIfAbsent(key, k -&gt; new ArrayList&lt;&gt;()).add(word);
+    }
+    return new ArrayList&lt;&gt;(groups.values());
+}</code></pre>
+      </details>
+      <div class="lab-mount" data-lab="group-anagrams"></div>
+      <details class="walkthrough">
+        <summary>Idiomatic walkthrough</summary>
+        <div class="walkthrough-body">
+          <p>This is a HashMap grouping problem: compute a canonical key for each word (its letters sorted), then <code>computeIfAbsent</code> a bucket for that key and append. In Java, <code>Map.computeIfAbsent(key, k -&gt; new ArrayList&lt;&gt;())</code> is the idiomatic one-liner instead of a manual <code>containsKey</code>/<code>put</code> check.</p>
+      <p>Sorting each word's letters costs O(k log k) per word of length k, giving O(n · k log k) overall. A faster alternative for lowercase-letters-only input builds a 26-length character-count array as the key instead of sorting, dropping the per-word cost to O(k) — worth mentioning in an interview as the optimization once the sorting version works. Note the <code>LinkedHashMap</code> in the Java reference: a plain <code>HashMap</code> wouldn't guarantee the "first-seen order" the problem asks for, exactly the distinction covered in Module 3.</p>
+        </div>
+      </details>
+    </article>
+
+    <article class="lab-block" id="lab-dedupe">
+      <span class="lab-tag">Hands-on lab</span>
+      <h3>Lab 3 · Dedupe, Preserving Order</h3>
+      <div class="problem-stmt">
+        <p>Implement <code>dedupePreserveOrder(items)</code>: remove duplicate values from an array, keeping only the first occurrence of each, in original order.</p>
+      </div>
+      <details class="java-ref">
+        <summary>Java reference solution</summary>
+        <pre class="code"><code>public static &lt;T&gt; List&lt;T&gt; dedupePreserveOrder(List&lt;T&gt; items) {
+    return new ArrayList&lt;&gt;(new LinkedHashSet&lt;&gt;(items));
+}</code></pre>
+      </details>
+      <div class="lab-mount" data-lab="dedupe"></div>
+      <details class="walkthrough">
+        <summary>Idiomatic walkthrough</summary>
+        <div class="walkthrough-body">
+          <p>The idiomatic Java one-liner is <code>new LinkedHashSet&lt;&gt;(items)</code>: a <code>Set</code> already enforces uniqueness, and <code>LinkedHashSet</code> specifically preserves insertion order during iteration — a plain <code>HashSet</code> would deduplicate correctly but give no order guarantee at all (Module 3 covers exactly this distinction). Wrapping the result back in an <code>ArrayList</code> gives you a <code>List</code> again if the caller needs indexed access.</p>
+      <p>The JS lab solution spells out what <code>LinkedHashSet</code> does internally: a <code>Set</code> for O(1) membership checks, plus a separate output array built in encounter order. This two-structure pattern — one for uniqueness, one for order — is worth recognizing, because <code>LinkedHashSet</code> is really just this same idea, implemented once, in the standard library.</p>
+        </div>
+      </details>
+    </article>
+
+    <article class="lab-block" id="lab-generic-stack">
+      <span class="lab-tag">Hands-on lab</span>
+      <h3>Lab 4 · A Generic Stack Container</h3>
+      <div class="problem-stmt">
+        <p>Implement a <code>Stack</code> class with <code>push(item)</code>, <code>pop()</code>, <code>peek()</code>, <code>isEmpty()</code>, and <code>size()</code>. It should work for any type of item &amp;mdash; the point of this lab is designing a reusable container, the same shape as a generic <code>Stack&lt;T&gt;</code> in Java.</p>
+      </div>
+      <details class="java-ref">
+        <summary>Java reference solution</summary>
+        <pre class="code"><code>public class Stack&lt;T&gt; {
+    private final Deque&lt;T&gt; items = new ArrayDeque&lt;&gt;(); // composition, not extending Vector
+
+    public void push(T item) { items.push(item); }
+    public T pop() { return items.pop(); }
+    public T peek() { return items.peek(); }
+    public boolean isEmpty() { return items.isEmpty(); }
+    public int size() { return items.size(); }
+}</code></pre>
+      </details>
+      <div class="lab-mount" data-lab="generic-stack"></div>
+      <details class="walkthrough">
+        <summary>Idiomatic walkthrough</summary>
+        <div class="walkthrough-body">
+          <p>Notice the Java reference wraps an <code>ArrayDeque&lt;T&gt;</code> rather than extending it (or extending <code>java.util.Vector</code>, which is what the legacy <code>java.util.Stack</code> class actually does — a well-known design mistake: it inherits Vector's synchronized, index-based methods, letting callers reach in and corrupt the stack's ordering by calling <code>add(index, item)</code> directly). Composition, favored in Module 2, keeps the public surface to exactly the five stack operations, hiding the backing structure entirely.</p>
+      <p>The generics angle: <code>Stack&lt;T&gt;</code> gives compile-time type safety — <code>Stack&lt;String&gt;</code> and <code>Stack&lt;Integer&gt;</code> catch type errors at compile time and never need a cast when popping. At runtime, though, type erasure (Module 4) means both compile to the exact same <code>Stack</code> bytecode with <code>T</code> erased to <code>Object</code> — which is exactly what this JS lab mirrors: one untyped class, working for any item type, is what Java's generic <code>Stack&lt;T&gt;</code> looks like *after* erasure.</p>
+        </div>
+      </details>
+    </article>
+
+    <article class="lab-block" id="lab-stream-pipeline">
+      <span class="lab-tag">Hands-on lab</span>
+      <h3>Lab 5 · Stream-Style Pipeline</h3>
+      <div class="problem-stmt">
+        <p>Implement <code>sumOfSquaresOfEvens(nums)</code>: given an array of integers, return the sum of the squares of only the even numbers. Write it as a chain of transformations (<code>filter</code> → <code>map</code> → <code>reduce</code>), the way you would with Java's Streams API, rather than a hand-rolled loop.</p>
+      </div>
+      <details class="java-ref">
+        <summary>Java reference solution</summary>
+        <pre class="code"><code>public static int sumOfSquaresOfEvens(List&lt;Integer&gt; nums) {
+    return nums.stream()
+        .filter(n -&gt; n % 2 == 0)
+        .map(n -&gt; n * n)
+        .reduce(0, Integer::sum);
+}</code></pre>
+      </details>
+      <div class="lab-mount" data-lab="stream-pipeline"></div>
+      <details class="walkthrough">
+        <summary>Idiomatic walkthrough</summary>
+        <div class="walkthrough-body">
+          <p>This mirrors a real Java stream pipeline term for term: <code>filter</code> keeps only even numbers, <code>map</code> transforms each survivor into its square, and <code>reduce</code> combines everything into a single total, starting from an identity value of <code>0</code>. In Java, <code>filter</code> and <code>map</code> are intermediate (lazy) operations — nothing actually runs element-by-element until the terminal <code>reduce</code> call pulls elements through the whole pipeline, exactly as described in Module 6.</p>
+      <p>Notice what this pipeline does *not* need: no manual loop variable, no mutable accumulator declared outside the loop, no index bookkeeping. That's the actual value of the stream style — it names each transformation step instead of hiding them inside one imperative block. For a pipeline this simple, the stream version is clearer than the loop; Module 6 also covers when the opposite is true.</p>
+        </div>
+      </details>
+    </article>
+
+    <article class="lab-block" id="lab-optional-lookup">
+      <span class="lab-tag">Hands-on lab</span>
+      <h3>Lab 6 · Optional-Safe Lookup</h3>
+      <div class="problem-stmt">
+        <p>Implement <code>findUserEmailOrDefault(users, id, defaultEmail)</code>. <code>users</code> is an array of <code>{id, email}</code> objects, where <code>email</code> may be <code>null</code> or missing for some users. Find the user with the given <code>id</code>; if found and their email is set, return it; otherwise return <code>defaultEmail</code>. Never throw, even if no user matches.</p>
+      </div>
+      <details class="java-ref">
+        <summary>Java reference solution</summary>
+        <pre class="code"><code>public static String findUserEmailOrDefault(List&lt;User&gt; users, long id, String defaultEmail) {
+    return users.stream()
+        .filter(u -&gt; u.getId() == id)
+        .findFirst()
+        .map(User::getEmail)
+        .filter(Objects::nonNull)
+        .orElse(defaultEmail);
+}</code></pre>
+      </details>
+      <div class="lab-mount" data-lab="optional-lookup"></div>
+      <details class="walkthrough">
+        <summary>Idiomatic walkthrough</summary>
+        <div class="walkthrough-body">
+          <p>The Java version chains <code>Optional</code> operations end to end: <code>findFirst()</code> returns <code>Optional&lt;User&gt;</code> (empty if no match), <code>.map(User::getEmail)</code> transforms the user into their email *only if present* (mapping over an empty <code>Optional</code> stays empty, no null-check needed), <code>.filter(Objects::nonNull)</code> drops through to empty if the email itself was <code>null</code>, and <code>.orElse(defaultEmail)</code> supplies the fallback. Every step is a no-op on an already-empty <code>Optional</code>, which is exactly what makes this chain safe without a single explicit <code>if</code>.</p>
+      <p>Contrast this with the naive alternative: nested <code>if (user != null) { if (user.getEmail() != null) { ... } }</code> — functionally equivalent, but exactly the "null-checking pyramid" <code>Optional</code> exists to flatten. The one thing to avoid, covered in Module 6, is calling <code>.get()</code> on the <code>Optional</code> without checking presence first, which throws <code>NoSuchElementException</code> on an empty <code>Optional</code> — no safer than the <code>null</code> it's meant to replace.</p>
+        </div>
+      </details>
+    </article>
+
+    <article class="lab-block" id="lab-race-condition">
+      <span class="lab-tag">Hands-on lab</span>
+      <h3>Lab 7 · Race Condition: Simulate and Fix</h3>
+      <div class="problem-stmt">
+        <p><code>trace</code> is an array recording the order in which two or more threads read and write a *shared counter*, one step at a time: <code>'R1'</code> means thread 1 reads the shared value into its own local snapshot; <code>'W1'</code> means thread 1 writes <code>snapshot + 1</code> back to the shared value. Implement <code>applyTrace(trace, sync)</code>:</p>
+      <p>When <code>sync</code> is <code>false</code>, simulate the raw, unsynchronized race exactly as recorded: track each thread's last snapshot, and a <code>'W&lt;t&gt;'</code> step writes <code>snapshot[t] + 1</code>, even if that snapshot has gone stale because another thread wrote in between.</p>
+      <p>When <code>sync</code> is <code>true</code>, simulate a <code>synchronized</code> counter: a lock means each thread's read is always fresh at the instant it increments, so every <code>'W&lt;t&gt;'</code> step simply adds <code>1</code> to whatever the shared value currently is (its paired <code>'R&lt;t&gt;'</code> becomes irrelevant, since the lock guarantees freshness).</p>
+      <p>Return the final shared value.</p>
+      </div>
+      <details class="java-ref">
+        <summary>Java reference solution</summary>
+        <pre class="code"><code>// Unsynchronized: count++ is really read-modify-write, three separate steps
+class UnsafeCounter {
+    private int count = 0;
+    void increment() { count++; } // NOT atomic - concurrent callers can lose updates
+    int get() { return count; }
+}
+
+// Fixed: synchronized forces each increment to be a single atomic unit
+class SafeCounter {
+    private int count = 0;
+    synchronized void increment() { count++; } // now atomic w.r.t. other synchronized calls
+    synchronized int get() { return count; }
+}
+
+// Or, idiomatically, java.util.concurrent.atomic:
+class AtomicCounter {
+    private final AtomicInteger count = new AtomicInteger(0);
+    void increment() { count.incrementAndGet(); } // atomic via compare-and-swap, no lock needed
+}</code></pre>
+      </details>
+      <div class="lab-mount" data-lab="race-condition"></div>
+      <details class="walkthrough">
+        <summary>Idiomatic walkthrough</summary>
+        <div class="walkthrough-body">
+          <p>Run the trace <code>['R1','R2','W1','W2']</code> with <code>sync = false</code>: thread 1 reads <code>0</code>, thread 2 also reads <code>0</code> before thread 1 has written anything back, then thread 1 writes <code>0 + 1 = 1</code>, and thread 2 writes <code>0 + 1 = 1</code> again — two increments happened, but the shared value only moved from <code>0</code> to <code>1</code>. That's a lost update: exactly the bug in <code>count++</code> across threads, because the operation isn't atomic — it's a read, then later a write, with a window in between where another thread can interleave.</p>
+      <p>Run the same trace with <code>sync = true</code>: a lock forces each <code>'W&lt;t&gt;'</code> to read fresh at the moment of increment, ignoring the stale snapshot entirely, so both writes land correctly: <code>0 → 1 → 2</code>. That's what <code>synchronized</code> (or <code>AtomicInteger</code>, shown above) actually buys you — not "the operations run faster," but "the operations can never be observed halfway through by another thread." Try a trace with no overlap at all, like <code>['R1','W1','R2','W2']</code>, and notice both modes agree — the bug only appears when reads and writes from different threads actually interleave.</p>
+        </div>
+      </details>
+    </article>
+
+    <article class="lab-block" id="lab-lru-cache">
+      <span class="lab-tag">Hands-on lab</span>
+      <h3>Lab 8 · A Simple Bounded Cache (LRU-Style)</h3>
+      <div class="problem-stmt">
+        <p>Implement <code>BoundedCache</code>, a fixed-capacity key-value cache. <code>get(key)</code> returns the value for <code>key</code> (or <code>undefined</code> if absent) and marks that key as most-recently-used. <code>put(key, value)</code> inserts or updates an entry and marks it most-recently-used; if this makes the cache exceed its capacity, evict the *least*-recently-used entry. Use a <code>Map</code> — its keys iterate in insertion order, which you can exploit by re-inserting a key to push it to the "most recent" end.</p>
+      </div>
+      <details class="java-ref">
+        <summary>Java reference solution</summary>
+        <pre class="code"><code>public class BoundedCache&lt;K, V&gt; extends LinkedHashMap&lt;K, V&gt; {
+    private final int capacity;
+
+    public BoundedCache(int capacity) {
+        super(16, 0.75f, true); // accessOrder = true: reorders entries on get(), not just put()
+        this.capacity = capacity;
+    }
+
+    @Override
+    protected boolean removeEldestEntry(Map.Entry&lt;K, V&gt; eldest) {
+        return size() &gt; capacity; // called automatically after every put()
+    }
+}</code></pre>
+      </details>
+      <div class="lab-mount" data-lab="lru-cache"></div>
+      <details class="walkthrough">
+        <summary>Idiomatic walkthrough</summary>
+        <div class="walkthrough-body">
+          <p><code>LinkedHashMap</code> was built with exactly this use case in mind: its third constructor argument, <code>accessOrder = true</code>, switches its internal linked list from insertion order to access order, so every <code>get()</code> (not just <code>put()</code>) moves an entry to the "most recently used" end. <code>removeEldestEntry(...)</code> is a protected hook <code>LinkedHashMap</code> calls automatically right after every insertion — override it to return <code>true</code> once the map exceeds capacity, and the eldest (least-recently-used) entry is evicted for you, with no manual bookkeeping.</p>
+      <p>The JS version makes that mechanism explicit instead of hidden: a <code>Map</code>'s keys iterate in insertion order, so deleting and re-inserting a key on every access is exactly what "access order" means under the hood, and reading <code>map.keys().next().value</code> after that is exactly how you find the least-recently-used entry — the first key still in insertion order. This is one of the most common ways an LRU cache actually gets implemented in Java interviews and in real code, precisely because <code>LinkedHashMap</code> does the hard part for you.</p>
+        </div>
+      </details>
+    </article>
+
+    <article class="lab-block" id="lab-fizzbuzzbang">
+      <span class="lab-tag">Hands-on lab</span>
+      <h3>Lab 9 · FizzBuzzBang</h3>
+      <div class="problem-stmt">
+        <p>A slightly more interesting FizzBuzz. Implement <code>fizzBuzzBang(n)</code>, returning an array of strings for the numbers <code>1..n</code> where: multiples of <code>3</code> contribute <code>"Fizz"</code>, multiples of <code>5</code> contribute <code>"Buzz"</code>, multiples of <code>7</code> contribute <code>"Bang"</code>, a number matching more than one rule concatenates them in that order (e.g. <code>15 → "FizzBuzz"</code>, <code>21 → "FizzBang"</code>), and a number matching none of the rules becomes its own string (e.g. <code>8 → "8"</code>).</p>
+      </div>
+      <details class="java-ref">
+        <summary>Java reference solution</summary>
+        <pre class="code"><code>public static List&lt;String&gt; fizzBuzzBang(int n) {
+    List&lt;String&gt; out = new ArrayList&lt;&gt;(n);
+    for (int i = 1; i &lt;= n; i++) {
+        StringBuilder word = new StringBuilder();
+        if (i % 3 == 0) word.append("Fizz");
+        if (i % 5 == 0) word.append("Buzz");
+        if (i % 7 == 0) word.append("Bang");
+        out.add(word.length() == 0 ? String.valueOf(i) : word.toString());
+    }
+    return out;
+}</code></pre>
+      </details>
+      <div class="lab-mount" data-lab="fizzbuzzbang"></div>
+      <details class="walkthrough">
+        <summary>Idiomatic walkthrough</summary>
+        <div class="walkthrough-body">
+          <p>Interviewers still ask FizzBuzz-style problems, not because the algorithm is hard, but because they're testing whether you write clean, independent conditionals (<code>if</code>, <code>if</code>, <code>if</code>, not <code>if</code>/<code>else if</code>/<code>else if</code>, which would only ever apply one rule) and correct modulo logic under a small amount of time pressure. Each rule is checked independently and its word appended if it matches — that's what allows a number like <code>21</code> to correctly produce <code>"FizzBang"</code> instead of stopping at the first match.</p>
+      <p>The Java reference uses <code>StringBuilder</code> to accumulate the word instead of repeated <code>String</code> concatenation with <code>+=</code>, tying back to Module 1: since <code>String</code> is immutable, each <code>+=</code> inside a loop would allocate a new <code>String</code> object, and <code>StringBuilder</code> exists precisely to avoid that when building a string incrementally — a small detail, but one worth mentioning out loud in an interview to show you understand *why*, not just that <code>StringBuilder</code> is "the fast one."</p>
+        </div>
+      </details>
+    </article>
+  </section>
+
+  <div class="closing-note">
+    <h2>Where to go from here</h2>
+    <p>Everything in this course is the foundation the advanced track assumes you already have: once <code>equals</code>/<code>hashCode</code>, the collections framework, generics, streams, and basic concurrency feel automatic rather than effortful, you're ready for algorithm-heavy DSA practice, low-level design (LLD), and system-design (HLD) interview preparation — the next step up.</p>
+  </div>
+
+</div>
+<script>
+
+(function () {
+  'use strict';
+
+  var LAB_REGISTRY = {
+    "palindrome": {
+      id: "palindrome",
+      fnName: "isPalindrome",
+      kind: "plain",
+      starter: "function isPalindrome(str) {\n  // TODO: return true if `str` reads the same forwards and backwards,\n  // ignoring case and any character that isn't a letter or digit.\n}\n",
+      solution: "function isPalindrome(str) {\n  const cleaned = str.toLowerCase().replace(/[^a-z0-9]/g, '');\n  let left = 0, right = cleaned.length - 1;\n  while (left < right) {\n    if (cleaned[left] !== cleaned[right]) return false;\n    left++;\n    right--;\n  }\n  return true;\n}\n",
+      tests: [
+        { label: "simple palindrome", args: ["racecar"], expected: true },
+        { label: "not a palindrome", args: ["hello"], expected: false },
+        { label: "mixed case, punctuation, spaces", args: ["A man, a plan, a canal: Panama"], expected: true },
+        { label: "empty string", args: [""], expected: true },
+        { label: "two different letters", args: ["ab"], expected: false },
+        { label: "sentence with punctuation", args: ["Was it a car or a cat I saw?"], expected: true }
+      ]
+    },
+    "group-anagrams": {
+      id: "group-anagrams",
+      fnName: "groupAnagrams",
+      kind: "plain",
+      starter: "function groupAnagrams(words) {\n  // TODO: group words that are anagrams of each other.\n  // Return an array of arrays. Preserve the order in which each group's\n  // key was first seen, and the order of words within each group.\n}\n",
+      solution: "function groupAnagrams(words) {\n  const groups = new Map();\n  for (const word of words) {\n    const key = word.toLowerCase().split('').sort().join('');\n    if (!groups.has(key)) groups.set(key, []);\n    groups.get(key).push(word);\n  }\n  return Array.from(groups.values());\n}\n",
+      tests: [
+        { label: "classic grouping", args: [["eat", "tea", "tan", "ate", "nat", "bat"]], expected: [["eat", "tea", "ate"], ["tan", "nat"], ["bat"]] },
+        { label: "empty input", args: [[]], expected: [] },
+        { label: "single word", args: [["a"]], expected: [["a"]] },
+        { label: "three-way anagram group plus a singleton", args: [["abc", "cba", "bca", "xyz"]], expected: [["abc", "cba", "bca"], ["xyz"]] }
+      ]
+    },
+    "dedupe": {
+      id: "dedupe",
+      fnName: "dedupePreserveOrder",
+      kind: "plain",
+      starter: "function dedupePreserveOrder(items) {\n  // TODO: return a new array with duplicates removed, keeping the first\n  // occurrence of each value in its original order.\n}\n",
+      solution: "function dedupePreserveOrder(items) {\n  const seen = new Set();\n  const out = [];\n  for (const item of items) {\n    if (!seen.has(item)) {\n      seen.add(item);\n      out.push(item);\n    }\n  }\n  return out;\n}\n",
+      tests: [
+        { label: "numbers with repeats", args: [[1, 2, 2, 3, 1, 4]], expected: [1, 2, 3, 4] },
+        { label: "strings with repeats", args: [["a", "b", "a", "c", "b"]], expected: ["a", "b", "c"] },
+        { label: "empty array", args: [[]], expected: [] },
+        { label: "single element", args: [[5]], expected: [5] },
+        { label: "all duplicates", args: [[1, 1, 1, 1]], expected: [1] }
+      ]
+    },
+    "generic-stack": {
+      id: "generic-stack",
+      fnName: "Stack",
+      kind: "ops",
+      starter: "class Stack {\n  constructor() {\n    // TODO: initialize internal storage\n  }\n  push(item) {\n    // TODO: add item to the top of the stack\n  }\n  pop() {\n    // TODO: remove and return the top item; return undefined if empty\n  }\n  peek() {\n    // TODO: return the top item without removing it; return undefined if empty\n  }\n  isEmpty() {\n    // TODO\n  }\n  size() {\n    // TODO\n  }\n}\n",
+      solution: "class Stack {\n  constructor() {\n    this.items = [];\n  }\n  push(item) {\n    this.items.push(item);\n  }\n  pop() {\n    return this.items.pop();\n  }\n  peek() {\n    return this.items.length ? this.items[this.items.length - 1] : undefined;\n  }\n  isEmpty() {\n    return this.items.length === 0;\n  }\n  size() {\n    return this.items.length;\n  }\n}\n",
+      tests: [
+        { label: "push/pop/peek/size sequence", seq: [["new"], ["push", 1], ["push", 2], ["push", 3], ["pop"], ["peek"], ["size"]], expected: [undefined, undefined, undefined, undefined, 3, 2, 2] },
+        { label: "isEmpty transitions", seq: [["new"], ["isEmpty"], ["push", "a"], ["isEmpty"], ["pop"], ["pop"]], expected: [undefined, true, undefined, false, "a", undefined] },
+        { label: "works with object items (generic-style)", seq: [["new"], ["push", {id: 1}], ["push", {id: 2}], ["pop"]], expected: [undefined, undefined, undefined, {id: 2}] }
+      ]
+    },
+    "stream-pipeline": {
+      id: "stream-pipeline",
+      fnName: "sumOfSquaresOfEvens",
+      kind: "plain",
+      starter: "function sumOfSquaresOfEvens(nums) {\n  // TODO: filter to even numbers, square each one, and sum the results.\n  // Write this as a chained pipeline (.filter().map().reduce()), mirroring\n  // a Java Stream: nums.stream().filter(...).map(...).reduce(...)\n}\n",
+      solution: "function sumOfSquaresOfEvens(nums) {\n  return nums\n    .filter(n => n % 2 === 0)\n    .map(n => n * n)\n    .reduce((total, n) => total + n, 0);\n}\n",
+      tests: [
+        { label: "mixed numbers", args: [[1, 2, 3, 4, 5, 6]], expected: 56 },
+        { label: "no evens", args: [[1, 3, 5]], expected: 0 },
+        { label: "empty array", args: [[]], expected: 0 },
+        { label: "single even number", args: [[2]], expected: 4 },
+        { label: "negative even numbers", args: [[-2, -4]], expected: 20 }
+      ]
+    },
+    "optional-lookup": {
+      id: "optional-lookup",
+      fnName: "findUserEmailOrDefault",
+      kind: "plain",
+      starter: "function findUserEmailOrDefault(users, id, defaultEmail) {\n  // TODO: find the user with the given id. If found and their email is\n  // set, return it. Otherwise return defaultEmail. Do not throw even if\n  // no user matches.\n}\n",
+      solution: "function findUserEmailOrDefault(users, id, defaultEmail) {\n  const user = users.find(u => u.id === id);\n  if (user && user.email) return user.email;\n  return defaultEmail;\n}\n",
+      tests: [
+        { label: "user found with email", args: [[{id: 1, email: "a@x.com"}, {id: 2, email: undefined}], 1, "none"], expected: "a@x.com" },
+        { label: "user found, email is null", args: [[{id: 1, email: "a@x.com"}, {id: 2, email: undefined}], 2, "none"], expected: "none" },
+        { label: "user not found", args: [[{id: 1, email: "a@x.com"}, {id: 2, email: undefined}], 3, "none"], expected: "none" },
+        { label: "empty user list", args: [[], 1, "n/a"], expected: "n/a" }
+      ]
+    },
+    "race-condition": {
+      id: "race-condition",
+      fnName: "applyTrace",
+      kind: "plain",
+      starter: "function applyTrace(trace, sync) {\n  // trace is an array like ['R1','R2','W1','W2'].\n  //\n  // sync === false: unsynchronized race.\n  //   'R<t>' -> remember the CURRENT shared value as thread t's snapshot.\n  //   'W<t>' -> shared = snapshot[t] + 1   (may be stale!)\n  //\n  // sync === true: synchronized (locked) counter.\n  //   'W<t>' -> shared = shared + 1        (always fresh, snapshot is irrelevant)\n  //\n  // Return the final shared value.\n}\n",
+      solution: "function applyTrace(trace, sync) {\n  let shared = 0;\n  const snapshot = {};\n  for (const step of trace) {\n    const action = step[0];\n    const thread = step.slice(1);\n    if (action === 'R') {\n      snapshot[thread] = shared;\n    } else if (action === 'W') {\n      if (sync) {\n        shared = shared + 1;\n      } else {\n        shared = snapshot[thread] + 1;\n      }\n    }\n  }\n  return shared;\n}\n",
+      tests: [
+        { label: "two-thread lost update, unsynchronized", args: [["R1", "R2", "W1", "W2"], false], expected: 1 },
+        { label: "two-thread, synchronized fixes it", args: [["R1", "R2", "W1", "W2"], true], expected: 2 },
+        { label: "no interleaving - correct even unsynchronized", args: [["R1", "W1", "R2", "W2"], false], expected: 2 },
+        { label: "three-thread lost update, unsynchronized", args: [["R1", "R2", "R3", "W1", "W2", "W3"], false], expected: 1 },
+        { label: "three-thread, synchronized fixes it", args: [["R1", "R2", "R3", "W1", "W2", "W3"], true], expected: 3 },
+        { label: "empty trace", args: [[], true], expected: 0 }
+      ]
+    },
+    "lru-cache": {
+      id: "lru-cache",
+      fnName: "BoundedCache",
+      kind: "ops",
+      starter: "class BoundedCache {\n  constructor(capacity) {\n    // TODO: store capacity and initialize a Map to hold entries.\n  }\n  get(key) {\n    // TODO: return the value for key, or undefined if absent.\n    // Accessing a key should mark it as most-recently-used.\n  }\n  put(key, value) {\n    // TODO: insert/update key -> value, marking it most-recently-used.\n    // If this makes the cache exceed capacity, evict the least-recently-used entry.\n  }\n}\n",
+      solution: "class BoundedCache {\n  constructor(capacity) {\n    this.capacity = capacity;\n    this.map = new Map();\n  }\n  get(key) {\n    if (!this.map.has(key)) return undefined;\n    const value = this.map.get(key);\n    this.map.delete(key);\n    this.map.set(key, value); // re-insert -> moves to the \"most recent\" end\n    return value;\n  }\n  put(key, value) {\n    if (this.map.has(key)) this.map.delete(key);\n    this.map.set(key, value);\n    if (this.map.size > this.capacity) {\n      const oldestKey = this.map.keys().next().value; // first key = least recently used\n      this.map.delete(oldestKey);\n    }\n  }\n}\n",
+      tests: [
+        { label: "capacity 2: eviction and re-access", seq: [["new", 2], ["put", "a", 1], ["put", "b", 2], ["get", "a"], ["put", "c", 3], ["get", "b"], ["get", "a"], ["get", "c"]], expected: [undefined, undefined, undefined, 1, undefined, undefined, 1, 3] },
+        { label: "capacity 1: every put evicts the previous entry", seq: [["new", 1], ["put", "x", 10], ["put", "y", 20], ["get", "x"], ["get", "y"]], expected: [undefined, undefined, undefined, undefined, 20] }
+      ]
+    },
+    "fizzbuzzbang": {
+      id: "fizzbuzzbang",
+      fnName: "fizzBuzzBang",
+      kind: "plain",
+      starter: "function fizzBuzzBang(n) {\n  // TODO: return an array of strings for numbers 1..n where:\n  //  - multiples of 3 contribute \"Fizz\"\n  //  - multiples of 5 contribute \"Buzz\"\n  //  - multiples of 7 contribute \"Bang\"\n  //  - a number can contribute more than one word, concatenated in the\n  //    order Fizz, Buzz, Bang (e.g. 15 -> \"FizzBuzz\", 21 -> \"FizzBang\")\n  //  - a number matching none of the above becomes its own string, e.g. \"8\"\n}\n",
+      solution: "function fizzBuzzBang(n) {\n  const out = [];\n  for (let i = 1; i <= n; i++) {\n    let word = '';\n    if (i % 3 === 0) word += 'Fizz';\n    if (i % 5 === 0) word += 'Buzz';\n    if (i % 7 === 0) word += 'Bang';\n    out.push(word || String(i));\n  }\n  return out;\n}\n",
+      tests: [
+        { label: "1..7 baseline", args: [7], expected: ["1", "2", "Fizz", "4", "Buzz", "Fizz", "Bang"] },
+        { label: "n = 1", args: [1], expected: ["1"] },
+        { label: "n = 0 (empty)", args: [0], expected: [] },
+        { label: "1..21, includes FizzBuzz and FizzBang overlaps", args: [21], expected: ["1", "2", "Fizz", "4", "Buzz", "Fizz", "Bang", "8", "Fizz", "Buzz", "11", "Fizz", "13", "Bang", "FizzBuzz", "16", "17", "Fizz", "19", "Buzz", "FizzBang"] }
+      ]
+    }
+  };
+
+  function esc(s) {
+    return String(s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function fmtVal(v) {
+    if (v === undefined) return 'undefined';
+    try { return JSON.stringify(v); } catch (e) { return String(v); }
+  }
+
+  function deepEqualJS(a, b) {
+    if (Object.is(a, b)) return true;
+    if (typeof a !== typeof b) return false;
+    if (a === null || b === null) return a === b;
+    if (Array.isArray(a) && Array.isArray(b)) {
+      if (a.length !== b.length) return false;
+      for (var i = 0; i < a.length; i++) { if (!deepEqualJS(a[i], b[i])) return false; }
+      return true;
+    }
+    if (typeof a === 'object' && typeof b === 'object') {
+      var ka = Object.keys(a).sort(), kb = Object.keys(b).sort();
+      if (ka.length !== kb.length) return false;
+      for (var j = 0; j < ka.length; j++) {
+        if (ka[j] !== kb[j]) return false;
+        if (!deepEqualJS(a[ka[j]], b[ka[j]])) return false;
+      }
+      return true;
+    }
+    return a === b;
+  }
+
+  function compileLab(userCode, fnName) {
+    var src = userCode + '\nreturn (typeof ' + fnName + " !== 'undefined') ? " + fnName + ' : undefined;';
+    // eslint-disable-next-line no-new-func
+    var factory = new Function(src);
+    return factory();
+  }
+
+  function runOps(Ctor, seq) {
+    var outputs = [];
+    var obj = null;
+    for (var i = 0; i < seq.length; i++) {
+      var step = seq[i];
+      var method = step[0];
+      var args = step.slice(1);
+      if (method === 'new') {
+        obj = new (Function.prototype.bind.apply(Ctor, [null].concat(args)))();
+        outputs.push(undefined);
+      } else {
+        outputs.push(obj[method].apply(obj, args));
+      }
+    }
+    return outputs;
+  }
+
+  function mountLab(container, def) {
+    container.innerHTML =
+      '<div class="code-lab" data-lab="' + def.id + '">' +
+        '<div class="lab-toolbar">' +
+          '<button type="button" class="btn btn-accent" data-act="run">Run tests</button>' +
+          '<button type="button" class="btn" data-act="reset">Reset to solution</button>' +
+          '<span class="lab-summary" data-role="summary"></span>' +
+        '</div>' +
+        '<textarea class="lab-editor" spellcheck="false" data-role="editor"></textarea>' +
+        '<pre class="lab-error" data-role="error"></pre>' +
+        '<div class="lab-table-wrap">' +
+          '<table class="lab-tests">' +
+            '<thead><tr><th>#</th><th>Case</th><th>Expected</th><th>Actual</th><th>Result</th></tr></thead>' +
+            '<tbody data-role="tbody"></tbody>' +
+          '</table>' +
+        '</div>' +
+      '</div>';
+
+    var editor = container.querySelector('[data-role="editor"]');
+    var errEl = container.querySelector('[data-role="error"]');
+    var summaryEl = container.querySelector('[data-role="summary"]');
+    var tbody = container.querySelector('[data-role="tbody"]');
+    editor.value = def.starter;
+
+    function run() {
+      errEl.textContent = '';
+      tbody.innerHTML = '';
+      var fn;
+      try {
+        fn = compileLab(editor.value, def.fnName);
+      } catch (e) {
+        errEl.textContent = 'Compile error: ' + (e && e.message ? e.message : e);
+        summaryEl.textContent = '';
+        return;
+      }
+      if (typeof fn === 'undefined') {
+        errEl.textContent = 'No function/class named "' + def.fnName + '" was found. Did you rename it?';
+        summaryEl.textContent = '';
+        return;
+      }
+      var passCount = 0;
+      def.tests.forEach(function (t, i) {
+        var actual, ok = false, errText = '';
+        try {
+          if (def.kind === 'ops') {
+            actual = runOps(fn, t.seq);
+          } else {
+            actual = fn.apply(null, t.args);
+          }
+          ok = deepEqualJS(actual, t.expected);
+        } catch (e) {
+          errText = e && e.message ? e.message : String(e);
+          ok = false;
+        }
+        if (ok) passCount++;
+        var tr = document.createElement('tr');
+        tr.className = ok ? 'pass' : 'fail';
+        var actualCell = errText ? ('Error: ' + errText) : fmtVal(actual);
+        tr.innerHTML =
+          '<td>' + (i + 1) + '</td>' +
+          '<td>' + esc(t.label || '') + '</td>' +
+          '<td><code>' + esc(fmtVal(t.expected)) + '</code></td>' +
+          '<td><code>' + esc(actualCell) + '</code></td>' +
+          '<td>' + (ok ? '<span class="pass-mark">PASS</span>' : '<span class="fail-mark">FAIL</span>') + '</td>';
+        tbody.appendChild(tr);
+      });
+      summaryEl.textContent = passCount + ' / ' + def.tests.length + ' tests passed';
+    }
+
+    container.querySelector('[data-act="run"]').addEventListener('click', run);
+    container.querySelector('[data-act="reset"]').addEventListener('click', function () {
+      editor.value = def.solution;
+      run();
+    });
+  }
+
+  function init() {
+    var mounts = document.querySelectorAll('.lab-mount[data-lab]');
+    mounts.forEach(function (mount) {
+      var id = mount.getAttribute('data-lab');
+      var def = LAB_REGISTRY[id];
+      if (def) mountLab(mount, def);
+    });
+
+    // Only one <details class="concept-card"> open at a time within its grid (optional, light touch)
+    document.querySelectorAll('.concept-grid').forEach(function (grid) {
+      var cards = grid.querySelectorAll('details.concept-card');
+      cards.forEach(function (card) {
+        card.addEventListener('toggle', function () {
+          if (card.open) {
+            cards.forEach(function (other) { if (other !== card) other.open = false; });
+          }
+        });
+      });
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+
+</script>
+</body>
+</html>

@@ -1,0 +1,1204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Technical Architecture &amp; Design Principles</title>
+<meta name="description" content="A working architect's course on making and defending system design decisions: trade-offs, SOLID in real systems, monolith vs microservices, event-driven architecture, data architecture, API design, NFRs, ADRs, and leading architecture through people."/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap');
+
+:root{
+  --bg:#F8FAFC; --fg:#0F172A; --card:#FFFFFF; --border:#E2E8F0; --muted:#475569;
+  --primary:#F59E0B; --primary-fg:#0F172A; --accent:#8B5CF6; --accent-fg:#ffffff;
+  --good:#16A34A; --bad:#DC2626;
+  --radius:12px;
+  --mono:ui-monospace, "SF Mono", "Cascadia Code", "IBM Plex Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#0F172A; --fg:#F8FAFC; --card:#222735; --border:#334155; --muted:#94A3B8;
+    --primary:#F59E0B; --primary-fg:#0F172A; --accent:#8B5CF6; --accent-fg:#ffffff;
+    --good:#4ADE80; --bad:#F87171;
+  }
+}
+
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0; font-family:'IBM Plex Sans', system-ui, -apple-system, sans-serif;
+  background:var(--bg); color:var(--fg); line-height:1.65; -webkit-font-smoothing:antialiased;
+  font-size:16px;
+}
+a{color:var(--accent)}
+a:hover{text-decoration:none}
+.wrap{max-width:900px; margin:0 auto; padding:0 1.25rem 6rem}
+
+/* ---------- Hero ---------- */
+header.hero{padding:3.25rem 0 2.25rem; border-bottom:1px solid var(--border)}
+.kicker{
+  display:inline-block; text-transform:uppercase; letter-spacing:.09em; font-size:.72rem;
+  font-weight:600; color:var(--primary-fg); background:var(--primary); padding:.3rem .65rem;
+  border-radius:99px; margin-bottom:1rem;
+}
+h1{font-size:clamp(1.85rem,4.4vw,2.65rem); margin:0 0 .6rem; font-weight:700; letter-spacing:-0.01em; line-height:1.15}
+.subtitle{color:var(--muted); font-size:1.12rem; margin:0; max-width:62ch; font-weight:400}
+.hero-meta{display:flex; flex-wrap:wrap; gap:.5rem; margin-top:1.25rem}
+.tag{font-size:.78rem; color:var(--muted); border:1px solid var(--border); border-radius:99px; padding:.3rem .75rem}
+
+/* ---------- TOC ---------- */
+nav.toc{margin:2rem 0 0; padding:1.35rem 1.5rem; border:1px solid var(--border); border-radius:var(--radius); background:var(--card)}
+nav.toc h2{margin:0 0 .85rem; font-size:.82rem; text-transform:uppercase; letter-spacing:.07em; color:var(--muted); font-weight:600}
+nav.toc ol{margin:0; padding-left:1.15rem; columns:2; column-gap:1.5rem}
+nav.toc li{margin:.3rem 0; break-inside:avoid; font-size:.92rem}
+nav.toc a{color:var(--fg); text-decoration:none}
+nav.toc a:hover{color:var(--accent)}
+@media (max-width:600px){ nav.toc ol{columns:1} }
+
+/* ---------- Sections ---------- */
+section.course-section{padding:2.75rem 0; border-bottom:1px solid var(--border)}
+section.course-section:last-of-type{border-bottom:none}
+.sec-kicker{text-transform:uppercase; letter-spacing:.08em; font-size:.74rem; color:var(--primary); font-weight:700; margin:0 0 .4rem}
+h2{font-size:1.55rem; margin:0 0 .75rem; font-weight:700; letter-spacing:-0.01em; scroll-margin-top:1.5rem}
+h3{font-size:1.15rem; margin:1.6rem 0 .6rem; font-weight:600}
+.lede{font-size:1.05rem; color:var(--muted); margin:0 0 1.25rem; max-width:68ch}
+p{margin:0 0 1rem; max-width:72ch}
+ul.list,ol.list{margin:0 0 1.1rem; padding-left:1.25rem; max-width:70ch}
+ul.list li,ol.list li{margin:.4rem 0}
+strong{color:var(--fg); font-weight:600}
+code.inline{font-family:var(--mono); font-size:.85em; background:var(--card); border:1px solid var(--border); border-radius:5px; padding:.05rem .35rem}
+
+pre.code{
+  background:var(--card); border:1px solid var(--border); border-radius:10px;
+  padding:1rem 1.15rem; overflow-x:auto; margin:1rem 0 1.25rem;
+}
+pre.code code{font-family:var(--mono); font-size:.82rem; line-height:1.55; color:var(--fg); white-space:pre}
+
+.callout{
+  border-left:3px solid var(--accent); background:var(--card); border:1px solid var(--border); border-left-width:3px;
+  border-radius:0 10px 10px 0; padding:1rem 1.25rem; margin:1.25rem 0; max-width:70ch;
+}
+.callout p:last-child{margin-bottom:0}
+.callout .callout-label{font-weight:700; font-size:.75rem; text-transform:uppercase; letter-spacing:.06em; color:var(--accent); margin-bottom:.4rem; display:block}
+.callout.warn{border-left-color:var(--primary)}
+.callout.warn .callout-label{color:var(--primary)}
+
+/* concept cards */
+.concept-grid{display:grid; gap:.65rem; margin:1.25rem 0 1.5rem}
+details.concept-card{border:1px solid var(--border); border-radius:10px; background:var(--card); overflow:hidden}
+details.concept-card summary{
+  cursor:pointer; padding:.85rem 1.1rem; font-weight:600; list-style:none; display:flex;
+  align-items:center; justify-content:space-between; gap:.75rem; -webkit-tap-highlight-color:transparent;
+}
+details.concept-card summary::-webkit-details-marker{display:none}
+details.concept-card summary::after{content:'+'; color:var(--accent); font-size:1.2rem; font-weight:400; flex-shrink:0}
+details.concept-card[open] summary::after{content:'\2212'}
+details.concept-card summary:focus-visible{outline:3px solid var(--primary); outline-offset:-3px}
+details.concept-card .body{padding:0 1.1rem 1rem; color:var(--muted); font-size:.94rem}
+details.concept-card .body p{max-width:none}
+
+/* tables */
+table.tbl{width:100%; border-collapse:collapse; margin:1rem 0 1.4rem; font-size:.9rem}
+table.tbl th,table.tbl td{text-align:left; padding:.55rem .65rem; border-bottom:1px solid var(--border); vertical-align:top}
+table.tbl th{color:var(--muted); font-weight:600; font-size:.78rem; text-transform:uppercase; letter-spacing:.04em}
+
+/* ---------- Exercises ---------- */
+.exercise{
+  margin:1.75rem 0; border:1px solid var(--border); border-radius:14px; background:var(--card);
+  padding:1.5rem 1.5rem 1.6rem;
+}
+.exercise-label{
+  display:inline-flex; align-items:center; gap:.4rem; font-size:.72rem; font-weight:700;
+  text-transform:uppercase; letter-spacing:.07em; color:var(--accent-fg); background:var(--accent);
+  padding:.3rem .65rem; border-radius:99px; margin-bottom:.9rem;
+}
+.exercise h3{margin-top:0}
+.exercise .ex-prompt{color:var(--muted); font-size:.95rem; margin-bottom:1.1rem}
+
+.btn{
+  background:var(--accent); color:var(--accent-fg); border:none; padding:.6rem 1.15rem;
+  border-radius:8px; cursor:pointer; font-weight:600; font-size:.9rem; font-family:inherit;
+  transition:opacity .2s, transform .15s; display:inline-flex; align-items:center; gap:.4rem;
+}
+.btn:hover{opacity:.88}
+.btn:active{transform:scale(.98)}
+.btn:focus-visible{outline:3px solid var(--primary); outline-offset:2px}
+.btn.secondary{background:transparent; border:1px solid var(--border); color:var(--fg)}
+.btn.small{padding:.4rem .8rem; font-size:.8rem}
+.btn:disabled{opacity:.45; cursor:not-allowed}
+
+.choice-row{display:flex; flex-wrap:wrap; gap:.6rem; margin:.75rem 0 1.1rem}
+.choice-btn{
+  border:1.5px solid var(--border); background:var(--bg); color:var(--fg); padding:.65rem 1rem;
+  border-radius:10px; cursor:pointer; font-weight:600; font-size:.88rem; font-family:inherit;
+  transition:border-color .2s, background .2s;
+}
+.choice-btn:hover{border-color:var(--accent)}
+.choice-btn:focus-visible{outline:3px solid var(--primary); outline-offset:2px}
+.choice-btn.selected{border-color:var(--accent); background:var(--accent); color:var(--accent-fg)}
+
+.reveal{
+  display:none; margin-top:1rem; padding:1rem 1.15rem; border-radius:10px; border:1px solid var(--border);
+  background:var(--bg); font-size:.92rem;
+}
+.reveal.show{display:block}
+.reveal h4{margin:0 0 .5rem; font-size:.85rem; text-transform:uppercase; letter-spacing:.05em; color:var(--accent)}
+.reveal .pro{color:var(--good)}
+.reveal .con{color:var(--bad)}
+.reveal ul{margin:.35rem 0; padding-left:1.1rem}
+.reveal ul li{margin:.25rem 0}
+
+/* coupling diagram exercise */
+.diagram{
+  display:flex; flex-wrap:wrap; gap:1.4rem 1rem; align-items:center; justify-content:center;
+  padding:1.5rem 1rem; background:var(--bg); border-radius:10px; border:1px solid var(--border); margin:.75rem 0 1rem;
+}
+.dbox{
+  border:1.5px solid var(--border); background:var(--card); border-radius:10px; padding:.75rem 1rem;
+  font-size:.85rem; font-weight:600; text-align:center; cursor:pointer; min-width:120px;
+  transition:border-color .2s, box-shadow .2s, transform .15s;
+}
+.dbox:hover{border-color:var(--accent); transform:translateY(-2px)}
+.dbox:focus-visible{outline:3px solid var(--primary); outline-offset:2px}
+.dbox.hot{border-color:var(--bad); box-shadow:0 0 0 3px color-mix(in srgb, var(--bad) 18%, transparent)}
+.dbox .sub{display:block; font-weight:400; color:var(--muted); font-size:.72rem; margin-top:.25rem}
+.darrow{color:var(--muted); font-size:1.3rem; font-weight:700}
+@media (max-width:640px){ .darrow{transform:rotate(90deg)} }
+
+/* db-match exercise */
+.match-row{
+  display:grid; grid-template-columns:1fr 200px auto; gap:.75rem; align-items:center;
+  padding:.75rem 0; border-bottom:1px solid var(--border);
+}
+.match-row:last-of-type{border-bottom:none}
+.match-row p{margin:0; font-size:.9rem; max-width:none}
+.match-row select{
+  padding:.5rem .6rem; border-radius:8px; border:1px solid var(--border); background:var(--bg); color:var(--fg);
+  font-family:inherit; font-size:.85rem; cursor:pointer;
+}
+.match-row select:focus-visible{outline:3px solid var(--primary); outline-offset:1px}
+.match-fb{font-size:1.2rem; min-width:1.4rem; text-align:center}
+.match-fb.correct{color:var(--good)}
+.match-fb.wrong{color:var(--bad)}
+@media (max-width:640px){ .match-row{grid-template-columns:1fr; gap:.4rem} }
+
+/* budget calculator */
+.budget-table{width:100%; border-collapse:collapse; margin:.75rem 0 1rem; font-size:.87rem}
+.budget-table th{text-align:left; color:var(--muted); font-weight:600; font-size:.75rem; text-transform:uppercase; padding:.4rem .5rem}
+.budget-table td{padding:.35rem .5rem; border-top:1px solid var(--border)}
+.budget-table input{
+  width:80px; padding:.4rem .5rem; border-radius:7px; border:1px solid var(--border); background:var(--bg);
+  color:var(--fg); font-family:inherit; font-size:.85rem;
+}
+.budget-table input:focus-visible{outline:3px solid var(--primary); outline-offset:1px}
+.budget-summary{display:flex; flex-wrap:wrap; gap:1.5rem; margin-top:1rem; padding:1rem; border-radius:10px; background:var(--bg); border:1px solid var(--border)}
+.budget-stat{min-width:160px}
+.budget-stat .label{font-size:.72rem; text-transform:uppercase; letter-spacing:.05em; color:var(--muted)}
+.budget-stat .value{font-size:1.5rem; font-weight:700; margin-top:.15rem}
+.budget-stat .value.ok{color:var(--good)}
+.budget-stat .value.bad{color:var(--bad)}
+
+/* ADR exercise */
+.adr-field{margin-bottom:1rem}
+.adr-field label{display:block; font-size:.8rem; font-weight:600; margin-bottom:.35rem; color:var(--muted); text-transform:uppercase; letter-spacing:.04em}
+.adr-field textarea{
+  width:100%; min-height:80px; padding:.65rem .75rem; border-radius:9px; border:1px solid var(--border);
+  background:var(--bg); color:var(--fg); font-family:inherit; font-size:.9rem; line-height:1.5; resize:vertical;
+}
+.adr-field textarea:focus-visible{outline:3px solid var(--primary); outline-offset:1px}
+.adr-feedback{margin-top:.4rem; font-size:.82rem; min-height:1.2em}
+.adr-feedback.ok{color:var(--good)}
+.adr-feedback.warn{color:var(--primary)}
+
+/* checklist scorer */
+.check-list{list-style:none; margin:.75rem 0 1rem; padding:0; display:grid; gap:.5rem}
+.check-item{
+  display:flex; align-items:flex-start; gap:.65rem; padding:.65rem .8rem; border:1px solid var(--border);
+  border-radius:9px; background:var(--bg); cursor:pointer;
+}
+.check-item input{margin-top:.2rem; width:18px; height:18px; accent-color:var(--accent); cursor:pointer; flex-shrink:0}
+.check-item span{font-size:.9rem}
+.check-item:has(input:checked){border-color:var(--accent)}
+.score-bar-wrap{margin-top:1.1rem}
+.score-bar{height:10px; border-radius:99px; background:var(--border); overflow:hidden}
+.score-bar > i{display:block; height:100%; width:0%; background:var(--accent); transition:width .3s ease}
+.score-readout{display:flex; justify-content:space-between; margin-top:.5rem; font-size:.85rem; color:var(--muted)}
+.score-readout strong{color:var(--fg)}
+.score-verdict{margin-top:.85rem; padding:.85rem 1rem; border-radius:9px; background:var(--bg); border:1px solid var(--border); font-size:.9rem; min-height:1em}
+
+/* footer */
+footer.course-footer{padding-top:2.5rem; color:var(--muted); font-size:.85rem}
+
+@media (max-width:640px){
+  .wrap{padding:0 1rem 4rem}
+  header.hero{padding:2.25rem 0 1.75rem}
+  section.course-section{padding:2rem 0}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <span class="kicker">Architecture &amp; Design</span>
+  <h1>Technical Architecture &amp; Design Principles</h1>
+  <p class="subtitle">A working architect's course on making and defending system design decisions &mdash; the trade-offs, the patterns, and the judgment that separate someone who writes good code from someone who designs good systems.</p>
+  <div class="hero-meta">
+    <span class="tag">10 core sections</span>
+    <span class="tag">6 interactive exercises</span>
+    <span class="tag">Grounded in production fintech systems</span>
+  </div>
+</header>
+
+<nav class="toc" aria-label="Table of contents">
+  <h2>On this page</h2>
+  <ol>
+    <li><a href="#what-is-architecture">1. What Architecture Actually Is</a></li>
+    <li><a href="#core-principles">2. Core Architecture Principles</a></li>
+    <li><a href="#architecture-styles">3. Layered, Hexagonal &amp; Clean Architecture</a></li>
+    <li><a href="#monolith-vs-microservices">4. Monolith vs Microservices vs Modular Monolith</a></li>
+    <li><a href="#event-driven">5. Event-Driven Architecture in Practice</a></li>
+    <li><a href="#data-architecture">6. Data Architecture Decisions</a></li>
+    <li><a href="#api-design">7. API Design as an Architectural Decision</a></li>
+    <li><a href="#nfrs">8. Non-Functional Requirements</a></li>
+    <li><a href="#adrs">9. Architecture Decision Records</a></li>
+    <li><a href="#leading-architecture">10. Leading Architecture in Practice</a></li>
+  </ol>
+</nav>
+
+<!-- =========================================================
+     SECTION 1 — WHAT ARCHITECTURE ACTUALLY IS
+========================================================== -->
+<section class="course-section" id="what-is-architecture">
+  <p class="sec-kicker">Section 1</p>
+  <h2>What Architecture Actually Is</h2>
+  <p class="lede">Architecture is not a checklist of best practices you apply until the diagram looks respectable. It is a series of trade-offs, made under incomplete information, that determine how expensive change will be for the next several years.</p>
+
+  <p>Most engineers first encounter "architecture" as a set of rules: use dependency injection, favor composition over inheritance, keep controllers thin. Those rules are useful, but they are downstream of the actual skill. The actual skill is deciding, for this system, with this team, under these constraints, which trade-off to accept &mdash; and being able to say clearly why you accepted it and what it will cost you later.</p>
+
+  <p>Every non-trivial design decision buys you something and costs you something else. Splitting a service buys you independent deployment and costs you distributed transactions. Choosing a relational database buys you strong consistency and costs you horizontal write scaling. Adding an abstraction layer buys you the ability to swap an implementation and costs you a file, an interface, and a slightly longer onboarding path for new engineers. There is no trade-off-free option. Architecture is the discipline of choosing which costs you are willing to carry, deliberately, instead of discovering them by accident eighteen months in.</p>
+
+  <h3>Some decisions are cheap. Some are not.</h3>
+  <p>Not all decisions deserve the same amount of deliberation, and conflating them is how teams either move too slowly on things that don't matter or too fast on things that do.</p>
+
+  <ul class="list">
+    <li><strong>Cheap, reversible decisions:</strong> a variable name, the internal structure of a single function, which logging library you use behind a thin wrapper, whether a helper method is private or package-private. Get these roughly right and move on. Spending a design review on them is a waste of the team's time.</li>
+    <li><strong>Expensive, hard-to-reverse decisions:</strong> your core data model and the invariants it enforces, where a service boundary sits and what crosses it, whether two components communicate synchronously or asynchronously, how you handle distributed transactions, and what your primary keys and identifiers mean. Get these wrong and you don't refactor your way out over a sprint &mdash; you run a migration, coordinate a cutover, and carry two code paths for months.</li>
+  </ul>
+
+  <p>The mark of an architect is knowing, before you write the code, which category a given decision falls into. Junior engineers often get this backwards: they agonize over naming and folder structure while nonchalantly picking a synchronous call chain across five services because "we can always change it later." You usually can't, not cheaply.</p>
+
+  <h3>A concrete example: how invoice generation talks to the payment gateway</h3>
+  <p>Take a billing platform generating a monthly invoice and needing to charge a stored payment method. There are at least three shapes this can take:</p>
+  <ol class="list">
+    <li>The invoicing service calls the payment gateway synchronously, in-line with invoice creation, and marks the invoice paid or failed based on the immediate response.</li>
+    <li>The invoicing service creates the invoice, publishes a <code class="inline">InvoiceReady</code> event, and a separate payment service consumes it, attempts the charge, and publishes a <code class="inline">PaymentSucceeded</code> or <code class="inline">PaymentFailed</code> event that invoicing reacts to.</li>
+    <li>Invoicing calls a payment gateway abstraction that queues the charge request and polls or receives a webhook for the outcome, decoupling the invoice's lifecycle from the gateway's response time entirely.</li>
+  </ol>
+  <p>Option 1 is the easiest to build and reason about on day one. It is also the one that is hardest to walk back. Once dozens of call sites assume invoice creation and payment capture happen in the same request, changing to an async model later means touching every caller, every test, every assumption about what "invoice created" means, and probably running a dual-write period while you migrate traffic. The team that picked option 1 for speed in month one is often still living with it in year three, not because it was the wrong call at the time, but because nobody flagged it as an expensive-to-reverse decision when it was made. Had they flagged it, they might still have picked option 1 &mdash; correctly, for a small team without yet-proven payment gateway reliability problems &mdash; but they would have done it with eyes open, and probably isolated the payment call behind an interface so that when it did need to change, the blast radius was smaller.</p>
+
+  <p>This is the actual value architecture adds: not predicting the future correctly, but making sure the expensive-to-reverse decisions get made consciously, with the trade-off named out loud, instead of by default because it was the first thing that compiled.</p>
+
+  <div class="callout">
+    <span class="callout-label">Working definition</span>
+    <p>Good architecture doesn't eliminate the cost of change &mdash; nothing does. It buys you options. A well-placed interface, a clean service boundary, an honestly-named event: these don't make future requirements free, they make future requirements <em>possible without a rewrite</em>. If you remember one thing from this section, remember that architecture is risk management for the cost of change, not a pursuit of elegance for its own sake.</p>
+  </div>
+</section>
+
+<!-- =========================================================
+     SECTION 2 — CORE ARCHITECTURE PRINCIPLES
+========================================================== -->
+<section class="course-section" id="core-principles">
+  <p class="sec-kicker">Section 2</p>
+  <h2>Core Architecture Principles</h2>
+  <p class="lede">Separation of concerns, coupling and cohesion, SOLID, and knowing when to build for the future versus when to build only for today. These aren't academic exercises &mdash; they're the vocabulary you use to explain why one design is better than another.</p>
+
+  <h3>Separation of concerns, coupling, and cohesion</h3>
+  <p>Separation of concerns means each part of your system has one reason to change. Coupling is how much one part knows about, and depends on, another. Cohesion is how tightly the responsibilities inside one part belong together. You want low coupling between modules and high cohesion within them. Most real-world design problems are one of these two going wrong.</p>
+
+  <p>Here's what it looks like when it goes wrong, in a shape you've probably seen: an <code class="inline">InvoiceService</code> whose <code class="inline">generateInvoice()</code> method calculates line-item pricing, looks up tax rates from a third-party API, renders a PDF, and sends an email &mdash; all in one method, all in one class.</p>
+
+  <pre class="code"><code>class InvoiceService {
+  generateInvoice(subscriptionId) {
+    plan = db.getPlan(subscriptionId)
+    lineItems = calculatePricing(plan)          // pricing logic
+    taxRate = taxApiClient.lookup(customer.region) // external call
+    total = applyTax(lineItems, taxRate)
+    pdfBytes = pdfRenderer.render(lineItems, total) // rendering
+    emailClient.send(customer.email, pdfBytes)      // notification
+    db.save(invoice)
+  }
+}</code></pre>
+
+  <p>This class has four reasons to change: a pricing rule changes, the tax API's contract changes, the PDF layout changes, or the email provider changes. Any of those four teams touching any of those four concerns has to go through this one method, and a bug in PDF rendering can take down invoice creation entirely. That's low cohesion dressed up as a single class, and tight coupling to three external systems baked directly into business logic.</p>
+
+  <p>The decomposed version separates by reason to change, not by arbitrary line count:</p>
+
+  <pre class="code"><code>class InvoiceService {
+  generateInvoice(subscriptionId) {
+    lineItems = pricingEngine.calculate(subscriptionId)
+    invoice = Invoice.create(lineItems)
+    invoiceRepository.save(invoice)
+    eventBus.publish(InvoiceCreated(invoice.id))
+    return invoice
+  }
+}
+
+// separate consumers, each with one reason to change
+class InvoicePdfRenderer { onInvoiceCreated(event) { ... } }
+class InvoiceEmailNotifier { onInvoiceCreated(event) { ... } }
+class TaxCalculator { calculate(lineItems, region) { ... } }</code></pre>
+
+  <p>Now a change to email copy can't break invoice math, a PDF library upgrade can't fail a database write, and each piece can be tested and deployed on its own schedule. This is also, not coincidentally, exactly the shape you need if you ever want to move PDF generation or email notification into its own service &mdash; the seam is already there.</p>
+
+  <p>A quick way to reason about coupling: afferent coupling is how many things depend on a module (a high number means you must be very careful about breaking changes); efferent coupling is how many things a module depends on (a high number means the module is fragile to changes elsewhere). A healthy core domain module tends to have high afferent coupling (lots of things build on it) and low efferent coupling (it depends on very little). When you see a domain class importing six infrastructure clients directly, that's high efferent coupling in the wrong place, and it's usually the first thing worth fixing.</p>
+
+  <h3>SOLID, without the toy examples</h3>
+  <p>SOLID gets a bad reputation because it's usually taught with animals and shapes. Applied to systems that move money, the same five principles are concrete and load-bearing.</p>
+
+  <div class="concept-grid">
+    <details class="concept-card">
+      <summary>Single Responsibility &mdash; a PaymentProcessor with too many reasons to change</summary>
+      <div class="body">
+        <p>A <code class="inline">PaymentProcessor.charge()</code> method that authorizes the card, runs fraud rules, retries on gateway timeout, and writes the ledger entry has four reasons to change: fraud policy updates, retry/backoff tuning, gateway contract changes, and ledger schema changes. When the fraud team wants to add a new rule, they're editing the same method that handles retry logic, and a mistake in fraud scoring can now break payment retries. Split it: <code class="inline">CardAuthorizer</code>, <code class="inline">FraudScorer</code>, <code class="inline">RetryPolicy</code>, and <code class="inline">LedgerWriter</code>, orchestrated by a thin coordinator. Each one has exactly one team that can break it and exactly one reason it should ever be edited.</p>
+      </div>
+    </details>
+    <details class="concept-card">
+      <summary>Open/Closed &mdash; a pricing engine that shouldn't need surgery for every new discount</summary>
+      <div class="body">
+        <p>If your discount calculation is a single method with a growing chain of <code class="inline">if (customer.isEnterprise) ... else if (promo.code === 'WINTER25') ...</code>, every new promotion means editing and re-testing code that every other promotion also depends on. Model discounts as a <code class="inline">PricingRule</code> interface with a <code class="inline">apply(cart)</code> method, register concrete rules (<code class="inline">PercentageDiscountRule</code>, <code class="inline">VolumeTierRule</code>, <code class="inline">PromoCodeRule</code>), and have the pricing engine iterate over registered rules. A new promotion is a new class, not an edit to a method twelve other promotions rely on. The engine is closed for modification, open for extension.</p>
+      </div>
+    </details>
+    <details class="concept-card">
+      <summary>Liskov Substitution &mdash; a payment method hierarchy that lies about its contract</summary>
+      <div class="body">
+        <p>Say you have a <code class="inline">PaymentMethod</code> base type with a <code class="inline">refund(amount)</code> method, implemented by <code class="inline">CreditCard</code> and <code class="inline">BankTransfer</code>. If <code class="inline">BankTransfer.refund()</code> throws <code class="inline">UnsupportedOperationException</code> because bank transfer refunds have to be processed manually outside the system, every caller that treats a <code class="inline">PaymentMethod</code> polymorphically is now silently broken for a subtype it didn't know existed. That's a Liskov violation: the subtype can't honor the base type's contract. The fix isn't a try/catch at every call site &mdash; it's admitting in the type system that not all payment methods support programmatic refunds, via a narrower <code class="inline">RefundablePaymentMethod</code> interface that <code class="inline">BankTransfer</code> simply doesn't implement, so the compiler (or your type checks) catches the mismatch instead of a customer finding out in production.</p>
+      </div>
+    </details>
+    <details class="concept-card">
+      <summary>Interface Segregation &mdash; a fat AccountService nobody actually needs in full</summary>
+      <div class="body">
+        <p>A single <code class="inline">AccountService</code> interface with twenty methods &mdash; <code class="inline">createAccount</code>, <code class="inline">closeAccount</code>, <code class="inline">updateKyc</code>, <code class="inline">getBalance</code>, <code class="inline">getTransactionHistory</code>, <code class="inline">generateStatement</code> &mdash; forces a read-only reporting service that only ever calls <code class="inline">getBalance</code> and <code class="inline">getTransactionHistory</code> to depend on, mock, and be recompiled against seventeen write methods it will never call. Split it into <code class="inline">AccountReader</code> and <code class="inline">AccountWriter</code> (or finer-grained still). The reporting service depends on a two-method interface. Nobody has to fake-implement <code class="inline">closeAccount</code> in a test double just to satisfy a compiler.</p>
+      </div>
+    </details>
+    <details class="concept-card">
+      <summary>Dependency Inversion &mdash; a pricing engine that shouldn't know a specific FX vendor exists</summary>
+      <div class="body">
+        <p>If your pricing calculation directly instantiates and calls a specific FX rate vendor's SDK, that vendor's API shape is now baked into your core pricing logic, your unit tests need network mocking or a sandbox account, and switching vendors means editing pricing code. Instead, define a <code class="inline">RateProvider</code> interface owned by the pricing domain (<code class="inline">getRate(from, to): Rate</code>), and have a <code class="inline">VendorXRateProvider</code> adapter implement it. The pricing engine depends on an abstraction it owns; the vendor-specific detail depends on that abstraction too, from the outside. This is the one SOLID principle that, done consistently, is also what makes hexagonal architecture (Section 3) actually work in practice.</p>
+      </div>
+    </details>
+  </div>
+
+  <h3>YAGNI vs designing for change &mdash; and how to actually tell the difference</h3>
+  <p>"You aren't gonna need it" and "design for change" are both correct advice, and they contradict each other, which is exactly why this trips people up. The resolution isn't a rule, it's a question: <strong>how many concrete, already-committed future requirements can you name, versus how many are you guessing at?</strong></p>
+
+  <p>A useful heuristic: compare the cost of building the flexibility now against the cost of adding it later, but only after being honest about how likely "later" actually is. Building a generic, configurable plugin system so your report generator can support arbitrary output formats, when the only format anyone has asked for is PDF and there's no roadmap item for anything else, is over-engineering. You're paying an abstraction tax &mdash; extra interfaces, more indirection, more places for bugs to hide, more onboarding overhead &mdash; against a future that may never arrive. Nobody thanks you for the extensibility of a feature that never gets extended; they just have to read more code to change the PDF export.</p>
+
+  <p>Contrast that with isolating your payment gateway behind an interface from day one when your sales team already has two enterprise prospects who each require a different, named payment processor as a contractual condition. That's not speculation, it's a known near-term requirement with names attached. Building the abstraction on day one costs you one interface and one extra layer of indirection; building it retroactively after gateway-specific code is smeared across forty call sites costs you a multi-week refactor under time pressure while a sales deal is waiting on it.</p>
+
+  <ul class="list">
+    <li><strong>Lean toward YAGNI when:</strong> the future requirement is speculative, you can't name who asked for it, and the abstraction has exactly one real implementation today with no second one in sight.</li>
+    <li><strong>Lean toward designing for change when:</strong> you can point to a concrete, near-term second use case, the cost of retrofitting later is disproportionately higher than building the seam now, or the decision sits at a boundary (a service boundary, an external integration, a persistence choice) that's expensive to move once code depends on its exact shape.</li>
+  </ul>
+  <p>The discipline isn't picking one side forever. It's asking the question honestly, for this decision, instead of defaulting to whichever habit you personally prefer.</p>
+</section>
+
+<!-- =========================================================
+     EXERCISE 1 — SPOT THE COUPLING PROBLEM
+========================================================== -->
+<div class="exercise" id="ex-coupling">
+  <span class="exercise-label">Exercise 1 &middot; Spot the coupling problem</span>
+  <h3>A pricing service, three ways</h3>
+  <p class="ex-prompt">Below is a dependency diagram for a <code class="inline">PricingEngine</code>. Click each box to see whether it's a healthy dependency or a coupling problem, and why.</p>
+  <div class="diagram" id="coupling-diagram" role="group" aria-label="Pricing engine dependency diagram">
+    <div class="dbox" tabindex="0" role="button" data-key="engine">PricingEngine<span class="sub">core domain</span></div>
+    <span class="darrow" aria-hidden="true">&rarr;</span>
+    <div class="dbox" tabindex="0" role="button" data-key="rateProvider">RateProvider<span class="sub">interface it owns</span></div>
+    <span class="darrow" aria-hidden="true">&rarr;</span>
+    <div class="dbox" tabindex="0" role="button" data-key="vendorAdapter">VendorXAdapter<span class="sub">implements RateProvider</span></div>
+  </div>
+  <div class="diagram" id="coupling-diagram-2" role="group" aria-label="Pricing engine dependency diagram, second version" style="margin-top:.75rem">
+    <div class="dbox hot" tabindex="0" role="button" data-key="engineBad">PricingEngine<span class="sub">core domain</span></div>
+    <span class="darrow" aria-hidden="true">&rarr;</span>
+    <div class="dbox hot" tabindex="0" role="button" data-key="vendorDirect">VendorX SDK<span class="sub">imported directly</span></div>
+  </div>
+  <div class="reveal" id="coupling-reveal">
+    <h4 id="coupling-reveal-title">Select a box</h4>
+    <p id="coupling-reveal-body">Click any box above to see the analysis.</p>
+  </div>
+</div>
+
+<!-- =========================================================
+     SECTION 3 — LAYERED / HEXAGONAL / CLEAN
+========================================================== -->
+<section class="course-section" id="architecture-styles">
+  <p class="sec-kicker">Section 3</p>
+  <h2>Layered, Hexagonal &amp; Clean Architecture</h2>
+  <p class="lede">Three answers to the same question &mdash; how do you keep business rules from getting tangled up with frameworks, databases, and delivery mechanisms &mdash; with increasing amounts of discipline and increasing amounts of ceremony.</p>
+
+  <h3>Layered architecture: the default, and its failure mode</h3>
+  <p>Classic layered architecture &mdash; presentation, business logic, data access &mdash; solves a real problem: it stops your HTTP controllers from containing SQL and stops your persistence code from containing business rules, by giving each concern its own place to live. For a large share of applications, this is entirely sufficient, well understood by every engineer you'll ever hire, and requires no special vocabulary to explain in a design review.</p>
+  <p>Its known failure mode is that the layers become nominal rather than real. Business rules leak upward into controllers because it's faster to add an <code class="inline">if</code> statement there than to route it through the service layer. They leak downward into repositories because a query needs "just one more filter" that's really a business rule about which invoices count as overdue. A few years in, the "layers" are three folders that don't actually enforce any dependency direction, and nobody can tell you where the real business logic lives without grepping for it.</p>
+
+  <h3>Hexagonal architecture (ports &amp; adapters): isolating the domain on purpose</h3>
+  <p>Hexagonal architecture solves a narrower, sharper problem: make it possible to swap infrastructure &mdash; a database, a message broker, a payment gateway, a third-party rate API &mdash; without touching business rules, and make it possible to test business rules without spinning up any of that infrastructure at all.</p>
+  <p>The domain defines <strong>ports</strong> &mdash; interfaces expressed in the domain's own vocabulary, owned by the domain, with no knowledge of any specific technology. <strong>Adapters</strong> implement those ports against real infrastructure, or against a test double. In a billing context:</p>
+  <pre class="code"><code>// port — defined by the domain, knows nothing about Stripe
+interface PaymentGateway {
+  charge(amount: Money, method: PaymentMethodToken): ChargeResult
+}
+
+// adapter — implements the port against a real vendor
+class StripeAdapter implements PaymentGateway {
+  charge(amount, method) {
+    response = stripeClient.createCharge({ amount, source: method })
+    return ChargeResult.from(response)
+  }
+}
+
+// adapter — implements the port for tests, no network at all
+class InMemoryPaymentGateway implements PaymentGateway {
+  charge(amount, method) { return ChargeResult.approved(amount) }
+}</code></pre>
+  <p>The <code class="inline">BillingService</code> that depends on <code class="inline">PaymentGateway</code> never imports Stripe's SDK, never changes when Stripe changes their API, and can be unit tested against <code class="inline">InMemoryPaymentGateway</code> in milliseconds with no test account, no network flakiness, and no risk of accidentally charging a real card in CI.</p>
+
+  <h3>Clean Architecture: the same idea, made explicit</h3>
+  <p>Clean Architecture, as popularized by Robert Martin, is best understood as hexagonal architecture with an explicit rule attached: the Dependency Rule &mdash; dependencies only point inward, toward the domain, never outward. Frameworks, databases, and UI are all "outer" layers that depend on the domain; the domain depends on nothing outer. It also elevates <strong>use cases</strong> (application-specific business rules, like "apply a mid-cycle plan change and prorate the difference") to first-class objects, distinct from the entity model underneath them and from the delivery mechanism on top.</p>
+
+  <h3>The honest cost, and when it's worth paying</h3>
+  <p>None of this is free. You now have interfaces with exactly one production implementation for years at a time, more files to navigate, and a real onboarding cost for engineers used to a simpler layered style clicking straight from a controller to a query. If you over-apply this pattern, you get an admin CRUD panel with six files and four interfaces to change a phone number field, and everyone quietly resents the architecture.</p>
+
+  <table class="tbl">
+    <tr><th>Worth the indirection when</th><th>Over-engineering when</th></tr>
+    <tr><td>Multiple integration points genuinely will change (payment gateways, notification providers, more than one persistence store)</td><td>There's exactly one implementation of the abstraction and no credible plan for a second, ever</td></tr>
+    <tr><td>The domain logic is complex enough that protecting it from framework churn has real payoff (pricing rules, underwriting logic, proration math)</td><td>The logic is a thin pass-through to a database table with almost no business rules</td></tr>
+    <tr><td>The system will live and be extended for years, by a team larger than one or two people</td><td>It's a short-lived internal tool or a service with a two-quarter horizon</td></tr>
+    <tr><td>You need to unit test business rules fast, without infrastructure, and that speed matters to your delivery cadence</td><td>Integration tests against a real (or containerized) dependency are already fast and reliable enough</td></tr>
+  </table>
+
+  <div class="callout">
+    <span class="callout-label">Decision checklist</span>
+    <p>Before reaching for ports and adapters, ask: will this dependency plausibly have a second implementation within the system's realistic lifetime? Is the domain logic behind it complex enough to be worth protecting? Is the team big enough, and will the system live long enough, to pay back the onboarding cost? If you can't answer yes to at least two of those, a well-organized layered architecture is the right call, and the extra ceremony would be architecture for its own sake.</p>
+  </div>
+</section>
+
+<!-- =========================================================
+     SECTION 4 — MONOLITH VS MICROSERVICES VS MODULAR MONOLITH
+========================================================== -->
+<section class="course-section" id="monolith-vs-microservices">
+  <p class="sec-kicker">Section 4</p>
+  <h2>Monolith vs Microservices vs Modular Monolith</h2>
+  <p class="lede">The industry spent a decade treating microservices as a maturity signal. The honest trade-off is more interesting, and for most teams, the right starting point is neither extreme.</p>
+
+  <h3>What you actually gain and actually lose with microservices</h3>
+  <p>Microservices give you real things: independent deployment (a team ships its service without coordinating a release train with nine other teams), independent scaling (scale the pricing engine to handle a Black Friday spike without over-provisioning the whole system), and fault isolation (a bug in the notification service doesn't take down checkout, if the boundary is drawn well).</p>
+  <p>They also cost real things that don't show up in the pitch deck: every in-process function call becomes a network call, with its own latency, timeout, and failure mode to handle. You need distributed tracing to answer "why was this request slow" across service boundaries, which is a genuinely harder observability problem than reading one stack trace. You get version skew &mdash; service A's v2 client talking to service B's v1 API during a rolling deploy &mdash; as a permanent fact of life, not an edge case. And if your service boundaries don't actually match your data and transaction boundaries, you end up with a distributed monolith: nine services that all have to deploy together anyway because they're tightly coupled through synchronous calls and shared assumptions, except now you also pay the network tax and the operational tax of nine services, with none of the independence you were promised.</p>
+
+  <h3>Data consistency: what a database transaction used to give you for free</h3>
+  <p>Consider a "create subscription" flow. In a single database, this is one transaction: insert the subscription row, insert the first invoice, insert the ledger entry. Either all three happen or none do &mdash; the database guarantees it.</p>
+  <p>Split subscriptions, invoicing, and ledger into three services with three databases, and that guarantee disappears. Now "create subscription" is a saga: create the subscription, publish an event, have invoicing react and create the invoice, publish another event, have the ledger service react and post the entry. If step two fails after step one succeeded, you need a compensating action (cancel the subscription, or retry invoicing, or flag it for reconciliation) because there is no longer a single transaction to roll back. This isn't a minor implementation detail &mdash; it's a fundamentally different correctness model that has to be designed for explicitly, not bolted on after the fact when the first partial failure happens in production.</p>
+
+  <h3>Conway's Law: your service boundaries will mirror your org chart, whether you plan it or not</h3>
+  <p>Conway's Law says systems end up structured like the communication patterns of the organizations that build them. Drawn well, this is a feature: if you have one team that owns pricing end to end, a pricing service that maps to that team's boundary means the team can move without cross-team coordination for most changes. Drawn badly &mdash; services split along old org lines that no longer reflect the actual domain, or a "shared platform team" that every other team has a dependency on for every change &mdash; you get constant cross-team coordination overhead that no amount of good code can fix, because the problem isn't the code, it's that the service boundaries don't match who actually needs to move independently.</p>
+
+  <h3>The case for starting with a modular monolith</h3>
+  <p>For most teams, most of the time, the right starting point is a modular monolith: one deployable unit, one database, but with real internal boundaries &mdash; enforced by package structure, internal APIs, and code review discipline, not by network calls. You get the deployment simplicity and transactional consistency of a monolith while your domain model is still evolving and your team is still small enough that cross-module coordination happens by walking to someone's desk, not by a release calendar.</p>
+  <p>Concretely: a billing monolith with clearly separated <code class="inline">pricing</code>, <code class="inline">invoicing</code>, <code class="inline">ledger</code>, and <code class="inline">notifications</code> modules, each with its own package, its own internal interface, and a rule that no module reaches into another's internals or database tables directly. When the pricing module later needs independent scaling because it's doing heavy real-time rate calculation under load the rest of the system doesn't experience, and there's a dedicated team that owns it, extracting it into its own service is a well-defined, bounded piece of work &mdash; because the seam was already there. You're not doing archaeology on a tangled codebase to find the boundary; you're cutting along a line that already exists.</p>
+
+  <p>Microservices-first, for a small team with a domain model that's still being discovered, is usually a mistake, and it's worth saying plainly why: you pay the full operational and coordination cost of distributed systems before you know where your actual boundaries should be, which means you're likely to draw them wrong, and now you're refactoring service boundaries across process and network boundaries instead of refactoring code within one codebase &mdash; a strictly harder problem, at exactly the point in a system's life when the domain model is most likely to be wrong.</p>
+
+  <div class="callout warn">
+    <span class="callout-label">Plain recommendation</span>
+    <p>Default to a modular monolith. Extract a service when you can point to a specific reason &mdash; a genuinely different scaling profile, a genuinely separate team that needs release independence, a genuinely different reliability requirement &mdash; not because microservices are what mature systems are supposed to look like.</p>
+  </div>
+</section>
+
+<!-- =========================================================
+     EXERCISE 2 — MONOLITH VS MICROSERVICES VS MODULAR MONOLITH SCENARIO
+========================================================== -->
+<div class="exercise" id="ex-tradeoff">
+  <span class="exercise-label">Exercise 2 &middot; Trade-off scenario</span>
+  <h3>Pick a starting architecture</h3>
+  <p class="ex-prompt">A six-engineer team is building a new usage-based billing product from scratch. The domain model &mdash; how metering, pricing, and invoicing relate &mdash; is not yet fully understood and will likely change as real customers onboard. Which starting architecture would you choose?</p>
+  <div class="choice-row" id="tradeoff-choices" role="group" aria-label="Architecture choice">
+    <button class="choice-btn" type="button" data-choice="monolith">Traditional monolith</button>
+    <button class="choice-btn" type="button" data-choice="microservices">Microservices from day one</button>
+    <button class="choice-btn" type="button" data-choice="modular">Modular monolith</button>
+  </div>
+  <div class="reveal" id="tradeoff-reveal">
+    <h4 id="tradeoff-reveal-title">Select an option</h4>
+    <div id="tradeoff-reveal-body"></div>
+  </div>
+</div>
+
+<!-- =========================================================
+     SECTION 5 — EVENT-DRIVEN ARCHITECTURE
+========================================================== -->
+<section class="course-section" id="event-driven">
+  <p class="sec-kicker">Section 5</p>
+  <h2>Event-Driven Architecture in Practice</h2>
+  <p class="lede">Choreography vs orchestration, the outbox pattern, idempotency, and eventual consistency &mdash; the four things that separate event-driven systems that work reliably from ones that quietly lose or duplicate data under load.</p>
+
+  <h3>Choreography vs orchestration</h3>
+  <p>Take a subscription renewal flow: charge the card, record the transaction in the ledger, email a receipt, extend the customer's entitlement. In <strong>choreography</strong>, each service reacts to events independently with no central coordinator: billing charges the card and publishes <code class="inline">PaymentCharged</code>; ledger, notifications, and entitlements all subscribe to that event and each does its own thing, possibly publishing further events others react to. In <strong>orchestration</strong>, a central process &mdash; a saga orchestrator &mdash; explicitly calls each step in sequence, tracks the state of the overall workflow, and decides what happens on failure.</p>
+
+  <p>Choreography gives you loose coupling: billing doesn't need to know that notifications or entitlements exist at all, it just publishes what happened. That's genuinely valuable when the set of consumers will grow over time. Its cost is that the overall business process &mdash; "what actually happens when someone renews" &mdash; is now implicit, scattered across however many services subscribe to the event, and hard to see or reason about from any single place. When something goes wrong halfway through, there's no single place that knows the renewal is "half done" and needs a decision made about it.</p>
+
+  <p>Orchestration makes the process explicit and centrally visible &mdash; you can read the orchestrator and know exactly what a renewal does, in what order, and what happens if step three fails. Its cost is that the orchestrator becomes a real coupling point: every step's contract is now known to one central place, and that orchestrator needs its own high availability, since if it's down, renewals stop, even if every individual service it would have called is healthy.</p>
+
+  <p>In practice, most mature systems land on a hybrid: orchestration for workflows with real cross-step failure handling and business importance (payment flows, provisioning, anything with compliance implications), choreography for fan-out notifications where each consumer's success or failure is independent and doesn't need to block or roll back the others.</p>
+
+  <h3>The outbox pattern: solving the dual-write problem</h3>
+  <p>Here's a failure mode that looks fine in a demo and breaks in production: your service writes a state change to its database, then publishes an event to a message broker. Those are two separate writes to two separate systems, and there is a gap between them. If the process crashes after the database commit but before the publish, the event is lost forever and every downstream consumer never finds out the state changed. If it crashes after publishing but the database transaction then fails to commit, you've told the world something happened that didn't.</p>
+
+  <p>The outbox pattern removes the gap by removing the second write. Instead of publishing directly, the service writes the state change <em>and</em> an outbox row describing the event, in the same local database transaction &mdash; so it's atomic by construction, the same guarantee that already protects your other writes. A separate relay process (or a change-data-capture stream reading the database's write-ahead log) reads unpublished outbox rows, publishes them to the broker, and marks them published.</p>
+
+  <pre class="code"><code>// single local transaction — atomic by the database's own guarantee
+BEGIN TRANSACTION
+  UPDATE invoices SET status = 'PAID' WHERE id = :invoiceId
+  INSERT INTO outbox (event_type, payload, published)
+    VALUES ('InvoicePaid', :payload, false)
+COMMIT
+
+// separate relay process, running continuously
+rows = outbox.selectUnpublished()
+for row in rows:
+  broker.publish(row.event_type, row.payload)
+  outbox.markPublished(row.id)</code></pre>
+
+  <p>The event can now never be silently lost, because it was written durably in the same transaction as the state change it describes. It can, however, be published more than once &mdash; if the relay crashes after publishing but before marking the row published, it will publish that row again on restart. That's not a bug in the pattern, it's why the next topic isn't optional.</p>
+
+  <h3>Idempotency: non-negotiable, not a nice-to-have</h3>
+  <p>Distributed systems default to at-least-once delivery, not exactly-once, because exactly-once delivery across a network with possible failures is provably impossible to guarantee without cooperation from the consumer. That means your consumers <strong>will</strong> see duplicate events, as a routine fact of operation, not a rare edge case.</p>
+  <p>The fix is idempotent business operations, not idempotent transport. Give every operation that has an effect a unique operation identifier, and check before applying it: "apply payment of $50 to invoice INV-1001" needs an idempotency key &mdash; not just re-running the same SQL, because re-running <code class="inline">UPDATE balance = balance - 50</code> twice is not idempotent, it's a double charge. Instead, store applied operation IDs in a deduplication table and check membership before applying: <code class="inline">if (appliedOperations.contains(operationId)) return cachedResult;</code> then apply and record atomically.</p>
+  <div class="callout warn">
+    <span class="callout-label">A real failure shape</span>
+    <p>A payment retry mechanism that retries on network timeout, without an idempotency key, will occasionally double-charge a customer: the first request actually succeeded at the gateway, but the response was lost to a network blip before your service recorded it, so your service times out, assumes failure, and retries &mdash; charging the card a second time for a request the gateway already fulfilled once. The gateway didn't malfunction; your retry logic did, because it had no way to know "this exact operation, identified this exact way, already happened."</p>
+  </div>
+
+  <h3>Eventual consistency, explained to a skeptical stakeholder</h3>
+  <p>When a product manager or compliance officer pushes back on "the balance might be stale for a few seconds," the honest answer isn't to argue they're wrong to care. It's to be precise about where it applies and where it doesn't. Something like: "The money movement itself &mdash; the actual debit and credit &mdash; happens in one strongly consistent transaction, and that never becomes eventually consistent, ever. What's eventually consistent is the read-only dashboard that displays the updated balance a few hundred milliseconds later, because it's reading from a replica that hasn't caught up yet. Nobody can spend money that isn't there because of that lag; they can only see a number on a screen refresh a beat later than the transaction that's already final."</p>
+  <p>Where eventual consistency is genuinely not acceptable: within a single funds-movement transaction, or anywhere a decision is made based on a balance that could be stale (authorizing a new charge against an account, for instance). Where it's entirely fine: a read replica powering a reporting dashboard, a notification email that arrives a few seconds after the event it describes, a search index that catches up shortly after a write. Naming that boundary explicitly, instead of asserting "eventual consistency is fine, trust me," is what actually earns the stakeholder's trust.</p>
+</section>
+
+<!-- =========================================================
+     SECTION 6 — DATA ARCHITECTURE DECISIONS
+========================================================== -->
+<section class="course-section" id="data-architecture">
+  <p class="sec-kicker">Section 6</p>
+  <h2>Data Architecture Decisions</h2>
+  <p class="lede">Pick a database by the shape of how you'll read and write data, not by which database is having a moment. Every category below is a genuine, defensible fit for the right access pattern &mdash; and a genuine mistake for the wrong one.</p>
+
+  <table class="tbl">
+    <tr><th>Category</th><th>Good fit when</th><th>Fintech example</th></tr>
+    <tr><td>Relational</td><td>Strong consistency and multi-row transactions across related records matter more than write throughput at extreme scale</td><td>Ledger entries, invoices, subscription state &mdash; anything where "these three rows change together, correctly, or not at all" is a hard requirement</td></tr>
+    <tr><td>Document</td><td>Data is naturally read and written as a whole aggregate, and its shape evolves over time without a rigid schema</td><td>A pricing rule configuration with a variable set of conditions and tiers, or a product catalog entry with attributes that differ by product type</td></tr>
+    <tr><td>Key-value</td><td>Simple lookups by a known key, at very high throughput and very low latency, with no need for querying by other attributes</td><td>Session tokens, feature flag state, rate-limit counters checked on every API request</td></tr>
+    <tr><td>Wide-column</td><td>Very high write volume, time-series-shaped data, queried primarily by partition key over a time range</td><td>Raw usage/metering events feeding a metered-billing pipeline, where you write millions of events per hour and query by customer and time window</td></tr>
+  </table>
+  <p>Treat this table as a starting heuristic, not a law. Plenty of systems run a relational database for a document-shaped workload successfully because the team already knows it operationally and the scale doesn't demand otherwise. The mistake isn't choosing a relational database for a flexible-schema use case &mdash; it's choosing a database because it was trending, without ever writing down what your actual access pattern is.</p>
+
+  <h3>Database-per-service vs shared database</h3>
+  <p>A shared database across services is simple to start with and gives you cross-entity transactions and joins for free. It also creates coupling that doesn't show up in any dependency graph: a schema change now requires a cross-team negotiation because you don't know who else reads that table, and one service's inefficient query can degrade every other service sharing the database's connection pool and I/O capacity.</p>
+  <p>Database-per-service gives you real isolation &mdash; a team can change their schema without asking anyone, and a runaway query can't take down an unrelated service &mdash; but it removes the free cross-entity transaction and join, forcing you to solve consistency explicitly through sagas, eventual consistency, or deliberately denormalized read models that duplicate data across boundaries on purpose. That's a real cost you're choosing to carry in exchange for isolation, not a cost that disappears because you split the database.</p>
+
+  <h3>Read/write splitting and the lag you now own</h3>
+  <p>Sending writes to a primary and reads to replicas is a standard scaling technique, and it introduces replication lag as something you now have to reason about explicitly. A customer who updates their billing address and immediately reloads their profile can land on a replica that hasn't caught up yet and see the old address for a moment. Two honest ways to handle it: route "read your own write" requests (a user viewing data they just changed) back to the primary or a replica known to be caught up, for a short window after the write; or, for cases where a moment's staleness genuinely doesn't matter, accept the lag and don't engineer around it. What you shouldn't do is discover this behavior for the first time from a confused support ticket.</p>
+
+  <h3>CQRS: genuinely warranted rarely, and worth saying so plainly</h3>
+  <p>Command Query Responsibility Segregation splits your write model (which enforces invariants) from your read model (optimized for how data is actually queried), often with a separate, denormalized store for reads kept in sync asynchronously. It is a real, valuable pattern &mdash; and it is overkill for most services, including most services that have complex-looking business logic.</p>
+  <p>It earns its complexity when your write shape and read shape are radically different: a pricing calculation that runs a multi-step rules engine on write, versus a reporting dashboard that needs to aggregate millions of those results across arbitrary date ranges and customer segments in sub-second time &mdash; a shape no single write-optimized model serves well. For the much larger number of services that are basically CRUD with some validation, a single well-designed model handles both reads and writes correctly, and CQRS just adds a second model to keep in sync, an eventual-consistency window between them, and genuinely more places for bugs to live. If you can't articulate a specific query pattern your write model can't serve reasonably well, you don't need CQRS yet.</p>
+</section>
+
+<!-- =========================================================
+     EXERCISE 3 — MATCH THE WORKLOAD TO THE DATABASE
+========================================================== -->
+<div class="exercise" id="ex-dbmatch">
+  <span class="exercise-label">Exercise 3 &middot; Match the workload</span>
+  <h3>Choose a database category for each access pattern</h3>
+  <p class="ex-prompt">For each scenario, pick the database category that best fits the access pattern, then check your answers.</p>
+  <div id="dbmatch-rows">
+    <div class="match-row" data-answer="relational">
+      <p>A double-entry ledger where every debit must have a matching credit, and both must post together or not at all.</p>
+      <select><option value="">Choose&hellip;</option><option value="relational">Relational</option><option value="document">Document</option><option value="keyvalue">Key-value</option><option value="widecolumn">Wide-column</option></select>
+      <span class="match-fb" aria-live="polite"></span>
+    </div>
+    <div class="match-row" data-answer="widecolumn">
+      <p>Raw API usage events for metered billing, ingested at very high write volume and queried by customer ID and time range.</p>
+      <select><option value="">Choose&hellip;</option><option value="relational">Relational</option><option value="document">Document</option><option value="keyvalue">Key-value</option><option value="widecolumn">Wide-column</option></select>
+      <span class="match-fb" aria-live="polite"></span>
+    </div>
+    <div class="match-row" data-answer="keyvalue">
+      <p>A rate limiter that checks and increments a request counter for an API key on every single incoming request.</p>
+      <select><option value="">Choose&hellip;</option><option value="relational">Relational</option><option value="document">Document</option><option value="keyvalue">Key-value</option><option value="widecolumn">Wide-column</option></select>
+      <span class="match-fb" aria-live="polite"></span>
+    </div>
+    <div class="match-row" data-answer="document">
+      <p>A pricing rule configuration whose structure &mdash; tiers, conditions, discount stacking rules &mdash; varies by product and changes shape as new pricing models are added.</p>
+      <select><option value="">Choose&hellip;</option><option value="relational">Relational</option><option value="document">Document</option><option value="keyvalue">Key-value</option><option value="widecolumn">Wide-column</option></select>
+      <span class="match-fb" aria-live="polite"></span>
+    </div>
+  </div>
+  <button class="btn" id="dbmatch-check" type="button">Check answers</button>
+  <button class="btn secondary small" id="dbmatch-reset" type="button" style="margin-left:.5rem">Reset</button>
+  <div class="reveal" id="dbmatch-reveal"><h4>Result</h4><div id="dbmatch-reveal-body"></div></div>
+</div>
+
+<!-- =========================================================
+     SECTION 7 — API DESIGN
+========================================================== -->
+<section class="course-section" id="api-design">
+  <p class="sec-kicker">Section 7</p>
+  <h2>API Design as an Architectural Decision</h2>
+  <p class="lede">An API is a contract with every future caller you'll ever have, most of whom you haven't met yet. Treat the shape of it as an architectural decision, because changing it later means coordinating with people outside your own deploy pipeline.</p>
+
+  <h3>Model resources, not remote procedure calls wearing REST clothing</h3>
+  <p>An API like <code class="inline">POST /processInvoice</code> and <code class="inline">POST /updateInvoiceStatus</code> is RPC with a URL instead of a function name &mdash; it exposes your internal verbs directly, and every new operation means a new endpoint with its own bespoke contract. A resource-modeled version treats the invoice's lifecycle as state on a resource: <code class="inline">POST /invoices</code> to create one, <code class="inline">POST /invoices/{id}/payments</code> to record a payment against it (a payment is a real sub-resource with its own identity, not a hidden side effect of a status update), and a status change expressed as what actually happened in the domain, not a generic <code class="inline">PATCH /invoices/{id} {"status": "paid"}</code> that lets a caller set any status to any value with no domain rule enforced at the API layer at all.</p>
+
+  <h3>Versioning: pick a strategy, and prefer not needing it often</h3>
+  <p>URI versioning (<code class="inline">/v1/invoices</code>) is the most explicit and the easiest for consumers to understand, at the cost of every version living as a real, separately maintained surface. Header-based versioning keeps URLs stable but is less discoverable and harder to test casually with a browser or a quick curl. The strategy that works for most teams most of the time is neither: default to backward-compatible, additive evolution, and reserve an actual version bump for genuine breaking changes, which should be rare. Versioning too early, or bumping a major version for every field addition, multiplies the number of contracts you have to support simultaneously for no real benefit.</p>
+
+  <h3>Backward compatibility as a discipline, not an afterthought</h3>
+  <ul class="list">
+    <li><strong>Breaking, requires a deprecation plan:</strong> removing or renaming a field, changing a field's type or units, tightening validation that previously-valid requests now fail, changing the meaning of an existing status value.</li>
+    <li><strong>Safe, ship without ceremony:</strong> adding a new optional field, adding a new endpoint, loosening a validation rule, adding a new enum value a well-behaved client will simply ignore if unrecognized.</li>
+  </ul>
+  <p>This matters more, not less, in a fintech context, because your API consumers are often a partner bank's or payment processor's integration team who cannot redeploy on your release schedule. A breaking change with a two-week deprecation window written by you might be a six-month integration project on their side, blocked behind their own change-control process. Communicate deprecations early, keep the old and new contract running in parallel for a real window, and never assume "we announced it in a changelog" counts as communication to a regulated counterparty.</p>
+
+  <h3>Designing for the caller you'll have in two years</h3>
+  <p>A webhook payload or a pricing response that hardcodes an assumption like "there is always exactly one currency" will need a breaking change the day multi-currency support ships, even if that's eighteen months out and everyone privately expects it. A cheap hedge that costs almost nothing today: use an explicit, versioned event type field on webhook payloads (<code class="inline">"type": "invoice.payment_succeeded.v1"</code>) so you can introduce a v2 event alongside v1 without breaking existing subscribers, and structure a pricing response as <code class="inline">{"amount": {"value": 4999, "currency": "USD"}}</code> instead of a bare integer that implicitly means USD forever. This isn't a contradiction of YAGNI from Section 2 &mdash; it's the same heuristic applied here: multi-currency is a concrete, plausible near-term direction for most billing products, not a speculative hypothetical, so a small amount of structure now is cheap insurance, not gold-plating.</p>
+</section>
+
+<!-- =========================================================
+     SECTION 8 — NON-FUNCTIONAL REQUIREMENTS
+========================================================== -->
+<section class="course-section" id="nfrs">
+  <p class="sec-kicker">Section 8</p>
+  <h2>Non-Functional Requirements as First-Class Architecture Inputs</h2>
+  <p class="lede">NFRs get treated as an afterthought &mdash; something you check at the end &mdash; when they should be gathered before you draw a single box on a diagram, because they constrain the entire solution space.</p>
+
+  <h3>Turning vague adjectives into numbers you can design against</h3>
+  <p>"It needs to be fast" and "it needs high availability" are not requirements; they're the raw material a requirement gets built from. Your job is to turn "fast" into an actual latency budget for a specific operation &mdash; "the payment authorization call must return in under 800ms at p99, because the downstream processor times out at 2 seconds and the customer is watching a spinner" &mdash; and turn "high availability" into an actual target: how much downtime per month is genuinely acceptable, and what does "down" mean for this specific system (fully unreachable? degraded but serving cached data? unable to accept new writes but still serving reads?). Vague adjectives let everyone agree in the meeting and disagree the moment the system is built.</p>
+  <p>Different NFRs conflict with each other, and architecture is where that conflict actually gets resolved, not avoided: strong consistency and low latency pull against each other, high availability and cost pull against each other. Naming the conflict out loud, and picking deliberately, is the job; pretending you can have maximum consistency, minimum latency, maximum availability, and minimum cost simultaneously is how a design review ends in a document nobody can actually build.</p>
+
+  <h3>Categories, with a real example each</h3>
+  <ul class="list">
+    <li><strong>Latency budgets:</strong> a payment authorization call in the critical path of checkout has a hard, specific budget, driven by both user experience and a downstream processor's own timeout. An internal nightly reconciliation job has essentially none &mdash; it can take twenty minutes and nobody notices.</li>
+    <li><strong>Availability targets:</strong> a pricing lookup used at checkout needs to be highly available because its failure blocks revenue in real time. An internal analytics dashboard failing for an hour is an inconvenience, not an incident.</li>
+    <li><strong>Consistency requirements:</strong> funds movement needs strong consistency &mdash; there is no acceptable version of "eventually your balance will be correct" for an actual debit. A marketing email trigger firing a few seconds late, or even being lost and retried, is a non-event.</li>
+    <li><strong>Security and compliance constraints:</strong> in a regulated industry, these aren't guidelines, they're hard architectural boundaries. PCI-DSS scope reduction by tokenizing card data at entry and never letting a raw PAN touch your application database is a design decision that shapes your entire payment flow, not a checkbox added later. Audit requirements that certain state changes be append-only and immutable shape your data model directly &mdash; you don't delete or overwrite a ledger entry, you append a reversing entry. Data residency requirements can dictate, non-negotiably, which physical region a database is allowed to live in, regardless of which region would otherwise be cheapest or lowest-latency.</li>
+  </ul>
+
+  <h3>Two worked examples of NFRs actually changing the design</h3>
+  <p>A strict latency budget on checkout pricing forces a specific choice: instead of calling a live, third-party FX rate service synchronously in the checkout path (introducing an external network call's tail latency directly into a budget that can't absorb it), you cache rates with a short, monitored freshness window and refresh them asynchronously in the background, accepting slightly-stale-but-bounded rates in exchange for a latency budget you can actually guarantee. Similarly, a fraud-scoring model that takes 400ms to run doesn't have to sit in the synchronous authorization path if the budget can't absorb it; it can score asynchronously after a fast provisional authorization, with a defined process for what happens on a late fraud flag &mdash; a real design decision, not a performance optimization bolted on afterward.</p>
+  <p>On the compliance side: the decision that raw card numbers never touch your application database at all, only a PCI-compliant tokenization vault does, isn't a security add-on, it's an architectural boundary that determines which services can even see card data, how your payment flow is shaped end to end, and what your audit scope is. Retrofitting that boundary after your application database already has raw PANs scattered across several tables is a materially harder project than designing for it from the start.</p>
+</section>
+
+<!-- =========================================================
+     EXERCISE 4 — LATENCY & AVAILABILITY BUDGET CALCULATOR
+========================================================== -->
+<div class="exercise" id="ex-budget">
+  <span class="exercise-label">Exercise 4 &middot; Budget calculator</span>
+  <h3>Does this call chain fit your latency and availability budget?</h3>
+  <p class="ex-prompt">Edit the latency and availability figures for each hop in a checkout authorization flow (all figures are illustrative, not real vendor SLAs) and compare the result against your target budgets.</p>
+  <table class="budget-table" id="budget-table">
+    <thead><tr><th>Hop</th><th>Latency (ms)</th><th>Availability (%)</th></tr></thead>
+    <tbody>
+      <tr><td>API gateway &amp; auth</td><td><input type="number" class="hop-latency" value="15" min="0"/></td><td><input type="number" class="hop-avail" value="99.99" step="0.001" min="0" max="100"/></td></tr>
+      <tr><td>Pricing lookup</td><td><input type="number" class="hop-latency" value="40" min="0"/></td><td><input type="number" class="hop-avail" value="99.95" step="0.001" min="0" max="100"/></td></tr>
+      <tr><td>Fraud pre-check</td><td><input type="number" class="hop-latency" value="60" min="0"/></td><td><input type="number" class="hop-avail" value="99.9" step="0.001" min="0" max="100"/></td></tr>
+      <tr><td>Payment gateway authorization</td><td><input type="number" class="hop-latency" value="450" min="0"/></td><td><input type="number" class="hop-avail" value="99.9" step="0.001" min="0" max="100"/></td></tr>
+      <tr><td>Ledger write (local commit)</td><td><input type="number" class="hop-latency" value="20" min="0"/></td><td><input type="number" class="hop-avail" value="99.99" step="0.001" min="0" max="100"/></td></tr>
+    </tbody>
+  </table>
+  <div class="adr-field" style="max-width:420px">
+    <label for="budget-target-latency">Target latency budget (ms)</label>
+    <textarea id="budget-target-latency" style="min-height:auto;height:auto" rows="1">800</textarea>
+  </div>
+  <div class="adr-field" style="max-width:420px">
+    <label for="budget-target-avail">Target combined availability (%)</label>
+    <textarea id="budget-target-avail" style="min-height:auto;height:auto" rows="1">99.9</textarea>
+  </div>
+  <button class="btn" id="budget-calc" type="button">Calculate</button>
+  <div class="budget-summary" id="budget-summary" style="display:none">
+    <div class="budget-stat">
+      <div class="label">Total latency (sum of hops)</div>
+      <div class="value" id="budget-total-latency">&mdash;</div>
+    </div>
+    <div class="budget-stat">
+      <div class="label">Combined availability (product of hops)</div>
+      <div class="value" id="budget-total-avail">&mdash;</div>
+    </div>
+    <div class="budget-stat">
+      <div class="label">Verdict</div>
+      <div class="value" id="budget-verdict">&mdash;</div>
+    </div>
+  </div>
+  <p class="ex-prompt" style="margin-top:.9rem; margin-bottom:0">This is a deliberately simplified model &mdash; it sums latency as if every hop is serial and treats availability as independent probabilities multiplied together. Real systems have parallelism, caching, and correlated failures that make the real math kinder or crueler than this. The point isn't the precision, it's the habit: naming a budget, adding up your call chain against it, and noticing when a chain of "individually fine" services multiplies down to a system that misses its target.</p>
+</div>
+
+<!-- =========================================================
+     SECTION 9 — ARCHITECTURE DECISION RECORDS
+========================================================== -->
+<section class="course-section" id="adrs">
+  <p class="sec-kicker">Section 9</p>
+  <h2>Architecture Decision Records</h2>
+  <p class="lede">Six months from now, someone who wasn't in the room will ask why you built it this way. An ADR is how you answer that question without relying on anyone's memory.</p>
+
+  <p>Architecture decisions get re-litigated by people who weren't there for the original trade-off discussion, and without a written record, "why did we do it this way" becomes an oral-history problem &mdash; dependent on whoever happens to still be on the team and still remembers. Writing an ADR also improves the decision itself, not just its documentation: forcing yourself to name the alternatives you considered and the downsides of the option you picked catches weak reasoning before it ships, in a way that a verbal "yeah, let's just do it this way" in a meeting never does.</p>
+
+  <h3>A lightweight template</h3>
+  <pre class="code"><code># ADR-NNN: &lt;short, specific title&gt;
+
+Status: Proposed | Accepted | Superseded by ADR-XXX
+Date: YYYY-MM-DD
+Author(s):
+
+## Context
+What problem are we solving, and what constraints (team size, existing
+systems, NFRs, deadlines) shape the decision?
+
+## Decision
+What are we doing, stated plainly, in one or two sentences.
+
+## Alternatives Considered
+Each real alternative, and why it was not chosen.
+
+## Consequences
+### Positive
+What this buys us.
+### Negative
+What this costs us, honestly — not just what it doesn't cost.</code></pre>
+
+  <h3>A full worked example</h3>
+  <pre class="code"><code># ADR-014: Proration and mid-cycle plan changes as a module in
+# the billing monolith, not a new service
+
+Status: Accepted
+Date: 2026-03-11
+Author(s): Platform Architecture
+
+## Context
+Product wants to let customers switch subscription plans mid-cycle,
+with the difference prorated on the next invoice. This touches the
+subscriptions, invoicing, and ledger tables directly, and must be
+transactionally consistent — a plan change that updates the
+subscription but fails to post the correct proration to the ledger
+is a real financial discrepancy, not a cosmetic bug. The team
+building this is three engineers, part of the existing five-person
+billing team, with no dedicated on-call rotation of their own. The
+billing monolith currently owns subscriptions, invoicing, and ledger
+as internal modules with clear package boundaries, in one database,
+under transactional guarantees.
+
+## Decision
+Build proration and mid-cycle plan changes as a new internal module
+(`proration`) inside the existing billing monolith, reusing the
+existing subscriptions, invoicing, and ledger modules directly and
+within existing database transactions. We are not standing up a new
+service for this feature.
+
+## Alternatives Considered
+1. New standalone "proration service" with its own database,
+   communicating with subscriptions/invoicing/ledger via events.
+   Rejected: this flow has a hard consistency requirement across
+   three data domains that a single local transaction currently
+   satisfies for free; recreating that guarantee via a saga adds
+   real complexity (compensating actions, a partial-failure state
+   machine) for a feature with no independent scaling or team-
+   ownership need to justify the split.
+2. Bolt proration logic directly into the existing InvoiceService
+   without a distinct module. Rejected: proration has enough of its
+   own business rules (multiple proration strategies, edge cases
+   around plan downgrades and trial periods) that folding it
+   directly into InvoiceService would violate single responsibility
+   and make both harder to test and extend independently.
+
+## Consequences
+### Positive
+- Full transactional consistency for plan changes at no extra
+  engineering cost; no saga, no compensating actions, no partial-
+  failure window to reason about.
+- No new service to deploy, monitor, or put on an on-call rotation
+  for a three-engineer team that doesn't have spare on-call capacity.
+- Proration logic is isolated behind a clear module boundary, so a
+  future extraction (if it ever becomes warranted) has a defined
+  seam to cut along rather than requiring archaeology first.
+
+### Negative
+- Proration logic scales and deploys with the rest of the billing
+  monolith; it cannot be scaled or released independently.
+- If proration logic grows significantly more complex (e.g. real-
+  time proration across usage-based add-ons at high volume), this
+  decision will need revisiting.
+
+### Extraction trigger (defined now, so it's not decided emotionally
+### under pressure later)
+Revisit this decision if: proration logic needs materially
+different scaling characteristics than the rest of billing, or a
+dedicated team forms specifically to own it with its own release
+cadence, whichever happens first.</code></pre>
+
+  <p>ADR hygiene matters as much as the writing: keep each one short and scoped to one decision, store them in the repository next to the code they describe rather than in a wiki that drifts out of sync and rots, and when a decision changes, write a new ADR marked <em>Supersedes ADR-014</em> and mark the old one <em>Superseded</em> rather than deleting it &mdash; the history of why you changed your mind is often more valuable than the current state alone.</p>
+</section>
+
+<!-- =========================================================
+     EXERCISE 5 — FILL IN THE ADR
+========================================================== -->
+<div class="exercise" id="ex-adr">
+  <span class="exercise-label">Exercise 5 &middot; Write your own ADR</span>
+  <h3>Draft an ADR for a decision you're facing</h3>
+  <p class="ex-prompt">Use a real decision from your own work, or this prompt: "Should our notification-sending logic move out of the monolith into its own service?" Fill in each field, then click Review for structural feedback. This is a self-review heuristic, not a grade &mdash; it checks for the habits that make an ADR useful, not for whether your answer is "correct."</p>
+  <div class="adr-field">
+    <label for="adr-context">Context</label>
+    <textarea id="adr-context" placeholder="What problem are we solving, and what constraints shape the decision?"></textarea>
+    <div class="adr-feedback" id="fb-context"></div>
+  </div>
+  <div class="adr-field">
+    <label for="adr-decision">Decision</label>
+    <textarea id="adr-decision" placeholder="What are we doing, stated plainly?"></textarea>
+    <div class="adr-feedback" id="fb-decision"></div>
+  </div>
+  <div class="adr-field">
+    <label for="adr-alternatives">Alternatives Considered</label>
+    <textarea id="adr-alternatives" placeholder="What else did you consider, and why wasn't it chosen?"></textarea>
+    <div class="adr-feedback" id="fb-alternatives"></div>
+  </div>
+  <div class="adr-field">
+    <label for="adr-consequences">Consequences</label>
+    <textarea id="adr-consequences" placeholder="What does this buy you, and what does it honestly cost you?"></textarea>
+    <div class="adr-feedback" id="fb-consequences"></div>
+  </div>
+  <button class="btn" id="adr-review" type="button">Review my ADR</button>
+  <div class="reveal" id="adr-overall-reveal"><h4>Overall</h4><div id="adr-overall-body"></div></div>
+</div>
+
+<!-- =========================================================
+     SECTION 10 — LEADING ARCHITECTURE IN PRACTICE
+========================================================== -->
+<section class="course-section" id="leading-architecture">
+  <p class="sec-kicker">Section 10</p>
+  <h2>Leading Architecture in Practice</h2>
+  <p class="lede">Once you're the person whose architectural judgment other engineers rely on, the job changes: you now influence decisions mostly through people, not through the code you personally write.</p>
+
+  <h3>Running an architecture review that's actually useful</h3>
+  <p>A useless review is either a rubber stamp &mdash; a proposal presented as already-decided, discussion theater before an inevitable yes &mdash; or a gauntlet, where every attendee nitpicks a different detail and nobody proposes anything difficult again. A useful one has real structure: the proposal is circulated in advance, with problem, context, and options laid out, so people arrive having thought about it instead of reacting live for the first time; discussion focuses on the decision's genuinely risky and hardest-to-reverse parts, not on naming conventions or a line of code that'll change six times before merge; there's a named decision-maker, so the meeting ends in an actual decision instead of a vague sense that everyone sort of agreed; and any open question gets an explicit owner and a deadline, instead of trailing off unresolved.</p>
+
+  <h3>Disagree and commit &mdash; and when it's the wrong call</h3>
+  <p>Disagree and commit means your objection gets a real hearing, genuinely weighed rather than politely tolerated, and if the decision goes the other way, you commit to executing it well &mdash; not quietly under-investing in it, not re-litigating it in every subsequent meeting, not letting your team pick up on your resentment. It is not the same as "shut up and do what you're told," and it only works if the person overriding you actually gave your objection real weight first.</p>
+  <p>It's also the wrong call in a specific, narrow case: when the decision isn't just "I'd have chosen differently" but "this will cause a production incident" or "this is both wrong and expensive to reverse." That's when the right move is to escalate before commitment, not commit and hope. Knowing the difference between those two cases &mdash; a preference you can let go of, versus a real risk worth spending capital to block &mdash; is itself a judgment call that gets sharper with experience, and it's worth being honest with yourself about which one you're actually in before you decide whether to escalate or commit.</p>
+
+  <h3>Saying no without shutting down the conversation</h3>
+  <p>The least effective way to say no to a bad idea is "that's wrong" &mdash; it makes the conversation about being right, not about the system, and it teaches people to stop proposing things in front of you. A better technique: ask the question that surfaces the trade-off yourself, instead of asserting the conclusion. "Walk me through what happens when that downstream service is down and this one still needs to charge a card" gets the engineer to discover the gap in their own proposal, which they'll actually internalize, instead of "microservices are the wrong call here," which they'll just comply with. Separate the idea from the person &mdash; a flawed proposal from a strong engineer is a normal Tuesday, not a signal about their competence. And offer a real alternative, not just a veto; a "no" with nothing behind it teaches people that proposing things is risky, while a "no, and here's what I'd try instead, because of X" teaches them the actual reasoning they can apply next time.</p>
+  <p>Know which fights are worth having. "I would have designed this differently" is usually fine to let a senior engineer own &mdash; that's their call to make, and being wrong occasionally in a low-stakes, reversible way is how people build judgment. "This will cause a production incident, or violates a compliance requirement, or is functionally impossible to reverse once shipped" is worth spending real social capital on, clearly and directly, even if it's an uncomfortable conversation.</p>
+
+  <h3>Mentoring engineers into architectural thinking</h3>
+  <p>You don't build this judgment in people by making every decision for them and explaining your reasoning afterward &mdash; that produces engineers who can recite your reasoning, not engineers who can generate their own. Assign real design work, with a review checkpoint before it's built rather than after, so mistakes get caught while they're cheap to change, not after the code ships. In code review, ask "what happens if this call fails halfway through" or "what would break this under load" instead of just pointing at the answer &mdash; the question builds the muscle, the answer alone doesn't. Have them write the ADR for their own decision and defend it in a review, not just implement a decision you already made. And deliberately, on a safe-to-fail decision, let it go a direction you personally wouldn't have chosen &mdash; real consequences, learned firsthand on something recoverable, teach a lesson that being overridden every time never does.</p>
+
+  <p>What actually separates engineers who make this transition well from those who don't is rarely more technical knowledge &mdash; most senior engineers already know what a saga is, what CAP theorem says, what SOLID stands for. It's judgment under ambiguity: the ability to make a defensible call with incomplete information, name the trade-off honestly instead of pretending there isn't one, and be accountable for how it plays out. That's the actual skill this course has been building toward, and it's built by making real decisions on real systems, not by memorizing more patterns.</p>
+</section>
+
+<!-- =========================================================
+     EXERCISE 6 — SCORE THIS SYSTEM DESIGN
+========================================================== -->
+<div class="exercise" id="ex-score">
+  <span class="exercise-label">Exercise 6 &middot; Capstone self-check</span>
+  <h3>Score a system design against what this course covered</h3>
+  <p class="ex-prompt">Think of a real system you've built or are currently designing. Check every statement below that honestly applies to it, and see where it lands.</p>
+  <ul class="check-list" id="score-list">
+    <li class="check-item"><label><input type="checkbox" data-weight="2"/><span>Each core module or service has a single, clearly nameable reason to change.</span></label></li>
+    <li class="check-item"><label><input type="checkbox" data-weight="2"/><span>Business logic depends on abstractions it owns, not directly on a specific vendor SDK or infrastructure client.</span></label></li>
+    <li class="check-item"><label><input type="checkbox" data-weight="1"/><span>Every abstraction layer in the system earns its cost &mdash; there's a real, current reason for it, not just anticipated future flexibility.</span></label></li>
+    <li class="check-item"><label><input type="checkbox" data-weight="2"/><span>Service or module boundaries were drawn around actual domain and data-consistency boundaries, not copied from the org chart or guessed at.</span></label></li>
+    <li class="check-item"><label><input type="checkbox" data-weight="2"/><span>Every event consumer in the system is idempotent, and this was verified, not assumed.</span></label></li>
+    <li class="check-item"><label><input type="checkbox" data-weight="1"/><span>State changes that must be atomic and visible together use the outbox pattern or an equivalent, not a dual write.</span></label></li>
+    <li class="check-item"><label><input type="checkbox" data-weight="1"/><span>Each datastore in the system was chosen for its access pattern, and you could explain that choice in one sentence.</span></label></li>
+    <li class="check-item"><label><input type="checkbox" data-weight="1"/><span>API contracts are versioned or evolve additively, with a real backward-compatibility discipline.</span></label></li>
+    <li class="check-item"><label><input type="checkbox" data-weight="2"/><span>Latency, availability, and consistency targets exist as actual numbers somewhere, not as unwritten assumptions.</span></label></li>
+    <li class="check-item"><label><input type="checkbox" data-weight="1"/><span>The system's expensive-to-reverse decisions are written down somewhere &mdash; an ADR or equivalent &mdash; with the alternatives and honest downsides included.</span></label></li>
+  </ul>
+  <div class="score-bar-wrap">
+    <div class="score-bar"><i id="score-bar-fill"></i></div>
+    <div class="score-readout"><span>Score: <strong id="score-points">0</strong> / <span id="score-max">15</span></span><span id="score-pct">0%</span></div>
+  </div>
+  <div class="score-verdict" id="score-verdict">Check the statements that apply to see your result.</div>
+</div>
+
+<footer class="course-footer">
+  <p>This course reflects real trade-offs made on production banking and billing systems. Architecture judgment is built through repetition &mdash; revisit the exercises above with a different real system each time.</p>
+</footer>
+
+</div><!-- /.wrap -->
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------------- Exercise 1: coupling diagram ---------------- */
+  var couplingData = {
+    engine: {
+      title: "PricingEngine → RateProvider: healthy",
+      body: "<p class=\"pro\">Good dependency.</p><ul><li>The domain depends on an interface it owns, expressed in its own vocabulary (<code class=\"inline\">getRate(from, to)</code>), not in a vendor's terms.</li><li>Unit tests can supply a fake <code class=\"inline\">RateProvider</code> with zero network calls.</li><li>Switching FX vendors later means writing a new adapter, not editing pricing logic.</li></ul>"
+    },
+    rateProvider: {
+      title: "RateProvider: the seam that makes this work",
+      body: "<p>This interface is owned by the pricing domain, not by the vendor. It's the Dependency Inversion Principle in practice: both the high-level pricing engine and the low-level vendor adapter depend on this abstraction, not on each other directly.</p>"
+    },
+    vendorAdapter: {
+      title: "VendorXAdapter → implements RateProvider: healthy",
+      body: "<p class=\"pro\">Good dependency direction.</p><p>All vendor-specific detail &mdash; auth headers, response parsing, rate limits &mdash; lives here, isolated from the domain. If VendorX changes their API, only this file changes.</p>"
+    },
+    engineBad: {
+      title: "PricingEngine → VendorX SDK: coupling problem",
+      body: "<p class=\"con\">Tight, direct coupling to a specific vendor.</p><ul><li>Pricing logic now imports and depends on VendorX's exact SDK shape &mdash; their types, their error codes, their auth model.</li><li>Unit testing pricing logic now requires mocking the vendor SDK directly, or hitting a real sandbox.</li><li>Switching vendors, or supporting a second one, means editing pricing logic itself, not writing a new adapter.</li></ul>"
+    },
+    vendorDirect: {
+      title: "VendorX SDK: imported directly into the domain",
+      body: "<p class=\"con\">This is the efferent coupling to avoid in a domain module.</p><p>The fix is the same pattern shown on the left: introduce a <code class=\"inline\">RateProvider</code> port the domain owns, and move this SDK call behind an adapter that implements it.</p>"
+    }
+  };
+
+  function wireCouplingDiagram(diagramIds, revealPrefix){
+    diagramIds.forEach(function(id){
+      var diagram = document.getElementById(id);
+      if(!diagram) return;
+      diagram.querySelectorAll('.dbox').forEach(function(box){
+        function activate(){
+          var key = box.getAttribute('data-key');
+          var data = couplingData[key];
+          if(!data) return;
+          document.getElementById(revealPrefix + '-title').textContent = data.title;
+          document.getElementById(revealPrefix + '-body').innerHTML = data.body;
+          document.getElementById(revealPrefix).classList.add('show');
+        }
+        box.addEventListener('click', activate);
+        box.addEventListener('keydown', function(e){
+          if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); activate(); }
+        });
+      });
+    });
+  }
+  wireCouplingDiagram(['coupling-diagram','coupling-diagram-2'], 'coupling-reveal');
+
+  /* ---------------- Exercise 2: monolith/microservices/modular scenario ---------------- */
+  var tradeoffData = {
+    monolith: {
+      title: "Traditional monolith — workable, but misses an easy win",
+      body: "<p>A plain monolith gets you deployment simplicity and transactional consistency, which is right for this team size and this stage of domain discovery. What it usually lacks, if nobody enforces it, is internal discipline: without deliberate module boundaries, the codebase tends to accrete into one another. If pricing, metering, and invoicing all reach into each other's internals freely, you'll pay for that later when the domain model firms up and you want to extract a piece cleanly.</p><ul><li class='pro'>Right call on deployment and consistency for a 6-person team with an evolving domain</li><li class='con'>Missing the enforced internal boundaries that make a future extraction cheap</li></ul>"
+    },
+    microservices: {
+      title: "Microservices from day one — usually the wrong call here",
+      body: "<p>With six engineers and a domain model that isn't understood yet, this is very likely a mistake. You'll pay the full operational tax of distributed systems &mdash; network calls where function calls used to be, distributed tracing, saga-based consistency, more infrastructure to run &mdash; before you know where your actual boundaries should sit. The most probable outcome is drawing service boundaries in the wrong places and then refactoring across network and process boundaries once real usage reveals the real domain model, which is strictly harder than refactoring within one codebase.</p><ul><li class='con'>Pays distributed-systems tax before the domain model is known</li><li class='con'>Wrong boundaries are much more expensive to fix across services than within one codebase</li></ul>"
+    },
+    modular: {
+      title: "Modular monolith — the strongest starting point here",
+      body: "<p>This gets the team the deployment simplicity and transactional consistency a small team needs while the domain is still being discovered, while enforcing real internal boundaries (separate packages, internal APIs, no reaching into another module's tables) so that when a genuine reason to extract a service appears &mdash; different scaling needs, a dedicated team, a different reliability bar &mdash; there's already a clean seam to cut along instead of a tangled codebase to untangle first.</p><ul><li class='pro'>Deployment simplicity and free transactional consistency while the domain model is still moving</li><li class='pro'>Enforced boundaries make a later, justified extraction cheap and well-scoped</li></ul>"
+    }
+  };
+  (function(){
+    var row = document.getElementById('tradeoff-choices');
+    if(!row) return;
+    row.querySelectorAll('.choice-btn').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        row.querySelectorAll('.choice-btn').forEach(function(b){ b.classList.remove('selected'); });
+        btn.classList.add('selected');
+        var data = tradeoffData[btn.getAttribute('data-choice')];
+        document.getElementById('tradeoff-reveal-title').textContent = data.title;
+        document.getElementById('tradeoff-reveal-body').innerHTML = data.body;
+        document.getElementById('tradeoff-reveal').classList.add('show');
+      });
+    });
+  })();
+
+  /* ---------------- Exercise 3: db match ---------------- */
+  (function(){
+    var labels = { relational:'Relational', document:'Document', keyvalue:'Key-value', widecolumn:'Wide-column' };
+    var checkBtn = document.getElementById('dbmatch-check');
+    var resetBtn = document.getElementById('dbmatch-reset');
+    if(!checkBtn) return;
+    checkBtn.addEventListener('click', function(){
+      var rows = document.querySelectorAll('#dbmatch-rows .match-row');
+      var correct = 0;
+      var lines = [];
+      rows.forEach(function(row){
+        var answer = row.getAttribute('data-answer');
+        var select = row.querySelector('select');
+        var fb = row.querySelector('.match-fb');
+        var chosen = select.value;
+        if(!chosen){
+          fb.textContent = '?';
+          fb.className = 'match-fb';
+          lines.push('One or more rows not answered yet.');
+          return;
+        }
+        if(chosen === answer){
+          fb.textContent = '✓';
+          fb.className = 'match-fb correct';
+          correct++;
+        } else {
+          fb.textContent = '✗';
+          fb.className = 'match-fb wrong';
+          lines.push('For "' + row.querySelector('p').textContent.slice(0,50) + '…" the better fit is ' + labels[answer] + '.');
+        }
+      });
+      var reveal = document.getElementById('dbmatch-reveal');
+      var body = document.getElementById('dbmatch-reveal-body');
+      body.innerHTML = '<p><strong>' + correct + ' / ' + rows.length + ' correct.</strong></p>' +
+        (lines.length ? '<ul><li>' + lines.join('</li><li>') + '</li></ul>' : '<p>All matched to their strongest-fit category.</p>');
+      reveal.classList.add('show');
+    });
+    resetBtn.addEventListener('click', function(){
+      document.querySelectorAll('#dbmatch-rows select').forEach(function(s){ s.value=''; });
+      document.querySelectorAll('#dbmatch-rows .match-fb').forEach(function(f){ f.textContent=''; f.className='match-fb'; });
+      document.getElementById('dbmatch-reveal').classList.remove('show');
+    });
+  })();
+
+  /* ---------------- Exercise 4: budget calculator ---------------- */
+  (function(){
+    var btn = document.getElementById('budget-calc');
+    if(!btn) return;
+    btn.addEventListener('click', function(){
+      var latencyInputs = document.querySelectorAll('#budget-table .hop-latency');
+      var availInputs = document.querySelectorAll('#budget-table .hop-avail');
+      var totalLatency = 0;
+      var combinedAvail = 1;
+      latencyInputs.forEach(function(inp){ totalLatency += (parseFloat(inp.value) || 0); });
+      availInputs.forEach(function(inp){ combinedAvail *= ((parseFloat(inp.value) || 0) / 100); });
+      var combinedAvailPct = combinedAvail * 100;
+      var targetLatency = parseFloat(document.getElementById('budget-target-latency').value) || 0;
+      var targetAvail = parseFloat(document.getElementById('budget-target-avail').value) || 0;
+
+      var latEl = document.getElementById('budget-total-latency');
+      var avEl = document.getElementById('budget-total-avail');
+      var verdictEl = document.getElementById('budget-verdict');
+
+      latEl.textContent = totalLatency.toFixed(0) + ' ms';
+      avEl.textContent = combinedAvailPct.toFixed(3) + '%';
+
+      var latOk = totalLatency <= targetLatency;
+      var avOk = combinedAvailPct >= targetAvail;
+      latEl.className = 'value ' + (latOk ? 'ok' : 'bad');
+      avEl.className = 'value ' + (avOk ? 'ok' : 'bad');
+
+      if(latOk && avOk){
+        verdictEl.textContent = 'Within budget';
+        verdictEl.className = 'value ok';
+      } else if(!latOk && !avOk){
+        verdictEl.textContent = 'Over on both';
+        verdictEl.className = 'value bad';
+      } else if(!latOk){
+        verdictEl.textContent = 'Over latency budget';
+        verdictEl.className = 'value bad';
+      } else {
+        verdictEl.textContent = 'Under availability target';
+        verdictEl.className = 'value bad';
+      }
+      document.getElementById('budget-summary').style.display = 'flex';
+    });
+  })();
+
+  /* ---------------- Exercise 5: ADR self-review ---------------- */
+  (function(){
+    var btn = document.getElementById('adr-review');
+    if(!btn) return;
+
+    function wordCount(text){ return (text.trim().match(/\S+/g) || []).length; }
+
+    function reviewField(id, fbId, opts){
+      var text = document.getElementById(id).value;
+      var fb = document.getElementById(fbId);
+      var wc = wordCount(text);
+      var issues = [];
+      if(wc < opts.minWords){
+        issues.push('too brief to be useful to someone reading this in a year (aim for at least ' + opts.minWords + ' words)');
+      }
+      (opts.wantsAnyOf || []).forEach(function(group){
+        var found = group.words.some(function(w){ return text.toLowerCase().indexOf(w) !== -1; });
+        if(!found) issues.push(group.hint);
+      });
+      if(issues.length === 0){
+        fb.textContent = 'Looks structurally solid.';
+        fb.className = 'adr-feedback ok';
+      } else {
+        fb.textContent = 'Consider: ' + issues.join('; ') + '.';
+        fb.className = 'adr-feedback warn';
+      }
+      return issues.length === 0;
+    }
+
+    btn.addEventListener('click', function(){
+      var okContext = reviewField('adr-context', 'fb-context', {
+        minWords: 15,
+        wantsAnyOf: [{ words:['because','since','constraint','team','deadline','requirement'], hint:'name a concrete constraint driving this decision (team size, a deadline, an NFR, an existing system)' }]
+      });
+      var okDecision = reviewField('adr-decision', 'fb-decision', {
+        minWords: 8,
+        wantsAnyOf: [{ words:['will','decided','decision is','we are','we will'], hint:'state the decision plainly, as something you are doing, not just a topic' }]
+      });
+      var okAlternatives = reviewField('adr-alternatives', 'fb-alternatives', {
+        minWords: 15,
+        wantsAnyOf: [{ words:['rejected','because','instead','considered','ruled out','not chosen'], hint:'say explicitly why each alternative was not chosen, not just that it exists' }]
+      });
+      var okConsequences = reviewField('adr-consequences', 'fb-consequences', {
+        minWords: 15,
+        wantsAnyOf: [
+          { words:['cost','downside','risk','negative','trade-off','tradeoff','limitation'], hint:'name a real downside — a good ADR admits what this costs, not just what it buys' }
+        ]
+      });
+
+      var passCount = [okContext, okDecision, okAlternatives, okConsequences].filter(Boolean).length;
+      var overall = document.getElementById('adr-overall-reveal');
+      var body = document.getElementById('adr-overall-body');
+      var verdict;
+      if(passCount === 4){
+        verdict = '<p class="pro">All four fields hit the structural bar. This is the shape a useful ADR takes: someone reading it in a year, with none of the meeting context, should understand what was decided, what else was on the table, and what it costs.</p>';
+      } else if(passCount >= 2){
+        verdict = '<p>' + passCount + ' of 4 fields hit the bar. Check the notes under each field above — the most common gap is the Consequences section only listing benefits. A real ADR names the downside too.</p>';
+      } else {
+        verdict = '<p class="con">Most fields need more substance. Re-read Section 9\'s worked example, and try naming a specific constraint, a specific rejected alternative, and a specific cost, not general statements.</p>';
+      }
+      body.innerHTML = verdict;
+      overall.classList.add('show');
+    });
+  })();
+
+  /* ---------------- Exercise 6: capstone score ---------------- */
+  (function(){
+    var list = document.getElementById('score-list');
+    if(!list) return;
+    var inputs = list.querySelectorAll('input[type=checkbox]');
+    var maxScore = 0;
+    inputs.forEach(function(inp){ maxScore += parseInt(inp.getAttribute('data-weight'), 10) || 1; });
+    document.getElementById('score-max').textContent = maxScore;
+
+    function recompute(){
+      var score = 0;
+      inputs.forEach(function(inp){ if(inp.checked) score += parseInt(inp.getAttribute('data-weight'),10) || 1; });
+      var pct = Math.round((score / maxScore) * 100);
+      document.getElementById('score-points').textContent = score;
+      document.getElementById('score-pct').textContent = pct + '%';
+      document.getElementById('score-bar-fill').style.width = pct + '%';
+      var verdictEl = document.getElementById('score-verdict');
+      var verdict;
+      if(pct >= 80){
+        verdict = 'Strong. This system reflects most of what the course covers — the honest next step is finding the one or two unchecked items and treating them as your next architectural improvement, not a rewrite.';
+      } else if(pct >= 50){
+        verdict = 'Solid foundation with real gaps. Look at the unchecked items — they\'re usually clustered around one theme (often NFRs written down nowhere, or idempotency assumed rather than verified). Pick one and fix it deliberately.';
+      } else if(score > 0){
+        verdict = 'Several fundamentals are missing. That\'s common for a system built under deadline pressure — the value of this checklist is naming the gaps precisely instead of a vague sense that "we should clean this up sometime."';
+      } else {
+        verdict = 'Check the statements that honestly apply to a real system to see where it lands.';
+      }
+      verdictEl.textContent = verdict;
+    }
+    inputs.forEach(function(inp){ inp.addEventListener('change', recompute); });
+    recompute();
+  })();
+
+})();
+</script>
+</body>
+</html>

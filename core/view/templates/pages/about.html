@@ -4,6 +4,7 @@
     <p class="eyebrow">About</p>
     <h1>{{.Profile.Name}}</h1>
     <p class="hero-title">{{.Profile.Title}}</p>
+    {{if .Profile.Tagline}}<p class="hero-subtitle">{{.Profile.Tagline}}</p>{{end}}
   </div>
 </section>
 
@@ -15,7 +16,7 @@
         {{if .Profile.LinkedInURL}}<a class="btn btn-secondary" href="{{.Profile.LinkedInURL}}" target="_blank" rel="noopener">LinkedIn</a>{{end}}
         {{if .Profile.ResumeURL}}<a class="btn btn-secondary" href="{{.Profile.ResumeURL}}" target="_blank" rel="noopener">Resume</a>{{end}}
         {{if .Profile.Email}}<button type="button" class="btn btn-secondary copy-btn" data-copy="{{.Profile.Email}}">Copy email</button>{{end}}
-        <a class="btn btn-primary no-print" href="{{.Nav.Booking}}">Book Time</a>
+        <a class="btn btn-primary no-print" href="{{.Nav.Consultancy}}">Work With Me</a>
       </div>
     </div>
     <aside class="about-facts">
@@ -28,8 +29,32 @@
   </div>
 </section>
 
-{{if .Skills}}
 <section class="section section-alt">
+  <div class="container">
+    <h2 class="section-title">Major projects &amp; impact</h2>
+    <div class="feature-grid">
+      <div class="feature-card">
+        <h3>Event-driven pricing &amp; billing platform</h3>
+        <p>Architected the core event-driven pricing and billing platform at Zafin — designing the domain model, event flows, and service boundaries that banking clients run production billing on.</p>
+      </div>
+      <div class="feature-card">
+        <h3>High-throughput transaction systems</h3>
+        <p>Designed and hardened systems processing millions of transactions and requests daily, improving reliability, deployment speed, and reducing latency across the stack.</p>
+      </div>
+      <div class="feature-card">
+        <h3>Platform security &amp; upgrades</h3>
+        <p>Led technical upgrades and security-hardening initiatives across banking-grade platforms, closing gaps without disrupting live production traffic.</p>
+      </div>
+      <div class="feature-card">
+        <h3>Engineering leadership at scale</h3>
+        <p>Mentored and led engineering teams of 10 to 30+, raising delivery standards and growing engineers into architecture-level thinking.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+{{if .Skills}}
+<section class="section">
   <div class="container">
     <h2 class="section-title">Skills</h2>
     <div class="skills-grid">
@@ -50,7 +75,7 @@
 {{end}}
 
 {{if .Experience}}
-<section class="section">
+<section class="section section-alt">
   <div class="container">
     <h2 class="section-title">Experience</h2>
     <div class="timeline">
@@ -74,7 +99,7 @@
 {{end}}
 
 {{if .Education}}
-<section class="section section-alt">
+<section class="section">
   <div class="container">
     <h2 class="section-title">Education</h2>
     <div class="education-list">
@@ -92,9 +117,9 @@
 
 <section class="section cta-section">
   <div class="container cta-inner">
-    <h2>Let's work together</h2>
-    <p>Whether it's architecture review, mentoring, or a course — I'd love to help.</p>
-    <a class="btn btn-primary" href="{{.Nav.Booking}}">Book Time With Me</a>
+    <h2>Still learning, still building</h2>
+    <p>I pick up something new most weeks — a pattern, a tool, a way to ship faster without breaking things — and bring it back into how I build and teach. If you'd like to work together, I offer <a href="{{.Nav.Courses}}">courses</a> and paid <a href="{{.Nav.Consultancy}}">1:1 consultancy</a>.</p>
+    <a class="btn btn-primary" href="{{.Nav.Consultancy}}">Work With Me</a>
   </div>
 </section>
 {{end}}

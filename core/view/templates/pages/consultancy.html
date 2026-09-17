@@ -1,0 +1,56 @@
+{{define "content"}}
+<section class="section page-hero">
+  <div class="container">
+    <p class="eyebrow">Consultancy</p>
+    <h1>Work with me directly</h1>
+    <p class="hero-subtitle">A focused, 1:1 hour to work through an architecture review, a system-design decision, a technical leadership question, or a career conversation — grounded in 8+ years building banking and fintech platforms at scale.</p>
+    <div class="hero-actions">
+      <a class="btn btn-primary" href="{{.Nav.Booking}}">Book Now — {{.PriceDisplay}}</a>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <h2 class="section-title">What a session can cover</h2>
+    <div class="feature-grid">
+      <div class="feature-card">
+        <h3>Architecture review</h3>
+        <p>Bring a system or a design doc — we'll walk through the trade-offs, risks, and what I'd change.</p>
+      </div>
+      <div class="feature-card">
+        <h3>System design decisions</h3>
+        <p>Scaling a service, choosing a data store, designing an event-driven pipeline — talk it through before you commit to it.</p>
+      </div>
+      <div class="feature-card">
+        <h3>Technical leadership</h3>
+        <p>Leading a team through a hard delivery, structuring an engineering org, or growing into a tech-lead role.</p>
+      </div>
+      <div class="feature-card">
+        <h3>Career guidance</h3>
+        <p>Interview prep, resume/portfolio feedback, or mapping out your next move as a backend or platform engineer.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section section-alt">
+  <div class="container">
+    <h2 class="section-title">How it works</h2>
+    <ol class="how-it-works">
+      <li><strong>Log in or create an account</strong> — needed so your booking and receipt are tied to you.</li>
+      <li><strong>Pick an open hour</strong> from the calendar on the booking page.</li>
+      <li><strong>Pay securely via Razorpay</strong> — {{.PriceDisplay}}, cards and UPI supported. Your slot is confirmed the moment payment clears.</li>
+      <li><strong>We meet</strong> — you'll get the details at the email on your account.</li>
+    </ol>
+  </div>
+</section>
+
+<section class="section cta-section">
+  <div class="container cta-inner">
+    <h2>Ready to book?</h2>
+    <p>Pick a time that works and let's talk it through.</p>
+    <a class="btn btn-primary" href="{{.Nav.Booking}}">Book Now — {{.PriceDisplay}}</a>
+  </div>
+</section>
+{{end}}

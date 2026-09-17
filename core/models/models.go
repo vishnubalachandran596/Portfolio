@@ -154,20 +154,57 @@ func FormatMoney(cents int, currency string) string {
 }
 
 const (
-	BookingStatusPending   = "pending"
-	BookingStatusConfirmed = "confirmed"
-	BookingStatusCancelled = "cancelled"
+	BookingStatusPendingPayment = "pending_payment"
+	BookingStatusConfirmed      = "confirmed"
+	BookingStatusCancelled      = "cancelled"
 )
 
 type Booking struct {
-	ID        int64
-	Name      string
-	Email     string
-	Message   string
-	SlotStart time.Time
-	SlotEnd   time.Time
-	Status    string
-	CreatedAt time.Time
+	ID                int64
+	UserID            int64
+	Name              string
+	Email             string
+	Message           string
+	SlotStart         time.Time
+	SlotEnd           time.Time
+	Status            string
+	AmountCents       int
+	Currency          string
+	RazorpayOrderID   string
+	RazorpayPaymentID string
+	CreatedAt         time.Time
+}
+
+// Consultancy is a single paid 1:1 offering (not stored per-row like a
+// course — one product, priced by region the same way a paid course is).
+const (
+	ConsultancyDurationMinutes = 60
+	ConsultancyPriceCentsUSD   = 4000   // $40/hour
+	ConsultancyPriceCentsINR   = 300000 // ₹3,000/hour
+)
+
+// ConsultancyRegionalPrice mirrors Course.RegionalPrice: India gets its
+// own INR rate, everyone else the USD rate.
+func ConsultancyRegionalPrice(country string) (currency string, cents int) {
+	if country == "IN" {
+		return "INR", ConsultancyPriceCentsINR
+	}
+	return "USD", ConsultancyPriceCentsUSD
+}
+
+// ConsultancyRegionalPriceDisplay renders "₹3,000/hour" or "$40/hour" for
+// the given visitor's country.
+func ConsultancyRegionalPriceDisplay(country string) string {
+	currency, cents := ConsultancyRegionalPrice(country)
+	return FormatMoney(cents, currency) + "/hour"
+}
+
+type User struct {
+	ID           int64
+	Email        string
+	PasswordHash string
+	Name         string
+	CreatedAt    time.Time
 }
 
 type AvailabilityRule struct {

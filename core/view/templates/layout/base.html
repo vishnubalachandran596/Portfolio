@@ -24,15 +24,15 @@
 {{block "jsonld" .}}{{end}}
 </head>
 <body data-active="{{.Active}}">
+<div id="page-loader" class="page-loader" aria-hidden="true"><span></span></div>
 <div id="scroll-progress" class="scroll-progress" aria-hidden="true"></div>
 <a class="skip-link" href="#main-content">Skip to content</a>
 {{template "header" .}}
-<main id="main-content">
+<main id="main-content" class="page-enter">
 {{block "content" .}}{{end}}
 </main>
 {{template "footer" .}}
 <button type="button" id="back-to-top" class="back-to-top" aria-label="Back to top" hidden>↑</button>
-<a href="{{.Nav.Booking}}" class="floating-cta" aria-label="Book a session">Book time</a>
 <script src="/static/js/main.js" defer></script>
 </body>
 </html>

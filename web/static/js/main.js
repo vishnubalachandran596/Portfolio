@@ -1,15 +1,65 @@
 (function () {
   "use strict";
 
-  // --- Mobile nav toggle ---------------------------------------------
+  // --- Side panel (the "three bars" menu) -----------------------------
   var navToggle = document.getElementById("nav-toggle");
-  var nav = document.getElementById("primary-nav");
-  if (navToggle && nav) {
-    navToggle.addEventListener("click", function () {
-      var open = nav.classList.toggle("open");
-      navToggle.setAttribute("aria-expanded", open ? "true" : "false");
+  var sidePanel = document.getElementById("side-panel");
+  var sidePanelBackdrop = document.getElementById("side-panel-backdrop");
+  var sidePanelClose = document.getElementById("side-panel-close");
+  function openSidePanel() {
+    if (!sidePanel || !sidePanelBackdrop) return;
+    sidePanelBackdrop.hidden = false;
+    requestAnimationFrame(function () {
+      sidePanel.classList.add("open");
+      sidePanelBackdrop.classList.add("open");
     });
+    sidePanel.setAttribute("aria-hidden", "false");
+    if (navToggle) navToggle.setAttribute("aria-expanded", "true");
   }
+  function closeSidePanel() {
+    if (!sidePanel || !sidePanelBackdrop) return;
+    sidePanel.classList.remove("open");
+    sidePanelBackdrop.classList.remove("open");
+    sidePanel.setAttribute("aria-hidden", "true");
+    if (navToggle) navToggle.setAttribute("aria-expanded", "false");
+    setTimeout(function () { sidePanelBackdrop.hidden = true; }, 240);
+  }
+  if (navToggle) navToggle.addEventListener("click", openSidePanel);
+  if (sidePanelClose) sidePanelClose.addEventListener("click", closeSidePanel);
+  if (sidePanelBackdrop) sidePanelBackdrop.addEventListener("click", closeSidePanel);
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape") closeSidePanel();
+  });
+
+  // --- Page transitions -------------------------------------------------
+  // A light fade-out before navigating to an internal link, and a spinner
+  // for anything slower than an instant cache hit, instead of a hard jump.
+  var pageLoader = document.getElementById("page-loader");
+  var loaderTimer = null;
+  document.addEventListener("click", function (e) {
+    var link = e.target.closest && e.target.closest("a[href]");
+    if (!link) return;
+    var url;
+    try {
+      url = new URL(link.href, window.location.href);
+    } catch (err) {
+      return;
+    }
+    var isInternal = url.origin === window.location.origin;
+    var isSamePage = url.pathname === window.location.pathname && url.search === window.location.search;
+    if (!isInternal || isSamePage || link.target === "_blank" || link.hasAttribute("download") || e.metaKey || e.ctrlKey || e.shiftKey) {
+      return;
+    }
+    if (pageLoader) {
+      loaderTimer = setTimeout(function () {
+        pageLoader.classList.add("active");
+      }, 220);
+    }
+  });
+  window.addEventListener("pageshow", function () {
+    if (pageLoader) pageLoader.classList.remove("active");
+    if (loaderTimer) clearTimeout(loaderTimer);
+  });
 
   // --- Theme toggle (persisted, defaults to OS preference) -----------
   var themeToggle = document.getElementById("theme-toggle");
@@ -112,6 +162,24 @@
       }
     });
   });
+
+  // --- Login / signup tab switch -----------------------------------------
+  var authTabs = document.querySelectorAll(".auth-tab");
+  var loginForm = document.getElementById("login-form");
+  var signupForm = document.getElementById("signup-form");
+  if (authTabs.length && loginForm && signupForm) {
+    authTabs.forEach(function (tab) {
+      tab.addEventListener("click", function () {
+        var showSignup = tab.getAttribute("data-tab") === "signup";
+        authTabs.forEach(function (t) {
+          t.classList.toggle("active", t === tab);
+          t.setAttribute("aria-selected", t === tab ? "true" : "false");
+        });
+        loginForm.hidden = showSignup;
+        signupForm.hidden = !showSignup;
+      });
+    });
+  }
 
   // --- Loading state on form submit buttons -----------------------------
   document.querySelectorAll("form").forEach(function (form) {
@@ -216,11 +284,12 @@
     });
   }
 
-  // --- Booking slot picker ------------------------------------------------
-  var slotInput = document.getElementById("slot-input");
-  var contact = document.getElementById("booking-contact");
+  // --- Consultancy booking: pick a slot, pay via Razorpay ----------------
+  var bookingContact = document.getElementById("booking-contact");
   var selectedLabel = document.getElementById("selected-slot-label");
-  if (slotInput && contact) {
+  var payBtn = document.getElementById("booking-pay-btn");
+  var selectedSlot = "";
+  if (bookingContact && payBtn) {
     document.querySelectorAll(".slot-btn").forEach(function (btn) {
       btn.addEventListener("click", function () {
         if (btn.disabled) return;
@@ -228,11 +297,89 @@
           b.classList.remove("selected");
         });
         btn.classList.add("selected");
-        slotInput.value = btn.getAttribute("data-slot");
+        selectedSlot = btn.getAttribute("data-slot");
         if (selectedLabel) selectedLabel.textContent = btn.getAttribute("data-label");
-        contact.hidden = false;
-        contact.scrollIntoView({ behavior: "smooth", block: "center" });
+        bookingContact.hidden = false;
+        bookingContact.scrollIntoView({ behavior: "smooth", block: "center" });
       });
+    });
+
+    payBtn.addEventListener("click", function () {
+      var errorBox = document.getElementById("booking-error");
+      var messageInput = document.getElementById("booking-message");
+      function showError(msg) {
+        if (errorBox) {
+          errorBox.textContent = msg;
+          errorBox.hidden = false;
+        }
+      }
+      if (!selectedSlot) {
+        showError("Please pick a time slot first.");
+        return;
+      }
+      if (errorBox) errorBox.hidden = true;
+      payBtn.disabled = true;
+      var originalText = payBtn.textContent;
+      payBtn.textContent = "Starting checkout…";
+
+      var form = new FormData();
+      form.append("slot", selectedSlot);
+      form.append("message", messageInput ? messageInput.value : "");
+
+      fetch("/booking/checkout/order", { method: "POST", body: form })
+        .then(function (res) {
+          return res.json().then(function (data) {
+            if (!res.ok) throw new Error(data.error || "Could not start checkout.");
+            return data;
+          });
+        })
+        .then(function (order) {
+          var rzp = new Razorpay({
+            key: order.key_id,
+            amount: order.amount,
+            currency: order.currency,
+            name: "Consultancy session",
+            description: selectedLabel ? selectedLabel.textContent : "1-hour session",
+            order_id: order.order_id,
+            prefill: { email: order.email, name: order.name },
+            handler: function (response) {
+              fetch("/booking/checkout/verify", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  razorpay_order_id: response.razorpay_order_id,
+                  razorpay_payment_id: response.razorpay_payment_id,
+                  razorpay_signature: response.razorpay_signature,
+                }),
+              })
+                .then(function (res) { return res.json(); })
+                .then(function (result) {
+                  if (result.redirect) {
+                    window.location.href = result.redirect;
+                  } else {
+                    showError(result.error || "Payment could not be verified.");
+                  }
+                })
+                .catch(function () {
+                  showError("Payment could not be verified. Contact support with your payment ID.");
+                });
+            },
+            modal: {
+              ondismiss: function () {
+                payBtn.disabled = false;
+                payBtn.textContent = originalText;
+              },
+            },
+          });
+          rzp.open();
+          payBtn.disabled = false;
+          payBtn.textContent = originalText;
+        })
+        .catch(function (err) {
+          showError(err.message || "Could not start checkout.");
+          payBtn.disabled = false;
+          payBtn.textContent = originalText;
+        });
     });
   }
 })();

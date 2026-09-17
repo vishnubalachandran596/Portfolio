@@ -1,0 +1,51 @@
+{{define "content"}}
+<section class="section page-hero page-hero-narrow">
+  <div class="container">
+    <p class="eyebrow">Account</p>
+    <h1>Log in or create an account</h1>
+    <p class="hero-subtitle">You'll need an account to book a consultancy session or purchase a course — your purchases and bookings stay tied to it.</p>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container auth-container">
+    {{if .Error}}<div class="alert alert-error">{{.Error}}</div>{{end}}
+
+    <div class="auth-tabs" role="tablist">
+      <button type="button" class="auth-tab{{if eq .Mode "login"}} active{{end}}" data-tab="login" role="tab" aria-selected="{{if eq .Mode "login"}}true{{else}}false{{end}}">Log In</button>
+      <button type="button" class="auth-tab{{if eq .Mode "signup"}} active{{end}}" data-tab="signup" role="tab" aria-selected="{{if eq .Mode "signup"}}true{{else}}false{{end}}">Create Account</button>
+    </div>
+
+    <form method="POST" action="/login" class="auth-form" id="login-form"{{if ne .Mode "login"}} hidden{{end}}>
+      <input type="hidden" name="next" value="{{.Next}}">
+      <label>Email
+        <input type="email" name="email" required maxlength="200" autocomplete="email">
+      </label>
+      <label>Password
+        <span class="password-field">
+          <input type="password" name="password" id="login-password" required maxlength="200" autocomplete="current-password">
+          <button type="button" class="password-toggle" data-target="login-password">Show</button>
+        </span>
+      </label>
+      <button type="submit" class="btn btn-primary" data-loading-text="Logging in…">Log In</button>
+    </form>
+
+    <form method="POST" action="/signup" class="auth-form" id="signup-form"{{if ne .Mode "signup"}} hidden{{end}}>
+      <input type="hidden" name="next" value="{{.Next}}">
+      <label>Name
+        <input type="text" name="name" required maxlength="120" autocomplete="name">
+      </label>
+      <label>Email
+        <input type="email" name="email" required maxlength="200" autocomplete="email">
+      </label>
+      <label>Password <span class="optional">(at least 8 characters)</span>
+        <span class="password-field">
+          <input type="password" name="password" id="signup-password" required minlength="8" maxlength="200" autocomplete="new-password">
+          <button type="button" class="password-toggle" data-target="signup-password">Show</button>
+        </span>
+      </label>
+      <button type="submit" class="btn btn-primary" data-loading-text="Creating account…">Create Account</button>
+    </form>
+  </div>
+</section>
+{{end}}

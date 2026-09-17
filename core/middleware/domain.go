@@ -16,7 +16,9 @@ var pageSubdomains = []struct {
 }{
 	{"/about", "about"},
 	{"/courses", "courses"},
-	{"/booking", "booking"},
+	{"/consultancy", "consultancy"},
+	{"/booking", "consultancy"},
+	{"/contact", "contact"},
 	{"/admin", "admin"},
 }
 

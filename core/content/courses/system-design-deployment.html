@@ -1,0 +1,1160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>System Design &amp; Deployment Patterns</title>
+<meta name="description" content="A practical, mechanism-first course on scaling, caching, database sharding, reliability patterns and deployment strategies for real production systems and system design interviews."/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap');
+
+:root{
+  --bg:#F8FAFC; --fg:#0F172A; --card:#FFFFFF; --border:#E2E8F0; --muted:#475569;
+  --primary:#F59E0B; --primary-fg:#0F172A; --accent:#8B5CF6; --accent-fg:#ffffff;
+  --ok:#16A34A; --bad:#DC2626; --warn:#D97706;
+  --font:'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --mono:'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  --radius:12px;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#0F172A; --fg:#F8FAFC; --card:#222735; --border:#334155; --muted:#94A3B8;
+    --primary:#F59E0B; --primary-fg:#0F172A; --accent:#8B5CF6; --accent-fg:#ffffff;
+    --ok:#4ADE80; --bad:#F87171; --warn:#FBBF24;
+  }
+}
+
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0; font-family:var(--font); background:var(--bg); color:var(--fg);
+  line-height:1.6; -webkit-font-smoothing:antialiased;
+}
+a{color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent); outline-offset:2px; border-radius:4px}
+
+.wrap{max-width:840px; margin:0 auto; padding:0 1.25rem}
+
+header.hero{
+  padding:3.5rem 0 2.5rem; border-bottom:1px solid var(--border);
+}
+header.hero h1{
+  font-size:clamp(1.9rem,4.5vw,2.7rem); font-weight:700; margin:0 0 .6rem;
+  letter-spacing:-.02em; line-height:1.15;
+}
+header.hero p.subtitle{
+  margin:0; color:var(--muted); font-size:1.08rem; font-weight:400; max-width:60ch;
+}
+
+main{padding:2.5rem 0 5rem}
+
+section{margin:0 0 3.5rem; scroll-margin-top:1.5rem}
+section:last-of-type{margin-bottom:0}
+
+.kicker{
+  font-size:.78rem; font-weight:600; letter-spacing:.12em; text-transform:uppercase;
+  color:var(--primary); margin-bottom:.5rem;
+}
+h2{
+  font-size:1.55rem; font-weight:700; margin:0 0 1.1rem; letter-spacing:-.01em;
+}
+h3{font-size:1.2rem; font-weight:600; margin:1.8rem 0 .8rem}
+h4{font-size:1rem; font-weight:600; margin:1.2rem 0 .6rem}
+
+p{margin:0 0 1rem; color:var(--fg)}
+section p{color:var(--fg)}
+.muted{color:var(--muted)}
+strong{font-weight:600}
+code{
+  font-family:var(--mono); font-size:.85em; background:var(--card); border:1px solid var(--border);
+  padding:.1em .4em; border-radius:5px;
+}
+ul,ol{margin:0 0 1rem; padding-left:1.3rem; color:var(--fg)}
+li{margin:.3rem 0}
+hr.rule{border:0; border-top:1px solid var(--border); margin:2.2rem 0}
+
+.callout{
+  background:var(--card); border:1px solid var(--border); border-left:3px solid var(--primary);
+  border-radius:var(--radius); padding:1rem 1.2rem; margin:1.1rem 0; font-size:.96rem;
+}
+.callout p:last-child{margin-bottom:0}
+.callout .label{
+  font-size:.72rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
+  color:var(--primary); margin-bottom:.4rem; display:block;
+}
+
+.formula{
+  background:var(--card); border:1px solid var(--border); border-radius:var(--radius);
+  padding:1rem 1.2rem; margin:1rem 0; font-family:var(--mono); font-size:.84rem;
+  line-height:1.75; overflow-x:auto; color:var(--fg);
+}
+.formula .step{color:var(--muted)}
+.formula .result{color:var(--primary); font-weight:600}
+
+table.tradeoffs{
+  width:100%; border-collapse:collapse; margin:1.1rem 0; font-size:.9rem;
+  background:var(--card); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden;
+}
+table.tradeoffs th, table.tradeoffs td{
+  padding:.6rem .8rem; text-align:left; border-bottom:1px solid var(--border); vertical-align:top;
+}
+table.tradeoffs th{
+  background:var(--bg); font-size:.72rem; letter-spacing:.06em; text-transform:uppercase;
+  color:var(--muted); font-weight:600;
+}
+table.tradeoffs tr:last-child td{border-bottom:0}
+
+/* ---- interactive exercise shell ---- */
+.exercise{
+  background:var(--card); border:1px solid var(--border); border-radius:var(--radius);
+  padding:1.4rem 1.4rem 1.5rem; margin:1.6rem 0 2rem;
+}
+.exercise-head{display:flex; align-items:center; gap:.6rem; flex-wrap:wrap; margin-bottom:.3rem}
+.exercise-head h4{margin:0}
+.badge{
+  font-size:.66rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
+  color:var(--accent-fg); background:var(--accent); padding:.2rem .55rem; border-radius:999px;
+}
+.exercise-desc{color:var(--muted); font-size:.9rem; margin:.4rem 0 1.1rem}
+
+.field-row{display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:.8rem; margin-bottom:1rem}
+.field{display:flex; flex-direction:column; gap:.3rem}
+.field label{font-size:.78rem; color:var(--muted); font-weight:500}
+.field input[type=number], .field input[type=text]{
+  font-family:var(--font); font-size:.92rem; padding:.5rem .6rem; border-radius:8px;
+  border:1px solid var(--border); background:var(--bg); color:var(--fg);
+}
+.field input[type=range]{accent-color:var(--accent)}
+
+.btn{
+  font-family:var(--font); font-size:.88rem; font-weight:600; cursor:pointer;
+  background:var(--accent); color:var(--accent-fg); border:0; border-radius:9px;
+  padding:.55rem 1.1rem; transition:transform .18s ease, opacity .18s ease, background .2s ease;
+}
+.btn:hover{opacity:.88}
+.btn:active{transform:scale(.97)}
+.btn.secondary{background:transparent; color:var(--fg); border:1px solid var(--border)}
+.btn.secondary:hover{border-color:var(--accent); opacity:1; color:var(--accent)}
+.btn.ok{background:var(--ok); color:#04210f}
+.btn.bad{background:var(--bad); color:#2b0505}
+.btn-row{display:flex; flex-wrap:wrap; gap:.6rem; margin:.2rem 0 1rem}
+
+.readout{
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:.7rem; margin-top:1rem;
+}
+.readout .cell{
+  background:var(--bg); border:1px solid var(--border); border-radius:9px; padding:.65rem .8rem;
+}
+.readout .cell .v{font-family:var(--mono); font-size:1.15rem; font-weight:600; color:var(--primary)}
+.readout .cell .k{font-size:.72rem; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; margin-top:.15rem}
+
+/* quiz */
+.quiz-scenario{
+  border-top:1px dashed var(--border); padding-top:1.1rem; margin-top:1.1rem;
+}
+.quiz-scenario:first-of-type{border-top:0; padding-top:0; margin-top:0}
+.quiz-scenario p.q{font-weight:600; margin-bottom:.7rem}
+.quiz-options{display:grid; gap:.5rem}
+.quiz-opt{
+  text-align:left; width:100%; font-family:var(--font); font-size:.88rem;
+  background:var(--bg); border:1px solid var(--border); border-radius:8px;
+  padding:.55rem .8rem; cursor:pointer; color:var(--fg); transition:border-color .18s ease, background .18s ease;
+}
+.quiz-opt:hover{border-color:var(--accent)}
+.quiz-opt.correct{border-color:var(--ok); background:color-mix(in srgb, var(--ok) 14%, var(--card))}
+.quiz-opt.incorrect{border-color:var(--bad); background:color-mix(in srgb, var(--bad) 14%, var(--card))}
+.quiz-opt[disabled]{cursor:default}
+.quiz-feedback{
+  margin-top:.6rem; font-size:.86rem; padding:.6rem .8rem; border-radius:8px;
+  background:var(--bg); border:1px solid var(--border); display:none;
+}
+.quiz-feedback.show{display:block}
+.quiz-feedback.right{border-left:3px solid var(--ok)}
+.quiz-feedback.wrong{border-left:3px solid var(--bad)}
+
+/* circuit breaker */
+.cb-diagram{
+  display:flex; align-items:center; justify-content:center; gap:.5rem; flex-wrap:wrap;
+  margin:.2rem 0 1.2rem; padding:1.4rem .5rem; background:var(--bg); border-radius:var(--radius);
+  border:1px solid var(--border);
+}
+.cb-state{
+  min-width:112px; text-align:center; padding:.85rem .6rem; border-radius:10px;
+  border:2px solid var(--border); background:var(--card); font-weight:700; font-size:.85rem;
+  transition:border-color .25s ease, box-shadow .25s ease, transform .25s ease; letter-spacing:.03em;
+}
+.cb-state small{display:block; font-weight:400; color:var(--muted); font-size:.68rem; margin-top:.3rem; letter-spacing:0}
+.cb-state.active{transform:scale(1.06)}
+.cb-state[data-s=closed].active{border-color:var(--ok); box-shadow:0 0 0 3px color-mix(in srgb, var(--ok) 20%, transparent)}
+.cb-state[data-s=open].active{border-color:var(--bad); box-shadow:0 0 0 3px color-mix(in srgb, var(--bad) 20%, transparent)}
+.cb-state[data-s=halfopen].active{border-color:var(--warn); box-shadow:0 0 0 3px color-mix(in srgb, var(--warn) 20%, transparent)}
+.cb-arrow{color:var(--muted); font-size:1.3rem}
+.cb-status-line{font-size:.92rem; margin:.6rem 0 .3rem}
+.cb-status-line b{color:var(--primary)}
+.cb-log{
+  max-height:150px; overflow-y:auto; font-family:var(--mono); font-size:.76rem;
+  background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:.5rem .7rem; margin-top:.7rem;
+}
+.cb-log div{padding:.15rem 0; border-bottom:1px dotted var(--border); color:var(--muted)}
+.cb-log div:last-child{border-bottom:0}
+.cb-log div.ev-fail{color:var(--bad)}
+.cb-log div.ev-ok{color:var(--ok)}
+.cb-log div.ev-block{color:var(--warn)}
+
+/* hashing ring */
+.ring-wrap{display:flex; gap:1.6rem; flex-wrap:wrap; align-items:flex-start; justify-content:center}
+.ring-svg{width:260px; height:260px; flex-shrink:0}
+.ring-stats{flex:1; min-width:220px}
+.ring-node-dot{fill:var(--accent)}
+.ring-key-dot{fill:var(--muted)}
+.ring-legend{display:flex; gap:1rem; font-size:.78rem; color:var(--muted); margin-top:.5rem; flex-wrap:wrap}
+.ring-legend span{display:inline-flex; align-items:center; gap:.35rem}
+.ring-swatch{width:.65rem; height:.65rem; border-radius:50%; display:inline-block}
+
+/* token bucket */
+.bucket-wrap{display:flex; gap:1.6rem; flex-wrap:wrap; align-items:center}
+.bucket-visual{
+  width:70px; height:180px; border:2px solid var(--border); border-radius:8px 8px 4px 4px;
+  position:relative; overflow:hidden; background:var(--bg); flex-shrink:0;
+}
+.bucket-fill{
+  position:absolute; bottom:0; left:0; right:0; background:var(--accent); height:0%;
+  transition:height .25s linear;
+}
+.bucket-label{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-family:var(--mono); font-size:.78rem; font-weight:700; color:var(--fg); mix-blend-mode:difference}
+.bucket-side{flex:1; min-width:220px}
+
+/* backoff / jitter */
+.jitter-row{margin:.9rem 0}
+.jitter-row .jr-label{font-size:.76rem; color:var(--muted); margin-bottom:.35rem; text-transform:uppercase; letter-spacing:.05em}
+.jitter-track{
+  position:relative; height:46px; background:var(--bg); border:1px solid var(--border);
+  border-radius:8px; overflow:hidden;
+}
+.jitter-bin{
+  position:absolute; bottom:0; width:3px; background:var(--bad); border-radius:2px 2px 0 0;
+  transition:height .2s ease;
+}
+.jitter-row.jittered .jitter-bin{background:var(--accent)}
+
+.two-col{display:grid; grid-template-columns:1fr 1fr; gap:1.4rem}
+@media (max-width:640px){
+  .two-col{grid-template-columns:1fr}
+  .bucket-wrap{flex-direction:column}
+  header.hero{padding:2.2rem 0 1.8rem}
+  h2{font-size:1.32rem}
+  .exercise{padding:1.1rem 1rem 1.3rem}
+}
+
+footer.end{
+  border-top:1px solid var(--border); padding-top:1.6rem; margin-top:2.5rem;
+  color:var(--muted); font-size:.85rem;
+}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+<header class="hero">
+  <h1>System Design &amp; Deployment Patterns</h1>
+  <p class="subtitle">A mechanism-first course on scaling, caching, data, reliability and deployment — for interview prep and for systems you actually have to run.</p>
+</header>
+</div>
+
+<main class="wrap">
+
+<!-- ============ SECTION 1 ============ -->
+<section id="mental-model">
+  <div class="kicker">01 · Foundations</div>
+  <h2>The system design interview mental model</h2>
+
+  <p>Every system design exercise — whether it's an interview or a real design doc — falls apart in the same place: someone starts drawing boxes before anyone agrees what the system is supposed to do, at what scale, and under what constraints. The discipline that separates a strong design from a shaky one is almost entirely upstream of the architecture: clarify requirements, do the arithmetic, and only then let the numbers tell you which trade-offs are even on the table.</p>
+
+  <h3>Functional vs. non-functional requirements</h3>
+  <p><strong>Functional requirements</strong> describe what the system does — the operations a user or client can invoke, and their expected behavior. <strong>Non-functional requirements</strong> describe the qualities the system must have while doing that — scale (how many users, how much data, how much traffic), latency (p50/p99 targets), availability (can it tolerate downtime, and how much), consistency (can reads be briefly stale), and durability (can data ever be lost). Non-functional requirements are the ones that actually drive architecture: two systems with identical functional requirements — "let a user post a message" — produce completely different designs if one needs to serve 500 requests a day and the other needs to serve 500,000 a second with a 200ms p99.</p>
+
+  <p>A few clarifying questions worth asking for almost any "design X" prompt, because the answers change the design:</p>
+  <ul>
+    <li>What's the read:write ratio? A read-heavy system (Twitter timelines, a URL shortener) optimizes around caching and replication; a write-heavy system (metrics ingestion, an order pipeline) optimizes around ingestion throughput and buffering.</li>
+    <li>What's the scale, roughly — daily active users, requests per user, total data volume? Even an order-of-magnitude estimate changes whether a single database instance is fine or sharding is mandatory from day one.</li>
+    <li>What's the latency requirement, and is it a hard real-time constraint or a "should feel fast" constraint? A single-digit-millisecond p99 rules out synchronous cross-region calls in the hot path; a 2-second budget does not.</li>
+    <li>Does correctness matter more than availability, or the reverse, if the network partitions? A payments ledger and a "like" counter answer this question differently, and that answer determines the consistency model.</li>
+    <li>Is this a green-field system, or does it need to interoperate with, or migrate from, something that already exists in production?</li>
+  </ul>
+
+  <h3>Back-of-envelope estimation as a discipline</h3>
+  <p>Estimation isn't a box-ticking ritual before the "real" design work — it's the mechanism by which requirements become constraints you can design against. The method is always the same three calculations: traffic (QPS), storage growth, and bandwidth, derived from a small number of assumed inputs using simple arithmetic. A few approximations make the mental math fast and are worth memorizing:</p>
+
+  <div class="formula">
+<span class="step">// time</span>
+1 day ≈ 86,400 seconds ≈ 10^5 seconds  (good enough for order-of-magnitude math)
+1 year ≈ 3.15 × 10^7 seconds
+
+<span class="step">// data size, base-2 approximations</span>
+1 KB ≈ 10^3 bytes    1 MB ≈ 10^6 bytes    1 GB ≈ 10^9 bytes    1 TB ≈ 10^12 bytes
+  </div>
+
+  <div class="callout">
+    <span class="label">Illustrative example</span>
+    <p>Say we're estimating for a hypothetical service with <strong>10 million daily active users (DAU)</strong>, where each user performs <strong>20 read actions and 2 write actions per day</strong> on average, each request/response pair is roughly <strong>2 KB</strong>, and each written record is roughly <strong>1 KB</strong>. These numbers are illustrative, not observed — the point is the method, which works the same way regardless of the actual inputs.</p>
+  </div>
+
+  <div class="formula">
+<span class="step">// (a) QPS from DAU and actions/user/day</span>
+reads/day  = 10,000,000 users × 20 = 200,000,000
+writes/day = 10,000,000 users × 2  = 20,000,000
+avg read QPS  = 200,000,000 / 86,400 ≈ <span class="result">2,315 QPS</span>
+avg write QPS =  20,000,000 / 86,400 ≈ <span class="result">232 QPS</span>
+<span class="step">// traffic is never uniform across the day — plan capacity for peak, not average.
+// a common starting assumption (illustrative, tune with real traffic curves) is peak ≈ 2-3× average</span>
+peak read QPS  ≈ 2,315 × 3 ≈ <span class="result">~7,000 QPS</span>
+
+<span class="step">// (b) storage growth per year</span>
+bytes/year = writes/day × record size × 365
+           = 20,000,000 × 1,000 bytes × 365
+           ≈ 7.3 × 10^12 bytes ≈ <span class="result">~7.3 TB / year</span>
+<span class="step">// add index overhead (often 20-50% on top of raw row size) and replication factor (e.g. 3x for durability)
+// → realistic provisioning is closer to 7.3 TB × 1.3 × 3 ≈ ~28 TB/year of raw disk</span>
+
+<span class="step">// (c) bandwidth from request/response size and QPS</span>
+read bandwidth = 2,315 QPS × 2 KB × 8 bits/byte ≈ 37 Mbps sustained, ~110 Mbps at peak
+  </div>
+
+  <p>The value of doing this isn't the specific numbers — it's what they rule in or out. A ~7,000 peak QPS read path with a 2-3x read:write skew says "you need a cache and probably read replicas, but you do not need to shard on day one." A p99 latency budget of 10ms says "no synchronous call to a service in another region can be in the hot path, full stop" — the speed of light alone (roughly 60-70ms round-trip cross-continent over real network paths) makes that arithmetically impossible before any processing time is added. This is the actual purpose of estimation: it converts vague scale talk into hard constraints that eliminate whole categories of design, before you've drawn a single box.</p>
+
+  <div class="exercise" id="ex-capacity">
+    <div class="exercise-head"><h4>Back-of-envelope capacity calculator</h4><span class="badge">Interactive</span></div>
+    <p class="exercise-desc">Plug in rough numbers for a hypothetical service and watch the QPS, storage, and bandwidth arithmetic compute live — the same three calculations from above, worked on your inputs.</p>
+    <div class="field-row">
+      <div class="field"><label for="cap-users">Daily active users</label><input type="number" id="cap-users" value="10000000" min="0"/></div>
+      <div class="field"><label for="cap-reads">Reads / user / day</label><input type="number" id="cap-reads" value="20" min="0"/></div>
+      <div class="field"><label for="cap-writes">Writes / user / day</label><input type="number" id="cap-writes" value="2" min="0"/></div>
+      <div class="field"><label for="cap-reqsize">Avg request+response size (bytes)</label><input type="number" id="cap-reqsize" value="2000" min="0"/></div>
+      <div class="field"><label for="cap-recsize">Avg stored record size (bytes)</label><input type="number" id="cap-recsize" value="1000" min="0"/></div>
+      <div class="field"><label for="cap-peak">Peak / average multiplier</label><input type="number" id="cap-peak" value="3" min="1" step="0.5"/></div>
+    </div>
+    <div class="readout" id="cap-out"></div>
+    <div class="formula" id="cap-formula" style="margin-top:1rem"></div>
+  </div>
+
+</section>
+
+<!-- ============ SECTION 2 ============ -->
+<section id="scaling-fundamentals">
+  <div class="kicker">02 · Foundations</div>
+  <h2>Scaling fundamentals</h2>
+
+  <h3>Vertical vs. horizontal scaling</h3>
+  <p><strong>Vertical scaling</strong> means adding more resources — CPU, RAM, faster disks — to a single machine. It's operationally simple (no distributed systems problems to solve) but hits hard limits: there's a ceiling on how large a single machine can get, the cost curve becomes superlinear well before that ceiling (the largest instances cost disproportionately more per unit of CPU/RAM than mid-sized ones), and a single machine remains a single point of failure no matter how big it is. <strong>Horizontal scaling</strong> means adding more machines and distributing load across them. It has no practical ceiling and gives you fault tolerance for free (one instance dying doesn't take down the service) — but it only works if the architecture supports it, which is the next point.</p>
+
+  <h3>Stateless vs. stateful services, and why statelessness is the unlock</h3>
+  <p>A service is <strong>stateless</strong> when it holds no session-specific or request-specific data in its own process memory or local disk between requests — every request carries (or looks up from a shared store) everything needed to handle it. A service is <strong>stateful</strong> when a given instance accumulates data over time that later requests depend on — an in-memory session, a WebSocket connection, a local cache that's the only copy of something.</p>
+  <p>Statelessness is the property that makes horizontal scaling <em>trivial</em>: if any instance can correctly handle any request, you scale by putting identical instances behind a load balancer and adding or removing them freely. There's no state to migrate when an instance dies, no need to route a specific user to a specific instance, and no coordination problem when scaling out. This is why "make it stateless" is usually the first architectural move before "make it horizontally scalable" — the second doesn't work cleanly without the first.</p>
+  <p>When state genuinely has to exist — a user's session, a shopping cart, an in-progress upload — there are two real options. The preferred one is to <strong>externalize the state</strong> to a shared store (a database, Redis, a distributed cache) that every instance can read and write, keeping the service itself stateless. The fallback, when externalizing isn't practical, is <strong>sticky sessions</strong> — the load balancer routes a given client to the same instance every time, usually via a cookie. Sticky sessions have real costs worth naming explicitly: they cause uneven load distribution (some instances end up with disproportionately many "sticky" clients), and they lose that client's state entirely if the instance fails, since nothing else holds a copy.</p>
+
+  <h3>Load balancing algorithms</h3>
+  <table class="tradeoffs">
+    <tr><th>Algorithm</th><th>How it routes</th><th>Good fit</th><th>Weakness</th></tr>
+    <tr><td><strong>Round robin</strong> (and weighted)</td><td>Requests are handed to backends in fixed rotation; weighted variants send proportionally more to higher-capacity backends.</td><td>Homogeneous backends, roughly uniform request cost.</td><td>Ignores actual backend load — a backend stuck on a slow request still gets the next one in rotation.</td></tr>
+    <tr><td><strong>Least connections</strong></td><td>Each request goes to whichever backend currently has the fewest open/in-flight connections.</td><td>Variable request cost (some requests are much slower than others) — adapts to real load, not just turn order.</td><td>Needs the load balancer to track live connection counts per backend; slightly more state and coordination than round robin.</td></tr>
+    <tr><td><strong>Consistent hashing</strong></td><td>Both backend nodes and request keys are hashed onto positions on a fixed ring (0 to a max hash value, wrapping around). A key is owned by the first node found walking clockwise from the key's position.</td><td>Any scenario where the <em>same</em> key should keep landing on the <em>same</em> backend — cache servers, sharded stateful backends, sticky routing without a central session store.</td><td>More complex to implement and reason about than the other two; still needs virtual nodes (see below) to avoid uneven load.</td></tr>
+  </table>
+
+  <p>Consistent hashing is worth being precise about, because interviews (and real systems) hinge on the detail. Naively, you might route key <code>k</code> to <code>hash(k) mod N</code> where <code>N</code> is the number of backend nodes — simple, but catastrophic when <code>N</code> changes: changing <code>N</code> by even one changes the modulus for almost every key, so adding or removing a single node remaps nearly the entire keyspace, invalidating nearly every cache entry or requiring nearly every stateful session to move at once.</p>
+  <p>Consistent hashing fixes this by placing both nodes and keys on the same ring via a hash function, independent of <code>N</code>. A key is owned by the nearest node clockwise from it. When a node is added, it only takes ownership of the slice of the ring between itself and the next node counter-clockwise — every other key's owner is unchanged. When a node is removed, only the keys it owned move, to the next node clockwise. In expectation, only about <strong>1/N</strong> of keys remap on a single node change, versus nearly all of them under naive mod-N hashing. Because a small number of nodes can land unevenly on the ring by chance (clustering, leaving some nodes with a disproportionate arc), real implementations place multiple <strong>virtual nodes</strong> per physical node around the ring, which smooths the distribution without changing the core remapping property.</p>
+
+  <div class="exercise" id="ex-hashring">
+    <div class="exercise-head"><h4>Consistent hashing visualizer</h4><span class="badge">Interactive</span></div>
+    <p class="exercise-desc">A ring of 24 fixed keys and a set of nodes. Add or remove a node and compare how many keys move under consistent hashing versus naive mod-N hashing.</p>
+    <div class="ring-wrap">
+      <svg class="ring-svg" viewBox="0 0 260 260" id="ring-svg" aria-label="Consistent hashing ring diagram"></svg>
+      <div class="ring-side" style="flex:1; min-width:220px">
+        <div class="btn-row">
+          <button class="btn" id="ring-add">Add node</button>
+          <button class="btn secondary" id="ring-remove">Remove node</button>
+          <button class="btn secondary" id="ring-reset">Reset</button>
+        </div>
+        <div class="readout" id="ring-out"></div>
+        <div class="ring-legend">
+          <span><i class="ring-swatch" style="background:var(--accent)"></i> node</span>
+          <span><i class="ring-swatch" style="background:var(--muted)"></i> key</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</section>
+
+<!-- ============ SECTION 3 ============ -->
+<section id="caching">
+  <div class="kicker">03 · Data</div>
+  <h2>Caching strategies in depth</h2>
+
+  <p>Caching is one of the highest-leverage tools in system design, and one of the most misapplied. The four canonical write/read strategies each make a different trade-off between consistency, latency, and durability risk.</p>
+
+  <h3>Cache-aside (lazy loading)</h3>
+  <p>The application checks the cache first; on a hit, it returns the cached value; on a miss, it reads from the database, returns the result, and <em>then</em> writes it into the cache for next time. The application owns population — the cache itself is a passive key-value store with no knowledge of the database. This is by far the most common pattern because it's simple and the cache only ever holds what's actually been requested. Its main cost is a staleness window: if the underlying row changes and the cache isn't explicitly invalidated, stale data can be served until the TTL expires.</p>
+
+  <h3>Write-through</h3>
+  <p>Writes go to the cache and the database together, synchronously, as part of the same write operation (typically cache first, then database, or the reverse, with the write only considered complete once both succeed). This keeps the cache always consistent with the database, at the cost of added write latency, since every write now waits on two systems instead of one.</p>
+
+  <h3>Write-behind (write-back)</h3>
+  <p>Writes land in the cache immediately and are acknowledged to the caller right away; the cache asynchronously flushes changes to the database in the background, often batched. This gives the lowest possible write latency and can absorb bursty write-heavy workloads well, but it carries real durability risk: if the cache crashes before a flush completes, that write is lost. It's a reasonable trade for workloads where a small window of possible data loss is acceptable in exchange for write throughput and latency — it is rarely acceptable for anything transactional.</p>
+
+  <h3>TTL and invalidation</h3>
+  <p>A cache entry needs to expire or be explicitly invalidated eventually, or it will silently serve stale data forever. <strong>Fixed TTL</strong> expires an entry a set duration after it was written. <strong>Sliding TTL</strong> resets the expiry clock on every access, keeping hot entries alive and letting cold ones lapse. <strong>Explicit invalidation on write</strong> deletes or updates the cache entry the moment the underlying data changes, giving the tightest consistency but requiring every write path to remember to do it. This last point is why cache invalidation is a genuinely hard engineering problem, not a joke: miss one write path that forgets to invalidate, or race a write against a concurrent cache repopulation, and you get silently stale reads that are difficult to detect because nothing errors — the system just quietly serves wrong data.</p>
+
+  <h3>Cache stampede</h3>
+  <p>A cache stampede (thundering herd, dogpile) happens when a hot key expires or is evicted, and a large number of concurrent requests miss on it at the same instant — all of them fall through to the database simultaneously, often enough to overload it, sometimes badly enough to take it down, which then causes every one of those requests to fail or time out together. Three concrete mitigations:</p>
+  <ul>
+    <li><strong>Request coalescing (single-flight):</strong> when multiple requests miss on the same key concurrently, only the first one actually queries the database; the rest wait on that in-flight result and share it once it returns, instead of each issuing their own database query.</li>
+    <li><strong>Probabilistic early expiration:</strong> as an entry approaches its TTL, requests recompute it early with rising probability (rather than all waiting for the hard expiry instant), spreading recomputation out over time instead of concentrating it at one moment.</li>
+    <li><strong>Short-lived mutex/lock keys:</strong> the first request to miss acquires a short-lived lock and repopulates the cache; other concurrent requests either wait briefly for the lock holder to finish, or fall back to a slightly stale value if one still exists.</li>
+  </ul>
+
+  <h3>Where caching helps, and where it just hides a problem</h3>
+  <p>Caching genuinely helps when the underlying data is read far more often than it's written, is expensive to compute or fetch, and the workload can tolerate some staleness. It is a poor fit — or actively harmful — when it's used to paper over a problem that should be fixed at the source. A cache in front of an unindexed, slow query doesn't make the query fast; it just hides the slowness until the cache misses (cold start, eviction, or a stampede), at which point the underlying problem surfaces at the worst possible time, under load. Similarly, using a cache to compensate for a service that's fundamentally under-provisioned for its real traffic just delays an outage rather than preventing one — the fix is capacity or query optimization, and caching on top of that fix is a legitimate latency win, but caching <em>instead of</em> that fix is technical debt wearing a performance-improvement costume. A useful interview and design-review discipline: before proposing a cache, be able to say precisely what's expensive about the operation you're caching, and what happens the moment the cache doesn't have the answer.</p>
+
+  <div class="exercise" id="ex-quiz">
+    <div class="exercise-head"><h4>Caching strategy decision quiz</h4><span class="badge">Interactive</span></div>
+    <p class="exercise-desc">Five scenarios. Pick the strategy you'd actually reach for, then read why.</p>
+    <div id="quiz-root"></div>
+  </div>
+
+</section>
+
+<!-- ============ SECTION 4 ============ -->
+<section id="db-scaling">
+  <div class="kicker">04 · Data</div>
+  <h2>Database scaling</h2>
+
+  <h3>Read replicas and replication lag</h3>
+  <p>A primary database accepts writes and records them to a write-ahead log (WAL) or binary log; one or more read replicas asynchronously apply that log to stay in sync, and reads can be distributed across them to take load off the primary. Because replication is asynchronous (to avoid the primary blocking on every replica's acknowledgment), replicas run slightly behind the primary — <strong>replication lag</strong>. The direct consequence is that a replica can serve a stale read: it hasn't applied the latest write yet. This bites hardest in the <strong>read-your-own-writes</strong> case — a user submits a write, then immediately issues a read that lands on a lagging replica and doesn't see their own change, which looks like a bug to the user even though the system is technically "eventually consistent." Two common mitigations: route reads back to the primary (or to a replica known to be caught up) for a short window immediately after that session's own write, or pass a consistency token (e.g. the log position of the write) with subsequent reads so the routing layer picks a replica that has caught up to at least that point.</p>
+
+  <h3>Sharding strategies</h3>
+  <table class="tradeoffs">
+    <tr><th>Strategy</th><th>Mechanism</th><th>Trade-off</th></tr>
+    <tr><td><strong>Range-based</strong></td><td>Data is partitioned by ordered key ranges (e.g. user IDs 1-1M on shard A, 1M-2M on shard B).</td><td>Efficient range scans within a shard. Risk of hot shards when keys are written in sequential order (e.g. timestamps, auto-increment IDs) — all new writes land on the single shard holding the current range.</td></tr>
+    <tr><td><strong>Hash-based</strong></td><td>A hash function maps each key to a shard, distributing keys roughly uniformly regardless of key ordering.</td><td>Even write distribution, no hot-shard problem from sequential keys. Range queries ("all records between X and Y") become scatter-gather across every shard, since adjacent keys are scattered by the hash.</td></tr>
+    <tr><td><strong>Directory-based</strong></td><td>A separate lookup service maps each key (or key range) to its shard explicitly, rather than deriving it algorithmically.</td><td>Most flexible — resharding or rebalancing means updating directory entries, not re-deriving every key's location. Adds a dependency and an extra network hop, and the directory service itself can become a bottleneck or single point of failure if not made highly available.</td></tr>
+  </table>
+
+  <h3>Indexing fundamentals</h3>
+  <p>A B-tree index maintains data in an ordered tree structure, giving O(log n) point lookups and efficient ordered range scans — versus a full table scan, which is O(n) and reads every row regardless of how selective the query is. <strong>Composite indexes</strong> (an index over multiple columns) are ordered by the first column, then the second within each value of the first, and so on — which means an index on <code>(a, b)</code> can efficiently serve queries filtering on <code>a</code> alone or on <code>a</code> and <code>b</code> together, but generally cannot efficiently serve a query filtering on <code>b</code> alone. Column order in a composite index is a real design decision, not a formality. Indexes aren't free: every index on a table must also be updated on every insert, update, or delete to that table, so each additional index is a direct write-amplification cost traded against faster reads — a table with ten indexes pays that update cost ten times over on every write.</p>
+
+  <h3>When to denormalize</h3>
+  <p>A normalized schema keeps each fact in exactly one place, avoiding update anomalies (change it once, it's correct everywhere) at the cost of needing joins to reassemble related data at read time. Denormalizing — duplicating data across tables or documents to avoid joins — trades that single source of truth for read performance on join-heavy hot paths. It's worth the trade when a query is both read-heavy and expensive to join at the volume you're serving; it costs you the need for a reconciliation or sync strategy to keep the duplicated copies from drifting apart, which is real ongoing engineering work, not a one-time cost.</p>
+
+  <h3>CAP theorem, precisely</h3>
+  <p>The common shorthand — "pick two of Consistency, Availability, Partition tolerance" — is misleading, because it implies you're always trading all three against each other. The precise statement is narrower and more useful: <strong>CAP only constrains you during an actual network partition.</strong> When there is no partition, a well-built distributed system can and should provide both consistency and availability simultaneously — there's no CAP trade-off to make in the normal case. The real decision CAP forces is: <em>when a partition is actually happening</em> and a node can't reach the rest of the cluster, does it keep serving requests with possibly-stale or possibly-conflicting data (choosing <strong>availability</strong>, an AP system), or does it refuse to serve until it can confirm consistency with the rest of the cluster (choosing <strong>consistency</strong>, a CP system)? Partition tolerance itself isn't really optional to "give up" — real networks partition, so any system that wants to keep running across more than one node has to have an answer for what happens when they can't talk to each other.</p>
+  <ul>
+    <li><strong>CP example:</strong> a leader-based distributed configuration store or coordination service (the kind used for service discovery or distributed locks) that requires a write quorum. If it can't reach enough replicas to confirm a write is durable and consistent, it refuses the write rather than risk two nodes disagreeing about the current configuration or who holds a lock — correctness is chosen over uptime, because a wrong answer (two services believing they both hold the same lock) is worse than no answer.</li>
+    <li><strong>AP example:</strong> a shopping cart service, or a DNS-like lookup system, during a partition keeps accepting reads and writes on whichever side of the partition a client can reach, even if that means two sides temporarily disagree — a user can keep adding items to their cart even if that node can't currently confirm the canonical state with the rest of the cluster. The system reconciles divergent state after the partition heals (e.g. by merging cart contents), because for this use case, staying available and resolving conflicts later is a better trade than refusing the user's request.</li>
+  </ul>
+
+</section>
+
+<!-- ============ SECTION 5 ============ -->
+<section id="async-queues">
+  <div class="kicker">05 · Data flow</div>
+  <h2>Asynchronous processing and queues</h2>
+
+  <p>Not every unit of work needs to happen inside the request/response cycle. Going async is the right call when an operation is slow, isn't needed to answer the immediate caller, or can tolerate completing sometime shortly after — sending a confirmation email, generating a thumbnail, posting a completed transaction to a downstream reporting system, delivering a webhook. It's the wrong call for anything the caller needs a correctness-relevant answer to before it can safely proceed — you can't tell a client their payment succeeded and then find out asynchronously that it didn't.</p>
+
+  <h3>Delivery guarantees, precisely</h3>
+  <ul>
+    <li><strong>At-most-once:</strong> a message is sent once and not retried — it can be lost if delivery or processing fails, but it will never be processed twice.</li>
+    <li><strong>At-least-once:</strong> the sender retries until it receives an acknowledgment — the message will eventually be processed, but a retry after an ack was sent-but-lost (or processing succeeded but the ack failed) can cause the same message to be processed more than once.</li>
+    <li><strong>Exactly-once:</strong> each message's effect is applied exactly one time, no losses, no duplicates.</li>
+  </ul>
+  <p>Exactly-once delivery is mostly a myth in distributed systems, and it's worth understanding precisely why: processing a message and acknowledging that it was processed are two separate operations against (usually) two separate systems, and you cannot make those two operations atomic without a distributed transaction spanning both — which most message queues and consumers don't have, because it would tank throughput. What's actually achievable, and what people usually mean when they say "exactly-once" in practice, is <strong>at-least-once delivery plus an idempotent consumer</strong>: the queue may redeliver a message, but the consumer recognizes it's already processed that message's unique ID and treats the redelivery as a safe no-op (via a dedup table, an idempotency key, or a natural idempotent operation like "set balance to X" instead of "add X to balance"). The exactly-once <em>effect</em> is achieved at the application layer, not guaranteed by the transport.</p>
+
+  <h3>Dead-letter queues</h3>
+  <p>A dead-letter queue (DLQ) is where a message goes after it's failed processing repeatedly — typically after a configured retry count is exhausted. This matters operationally for two reasons: without a DLQ, a "poison" message that always fails to process would either block the queue behind it (if ordering matters) or loop forever, burning resources on every attempt. With a DLQ, failing messages are set aside, the main queue keeps flowing, and the DLQ becomes a place that needs monitoring and alerting — messages accumulating there mean something is broken — along with a defined replay path once the underlying issue is fixed.</p>
+
+  <h3>Backpressure</h3>
+  <p>Backpressure is what has to happen when a consumer can't keep up with a producer's rate. The naive failure mode is an unbounded queue that just keeps growing, silently increasing latency for everything in it until it eventually exhausts memory and crashes — which is worse than any individual message failing. The concrete mechanisms to handle it deliberately: bound the queue and reject or block new writes once it's full; rate-limit the producer directly; autoscale the number of consumers in response to queue depth; and, at the edge of the system, shed load outright (reject new requests with a clear error) rather than let internal queues grow without limit. The common thread is that backpressure should be an explicit, designed response, not an emergent property of an unbounded buffer.</p>
+
+</section>
+
+<!-- ============ SECTION 6 ============ -->
+<section id="gateway-ratelimit">
+  <div class="kicker">06 · Edge</div>
+  <h2>API gateways, rate limiting, and reverse proxies</h2>
+
+  <p>A reverse proxy sits in front of one or more backend servers and handles TLS termination, request routing, and often basic response caching — it's infrastructure plumbing. An <strong>API gateway</strong> is a reverse proxy with application-aware responsibilities layered on top: authentication and authorization at the edge, rate limiting, request/response transformation, and routing to the right backend service by API version or path. The value compounds with the number of services behind it: with one or two backend services, every service can reasonably implement its own auth checks and rate limiting. With dozens of services, that becomes dozens of slightly different, inconsistently maintained implementations of the same cross-cutting concerns — a gateway centralizes them once, correctly, instead of dozens of times, inconsistently.</p>
+
+  <h3>Token bucket</h3>
+  <p>A bucket holds up to <code>N</code> tokens and refills at a fixed rate of <code>R</code> tokens per second, up to that capacity. Each incoming request consumes one token (or more, for requests explicitly weighted as more expensive); if a token is available, the bucket is decremented and the request proceeds; if not, the request is rejected or queued. Because tokens accumulate in the bucket during idle periods up to its capacity, a client can legitimately burst up to <code>N</code> requests instantly after being idle, while the refill rate <code>R</code> still enforces the long-run average rate over time. This makes token bucket a good fit whenever short bursts from legitimate clients are expected and acceptable — a client batching a set of calls together, for instance.</p>
+
+  <h3>Leaky bucket</h3>
+  <p>Incoming requests enter a fixed-size FIFO queue (the "bucket"); requests are processed — leak out — at a strictly constant fixed rate, regardless of how bursty their arrival was; if the queue is full when a new request arrives, it's rejected. The key difference from token bucket: leaky bucket smooths <em>output</em> to a perfectly constant rate, at the cost of added latency for anything that has to wait in the queue, whereas token bucket allows bursty output up to the bucket capacity as long as the long-run rate holds.</p>
+
+  <div class="callout">
+    <span class="label">Which one to reach for</span>
+    <p>Pick <strong>token bucket</strong> when you need to permit legitimate bursts without penalizing well-behaved bursty clients. Pick <strong>leaky bucket</strong> when you're protecting a downstream system that genuinely cannot tolerate burst load at all — even a legitimate burst — and needs requests arriving at it smoothed to a strictly constant rate, accepting the added queueing latency as the cost of that protection.</p>
+  </div>
+
+  <div class="exercise" id="ex-tokenbucket">
+    <div class="exercise-head"><h4>Token bucket rate limiter simulator</h4><span class="badge">Interactive</span></div>
+    <p class="exercise-desc">Time is simulated and accelerated. Watch the bucket refill, and send requests to see when they're allowed versus throttled.</p>
+    <div class="field-row">
+      <div class="field"><label for="tb-cap">Bucket capacity (tokens)</label><input type="number" id="tb-cap" value="8" min="1"/></div>
+      <div class="field"><label for="tb-rate">Refill rate (tokens / sim-second)</label><input type="number" id="tb-rate" value="2" min="0.1" step="0.1"/></div>
+    </div>
+    <div class="bucket-wrap">
+      <div class="bucket-visual"><div class="bucket-fill" id="tb-fill"></div><div class="bucket-label" id="tb-label">0</div></div>
+      <div class="bucket-side">
+        <div class="btn-row">
+          <button class="btn" id="tb-send">Send request</button>
+          <button class="btn secondary" id="tb-burst">Send burst of 5</button>
+          <button class="btn secondary" id="tb-restart">Restart</button>
+        </div>
+        <div class="cb-log" id="tb-log"></div>
+      </div>
+    </div>
+  </div>
+
+</section>
+
+<!-- ============ SECTION 7 ============ -->
+<section id="cdn-edge">
+  <div class="kicker">07 · Edge</div>
+  <h2>Content delivery and the edge</h2>
+
+  <p>A CDN is a globally distributed network of edge points of presence (PoPs) that cache content physically closer to users. DNS routing or anycast directs a user's request to a nearby (or otherwise optimal) PoP; if that PoP already has the requested content cached, it serves it directly with low latency and zero load on the origin; on a cache miss, the PoP pulls the content from the origin, serves it, and populates its cache for subsequent requests.</p>
+
+  <p>The distinction that matters for design is what belongs at the edge versus what has to stay at the origin. <strong>Belongs at the edge:</strong> static assets (JS, CSS, images, video), and increasingly API responses that are identical or near-identical across users and have clear cache-control semantics — anything cacheable and shared. <strong>Must stay at the origin:</strong> personalized responses (anything that differs per authenticated user), anything requiring strong consistency (the edge cache is, by construction, eventually consistent with the origin), writes (there's nothing to cache for a write), and anything gated by an auth check that needs to evaluate current, not cached, state.</p>
+
+  <p>Modern CDNs extend beyond pure static caching with <strong>edge compute</strong> — small pieces of logic executed at the PoP itself, such as validating an auth token's signature, routing a request into an A/B test bucket, or rewriting headers, all without a round trip to the origin. The limit on edge compute is important to be clear-eyed about: it's suited to small, stateless, low-latency logic, not a place to run stateful business logic or make direct database queries — that work still belongs at the origin or in a proper backend service.</p>
+
+</section>
+
+<!-- ============ SECTION 8 ============ -->
+<section id="reliability">
+  <div class="kicker">08 · Reliability</div>
+  <h2>Reliability patterns</h2>
+
+  <h3>Circuit breakers</h3>
+  <p>A circuit breaker wraps a call to a downstream dependency and tracks its own state as a small state machine with three states:</p>
+  <ul>
+    <li><strong>Closed</strong> — the normal state. Requests flow through to the downstream as usual, and failures are counted over a rolling window. If the failure rate crosses a configured threshold, the breaker trips to <strong>open</strong>.</li>
+    <li><strong>Open</strong> — requests fail immediately, without ever calling the downstream, for a configured timeout period. This protects the caller from wasting time waiting on a call likely to fail anyway, and protects the already-struggling downstream from additional load while it's unhealthy.</li>
+    <li><strong>Half-open</strong> — once the open timeout elapses, the breaker allows a small number of trial requests through to test whether the downstream has recovered. If those trial requests succeed, the breaker closes again (back to normal). If they fail, it trips back to open and the timeout starts over.</li>
+  </ul>
+  <p>The mechanism is only useful if implemented exactly this way — a breaker that doesn't fail fast while open, or that floods the downstream with unlimited "trial" traffic in half-open instead of a small controlled number, doesn't actually protect anything.</p>
+
+  <h3>Retries with exponential backoff and jitter</h3>
+  <p>A naive retry policy — retry immediately on failure — makes outages worse, not better: when a downstream service degrades and starts failing requests, every caller that was mid-request fails at roughly the same moment and, without any delay, retries at roughly the same moment too, producing a retry storm that synchronizes a load spike right back onto the service that's already struggling. <strong>Exponential backoff</strong> addresses part of this by waiting progressively longer between attempts — a common form is <code>wait = base × 2^attempt</code>, capped at some maximum. But backoff alone isn't sufficient: every client that failed at the same instant is still computing the same backoff schedule and retrying in lockstep at each interval — the storm just recurs at wider intervals instead of being eliminated. <strong>Jitter</strong> fixes this by randomizing the wait time instead of using the computed backoff value directly — a common form, "full jitter," picks a wait uniformly at random between 0 and the computed backoff ceiling — spreading retries out over the interval instead of firing them all at once.</p>
+
+  <h3>Timeouts</h3>
+  <p>Every network call needs an explicit timeout. Without one, a hung downstream call can hold a thread, a connection, or another finite resource indefinitely, and enough hung calls exhaust the caller's own resource pool — which then makes the caller unable to serve <em>any</em> request, healthy dependency or not. That's how a failure in one dependency cascades into an outage of the calling service itself. Setting the timeout value is a real trade-off: too short, and legitimately slow-but-fine calls get cut off and treated as failures; too long, and failure detection is slow and resources stay tied up longer than necessary.</p>
+
+  <h3>Bulkheads</h3>
+  <p>Named after ship compartments that keep a hull breach in one section from flooding the whole vessel: a bulkhead partitions resources — thread pools, connection pools — per downstream dependency, instead of sharing one pool across all of them. Concretely, if dependency A becomes slow and its calls start piling up, a shared pool means those piled-up calls consume resources that requests to healthy dependency B also needed, so B's requests start failing too, even though B itself is fine. Separate pools per dependency mean A's degradation is contained to A's own pool.</p>
+
+  <h3>Graceful degradation vs. hard failure</h3>
+  <p>When a non-critical dependency is unavailable, a well-designed system serves a reduced but still useful response rather than failing the whole request outright — a product page that renders fine without personalized recommendations if the recommendation service is down, rather than a 500 error for the entire page. This requires a specific design discipline exercised up front: explicitly classifying each dependency as essential (its failure must fail the request) or optional (its failure should degrade gracefully) at design time, not improvised mid-incident when it's too late to have thought it through carefully.</p>
+
+  <div class="two-col">
+    <div class="exercise" id="ex-circuitbreaker" style="margin:0">
+      <div class="exercise-head"><h4>Circuit breaker simulator</h4><span class="badge">Interactive</span></div>
+      <p class="exercise-desc">Threshold: 3 consecutive failures trips the breaker. Open state auto-recovers to half-open after 6 seconds.</p>
+      <div class="cb-diagram">
+        <div class="cb-state" data-s="closed">CLOSED<small>normal traffic</small></div>
+        <div class="cb-arrow">→</div>
+        <div class="cb-state" data-s="open">OPEN<small>fail fast</small></div>
+        <div class="cb-arrow">→</div>
+        <div class="cb-state" data-s="halfopen">HALF-OPEN<small>trial requests</small></div>
+      </div>
+      <p class="cb-status-line" id="cb-status">State: <b>CLOSED</b> · consecutive failures: 0/3</p>
+      <div class="btn-row">
+        <button class="btn ok" id="cb-succeed">Request succeeds</button>
+        <button class="btn bad" id="cb-fail">Request fails</button>
+        <button class="btn secondary" id="cb-reset">Reset</button>
+      </div>
+      <div class="cb-log" id="cb-log"></div>
+    </div>
+
+    <div class="exercise" id="ex-jitter" style="margin:0">
+      <div class="exercise-head"><h4>Retry storm: backoff alone vs. with jitter</h4><span class="badge">Interactive</span></div>
+      <p class="exercise-desc">50 clients fail at t=0 and each retries 3 times with exponential backoff (base 200ms, ×2 per attempt). Compare synchronized retries against full-jitter retries.</p>
+      <div class="btn-row"><button class="btn" id="jit-run">Run simulation</button></div>
+      <div class="jitter-row">
+        <div class="jr-label">Without jitter — retries stay synchronized into spikes</div>
+        <div class="jitter-track" id="jit-nojitter"></div>
+      </div>
+      <div class="jitter-row jittered">
+        <div class="jr-label">With full jitter — retries spread across each interval</div>
+        <div class="jitter-track" id="jit-jitter"></div>
+      </div>
+    </div>
+  </div>
+
+</section>
+
+<!-- ============ SECTION 9 ============ -->
+<section id="deployment">
+  <div class="kicker">09 · Delivery</div>
+  <h2>Deployment patterns</h2>
+
+  <h3>Rolling deployment</h3>
+  <p>Instances are replaced with the new version incrementally, a batch at a time, so old-version and new-version instances serve production traffic side by side throughout the rollout. Rollback means redeploying the previous version the same incremental way — it is not instant. The real risk to design for: because both versions are live simultaneously, they must be able to handle the same requests and the same data shape — the API and the database schema both need to be backward- and forward-compatible for the entire window both versions coexist, or requests routed to one version will break on data written or expected by the other.</p>
+
+  <h3>Blue-green deployment</h3>
+  <p>Two full, identical production environments exist: "blue" is currently live, "green" is idle and has the new version deployed to it. Once green is verified healthy, traffic is switched over at the router or load balancer level — essentially instantly. Rollback is the main advantage of this pattern: switching traffic back to blue is just as instant as the original cutover. The real cost: you're running double the infrastructure during the transition, and database migrations still need care, since both environments typically need to work against a shared or compatible schema — blue-green solves the traffic cutover problem, not the schema compatibility problem.</p>
+
+  <h3>Canary deployment</h3>
+  <p>The new version is released to a small slice of traffic or users first — commonly 1-5% — while error rates, latency, and relevant business metrics are monitored closely; the percentage is progressively increased as health is confirmed, reaching full rollout only once confidence is established at each step. Rollback means pulling back the canary slice immediately, and because the blast radius was deliberately kept small from the start, the damage from a bad deploy is limited by design rather than by luck. This is generally the preferred pattern for higher-risk changes precisely because it catches regressions while they're still affecting a small fraction of traffic, not everyone.</p>
+
+  <h3>Feature flags</h3>
+  <p>Feature flags decouple <em>deploying</em> code from <em>exposing</em> a feature. New code, flag off, ships to production "dark" — present but inert. The feature is then turned on for a subset of users or traffic independently of any deploy, and just as importantly, turned back off instantly as a kill switch if something's wrong — without needing a code rollback at all. This is a meaningfully faster and lower-risk rollback path for a bad feature than any of the deployment patterns above, because it doesn't involve redeploying anything.</p>
+
+  <h3>Zero-downtime schema migration: expand/contract</h3>
+  <p>You generally cannot atomically roll out new application code and a new database schema together across a fleet of instances during a rolling or canary deployment — at every point during the rollout, some instances are running old code and some are running new code, so the schema has to be simultaneously valid for both. The expand/contract pattern handles this in explicit stages:</p>
+  <ol>
+    <li><strong>Expand</strong> — add the new schema element (a new column, table, or shape) alongside the old one, without removing anything. Deploy code that writes to both the old and new shape.</li>
+    <li><strong>Migrate/backfill</strong> — backfill existing data into the new shape with a background job.</li>
+    <li><strong>Switch reads</strong> — deploy code that reads from the new shape (writes may continue dual-writing for safety, or cut over to new-only once verified).</li>
+    <li><strong>Contract</strong> — once every code path has fully migrated and been verified in production, remove the old schema element.</li>
+  </ol>
+  <p>Each stage individually is backward- and forward-compatible on its own, which is exactly what's required for it to survive a rolling or canary rollout where old and new code run side by side for a while — the migration never depends on every instance switching over at the same instant.</p>
+
+</section>
+
+<!-- ============ SECTION 10 ============ -->
+<section id="observability">
+  <div class="kicker">10 · Operations</div>
+  <h2>Observability as a design input</h2>
+
+  <p>Logs, metrics, and traces answer different questions, and treating them as interchangeable "monitoring stuff" leads to either under-instrumented systems that are undebuggable in production, or over-instrumented ones that are expensive and noisy without being any more useful.</p>
+  <ul>
+    <li><strong>Logs</strong> are discrete, timestamped events carrying arbitrary context. They're the right tool for reconstructing exactly what happened for one specific request or incident after the fact, but they're expensive to store and query at high volume, and rarely useful for spotting trends at a glance.</li>
+    <li><strong>Metrics</strong> are aggregated numeric time series — counters, gauges, histograms. They're cheap to store at scale, and they're the right tool for dashboards, alerting, and trend detection, but by design they lose per-request detail — a latency histogram tells you your p99 degraded, not which specific request was slow or why.</li>
+    <li><strong>Traces</strong> follow a single request's path across service boundaries, recording timing at each hop. They're the right tool for diagnosing where latency is actually going in a distributed call graph, but tracing has real overhead, so at scale you typically sample rather than trace every single request.</li>
+  </ul>
+  <p>Each one earns its cost in a different place: log what you'll need to reconstruct a specific incident (errors, state transitions, decisions with real context); measure as a metric anything you want to see trending or alert on cheaply at scale (the four golden signals — latency, traffic, errors, saturation — are the minimum starting set); trace the call paths that cross enough service boundaries that "which hop is slow" isn't obvious from logs or metrics alone. Instrumenting everything as verbose logs, by contrast, becomes its own operational and cost problem well before it becomes more useful — high-cardinality, high-volume logging without a clear purpose for each log line is expensive to store, slow to query, and usually still misses the specific thing you needed at 3am.</p>
+  <p>The core discipline is designing for debuggability from the start, not retrofitting it after the first bad incident: structured logging with a correlation or request ID propagated across every service a request touches, so a single failing request can be traced through the whole system by that ID; the golden signals exposed as metrics from day one for every service; and tracing wired in before you need it, not added reactively once a latency problem is already in production and nobody can tell which of twelve services is responsible.</p>
+
+</section>
+
+<!-- ============ SECTION 11 ============ -->
+<section id="walkthroughs">
+  <div class="kicker">11 · Applied</div>
+  <h2>Two worked system-design walkthroughs</h2>
+  <p>Two designs, done end to end — requirements, estimation, high-level design, and the specific trade-offs, stated explicitly rather than left implicit. Deliberately chosen to sit at opposite ends of the consistency spectrum: one is fine being eventually consistent, the other cannot be.</p>
+
+  <h3>Worked walkthrough: a URL shortener</h3>
+  <p><strong>Functional requirements:</strong> given a long URL, return a short code that redirects to it; given a short code, redirect to the original URL; optionally allow a user-chosen custom alias; optionally support an expiration date on a link.</p>
+  <p><strong>Non-functional requirements:</strong> redirects need to be low-latency (a redirect is on the critical path of every click); the read:write ratio is heavily skewed toward reads — illustratively, assume something on the order of 100 reads (redirects) per 1 write (new short link created); high availability matters more than strict consistency for the redirect path, since a link that's momentarily stale is a far smaller problem than a link that fails to redirect at all.</p>
+  <div class="formula">
+<span class="step">// illustrative estimation</span>
+assume 10M new short links/day → write QPS ≈ 10,000,000 / 86,400 ≈ 116 QPS
+assume 100:1 read:write → read QPS ≈ 11,600 QPS
+avg record: short code (7 bytes) + long URL (~100 bytes) + metadata (~50 bytes) ≈ 160 bytes
+storage/year ≈ 10M/day × 160 bytes × 365 ≈ ~584 GB/year of raw link data — small enough that
+storage is not the constraint; read throughput and cache hit rate are.
+  </div>
+  <p><strong>High-level design.</strong> For the encoding strategy, two real options: base62-encode an auto-incrementing counter (using <code>[a-zA-Z0-9]</code>, 62 symbols), or hash the long URL and take a prefix of the hash as the code. Counter + base62 is the stronger default: every ID is unique by construction, so there is never a collision to detect or retry on — a 7-character base62 code already covers 62^7 (over 3.5 trillion) unique values. Hash-prefix approaches must actively detect and resolve collisions (two different URLs hashing to the same prefix), adding a retry-with-salt loop on write that counter-based encoding simply doesn't need. The read path is dominated by cache-aside in front of the database: given the 100:1 read skew, the cache absorbs the overwhelming majority of redirect traffic, and the database is only touched on a cache miss or a new write. The write path is a single insert (or upsert, for a custom alias) keyed by the short code. Database choice: a simple key-value store, or a relational table with the short code as primary key, is sufficient — this isn't a relationally complex domain, and the access pattern is pure key lookup in both directions.</p>
+  <p><strong>Specific trade-offs.</strong> The redirect should be an HTTP <strong>302</strong>, not a <strong>301</strong>, and this is a deliberate, non-obvious choice: a 301 ("permanent redirect") gets cached by the requesting browser itself, which means all future clicks on that link from that browser never hit your server again at all — you lose the ability to track click analytics on subsequent visits, and you lose the ability to ever repoint or expire that short code, since the browser will keep redirecting on its own cached copy indefinitely. A 302 ("temporary redirect, ask again next time") keeps every click flowing through your service. For custom alias collisions, a straightforward uniqueness check on write against the alias column, rejecting the request if taken, is sufficient — no hashing scheme needed since the user is supplying the key directly. For expiration, a hybrid of <strong>lazy deletion on read</strong> (check the expiry timestamp at redirect time and return not-found if expired, without needing a background process to have already deleted it) combined with a <strong>periodic background sweep</strong> to actually reclaim storage from long-expired rows makes sense together: lazy deletion guarantees correctness immediately with zero added latency for the common case, while the sweep keeps storage from growing unbounded with dead rows that are never read again.</p>
+
+  <h3>Worked walkthrough: a payment ledger system</h3>
+  <p><strong>Functional requirements:</strong> record monetary transactions between accounts; support querying an account's current balance and its transaction history; support reversals and refunds of prior transactions.</p>
+  <p><strong>Non-functional requirements:</strong> this is one of the few places in system design where strong consistency is genuinely non-negotiable on the write path — correctness has to be chosen over availability if it ever comes to a choice, because an incorrect balance is not a degraded experience, it's a wrong answer with real financial consequences. The system must be auditable — every change must be reconstructable and attributable. And it must be idempotent under retries: payment clients (mobile apps, other services calling in) will retry requests after a timeout without knowing whether the original attempt actually succeeded, and a naive retry that reprocesses the payment is a double-charge.</p>
+  <p><strong>Core design principle: double-entry ledger.</strong> Every transaction is recorded not as a single balance update, but as a balanced set of debit and credit entries across accounts that always nets to exactly zero — money leaving one account is simultaneously recorded as money arriving in another, as two (or more) linked entries in the same atomic write. This is the standard pattern in real financial systems for two concrete reasons. First, it's self-checking: an unbalanced ledger (entries that don't sum to zero) is provably wrong, which gives you a cheap, mechanical correctness check that a single mutable balance field never gives you. Second, it's inherently auditable: the ledger is an immutable, append-only log of entries — balances are <em>derived</em> by summing entries for an account, not stored as a single field that gets overwritten in place — which means the full history is never lost to an update, and any balance at any point in time can be reconstructed exactly by replaying entries up to that point.</p>
+  <p><strong>Idempotency.</strong> Every payment request carries a client-generated idempotency key unique to that logical operation. The server, before processing, checks whether it has already seen that key; if so, it returns the stored result of the original attempt instead of processing the request again. If not, it processes the request and stores the result against that key. A client that times out and retries with the same key is guaranteed to get the original outcome back rather than triggering a second charge — this is the concrete mechanism that prevents double-processing under at-least-once retry semantics, discussed generally in the async processing section above, applied here where the stakes are real money.</p>
+  <p><strong>Consistency mechanism and the explicit trade-off.</strong> Recording a transaction's debit/credit entry pair happens inside a single database transaction with strong (ACID) guarantees — the pair is written atomically, or not at all, so the ledger is never observed in a half-written, unbalanced state. For transfers that cross shards or services, a two-phase (or saga-style, compensating-transaction) approach is used to preserve atomicity across the boundary rather than accepting a window where money could appear debited on one side without yet being credited on the other. The trade-off being made here is explicit and deliberate: this write path accepts lower throughput and real limits on horizontal write scaling in exchange for correctness, because money can never be silently lost, duplicated, or left in an inconsistent state — full stop. This is worth contrasting directly with the URL shortener above, which happily accepts eventual consistency and briefly stale reads in exchange for availability and horizontal scale. Neither choice is "more correct" in the abstract; they're different points on the same consistency-availability spectrum, chosen deliberately because the two systems' actual requirements are genuinely different, not because one team was more careful than the other.</p>
+  <p><strong>Reversals</strong> are modeled the same way as everything else in the ledger: as new compensating entries that reverse the economic effect of the original transaction, never as a mutation or deletion of the original entry. The original transaction stays in the immutable log exactly as it happened; the reversal is a new, separate, fully auditable event on top of it — which is exactly what "the history is never lost" means in practice.</p>
+
+</section>
+
+</main>
+
+<footer class="end wrap"><p>End of course.</p></footer>
+
+<script>
+(function(){
+"use strict";
+
+/* ---------------------------------------------------------------
+   1. Back-of-envelope capacity calculator
+--------------------------------------------------------------- */
+(function capacityCalc(){
+  var $ = function(id){ return document.getElementById(id); };
+  var ids = ['cap-users','cap-reads','cap-writes','cap-reqsize','cap-recsize','cap-peak'];
+  function fmt(n){
+    if(!isFinite(n)) return '0';
+    if(n >= 1e12) return (n/1e12).toFixed(2)+' T';
+    if(n >= 1e9)  return (n/1e9).toFixed(2)+' B';
+    if(n >= 1e6)  return (n/1e6).toFixed(2)+' M';
+    if(n >= 1e3)  return (n/1e3).toFixed(2)+' K';
+    return n.toFixed(2);
+  }
+  function bytesFmt(n){
+    var units=['B','KB','MB','GB','TB','PB']; var i=0;
+    while(n>=1000 && i<units.length-1){ n/=1000; i++; }
+    return n.toFixed(2)+' '+units[i];
+  }
+  function recompute(){
+    var users = parseFloat($('cap-users').value) || 0;
+    var reads = parseFloat($('cap-reads').value) || 0;
+    var writes = parseFloat($('cap-writes').value) || 0;
+    var reqSize = parseFloat($('cap-reqsize').value) || 0;
+    var recSize = parseFloat($('cap-recsize').value) || 0;
+    var peakMult = parseFloat($('cap-peak').value) || 1;
+
+    var readsPerDay = users * reads;
+    var writesPerDay = users * writes;
+    var avgReadQps = readsPerDay / 86400;
+    var avgWriteQps = writesPerDay / 86400;
+    var peakReadQps = avgReadQps * peakMult;
+    var peakWriteQps = avgWriteQps * peakMult;
+
+    var bytesPerYear = writesPerDay * recSize * 365;
+    var bytesPerYearProvisioned = bytesPerYear * 1.3 * 3; // index overhead + 3x replication, illustrative
+
+    var totalQps = avgReadQps + avgWriteQps;
+    var bitsPerSec = totalQps * reqSize * 8;
+    var mbps = bitsPerSec / 1e6;
+    var peakMbps = mbps * peakMult;
+
+    $('cap-out').innerHTML = [
+      cell(fmt(avgReadQps),'avg read QPS'),
+      cell(fmt(peakReadQps),'peak read QPS'),
+      cell(fmt(avgWriteQps),'avg write QPS'),
+      cell(bytesFmt(bytesPerYear),'raw storage / yr'),
+      cell(bytesFmt(bytesPerYearProvisioned),'provisioned / yr (×1.3 index, ×3 replicas)'),
+      cell(mbps.toFixed(1)+' Mbps',avg_bw()),
+    ].join('');
+
+    function avg_bw(){ return 'avg bandwidth (peak ≈ '+peakMbps.toFixed(1)+' Mbps)'; }
+
+    function cell(v,k){
+      return '<div class="cell"><div class="v">'+v+'</div><div class="k">'+k+'</div></div>';
+    }
+
+    $('cap-formula').innerHTML =
+      '<span class="step">reads/day</span> = '+fmt(users)+' users × '+reads+' = '+fmt(readsPerDay)+'\n'+
+      '<span class="step">avg read QPS</span>  = '+fmt(readsPerDay)+' / 86,400 ≈ <span class="result">'+fmt(avgReadQps)+' QPS</span>\n'+
+      '<span class="step">writes/day</span> = '+fmt(users)+' users × '+writes+' = '+fmt(writesPerDay)+'\n'+
+      '<span class="step">avg write QPS</span> = '+fmt(writesPerDay)+' / 86,400 ≈ <span class="result">'+fmt(avgWriteQps)+' QPS</span>\n'+
+      '<span class="step">storage/year</span> = writes/day × record size × 365 = '+fmt(writesPerDay)+' × '+recSize+' B × 365 ≈ <span class="result">'+bytesFmt(bytesPerYear)+'</span>\n'+
+      '<span class="step">bandwidth</span> = total QPS × payload size × 8 bits = '+fmt(totalQps)+' × '+reqSize+' B × 8 ≈ <span class="result">'+mbps.toFixed(1)+' Mbps</span> avg';
+  }
+  ids.forEach(function(id){ $(id).addEventListener('input', recompute); });
+  recompute();
+})();
+
+/* ---------------------------------------------------------------
+   2. Consistent hashing visualizer
+--------------------------------------------------------------- */
+(function hashRing(){
+  var svg = document.getElementById('ring-svg');
+  if(!svg) return;
+  var cx=130, cy=130, r=100;
+  var KEY_COUNT = 24;
+  var keys = []; // fixed hash positions 0-359
+  for(var i=0;i<KEY_COUNT;i++){ keys.push(Math.floor((360/KEY_COUNT)*i + (i*37)%17)); }
+  keys = keys.map(function(v){ return v % 360; });
+
+  var nodes = [20, 110, 200, 290]; // starting node hash positions (degrees)
+  var initialNodeCount = nodes.length;
+  var prevOwnersCH = null;
+  var prevOwnersMod = null;
+
+  function polar(deg, radius){
+    var rad = (deg-90) * Math.PI/180;
+    return { x: cx + radius*Math.cos(rad), y: cy + radius*Math.sin(rad) };
+  }
+
+  function ownerCH(keyDeg){
+    var sorted = nodes.slice().sort(function(a,b){return a-b;});
+    for(var i=0;i<sorted.length;i++){ if(sorted[i] >= keyDeg) return sorted[i]; }
+    return sorted[0]; // wrap around
+  }
+  function ownerMod(keyIndex){
+    var n = nodes.length;
+    if(n===0) return -1;
+    return keyIndex % n;
+  }
+
+  function render(){
+    var parts = [];
+    parts.push('<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="none" stroke="var(--border)" stroke-width="2"/>');
+
+    // owners this round
+    var chOwners = keys.map(function(k){ return ownerCH(k); });
+    var modOwners = keys.map(function(k,idx){ return ownerMod(idx); });
+
+    var chMoved = 0, modMoved = 0;
+    if(prevOwnersCH){
+      chOwners.forEach(function(o,idx){ if(prevOwnersCH[idx] !== o) chMoved++; });
+    }
+    if(prevOwnersMod){
+      modOwners.forEach(function(o,idx){ if(prevOwnersMod[idx] !== o) modMoved++; });
+    }
+
+    // draw keys
+    var palette = ['#8B5CF6','#F59E0B','#16A34A','#DC2626','#0891B2','#DB2777','#65A30D','#7C3AED'];
+    keys.forEach(function(k, idx){
+      var p = polar(k, r);
+      var ownerIdx = nodes.slice().sort(function(a,b){return a-b;}).indexOf(chOwners[idx]);
+      var color = palette[ownerIdx % palette.length] || 'var(--muted)';
+      parts.push('<circle cx="'+p.x.toFixed(1)+'" cy="'+p.y.toFixed(1)+'" r="4" fill="'+color+'" opacity="0.85"/>');
+    });
+
+    // draw nodes
+    nodes.forEach(function(n){
+      var p = polar(n, r);
+      parts.push('<circle cx="'+p.x.toFixed(1)+'" cy="'+p.y.toFixed(1)+'" r="9" fill="var(--card)" stroke="var(--accent)" stroke-width="3"/>');
+    });
+
+    svg.innerHTML = parts.join('');
+
+    document.getElementById('ring-out').innerHTML =
+      '<div class="cell"><div class="v">'+nodes.length+'</div><div class="k">nodes</div></div>'+
+      '<div class="cell"><div class="v">'+(prevOwnersCH ? chMoved+'/'+KEY_COUNT : '—')+'</div><div class="k">consistent hash: keys remapped</div></div>'+
+      '<div class="cell"><div class="v">'+(prevOwnersMod ? modMoved+'/'+KEY_COUNT : '—')+'</div><div class="k">naive mod-N: keys remapped</div></div>';
+
+    prevOwnersCH = chOwners;
+    prevOwnersMod = modOwners;
+  }
+
+  document.getElementById('ring-add').addEventListener('click', function(){
+    var deg = Math.floor(Math.random()*360);
+    nodes.push(deg);
+    render();
+  });
+  document.getElementById('ring-remove').addEventListener('click', function(){
+    if(nodes.length > 1){ nodes.pop(); render(); }
+  });
+  document.getElementById('ring-reset').addEventListener('click', function(){
+    nodes = [20, 110, 200, 290];
+    prevOwnersCH = null; prevOwnersMod = null;
+    render();
+  });
+
+  render();
+})();
+
+/* ---------------------------------------------------------------
+   3. Caching strategy decision quiz
+--------------------------------------------------------------- */
+(function quiz(){
+  var root = document.getElementById('quiz-root');
+  if(!root) return;
+  var scenarios = [
+    {
+      q: "A product listing page is read thousands of times per second but its underlying data changes only a few times an hour. Reads must never wait on a write.",
+      opts: [
+        {t:"Cache-aside with a TTL", correct:true, why:"Correct — reads dominate massively, some staleness (bounded by TTL) is fully acceptable, and cache-aside keeps writes fast since they never touch the cache directly."},
+        {t:"Write-through", correct:false, why:"Not correct — write-through adds latency to every write to keep the cache in lockstep, which this workload doesn't need since a few-minutes staleness window is fine."},
+        {t:"Write-behind", correct:false, why:"Not correct — write-behind is about protecting write latency/throughput on a write-heavy path; this workload is read-heavy, so it's solving the wrong problem."},
+        {t:"No cache — always hit the DB", correct:false, why:"Not correct — at thousands of reads/sec against rarely-changing data, skipping the cache wastes DB capacity for no consistency benefit."}
+      ]
+    },
+    {
+      q: "A financial reconciliation table must never let the cache and the database disagree, even briefly, and writes are relatively infrequent.",
+      opts: [
+        {t:"Write-through", correct:true, why:"Correct — write-through updates cache and DB together before acknowledging the write, so a subsequent read can never observe a value the DB doesn't also have. Infrequent writes make the added write latency an acceptable cost for that guarantee."},
+        {t:"Write-behind", correct:false, why:"Not correct — write-behind acknowledges the write before it's durably in the DB, which is exactly the kind of divergence window this use case can't tolerate."},
+        {t:"Cache-aside with a long TTL", correct:false, why:"Not correct — a long TTL means a stale cached value can be served long after the DB changed underneath it, which this scenario explicitly rules out."},
+        {t:"No caching at all", correct:false, why:"Defensible but not the best fit — write-through gives the same consistency guarantee while still getting cache read speed, since writes are infrequent."}
+      ]
+    },
+    {
+      q: "An analytics ingestion pipeline receives bursts of very high write volume from many clients at once; a brief window of possible data loss on a crash is an acceptable trade for keeping write latency low.",
+      opts: [
+        {t:"Write-behind (write-back)", correct:true, why:"Correct — write-behind acknowledges writes immediately from the cache and flushes to the DB asynchronously in batches, which is exactly what absorbs a bursty write-heavy load, at the accepted cost of a small durability window."},
+        {t:"Write-through", correct:false, why:"Not correct — synchronous writes to both cache and DB on every write would reintroduce the latency this workload is explicitly trying to avoid under burst load."},
+        {t:"Cache-aside", correct:false, why:"Not correct — cache-aside populates the cache on read miss; it doesn't help absorb write bursts at all, since writes go straight to the DB."},
+        {t:"TTL-only, no write strategy", correct:false, why:"Not correct — a TTL controls read staleness, it says nothing about how writes are absorbed under burst load."}
+      ]
+    },
+    {
+      q: "A hot cache key just expired, and 4,000 concurrent requests are about to miss on it at the same instant.",
+      opts: [
+        {t:"Request coalescing (single-flight) so only one request recomputes it", correct:true, why:"Correct — this is precisely the cache stampede problem, and single-flight is the direct fix: one request repopulates the cache, the other 3,999 wait on that same in-flight result instead of each hitting the DB."},
+        {t:"Lower the TTL so it expires more often", correct:false, why:"Not correct — a lower TTL makes this exact situation happen more frequently, not less."},
+        {t:"Switch to write-behind", correct:false, why:"Not correct — write-behind is a write-path strategy; this is a read-miss stampede problem entirely unrelated to how writes are flushed."},
+        {t:"Remove the cache for this key", correct:false, why:"Not correct — removing the cache just means every one of those 4,000 requests hits the DB directly, every time, which is worse, not better."}
+      ]
+    },
+    {
+      q: "A dashboard query joins five tables and takes 4 seconds to run, unindexed, against a table that's grown 50x since the query was first written.",
+      opts: [
+        {t:"Add appropriate indexes / fix the query first — caching alone would hide the problem", correct:true, why:"Correct — this is the caching trap named in the lesson: caching an expensive unindexed query hides the slowness until a cache miss, cold start, or stampede, at which point the same 4-second query still runs, now under load. Fix the query/indexing first; cache on top of that as a legitimate latency win if still needed."},
+        {t:"Put a long TTL cache in front of it and move on", correct:false, why:"Not correct — this is exactly the pattern the lesson warns about: papering over a genuinely slow query instead of fixing the underlying cause, which resurfaces at the worst moment."},
+        {t:"Switch it to write-through", correct:false, why:"Not correct — write-through is a write-consistency strategy; it has nothing to do with a slow read query."},
+        {t:"Shard the underlying tables", correct:false, why:"Premature — sharding is a much bigger structural change; indexing and query optimization should be tried first since they likely solve this directly."}
+      ]
+    }
+  ];
+
+  scenarios.forEach(function(sc, si){
+    var div = document.createElement('div');
+    div.className = 'quiz-scenario';
+    var optsHtml = sc.opts.map(function(o,oi){
+      return '<button class="quiz-opt" data-si="'+si+'" data-oi="'+oi+'">'+o.t+'</button>';
+    }).join('');
+    div.innerHTML = '<p class="q">'+(si+1)+'. '+sc.q+'</p><div class="quiz-options">'+optsHtml+'</div><div class="quiz-feedback" id="qf-'+si+'"></div>';
+    root.appendChild(div);
+  });
+
+  root.addEventListener('click', function(e){
+    var btn = e.target.closest('.quiz-opt');
+    if(!btn) return;
+    var si = +btn.getAttribute('data-si');
+    var oi = +btn.getAttribute('data-oi');
+    var scenario = scenarios[si];
+    var opt = scenario.opts[oi];
+    var group = btn.closest('.quiz-scenario');
+    var buttons = group.querySelectorAll('.quiz-opt');
+    buttons.forEach(function(b){ b.disabled = true; });
+    buttons.forEach(function(b, i){
+      if(scenario.opts[i].correct) b.classList.add('correct');
+    });
+    if(!opt.correct) btn.classList.add('incorrect');
+    var fb = document.getElementById('qf-'+si);
+    fb.className = 'quiz-feedback show ' + (opt.correct ? 'right' : 'wrong');
+    fb.textContent = (opt.correct ? 'Correct. ' : 'Not quite. ') + opt.why;
+  });
+})();
+
+/* ---------------------------------------------------------------
+   4. Token bucket rate limiter simulator
+--------------------------------------------------------------- */
+(function tokenBucket(){
+  var capInput = document.getElementById('tb-cap');
+  if(!capInput) return;
+  var rateInput = document.getElementById('tb-rate');
+  var fillEl = document.getElementById('tb-fill');
+  var labelEl = document.getElementById('tb-label');
+  var logEl = document.getElementById('tb-log');
+
+  var capacity = parseFloat(capInput.value);
+  var rate = parseFloat(rateInput.value); // tokens per sim-second
+  var tokens = capacity;
+  var lastTick = performance.now();
+  var SIM_SPEEDUP = 3; // 1 real second = 3 sim seconds
+
+  function log(msg, cls){
+    var d = document.createElement('div');
+    if(cls) d.className = cls;
+    d.textContent = msg;
+    logEl.insertBefore(d, logEl.firstChild);
+    while(logEl.children.length > 30) logEl.removeChild(logEl.lastChild);
+  }
+
+  function draw(){
+    var pct = Math.max(0, Math.min(100, (tokens/capacity)*100));
+    fillEl.style.height = pct+'%';
+    labelEl.textContent = tokens.toFixed(1)+' / '+capacity;
+  }
+
+  function tick(now){
+    var dtReal = (now - lastTick)/1000;
+    lastTick = now;
+    var dtSim = dtReal * SIM_SPEEDUP;
+    tokens = Math.min(capacity, tokens + dtSim*rate);
+    draw();
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+
+  function sendOne(){
+    if(tokens >= 1){
+      tokens -= 1;
+      draw();
+      log('✓ request allowed — token consumed ('+tokens.toFixed(1)+' left)', 'ev-ok');
+    } else {
+      log('✗ request throttled — bucket empty', 'ev-fail');
+    }
+  }
+
+  document.getElementById('tb-send').addEventListener('click', sendOne);
+  document.getElementById('tb-burst').addEventListener('click', function(){
+    for(var i=0;i<5;i++) sendOne();
+  });
+  document.getElementById('tb-restart').addEventListener('click', function(){
+    capacity = parseFloat(capInput.value) || 1;
+    rate = parseFloat(rateInput.value) || 0.1;
+    tokens = capacity;
+    logEl.innerHTML = '';
+    draw();
+    log('bucket reset to full capacity ('+capacity+' tokens)');
+  });
+  capInput.addEventListener('change', function(){
+    capacity = parseFloat(capInput.value) || 1;
+    tokens = Math.min(tokens, capacity);
+  });
+  rateInput.addEventListener('change', function(){
+    rate = parseFloat(rateInput.value) || 0.1;
+  });
+
+  draw();
+  log('bucket starts full ('+capacity+' tokens), refilling at '+rate+'/sim-second (3× real time)');
+})();
+
+/* ---------------------------------------------------------------
+   5. Circuit breaker simulator
+--------------------------------------------------------------- */
+(function circuitBreaker(){
+  var statusEl = document.getElementById('cb-status');
+  if(!statusEl) return;
+  var logEl = document.getElementById('cb-log');
+  var states = document.querySelectorAll('.cb-state');
+  var FAIL_THRESHOLD = 3;
+  var OPEN_TIMEOUT_MS = 6000;
+
+  var state = 'closed'; // closed | open | halfopen
+  var consecFails = 0;
+  var openTimer = null;
+
+  function log(msg, cls){
+    var d = document.createElement('div');
+    if(cls) d.className = cls;
+    d.textContent = msg;
+    logEl.insertBefore(d, logEl.firstChild);
+    while(logEl.children.length > 40) logEl.removeChild(logEl.lastChild);
+  }
+
+  function paint(){
+    states.forEach(function(el){
+      el.classList.toggle('active', el.getAttribute('data-s') === state);
+    });
+    var label = state === 'closed' ? 'CLOSED' : state === 'open' ? 'OPEN' : 'HALF-OPEN';
+    statusEl.innerHTML = 'State: <b>'+label+'</b> · consecutive failures: '+consecFails+'/'+FAIL_THRESHOLD;
+  }
+
+  function goOpen(){
+    state = 'open';
+    consecFails = 0;
+    paint();
+    log('⟲ breaker tripped OPEN — failing fast for '+(OPEN_TIMEOUT_MS/1000)+'s', 'ev-block');
+    if(openTimer) clearTimeout(openTimer);
+    openTimer = setTimeout(function(){
+      state = 'halfopen';
+      paint();
+      log('⟲ timeout elapsed — moving to HALF-OPEN, allowing a trial request');
+    }, OPEN_TIMEOUT_MS);
+  }
+
+  function handle(success){
+    if(state === 'open'){
+      log('✗ request rejected immediately — circuit is OPEN, downstream never called', 'ev-block');
+      return;
+    }
+    if(state === 'closed'){
+      if(success){
+        consecFails = 0;
+        log('✓ request succeeded', 'ev-ok');
+      } else {
+        consecFails++;
+        log('✗ request failed ('+consecFails+'/'+FAIL_THRESHOLD+')', 'ev-fail');
+        if(consecFails >= FAIL_THRESHOLD){ goOpen(); return; }
+      }
+      paint();
+      return;
+    }
+    if(state === 'halfopen'){
+      if(success){
+        state = 'closed';
+        consecFails = 0;
+        log('✓ trial request succeeded — breaker CLOSES, normal traffic resumes', 'ev-ok');
+      } else {
+        log('✗ trial request failed — breaker trips back to OPEN', 'ev-fail');
+        goOpen();
+        return;
+      }
+      paint();
+    }
+  }
+
+  document.getElementById('cb-succeed').addEventListener('click', function(){ handle(true); });
+  document.getElementById('cb-fail').addEventListener('click', function(){ handle(false); });
+  document.getElementById('cb-reset').addEventListener('click', function(){
+    state='closed'; consecFails=0;
+    if(openTimer) clearTimeout(openTimer);
+    logEl.innerHTML='';
+    paint();
+    log('breaker reset to CLOSED');
+  });
+
+  paint();
+  log('breaker starts CLOSED. 3 consecutive failures trips it OPEN.');
+})();
+
+/* ---------------------------------------------------------------
+   6. Retry storm: backoff alone vs. with jitter
+--------------------------------------------------------------- */
+(function jitterSim(){
+  var runBtn = document.getElementById('jit-run');
+  if(!runBtn) return;
+  var trackNo = document.getElementById('jit-nojitter');
+  var trackJit = document.getElementById('jit-jitter');
+  var CLIENTS = 50;
+  var BASE_MS = 200;
+  var ATTEMPTS = 3;
+  var WINDOW_MS = 2200; // visible timeline window
+  var BIN_MS = 40;
+  var BIN_COUNT = Math.ceil(WINDOW_MS/BIN_MS);
+
+  function computeTimesNoJitter(){
+    var times = [];
+    for(var c=0;c<CLIENTS;c++){
+      for(var a=1;a<=ATTEMPTS;a++){
+        times.push(BASE_MS * Math.pow(2, a)); // same for every client -> synchronized
+      }
+    }
+    return times;
+  }
+  function computeTimesJitter(){
+    var times = [];
+    for(var c=0;c<CLIENTS;c++){
+      for(var a=1;a<=ATTEMPTS;a++){
+        var ceiling = BASE_MS * Math.pow(2, a);
+        times.push(Math.random()*ceiling); // full jitter
+      }
+    }
+    return times;
+  }
+
+  function render(track, times){
+    var bins = new Array(BIN_COUNT).fill(0);
+    times.forEach(function(t){
+      var idx = Math.floor(t/BIN_MS);
+      if(idx>=0 && idx<BIN_COUNT) bins[idx]++;
+    });
+    var maxCount = Math.max.apply(null, bins) || 1;
+    track.innerHTML = '';
+    var w = track.clientWidth || 400;
+    var binWidth = w/BIN_COUNT;
+    bins.forEach(function(count, i){
+      var bar = document.createElement('div');
+      bar.className = 'jitter-bin';
+      var h = (count/maxCount)*40;
+      bar.style.height = h+'px';
+      bar.style.left = (i*binWidth)+'px';
+      bar.title = count+' retries in this ~'+BIN_MS+'ms window';
+      track.appendChild(bar);
+    });
+  }
+
+  function run(){
+    render(trackNo, computeTimesNoJitter());
+    render(trackJit, computeTimesJitter());
+  }
+
+  runBtn.addEventListener('click', run);
+  run();
+  window.addEventListener('resize', run);
+})();
+
+})();
+</script>
+
+</body>
+</html>

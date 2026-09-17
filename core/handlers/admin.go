@@ -53,10 +53,13 @@ func (a *App) AdminLogout(w http.ResponseWriter, r *http.Request) {
 
 type AdminDashboardData struct {
 	BaseData
-	CourseCount      int
-	PublishedCourses int
-	UpcomingBookings []models.Booking
-	PendingBookings  int
+	CourseCount       int
+	PublishedCourses  int
+	UpcomingBookings  []models.Booking
+	PendingBookings   int
+	ConfirmedBookings int
+	TotalPurchases    int
+	PaidPurchases     int
 }
 
 func (a *App) AdminDashboard(w http.ResponseWriter, r *http.Request) {
@@ -73,27 +76,47 @@ func (a *App) AdminDashboard(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	bookings, err := a.Bookings.ListUpcoming(ctx)
+	allBookings, err := a.Bookings.ListAll(ctx)
 	if err != nil {
 		a.serverError(w, "load bookings", err)
 		return
 	}
 	pending := 0
-	for _, b := range bookings {
-		if b.Status == models.BookingStatusPending {
+	confirmed := 0
+	var upcoming []models.Booking
+	for _, b := range allBookings {
+		switch b.Status {
+		case models.BookingStatusPendingPayment:
 			pending++
+		case models.BookingStatusConfirmed:
+			confirmed++
+			if len(upcoming) < 10 {
+				upcoming = append(upcoming, b)
+			}
 		}
 	}
-	if len(bookings) > 10 {
-		bookings = bookings[:10]
+
+	purchases, err := a.Purchases.ListAll(ctx)
+	if err != nil {
+		a.serverError(w, "load purchases", err)
+		return
+	}
+	paidPurchases := 0
+	for _, p := range purchases {
+		if p.Status == models.PurchaseStatusPaid {
+			paidPurchases++
+		}
 	}
 
 	a.View.Render(w, http.StatusOK, "admin_dashboard", AdminDashboardData{
-		BaseData:         a.base(r, "Admin Dashboard", "", "admin"),
-		CourseCount:      len(courses),
-		PublishedCourses: published,
-		UpcomingBookings: bookings,
-		PendingBookings:  pending,
+		BaseData:          a.base(r, "Admin Dashboard", "", "admin"),
+		CourseCount:       len(courses),
+		PublishedCourses:  published,
+		UpcomingBookings:  upcoming,
+		PendingBookings:   pending,
+		ConfirmedBookings: confirmed,
+		TotalPurchases:    len(purchases),
+		PaidPurchases:     paidPurchases,
 	})
 }
 
@@ -260,7 +283,7 @@ func (a *App) AdminBookingStatus(w http.ResponseWriter, r *http.Request) {
 	}
 	status := r.FormValue("status")
 	switch status {
-	case models.BookingStatusConfirmed, models.BookingStatusCancelled, models.BookingStatusPending:
+	case models.BookingStatusConfirmed, models.BookingStatusCancelled, models.BookingStatusPendingPayment:
 	default:
 		http.Error(w, "invalid status", http.StatusBadRequest)
 		return

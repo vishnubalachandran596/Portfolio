@@ -3,9 +3,10 @@
   <div class="container footer-inner">
     <p>&copy; {{currentYear}} {{.SiteName}}. All rights reserved.</p>
     <nav class="footer-nav">
-      <a href="{{.Nav.About}}">About</a>
+      <a href="{{.Nav.About}}">About Me</a>
       <a href="{{.Nav.Courses}}">Courses</a>
-      <a href="{{.Nav.Booking}}">Book Time</a>
+      <a href="{{.Nav.Consultancy}}">Consultancy</a>
+      <a href="{{.Nav.Contact}}">Contact</a>
       <a href="{{.Nav.Search}}">Search</a>
     </nav>
     <nav class="footer-nav footer-nav-legal">
@@ -19,7 +20,7 @@
 </footer>
 
 <div id="cookie-banner" class="cookie-banner" hidden>
-  <p>This site uses only essential cookies (a consent preference, and an admin session cookie if you log into the admin portal) — no third-party tracking. See our <a href="{{.Nav.Cookies}}">Cookie Policy</a>.</p>
+  <p>This site uses only essential cookies (a consent preference, and a session cookie once you log in) — no third-party tracking. See our <a href="{{.Nav.Cookies}}">Cookie Policy</a>.</p>
   <button type="button" id="cookie-accept" class="btn btn-primary btn-sm">Got it</button>
 </div>
 {{end}}

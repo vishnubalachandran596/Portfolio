@@ -14,24 +14,31 @@ type BookingRepo struct{ db *sql.DB }
 
 func NewBookingRepo(db *sql.DB) *BookingRepo { return &BookingRepo{db: db} }
 
-const bookingColumns = `id, name, email, message, slot_start, slot_end, status, created_at`
+const bookingColumns = `id, user_id, name, email, message, slot_start, slot_end, status, amount_cents, currency, razorpay_order_id, razorpay_payment_id, created_at`
 
 func scanBooking(row interface{ Scan(...any) error }) (models.Booking, error) {
 	var b models.Booking
-	err := row.Scan(&b.ID, &b.Name, &b.Email, &b.Message, &b.SlotStart, &b.SlotEnd, &b.Status, &b.CreatedAt)
+	var userID sql.NullInt64
+	err := row.Scan(&b.ID, &userID, &b.Name, &b.Email, &b.Message, &b.SlotStart, &b.SlotEnd, &b.Status,
+		&b.AmountCents, &b.Currency, &b.RazorpayOrderID, &b.RazorpayPaymentID, &b.CreatedAt)
+	b.UserID = userID.Int64
 	return b, err
 }
 
-// ErrSlotTaken is returned when a visitor tries to book a slot that was
-// already reserved by someone else (unique constraint on slot_start).
+// ErrSlotTaken is returned when a visitor tries to reserve a slot that's
+// already confirmed or has a live (non-stale) pending payment.
 var ErrSlotTaken = errors.New("slot already booked")
 
-func (r *BookingRepo) Create(ctx context.Context, b models.Booking) (int64, error) {
+// CreatePending reserves a slot for payment: a Razorpay order has already
+// been created for it, so this INSERT is what actually claims the slot —
+// the UNIQUE(slot_start) constraint rejects a racing second buyer.
+func (r *BookingRepo) CreatePending(ctx context.Context, b models.Booking) (int64, error) {
 	var id int64
 	err := r.db.QueryRowContext(ctx, `
-		INSERT INTO bookings (name, email, message, slot_start, slot_end, status)
-		VALUES ($1,$2,$3,$4,$5,$6) RETURNING id`,
-		b.Name, b.Email, b.Message, b.SlotStart, b.SlotEnd, models.BookingStatusPending,
+		INSERT INTO bookings (user_id, name, email, message, slot_start, slot_end, status, amount_cents, currency, razorpay_order_id)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id`,
+		b.UserID, b.Name, b.Email, b.Message, b.SlotStart, b.SlotEnd, models.BookingStatusPendingPayment,
+		b.AmountCents, b.Currency, b.RazorpayOrderID,
 	).Scan(&id)
 	if err != nil && isUniqueViolation(err) {
 		return 0, ErrSlotTaken
@@ -39,8 +46,37 @@ func (r *BookingRepo) Create(ctx context.Context, b models.Booking) (int64, erro
 	return id, err
 }
 
+func (r *BookingRepo) GetByRazorpayOrderID(ctx context.Context, orderID string) (models.Booking, error) {
+	b, err := scanBooking(r.db.QueryRowContext(ctx, `SELECT `+bookingColumns+` FROM bookings WHERE razorpay_order_id = $1`, orderID))
+	if errors.Is(err, sql.ErrNoRows) {
+		return models.Booking{}, ErrNotFound
+	}
+	return b, err
+}
+
+// MarkPaid confirms a pending booking once Razorpay's signature has been
+// verified. Scoped to status='pending_payment' so a replayed verify call
+// is a no-op (ErrNotFound) rather than double-processing.
+func (r *BookingRepo) MarkPaid(ctx context.Context, orderID, paymentID string) error {
+	res, err := r.db.ExecContext(ctx, `
+		UPDATE bookings SET status = $1, razorpay_payment_id = $2
+		WHERE razorpay_order_id = $3 AND status = $4`,
+		models.BookingStatusConfirmed, paymentID, orderID, models.BookingStatusPendingPayment)
+	if err != nil {
+		return err
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if n == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
 func (r *BookingRepo) ListUpcoming(ctx context.Context) ([]models.Booking, error) {
-	rows, err := r.db.QueryContext(ctx, `SELECT `+bookingColumns+` FROM bookings WHERE status != 'cancelled' AND slot_start >= now() - interval '1 day' ORDER BY slot_start`)
+	rows, err := r.db.QueryContext(ctx, `SELECT `+bookingColumns+` FROM bookings WHERE status = 'confirmed' AND slot_start >= now() - interval '1 day' ORDER BY slot_start`)
 	if err != nil {
 		return nil, err
 	}
@@ -69,12 +105,15 @@ func scanBookings(rows *sql.Rows) ([]models.Booking, error) {
 	return out, rows.Err()
 }
 
-// BookedSlots returns the start times already reserved (pending or
-// confirmed) within the given window, used to filter out taken slots.
+// BookedSlots returns the start times that aren't offerable: confirmed
+// bookings, plus pending-payment reservations less than 20 minutes old
+// (an abandoned checkout frees the slot automatically without a cleanup
+// job).
 func (r *BookingRepo) BookedSlots(ctx context.Context, from, to time.Time) (map[time.Time]bool, error) {
 	rows, err := r.db.QueryContext(ctx, `
 		SELECT slot_start FROM bookings
-		WHERE status != 'cancelled' AND slot_start >= $1 AND slot_start < $2`, from, to)
+		WHERE slot_start >= $1 AND slot_start < $2
+		  AND (status = 'confirmed' OR (status = 'pending_payment' AND created_at > now() - interval '20 minutes'))`, from, to)
 	if err != nil {
 		return nil, err
 	}

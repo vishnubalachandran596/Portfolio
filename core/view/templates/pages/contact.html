@@ -1,0 +1,31 @@
+{{define "content"}}
+<section class="section page-hero page-hero-narrow">
+  <div class="container">
+    <p class="eyebrow">Contact</p>
+    <h1>Get in touch</h1>
+    <p class="hero-subtitle">For a focused 1:1 conversation, booking a consultancy session is the fastest way to actually talk. For anything else, reach out directly.</p>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container contact-grid">
+    <div class="contact-card">
+      <h3>Email</h3>
+      <p>{{.Profile.Email}}</p>
+      {{if .Profile.Email}}<button type="button" class="btn btn-secondary copy-btn" data-copy="{{.Profile.Email}}">Copy email</button>{{end}}
+    </div>
+    {{if .Profile.LinkedInURL}}
+    <div class="contact-card">
+      <h3>LinkedIn</h3>
+      <p>Connect or message me directly.</p>
+      <a class="btn btn-secondary" href="{{.Profile.LinkedInURL}}" target="_blank" rel="noopener">Open LinkedIn ↗</a>
+    </div>
+    {{end}}
+    <div class="contact-card">
+      <h3>Consultancy</h3>
+      <p>Need real time on a problem, not just an email thread? Book a paid 1:1 session.</p>
+      <a class="btn btn-primary" href="{{.Nav.Consultancy}}">View Consultancy</a>
+    </div>
+  </div>
+</section>
+{{end}}

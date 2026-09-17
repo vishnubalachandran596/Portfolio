@@ -54,7 +54,8 @@ func (a *App) Sitemap(w http.ResponseWriter, r *http.Request) {
 		{"/", "1.0"},
 		{"/about", "0.9"},
 		{"/courses", "0.9"},
-		{"/booking", "0.8"},
+		{"/consultancy", "0.8"},
+		{"/contact", "0.5"},
 		{"/privacy", "0.2"},
 		{"/terms", "0.2"},
 		{"/refund", "0.2"},
@@ -103,12 +104,13 @@ type PageHit struct {
 
 var staticSearchIndex = []PageHit{
 	{"Home", "/", "Overview, hero introduction, and site highlights."},
-	{"About", "/about", "Full bio, skills, professional experience, and education."},
+	{"About Me", "/about", "Full bio, skills, professional experience, and education."},
 	{"Courses", "/courses", "Browse all published courses."},
-	{"Book Time", "/booking", "Book a 1:1 session."},
+	{"Consultancy", "/consultancy", "Book a paid 1:1 consultancy session."},
+	{"Contact", "/contact", "Get in touch."},
 	{"Privacy Policy", "/privacy", "How data is collected, used, and deleted."},
 	{"Terms of Service", "/terms", "Terms governing use of this site."},
-	{"Refund Policy", "/refund", "Refund terms for paid courses."},
+	{"Refund Policy", "/refund", "Refund terms for paid courses and consultancy."},
 	{"Cookie Policy", "/cookies", "How cookies are used on this site."},
 }
 

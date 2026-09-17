@@ -32,6 +32,7 @@ type App struct {
 	Availability *repo.AvailabilityRepo
 	Admins       *repo.AdminRepo
 	Purchases    *repo.PurchaseRepo
+	Users        *repo.UserRepo
 
 	Razorpay *payments.Razorpay
 	Timezone *time.Location
@@ -50,6 +51,10 @@ type BaseData struct {
 	OGImageURL      string
 	Nav             NavLinks
 	Country         string
+	IsLoggedIn      bool
+	IsAdmin         bool
+	UserName        string
+	LinkedInURL     string
 }
 
 // NavLinks holds the absolute URL for each primary nav destination, so
@@ -58,16 +63,20 @@ type BaseData struct {
 // goes directly to about.domain, not home.domain/about -> redirect).
 // Root-relative when no custom domain is configured.
 type NavLinks struct {
-	Home    string
-	About   string
-	Courses string
-	Booking string
-	Search  string
-	Admin   string
-	Privacy string
-	Terms   string
-	Refund  string
-	Cookies string
+	Home        string
+	About       string
+	Courses     string
+	Consultancy string
+	Booking     string
+	Contact     string
+	Search      string
+	Admin       string
+	Login       string
+	Logout      string
+	Privacy     string
+	Terms       string
+	Refund      string
+	Cookies     string
 }
 
 func New(cfg *config.Config, db *sql.DB, renderer *view.Renderer) *App {
@@ -90,6 +99,7 @@ func New(cfg *config.Config, db *sql.DB, renderer *view.Renderer) *App {
 		Availability: repo.NewAvailabilityRepo(db),
 		Admins:       repo.NewAdminRepo(db),
 		Purchases:    repo.NewPurchaseRepo(db),
+		Users:        repo.NewUserRepo(db),
 		Razorpay:     payments.NewRazorpay(cfg.RazorpayKeyID, cfg.RazorpayKeySecret),
 		Timezone:     loc,
 	}
@@ -97,6 +107,20 @@ func New(cfg *config.Config, db *sql.DB, renderer *view.Renderer) *App {
 
 func (a *App) base(r *http.Request, title, metaDescription, active string) BaseData {
 	base := a.baseURL(r)
+	isAdmin := a.Auth.IsAuthenticated(r)
+	isUser := a.Auth.IsUserAuthenticated(r)
+	userName := ""
+	if isUser {
+		if uid, ok := a.Auth.UserID(r); ok {
+			if u, err := a.Users.GetByID(r.Context(), uid); err == nil {
+				userName = u.Name
+			}
+		}
+	}
+	linkedIn := ""
+	if profile, err := a.Profile.Get(r.Context()); err == nil {
+		linkedIn = profile.LinkedInURL
+	}
 	return BaseData{
 		SiteName:        a.Cfg.SiteName,
 		Title:           title,
@@ -106,17 +130,25 @@ func (a *App) base(r *http.Request, title, metaDescription, active string) BaseD
 		CanonicalURL:    base + r.URL.Path,
 		OGImageURL:      base + "/static/img/og-image.png",
 		Nav: NavLinks{
-			Home:    a.pageURL(r, "/"),
-			About:   a.pageURL(r, "/about"),
-			Courses: a.pageURL(r, "/courses"),
-			Booking: a.pageURL(r, "/booking"),
-			Search:  a.pageURL(r, "/search"),
-			Admin:   a.pageURL(r, "/admin/login"),
-			Privacy: a.pageURL(r, "/privacy"),
-			Terms:   a.pageURL(r, "/terms"),
-			Refund:  a.pageURL(r, "/refund"),
-			Cookies: a.pageURL(r, "/cookies"),
+			Home:        a.pageURL(r, "/"),
+			About:       a.pageURL(r, "/about"),
+			Courses:     a.pageURL(r, "/courses"),
+			Consultancy: a.pageURL(r, "/consultancy"),
+			Booking:     a.pageURL(r, "/booking"),
+			Contact:     a.pageURL(r, "/contact"),
+			Search:      a.pageURL(r, "/search"),
+			Admin:       a.pageURL(r, "/admin"),
+			Login:       a.pageURL(r, "/login"),
+			Logout:      a.pageURL(r, "/logout"),
+			Privacy:     a.pageURL(r, "/privacy"),
+			Terms:       a.pageURL(r, "/terms"),
+			Refund:      a.pageURL(r, "/refund"),
+			Cookies:     a.pageURL(r, "/cookies"),
 		},
-		Country: geo.CountryFromRequest(r),
+		Country:     geo.CountryFromRequest(r),
+		IsLoggedIn:  isUser || isAdmin,
+		IsAdmin:     isAdmin,
+		UserName:    userName,
+		LinkedInURL: linkedIn,
 	}
 }
