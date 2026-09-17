@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/vishnubalachandran596/portfolio/core/geo"
 	"github.com/vishnubalachandran596/portfolio/core/models"
 	"github.com/vishnubalachandran596/portfolio/core/repo"
 )
@@ -60,9 +61,16 @@ func (a *App) CheckoutCreateOrder(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "A valid email is required."})
 		return
 	}
+	// Currency and the minimum floor are resolved server-side from the
+	// visitor's own detected region (never from anything the client
+	// sends) — India gets an INR minimum, everyone else the international
+	// one. This is the same signal used to render the page, so it always
+	// matches what the visitor was shown.
+	currency, minCents := course.RegionalPrice(geo.CountryFromRequest(r))
+
 	amountCents, _ := strconv.Atoi(r.FormValue("amount_cents"))
-	if amountCents < course.MinPriceCents {
-		amountCents = course.MinPriceCents
+	if amountCents < minCents {
+		amountCents = minCents
 	}
 
 	token, err := generateAccessToken()
@@ -72,7 +80,7 @@ func (a *App) CheckoutCreateOrder(w http.ResponseWriter, r *http.Request) {
 	}
 
 	receipt := fmt.Sprintf("course-%d-%d", course.ID, time.Now().UnixNano())
-	orderID, err := a.Razorpay.CreateOrder(amountCents, course.Currency, receipt)
+	orderID, err := a.Razorpay.CreateOrder(amountCents, currency, receipt)
 	if err != nil {
 		log.Printf("razorpay create order: %v", err)
 		writeJSON(w, http.StatusBadGateway, map[string]string{"error": "Could not start checkout. Please try again."})
@@ -83,7 +91,7 @@ func (a *App) CheckoutCreateOrder(w http.ResponseWriter, r *http.Request) {
 		CourseID:        course.ID,
 		Email:           email,
 		AmountCents:     amountCents,
-		Currency:        course.Currency,
+		Currency:        currency,
 		RazorpayOrderID: orderID,
 		AccessToken:     token,
 	}); err != nil {
@@ -94,7 +102,7 @@ func (a *App) CheckoutCreateOrder(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{
 		"order_id":    orderID,
 		"amount":      amountCents,
-		"currency":    course.Currency,
+		"currency":    currency,
 		"key_id":      a.Razorpay.KeyID,
 		"course_name": course.Title,
 		"email":       email,

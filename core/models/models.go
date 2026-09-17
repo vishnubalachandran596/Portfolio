@@ -69,47 +69,73 @@ type HomeFeature struct {
 }
 
 type Course struct {
-	ID            int64
-	Slug          string
-	Title         string
-	Summary       string
-	Description   string
-	Level         string
-	Duration      string
-	PriceCents    int
-	Currency      string
-	ImageURL      string
-	IsPublished   bool
-	SortOrder     int
-	IsPaid        bool
-	MinPriceCents int
-	ContentKey    string
-	CreatedAt     time.Time
-	UpdatedAt     time.Time
+	ID               int64
+	Slug             string
+	Title            string
+	Summary          string
+	Description      string
+	Level            string
+	Duration         string
+	PriceCents       int
+	Currency         string
+	ImageURL         string
+	IsPublished      bool
+	SortOrder        int
+	IsPaid           bool
+	MinPriceCents    int
+	MinPriceCentsINR int
+	ContentKey       string
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
 }
 
 // IsFree reports whether the course has no listed price.
 func (c Course) IsFree() bool { return !c.IsPaid && c.PriceCents == 0 }
 
 // PriceDisplay renders the price as a human string, e.g. "$49" or "Free".
+// For a paid course this shows the international minimum — see
+// RegionalPrice for the visitor-aware version (India gets an INR floor).
 func (c Course) PriceDisplay() string {
 	if c.IsPaid {
-		return "From " + formatMoney(c.MinPriceCents, c.Currency)
+		return "From " + FormatMoney(c.MinPriceCents, c.Currency)
 	}
 	if c.IsFree() {
 		return "Free"
 	}
-	return formatMoney(c.PriceCents, c.Currency)
+	return FormatMoney(c.PriceCents, c.Currency)
 }
 
 // MinPriceDisplay renders the minimum contribution for a paid course.
-func (c Course) MinPriceDisplay() string { return formatMoney(c.MinPriceCents, c.Currency) }
+func (c Course) MinPriceDisplay() string { return FormatMoney(c.MinPriceCents, c.Currency) }
 
 // MinPriceWhole is the minimum contribution in whole currency units
 // (e.g. 5 for $5), for use as a numeric HTML input attribute.
 func (c Course) MinPriceWhole() int { return c.MinPriceCents / 100 }
 
-func formatMoney(cents int, currency string) string {
+// RegionalPrice returns the currency and minimum contribution (in the
+// smallest currency unit) that applies for a visitor from the given ISO
+// 3166-1 alpha-2 country code: India gets its own INR minimum (when set),
+// everyone else — including unknown/local visitors — gets the course's
+// default international minimum.
+func (c Course) RegionalPrice(country string) (currency string, minCents int) {
+	if country == "IN" && c.MinPriceCentsINR > 0 {
+		return "INR", c.MinPriceCentsINR
+	}
+	return c.Currency, c.MinPriceCents
+}
+
+// RegionalPriceDisplay renders "From ₹500" / "From $5" / "Free" for the
+// given visitor's country — the region-aware counterpart to PriceDisplay,
+// used wherever a course price is shown to an actual visitor.
+func (c Course) RegionalPriceDisplay(country string) string {
+	if !c.IsPaid {
+		return c.PriceDisplay()
+	}
+	currency, cents := c.RegionalPrice(country)
+	return "From " + FormatMoney(cents, currency)
+}
+
+func FormatMoney(cents int, currency string) string {
 	symbol := "$"
 	switch currency {
 	case "EUR":

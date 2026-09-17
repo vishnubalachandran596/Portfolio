@@ -7,7 +7,7 @@
     <h1>{{.Course.Title}}</h1>
     <p class="hero-subtitle">{{.Course.Summary}}</p>
     <div class="course-detail-meta">
-      <span>{{.Course.PriceDisplay}}</span>
+      <span>{{.Course.RegionalPriceDisplay .Country}}</span>
       {{if .Course.Duration}}<span>· {{.Course.Duration}}</span>{{end}}
     </div>
 
@@ -20,15 +20,15 @@
       {{else if .PaymentsEnabled}}
       <div class="purchase-box" id="purchase-box">
         <p class="purchase-box-title">Unlock this course</p>
-        <p class="purchase-box-sub">Pay-what-you-want — {{.Course.MinPriceDisplay}} minimum.</p>
+        <p class="purchase-box-sub">Pay-what-you-want — {{.ResolvedMinDisplay}} minimum{{if eq .Country "IN"}} (India pricing){{end}}.</p>
         <div id="purchase-error" class="alert alert-error" hidden></div>
         <label>Your email <span class="optional">(access is sent here)</span>
           <input type="email" id="purchase-email" required>
         </label>
-        <label>Contribution ({{.Course.Currency}})
-          <input type="number" id="purchase-amount" min="{{.Course.MinPriceWhole}}" step="1" value="{{.Course.MinPriceWhole}}">
+        <label>Contribution ({{.ResolvedCurrency}})
+          <input type="number" id="purchase-amount" min="{{.ResolvedMinWhole}}" step="1" value="{{.ResolvedMinWhole}}">
         </label>
-        <button type="button" class="btn btn-primary" id="purchase-btn" data-slug="{{.Course.Slug}}" data-min-cents="{{.Course.MinPriceCents}}">Pay &amp; Unlock</button>
+        <button type="button" class="btn btn-primary" id="purchase-btn" data-slug="{{.Course.Slug}}" data-min-cents="{{.ResolvedMinCents}}">Pay &amp; Unlock</button>
       </div>
       <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
       {{else}}

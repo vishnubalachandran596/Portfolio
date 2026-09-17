@@ -42,7 +42,7 @@
         <span class="course-level">{{.Level}}</span>
         <h3>{{.Title}}</h3>
         <p>{{.Summary}}</p>
-        <span class="course-price">{{.PriceDisplay}}{{if not .IsFree}} <span class="course-duration">· {{.Duration}}</span>{{end}}</span>
+        <span class="course-price">{{.RegionalPriceDisplay $.Country}}{{if not .IsFree}} <span class="course-duration">· {{.Duration}}</span>{{end}}</span>
       </a>
       {{end}}
     </div>

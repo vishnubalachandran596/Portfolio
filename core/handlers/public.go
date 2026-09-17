@@ -118,12 +118,16 @@ func (a *App) CoursesList(w http.ResponseWriter, r *http.Request) {
 
 type CourseDetailData struct {
 	BaseData
-	Course           models.Course
-	JSONLD           template.JS
-	PaymentsEnabled  bool
-	RazorpayKeyID    string
-	PurchaseRequired bool
-	HasAccess        bool
+	Course             models.Course
+	JSONLD             template.JS
+	PaymentsEnabled    bool
+	RazorpayKeyID      string
+	PurchaseRequired   bool
+	HasAccess          bool
+	ResolvedCurrency   string
+	ResolvedMinCents   int
+	ResolvedMinWhole   int
+	ResolvedMinDisplay string
 }
 
 func (a *App) CourseDetail(w http.ResponseWriter, r *http.Request) {
@@ -148,14 +152,21 @@ func (a *App) CourseDetail(w http.ResponseWriter, r *http.Request) {
 	}
 
 	base := a.base(r, course.Title+" — "+a.Cfg.SiteName, course.Summary, "courses")
+
+	currency, minCents := course.RegionalPrice(base.Country)
+
 	a.View.Render(w, http.StatusOK, "course_detail", CourseDetailData{
-		BaseData:         base,
-		Course:           course,
-		JSONLD:           courseJSONLD(course.Title, course.Summary, base.CanonicalURL, a.Cfg.SiteName),
-		PaymentsEnabled:  a.Razorpay.Enabled(),
-		RazorpayKeyID:    a.Razorpay.KeyID,
-		PurchaseRequired: r.URL.Query().Get("purchase") == "required",
-		HasAccess:        hasAccess,
+		BaseData:           base,
+		Course:             course,
+		JSONLD:             courseJSONLD(course.Title, course.Summary, base.CanonicalURL, a.Cfg.SiteName),
+		PaymentsEnabled:    a.Razorpay.Enabled(),
+		RazorpayKeyID:      a.Razorpay.KeyID,
+		PurchaseRequired:   r.URL.Query().Get("purchase") == "required",
+		HasAccess:          hasAccess,
+		ResolvedCurrency:   currency,
+		ResolvedMinCents:   minCents,
+		ResolvedMinWhole:   minCents / 100,
+		ResolvedMinDisplay: models.FormatMoney(minCents, currency),
 	})
 }
 

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/vishnubalachandran596/portfolio/core/config"
+	"github.com/vishnubalachandran596/portfolio/core/geo"
 	"github.com/vishnubalachandran596/portfolio/core/middleware"
 	"github.com/vishnubalachandran596/portfolio/core/payments"
 	"github.com/vishnubalachandran596/portfolio/core/repo"
@@ -48,6 +49,7 @@ type BaseData struct {
 	CanonicalURL    string
 	OGImageURL      string
 	Nav             NavLinks
+	Country         string
 }
 
 // NavLinks holds the absolute URL for each primary nav destination, so
@@ -115,5 +117,6 @@ func (a *App) base(r *http.Request, title, metaDescription, active string) BaseD
 			Refund:  a.pageURL(r, "/refund"),
 			Cookies: a.pageURL(r, "/cookies"),
 		},
+		Country: geo.CountryFromRequest(r),
 	}
 }
