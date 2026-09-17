@@ -272,6 +272,38 @@ func (a *App) AdminBookingStatus(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/admin/bookings", http.StatusSeeOther)
 }
 
+// --- Purchases -------------------------------------------------------------
+
+type AdminPurchasesData struct {
+	BaseData
+	Purchases []models.Purchase
+	Courses   map[int64]models.Course
+}
+
+func (a *App) AdminPurchasesList(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	purchases, err := a.Purchases.ListAll(ctx)
+	if err != nil {
+		a.serverError(w, "load purchases", err)
+		return
+	}
+	courses, err := a.Courses.ListAll(ctx)
+	if err != nil {
+		a.serverError(w, "load courses", err)
+		return
+	}
+	byID := make(map[int64]models.Course, len(courses))
+	for _, c := range courses {
+		byID[c.ID] = c
+	}
+
+	a.View.Render(w, http.StatusOK, "admin_purchases", AdminPurchasesData{
+		BaseData:  a.base(r, "Purchases — Admin", "", "admin"),
+		Purchases: purchases,
+		Courses:   byID,
+	})
+}
+
 // --- Availability ---------------------------------------------------------
 
 type AdminAvailabilityData struct {

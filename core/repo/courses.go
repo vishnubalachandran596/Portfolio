@@ -14,12 +14,13 @@ type CourseRepo struct{ db *sql.DB }
 
 func NewCourseRepo(db *sql.DB) *CourseRepo { return &CourseRepo{db: db} }
 
-const courseColumns = `id, slug, title, summary, description, level, duration, price_cents, currency, image_url, is_published, sort_order, created_at, updated_at`
+const courseColumns = `id, slug, title, summary, description, level, duration, price_cents, currency, image_url, is_published, sort_order, is_paid, min_price_cents, content_key, created_at, updated_at`
 
 func scanCourse(row interface{ Scan(...any) error }) (models.Course, error) {
 	var c models.Course
 	err := row.Scan(&c.ID, &c.Slug, &c.Title, &c.Summary, &c.Description, &c.Level, &c.Duration,
-		&c.PriceCents, &c.Currency, &c.ImageURL, &c.IsPublished, &c.SortOrder, &c.CreatedAt, &c.UpdatedAt)
+		&c.PriceCents, &c.Currency, &c.ImageURL, &c.IsPublished, &c.SortOrder,
+		&c.IsPaid, &c.MinPriceCents, &c.ContentKey, &c.CreatedAt, &c.UpdatedAt)
 	return c, err
 }
 

@@ -118,8 +118,12 @@ func (a *App) CoursesList(w http.ResponseWriter, r *http.Request) {
 
 type CourseDetailData struct {
 	BaseData
-	Course models.Course
-	JSONLD template.JS
+	Course           models.Course
+	JSONLD           template.JS
+	PaymentsEnabled  bool
+	RazorpayKeyID    string
+	PurchaseRequired bool
+	HasAccess        bool
 }
 
 func (a *App) CourseDetail(w http.ResponseWriter, r *http.Request) {
@@ -138,11 +142,20 @@ func (a *App) CourseDetail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	hasAccess := false
+	if course.IsPaid {
+		hasAccess, _ = a.courseAccess(w, r, course)
+	}
+
 	base := a.base(r, course.Title+" — "+a.Cfg.SiteName, course.Summary, "courses")
 	a.View.Render(w, http.StatusOK, "course_detail", CourseDetailData{
-		BaseData: base,
-		Course:   course,
-		JSONLD:   courseJSONLD(course.Title, course.Summary, base.CanonicalURL, a.Cfg.SiteName),
+		BaseData:         base,
+		Course:           course,
+		JSONLD:           courseJSONLD(course.Title, course.Summary, base.CanonicalURL, a.Cfg.SiteName),
+		PaymentsEnabled:  a.Razorpay.Enabled(),
+		RazorpayKeyID:    a.Razorpay.KeyID,
+		PurchaseRequired: r.URL.Query().Get("purchase") == "required",
+		HasAccess:        hasAccess,
 	})
 }
 

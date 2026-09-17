@@ -136,6 +136,43 @@ Skills, experience, and education are currently seed-managed (edit
 into the admin UI to keep the CRUD surface focused on the three things
 explicitly asked for (courses, bookings, profile).
 
+## Paid courses (Razorpay)
+
+A course can be marked `is_paid` with a `min_price_cents` floor — the
+visitor picks any amount at or above that minimum ("pay what you want"),
+pays via Razorpay Checkout, and is redirected to `/courses/<slug>/learn`.
+
+- **Payment flow:** `POST /courses/<slug>/checkout/order` creates a
+  Razorpay order and a `purchases` row (`core/payments`, `core/repo/purchases.go`).
+  Razorpay's Checkout.js widget collects card details directly — this app
+  never sees or stores them. `POST /courses/<slug>/checkout/verify` is the
+  step that actually matters: it recomputes the HMAC-SHA256 signature
+  server-side and only marks the purchase "paid" if it matches
+  (`core/payments/razorpay.go`). Access is never granted from the
+  client-side "success" callback alone.
+- **Access:** a per-course HttpOnly cookie (`ca_<courseID>`) holding an
+  opaque access token, set once payment is verified. Logged-in admins
+  always have access, for previewing paid content.
+- **Content:** paid course content is a full, self-contained HTML
+  document (its own layout/CSS/JS — not run through the site's own
+  templates) embedded via `core/content` and served only by the
+  `/courses/<slug>/learn` handler, never from `/static` or the sitemap.
+  Adding a new paid course's content today means committing a new HTML
+  file there and mapping it to a `content_key` — there's no admin-portal
+  upload flow yet (that needs object storage, a separate decision).
+- **On "no one can copy the content":** be realistic about this — nothing
+  rendered in a browser can be made impossible to copy (view-source,
+  screenshots, and devtools always exist). What's actually implemented:
+  the content is never at a public URL, it's sent with `Cache-Control:
+  no-store`, right-click/copy are discouraged (not blocked — that's not
+  really possible either), and **every page is watermarked with the
+  purchaser's email**, which is the actually-effective deterrent — a
+  leaked copy is traceable back to whoever shared it.
+- **Setup:** set `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` (start with
+  Razorpay's test-mode keys) and optionally `CHECKOUT_CURRENCY`. The
+  purchase button is hidden until both are set. See `/admin/purchases`
+  for a log of every order and its status.
+
 ## Domain architecture (marketing site vs. app)
 
 The site follows a marketing-vs-app domain split: the apex domain serves

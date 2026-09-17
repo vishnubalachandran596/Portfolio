@@ -124,6 +124,98 @@
     });
   });
 
+  // --- Paid course checkout (Razorpay) -------------------------------------
+  var purchaseBtn = document.getElementById("purchase-btn");
+  if (purchaseBtn) {
+    purchaseBtn.addEventListener("click", function () {
+      var slug = purchaseBtn.getAttribute("data-slug");
+      var minCents = parseInt(purchaseBtn.getAttribute("data-min-cents"), 10) || 0;
+      var emailInput = document.getElementById("purchase-email");
+      var amountInput = document.getElementById("purchase-amount");
+      var errorBox = document.getElementById("purchase-error");
+
+      function showError(msg) {
+        if (errorBox) {
+          errorBox.textContent = msg;
+          errorBox.hidden = false;
+        }
+      }
+
+      var email = emailInput ? emailInput.value.trim() : "";
+      if (!email || email.indexOf("@") === -1) {
+        showError("Please enter a valid email.");
+        return;
+      }
+      var amount = Math.round(parseFloat(amountInput ? amountInput.value : "0") * 100);
+      if (isNaN(amount) || amount < minCents) amount = minCents;
+
+      if (errorBox) errorBox.hidden = true;
+      purchaseBtn.disabled = true;
+      purchaseBtn.textContent = "Starting checkout…";
+
+      var form = new FormData();
+      form.append("email", email);
+      form.append("amount_cents", String(amount));
+
+      fetch("/courses/" + slug + "/checkout/order", { method: "POST", body: form })
+        .then(function (res) {
+          return res.json().then(function (data) {
+            if (!res.ok) throw new Error(data.error || "Could not start checkout.");
+            return data;
+          });
+        })
+        .then(function (order) {
+          var rzp = new Razorpay({
+            key: order.key_id,
+            amount: order.amount,
+            currency: order.currency,
+            name: order.course_name,
+            description: "Course access",
+            order_id: order.order_id,
+            prefill: { email: order.email },
+            handler: function (response) {
+              fetch("/courses/" + slug + "/checkout/verify", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  razorpay_order_id: response.razorpay_order_id,
+                  razorpay_payment_id: response.razorpay_payment_id,
+                  razorpay_signature: response.razorpay_signature,
+                }),
+              })
+                .then(function (res) {
+                  return res.json();
+                })
+                .then(function (result) {
+                  if (result.redirect) {
+                    window.location.href = result.redirect;
+                  } else {
+                    showError(result.error || "Payment could not be verified.");
+                  }
+                })
+                .catch(function () {
+                  showError("Payment could not be verified. Contact support with your payment ID.");
+                });
+            },
+            modal: {
+              ondismiss: function () {
+                purchaseBtn.disabled = false;
+                purchaseBtn.textContent = "Pay & Unlock";
+              },
+            },
+          });
+          rzp.open();
+          purchaseBtn.disabled = false;
+          purchaseBtn.textContent = "Pay & Unlock";
+        })
+        .catch(function (err) {
+          showError(err.message || "Could not start checkout.");
+          purchaseBtn.disabled = false;
+          purchaseBtn.textContent = "Pay & Unlock";
+        });
+    });
+  }
+
   // --- Booking slot picker ------------------------------------------------
   var slotInput = document.getElementById("slot-input");
   var contact = document.getElementById("booking-contact");

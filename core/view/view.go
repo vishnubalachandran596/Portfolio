@@ -21,6 +21,13 @@ var funcs = template.FuncMap{
 	"formatDateTime": func(t time.Time) string {
 		return t.Format("Mon, Jan 2 2006 · 3:04 PM")
 	},
+	"money": func(cents int, currency string) string {
+		symbol := map[string]string{"EUR": "€", "GBP": "£", "INR": "₹"}[currency]
+		if symbol == "" {
+			symbol = "$"
+		}
+		return fmt.Sprintf("%s%d.%02d", symbol, cents/100, cents%100)
+	},
 	"splitLines": func(s string) []string {
 		var out []string
 		for _, p := range strings.Split(strings.ReplaceAll(s, "\r\n", "\n"), "\n\n") {
@@ -61,6 +68,7 @@ func New() (*Renderer, error) {
 		"templates/pages/admin_courses_list.html",
 		"templates/pages/admin_course_form.html",
 		"templates/pages/admin_bookings.html",
+		"templates/pages/admin_purchases.html",
 		"templates/pages/admin_availability.html",
 		"templates/pages/admin_profile.html",
 	}

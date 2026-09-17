@@ -9,6 +9,7 @@ import (
 
 	"github.com/vishnubalachandran596/portfolio/core/config"
 	"github.com/vishnubalachandran596/portfolio/core/middleware"
+	"github.com/vishnubalachandran596/portfolio/core/payments"
 	"github.com/vishnubalachandran596/portfolio/core/repo"
 	"github.com/vishnubalachandran596/portfolio/core/view"
 )
@@ -29,7 +30,9 @@ type App struct {
 	Bookings     *repo.BookingRepo
 	Availability *repo.AvailabilityRepo
 	Admins       *repo.AdminRepo
+	Purchases    *repo.PurchaseRepo
 
+	Razorpay *payments.Razorpay
 	Timezone *time.Location
 }
 
@@ -65,6 +68,8 @@ func New(cfg *config.Config, db *sql.DB, renderer *view.Renderer) *App {
 		Bookings:     repo.NewBookingRepo(db),
 		Availability: repo.NewAvailabilityRepo(db),
 		Admins:       repo.NewAdminRepo(db),
+		Purchases:    repo.NewPurchaseRepo(db),
+		Razorpay:     payments.NewRazorpay(cfg.RazorpayKeyID, cfg.RazorpayKeySecret),
 		Timezone:     loc,
 	}
 }

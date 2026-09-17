@@ -69,32 +69,49 @@ type HomeFeature struct {
 }
 
 type Course struct {
-	ID          int64
-	Slug        string
-	Title       string
-	Summary     string
-	Description string
-	Level       string
-	Duration    string
-	PriceCents  int
-	Currency    string
-	ImageURL    string
-	IsPublished bool
-	SortOrder   int
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
+	ID            int64
+	Slug          string
+	Title         string
+	Summary       string
+	Description   string
+	Level         string
+	Duration      string
+	PriceCents    int
+	Currency      string
+	ImageURL      string
+	IsPublished   bool
+	SortOrder     int
+	IsPaid        bool
+	MinPriceCents int
+	ContentKey    string
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
 }
 
 // IsFree reports whether the course has no listed price.
-func (c Course) IsFree() bool { return c.PriceCents == 0 }
+func (c Course) IsFree() bool { return !c.IsPaid && c.PriceCents == 0 }
 
 // PriceDisplay renders the price as a human string, e.g. "$49" or "Free".
 func (c Course) PriceDisplay() string {
+	if c.IsPaid {
+		return "From " + formatMoney(c.MinPriceCents, c.Currency)
+	}
 	if c.IsFree() {
 		return "Free"
 	}
+	return formatMoney(c.PriceCents, c.Currency)
+}
+
+// MinPriceDisplay renders the minimum contribution for a paid course.
+func (c Course) MinPriceDisplay() string { return formatMoney(c.MinPriceCents, c.Currency) }
+
+// MinPriceWhole is the minimum contribution in whole currency units
+// (e.g. 5 for $5), for use as a numeric HTML input attribute.
+func (c Course) MinPriceWhole() int { return c.MinPriceCents / 100 }
+
+func formatMoney(cents int, currency string) string {
 	symbol := "$"
-	switch c.Currency {
+	switch currency {
 	case "EUR":
 		symbol = "€"
 	case "GBP":
@@ -102,12 +119,12 @@ func (c Course) PriceDisplay() string {
 	case "INR":
 		symbol = "₹"
 	}
-	whole := c.PriceCents / 100
-	cents := c.PriceCents % 100
-	if cents == 0 {
+	whole := cents / 100
+	remainder := cents % 100
+	if remainder == 0 {
 		return symbol + strconv.Itoa(whole)
 	}
-	return symbol + strconv.Itoa(whole) + fmt.Sprintf(".%02d", cents)
+	return symbol + strconv.Itoa(whole) + fmt.Sprintf(".%02d", remainder)
 }
 
 const (
@@ -142,4 +159,28 @@ type TimeSlot struct {
 	Start     time.Time
 	End       time.Time
 	Available bool
+}
+
+const (
+	PurchaseStatusCreated = "created"
+	PurchaseStatusPaid    = "paid"
+	PurchaseStatusFailed  = "failed"
+)
+
+// Purchase tracks a Razorpay order for a paid course, from creation
+// through payment verification. AccessToken is the opaque bearer
+// credential (set as a cookie, or usable as a magic-link query param)
+// that unlocks the course's gated content once Status is "paid".
+type Purchase struct {
+	ID                int64
+	CourseID          int64
+	Email             string
+	AmountCents       int
+	Currency          string
+	Status            string
+	RazorpayOrderID   string
+	RazorpayPaymentID string
+	AccessToken       string
+	CreatedAt         time.Time
+	PaidAt            *time.Time
 }

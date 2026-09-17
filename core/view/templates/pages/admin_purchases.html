@@ -1,0 +1,26 @@
+{{define "content"}}
+{{template "adminnav" .}}
+<section class="section">
+  <div class="container">
+    <h1>Purchases</h1>
+    {{if .Purchases}}
+    <table class="admin-table">
+      <thead><tr><th>When</th><th>Course</th><th>Email</th><th>Amount</th><th>Status</th></tr></thead>
+      <tbody>
+        {{range .Purchases}}
+        <tr>
+          <td>{{formatDateTime .CreatedAt}}</td>
+          <td>{{with index $.Courses .CourseID}}{{.Title}}{{else}}—{{end}}</td>
+          <td>{{.Email}}</td>
+          <td>{{money .AmountCents .Currency}}</td>
+          <td><span class="status-badge status-{{if eq .Status "paid"}}confirmed{{else if eq .Status "failed"}}cancelled{{else}}pending{{end}}">{{.Status}}</span></td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+    {{else}}
+    <p class="empty-state">No purchases yet.</p>
+    {{end}}
+  </div>
+</section>
+{{end}}

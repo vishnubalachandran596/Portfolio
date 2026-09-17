@@ -18,6 +18,10 @@ type Config struct {
 	SiteURL       string
 	Domain        string
 	Environment   string
+
+	RazorpayKeyID     string
+	RazorpayKeySecret string
+	CheckoutCurrency  string
 }
 
 func Load() (*Config, error) {
@@ -46,6 +50,11 @@ func Load() (*Config, error) {
 		siteName = "Vishnu Balachandran"
 	}
 
+	checkoutCurrency := os.Getenv("CHECKOUT_CURRENCY")
+	if checkoutCurrency == "" {
+		checkoutCurrency = "USD"
+	}
+
 	return &Config{
 		Port:          port,
 		DatabaseURL:   dbURL,
@@ -57,6 +66,10 @@ func Load() (*Config, error) {
 		SiteURL:       os.Getenv("SITE_URL"),
 		Domain:        os.Getenv("DOMAIN"),
 		Environment:   env,
+
+		RazorpayKeyID:     os.Getenv("RAZORPAY_KEY_ID"),
+		RazorpayKeySecret: os.Getenv("RAZORPAY_KEY_SECRET"),
+		CheckoutCurrency:  checkoutCurrency,
 	}, nil
 }
 

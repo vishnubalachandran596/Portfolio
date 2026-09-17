@@ -18,10 +18,11 @@
     <p>We collect only what's needed to operate the site:</p>
     <ul>
       <li><strong>Booking requests:</strong> the name, email address, and optional message you submit on the Booking page, plus the time slot you selected.</li>
+      <li><strong>Course purchases:</strong> the email address and amount you enter when unlocking a paid course, and payment status (paid/failed). We never see or store your card details — payment is handled entirely by Razorpay's own checkout, which runs in its own secure window and passes us only a payment confirmation.</li>
       <li><strong>Admin account:</strong> if you're the site administrator, your email and a securely hashed password (we never store your password in plain text).</li>
-      <li><strong>Cookies:</strong> a cookie-consent preference, and — for the administrator only — a session cookie that keeps you logged into the admin portal. See our <a href="/cookies">Cookie Policy</a> for details.</li>
+      <li><strong>Cookies:</strong> a cookie-consent preference, a per-course access token (only if you've purchased a paid course, so you don't have to re-enter it), and — for the administrator only — a session cookie that keeps you logged into the admin portal. See our <a href="/cookies">Cookie Policy</a> for details.</li>
     </ul>
-    <p>We do not use third-party advertising or analytics trackers at this time. If that changes, this policy will be updated first.</p>
+    <p>Third-party processors we use, and why: <strong>Razorpay</strong> processes course payments (they receive your card/payment details directly; we never do), <strong>Supabase</strong> hosts our database, and <strong>Vercel</strong> hosts the application. We don't use any third-party advertising or analytics trackers.</p>
 
     <h2>How we use it</h2>
     <p>Booking information is used solely to schedule and follow up on the session you requested. It is not sold, rented, or used for marketing without your separate consent.</p>
@@ -47,10 +48,10 @@
     <p>Submitting a booking request reserves a time slot pending confirmation; it is not a guaranteed contract until confirmed. Please arrive on time and provide accurate contact information so we can reach you if plans change.</p>
 
     <h2>Courses</h2>
-    <p>Course listings describe content, level, and duration as accurately as possible. Course availability and content may change; we'll do our best to communicate material changes in advance.</p>
+    <p>Course listings describe content, level, and duration as accurately as possible. Course availability and content may change; we'll do our best to communicate material changes in advance. For a paid course, access is personal to the email address that unlocked it — please don't share your access link or re-post the course content elsewhere; it's licensed to you, not for redistribution.</p>
 
     <h2>Acceptable use</h2>
-    <p>Don't misuse this site: no attempts to disrupt, scrape at scale, submit false booking information, or use the site for unlawful purposes.</p>
+    <p>Don't misuse this site: no attempts to disrupt or scrape it at scale, no automated bulk-copying of paid course content, no submitting false booking or payment information, and no using the site for unlawful purposes.</p>
 
     <h2>No unsupported claims</h2>
     <p>Nothing on this site is intended as a guarantee of specific outcomes (e.g. employment, promotion, or exam results) from attending a course or session — results depend on many factors outside our control.</p>
@@ -63,8 +64,12 @@
     {{end}}
 
     {{if eq .Slug "refund"}}
-    <h2>Courses</h2>
-    <p>Courses listed on this site are currently offered free of charge. If paid courses are introduced in the future, this page will be updated with specific refund windows and conditions before any payment is collected — no hidden fees, ever.</p>
+    <h2>Paid courses</h2>
+    <p>Some courses are unlocked with a pay-what-you-want contribution (with a stated minimum, shown before you pay) rather than a fixed price. Because access to the full course content is granted immediately on payment, contributions are <strong>non-refundable</strong> once the course has been unlocked, except where the content is materially broken or inaccessible through a fault on our side — in that case, contact us and we'll make it right, including a refund if we can't fix it.</p>
+    <p>There are no hidden fees: the amount you agree to pay in the checkout window is exactly what's charged, nothing added afterward.</p>
+
+    <h2>Free courses</h2>
+    <p>Courses without a listed price are free to access — there's nothing to refund.</p>
 
     <h2>Booking cancellations</h2>
     <p>Since booked sessions are free, there's no charge to refund. If you need to cancel or reschedule a booked session, please reach out as far in advance as you can{{if .ContactEmail}} at <a href="mailto:{{.ContactEmail}}">{{.ContactEmail}}</a>{{else}} via the <a href="/booking">booking page</a>{{end}} so the slot can be released for someone else.</p>

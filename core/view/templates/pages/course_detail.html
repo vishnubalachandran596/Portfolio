@@ -10,9 +10,35 @@
       <span>{{.Course.PriceDisplay}}</span>
       {{if .Course.Duration}}<span>· {{.Course.Duration}}</span>{{end}}
     </div>
+
+    {{if .Course.IsPaid}}
+      {{if .PurchaseRequired}}<div class="alert alert-error">Purchase required — pay below to unlock this course.</div>{{end}}
+      {{if .HasAccess}}
+      <div class="hero-actions">
+        <a class="btn btn-primary" href="/courses/{{.Course.Slug}}/learn">Open Course</a>
+      </div>
+      {{else if .PaymentsEnabled}}
+      <div class="purchase-box" id="purchase-box">
+        <p class="purchase-box-title">Unlock this course</p>
+        <p class="purchase-box-sub">Pay-what-you-want — {{.Course.MinPriceDisplay}} minimum.</p>
+        <div id="purchase-error" class="alert alert-error" hidden></div>
+        <label>Your email <span class="optional">(access is sent here)</span>
+          <input type="email" id="purchase-email" required>
+        </label>
+        <label>Contribution ({{.Course.Currency}})
+          <input type="number" id="purchase-amount" min="{{.Course.MinPriceWhole}}" step="1" value="{{.Course.MinPriceWhole}}">
+        </label>
+        <button type="button" class="btn btn-primary" id="purchase-btn" data-slug="{{.Course.Slug}}" data-min-cents="{{.Course.MinPriceCents}}">Pay &amp; Unlock</button>
+      </div>
+      <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+      {{else}}
+      <p class="empty-state">Checkout isn't configured yet — check back soon.</p>
+      {{end}}
+    {{else}}
     <div class="hero-actions">
       <a class="btn btn-primary" href="/booking">Book Time to Discuss</a>
     </div>
+    {{end}}
   </div>
 </section>
 
