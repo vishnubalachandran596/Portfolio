@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"html/template"
 	"net/http"
 	"strconv"
 	"strings"
@@ -90,6 +91,7 @@ type ArticleDetailData struct {
 	BaseData
 	Article models.Article
 	Voted   bool
+	JSONLD  template.JS
 }
 
 // ArticleDetailPage is the article's own internal page — summary, tags,
@@ -115,6 +117,7 @@ func (a *App) ArticleDetailPage(w http.ResponseWriter, r *http.Request) {
 		BaseData: base,
 		Article:  article,
 		Voted:    alreadyVoted,
+		JSONLD:   articleJSONLD(article, base.CanonicalURL, a.Cfg.SiteName),
 	})
 }
 

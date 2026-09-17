@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"html/template"
+	"strings"
 
 	"github.com/vishnubalachandran596/portfolio/core/models"
 )
@@ -124,6 +125,42 @@ func personAndWebsiteJSONLD(profile models.Profile, homeURL string, sameAs []str
 		Context: "https://schema.org",
 		Graph:   []any{person, website, service},
 	})
+}
+
+// articleSchema marks up a curated article's own internal page as a
+// BlogPosting — the entry point search engines index, which then links
+// out to the real source via the page's own "read the full article" link.
+type articleSchema struct {
+	Context       string `json:"@context"`
+	Type          string `json:"@type"`
+	Headline      string `json:"headline"`
+	Description   string `json:"description"`
+	URL           string `json:"url"`
+	DatePublished string `json:"datePublished,omitempty"`
+	Keywords      string `json:"keywords,omitempty"`
+	Author        struct {
+		Type string `json:"@type"`
+		Name string `json:"name"`
+	} `json:"author"`
+}
+
+func articleJSONLD(a models.Article, pageURL, authorName string) template.JS {
+	s := articleSchema{
+		Context:     "https://schema.org",
+		Type:        "BlogPosting",
+		Headline:    a.Title,
+		Description: a.Summary,
+		URL:         pageURL,
+	}
+	if a.PublishedDate != nil {
+		s.DatePublished = a.PublishedDate.Format("2006-01-02")
+	}
+	if len(a.Tags) > 0 {
+		s.Keywords = strings.Join(a.Tags, ", ")
+	}
+	s.Author.Type = "Person"
+	s.Author.Name = authorName
+	return toJSONLD(s)
 }
 
 func courseJSONLD(title, description, url, providerName string) template.JS {
