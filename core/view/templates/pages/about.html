@@ -1,0 +1,100 @@
+{{define "content"}}
+<section class="section page-hero">
+  <div class="container">
+    <p class="eyebrow">About</p>
+    <h1>{{.Profile.Name}}</h1>
+    <p class="hero-title">{{.Profile.Title}}</p>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container about-grid">
+    <div class="about-summary">
+      {{range $p := splitLines .Profile.Summary}}<p>{{$p}}</p>{{end}}
+      <div class="about-links">
+        {{if .Profile.LinkedInURL}}<a class="btn btn-secondary" href="{{.Profile.LinkedInURL}}" target="_blank" rel="noopener">LinkedIn</a>{{end}}
+        {{if .Profile.ResumeURL}}<a class="btn btn-secondary" href="{{.Profile.ResumeURL}}" target="_blank" rel="noopener">Resume</a>{{end}}
+        {{if .Profile.Email}}<button type="button" class="btn btn-secondary copy-btn" data-copy="{{.Profile.Email}}">Copy email</button>{{end}}
+        <a class="btn btn-primary no-print" href="{{.Nav.Booking}}">Book Time</a>
+      </div>
+    </div>
+    <aside class="about-facts">
+      <dl>
+        <dt>Location</dt><dd>{{.Profile.Location}}</dd>
+        <dt>Experience</dt><dd>{{.Profile.YearsExperience}}+ years</dd>
+        {{if .Education}}<dt>Education</dt><dd>{{(index .Education 0).Degree}}, {{(index .Education 0).Field}}</dd>{{end}}
+      </dl>
+    </aside>
+  </div>
+</section>
+
+{{if .Skills}}
+<section class="section section-alt">
+  <div class="container">
+    <h2 class="section-title">Skills</h2>
+    <div class="skills-grid">
+      {{range .Skills}}
+      <div class="skill-card">
+        <div class="skill-card-head">
+          <h3>{{.Category}}</h3>
+          {{if .Level}}<span class="skill-level skill-level-{{.Level}}">{{.Level}}</span>{{end}}
+        </div>
+        <ul class="skill-tags">
+          {{range .Items}}<li>{{.}}</li>{{end}}
+        </ul>
+      </div>
+      {{end}}
+    </div>
+  </div>
+</section>
+{{end}}
+
+{{if .Experience}}
+<section class="section">
+  <div class="container">
+    <h2 class="section-title">Experience</h2>
+    <div class="timeline">
+      {{range .Experience}}
+      <article class="timeline-item">
+        <div class="timeline-meta">
+          <span class="timeline-dates">{{.StartDate}} – {{.EndDate}}</span>
+        </div>
+        <div class="timeline-body">
+          <h3>{{.Role}}</h3>
+          <p class="timeline-company">{{.Company}}{{if .Location}} · {{.Location}}{{end}}</p>
+          <ul>
+            {{range .Bullets}}<li>{{.}}</li>{{end}}
+          </ul>
+        </div>
+      </article>
+      {{end}}
+    </div>
+  </div>
+</section>
+{{end}}
+
+{{if .Education}}
+<section class="section section-alt">
+  <div class="container">
+    <h2 class="section-title">Education</h2>
+    <div class="education-list">
+      {{range .Education}}
+      <div class="education-item">
+        <h3>{{.Institution}}</h3>
+        <p>{{.Degree}}{{if .Field}}, {{.Field}}{{end}}</p>
+        <p class="education-years">{{.StartYear}} – {{.EndYear}}{{if .Details}} · {{.Details}}{{end}}</p>
+      </div>
+      {{end}}
+    </div>
+  </div>
+</section>
+{{end}}
+
+<section class="section cta-section">
+  <div class="container cta-inner">
+    <h2>Let's work together</h2>
+    <p>Whether it's architecture review, mentoring, or a course — I'd love to help.</p>
+    <a class="btn btn-primary" href="{{.Nav.Booking}}">Book Time With Me</a>
+  </div>
+</section>
+{{end}}

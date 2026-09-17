@@ -1,0 +1,93 @@
+{{define "content"}}
+<section class="section page-hero">
+  <div class="container">
+    <p class="eyebrow">Legal</p>
+    <h1>{{.PageTitle}}</h1>
+    <p class="hero-subtitle">Last updated: {{.LastUpdated}}</p>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container legal-content">
+
+    {{if eq .Slug "privacy"}}
+    <h2>What this policy covers</h2>
+    <p>This Privacy Policy explains what information {{.ContactName}}'s website ("this site") collects, why, and what choices you have. This is a plain-language policy for a personal portfolio and booking site, not a substitute for legal advice for your own situation.</p>
+
+    <h2>Information we collect</h2>
+    <p>We collect only what's needed to operate the site:</p>
+    <ul>
+      <li><strong>Booking requests:</strong> the name, email address, and optional message you submit on the Booking page, plus the time slot you selected.</li>
+      <li><strong>Course purchases:</strong> the email address and amount you enter when unlocking a paid course, and payment status (paid/failed). We never see or store your card details — payment is handled entirely by Razorpay's own checkout, which runs in its own secure window and passes us only a payment confirmation.</li>
+      <li><strong>Admin account:</strong> if you're the site administrator, your email and a securely hashed password (we never store your password in plain text).</li>
+      <li><strong>Cookies:</strong> a cookie-consent preference, a per-course access token (only if you've purchased a paid course, so you don't have to re-enter it), and — for the administrator only — a session cookie that keeps you logged into the admin portal. See our <a href="{{.Nav.Cookies}}">Cookie Policy</a> for details.</li>
+    </ul>
+    <p>Third-party processors we use, and why: <strong>Razorpay</strong> processes course payments (they receive your card/payment details directly; we never do), <strong>Supabase</strong> hosts our database, and <strong>Vercel</strong> hosts the application. We don't use any third-party advertising or analytics trackers.</p>
+
+    <h2>How we use it</h2>
+    <p>Booking information is used solely to schedule and follow up on the session you requested. It is not sold, rented, or used for marketing without your separate consent.</p>
+
+    <h2>Where it's stored</h2>
+    <p>Data is stored in a managed PostgreSQL database (hosted by Supabase) and served by an application hosted on Vercel. Both providers process data on our behalf under their own security and privacy commitments.</p>
+
+    <h2>Your rights, including data deletion</h2>
+    <p>You can ask us to access, correct, or delete the personal information we hold about you (for example, a booking you submitted) at any time{{if .ContactEmail}} by emailing <a href="mailto:{{.ContactEmail}}">{{.ContactEmail}}</a>{{else}} via the <a href="{{.Nav.Booking}}">booking page</a> or the contact details on the <a href="{{.Nav.About}}">About page</a>{{end}}. We'll respond and action deletion requests within a reasonable time.</p>
+
+    <h2>Children's data</h2>
+    <p>This site is not directed at children, and we do not knowingly collect personal information from anyone under 16. If you believe a child has provided us information, contact us and we'll delete it.</p>
+
+    <h2>Changes</h2>
+    <p>We may update this policy as the site evolves. Material changes will update the "Last updated" date above.</p>
+    {{end}}
+
+    {{if eq .Slug "terms"}}
+    <h2>Using this site</h2>
+    <p>By using this site you agree to these terms. This site is operated by {{.ContactName}}{{if .ContactLoc}}, based in {{.ContactLoc}}{{end}}, as a personal portfolio, course listing, and session-booking site.</p>
+
+    <h2>Bookings</h2>
+    <p>Submitting a booking request reserves a time slot pending confirmation; it is not a guaranteed contract until confirmed. Please arrive on time and provide accurate contact information so we can reach you if plans change.</p>
+
+    <h2>Courses</h2>
+    <p>Course listings describe content, level, and duration as accurately as possible. Course availability and content may change; we'll do our best to communicate material changes in advance. For a paid course, access is personal to the email address that unlocked it — please don't share your access link or re-post the course content elsewhere; it's licensed to you, not for redistribution.</p>
+
+    <h2>Acceptable use</h2>
+    <p>Don't misuse this site: no attempts to disrupt or scrape it at scale, no automated bulk-copying of paid course content, no submitting false booking or payment information, and no using the site for unlawful purposes.</p>
+
+    <h2>No unsupported claims</h2>
+    <p>Nothing on this site is intended as a guarantee of specific outcomes (e.g. employment, promotion, or exam results) from attending a course or session — results depend on many factors outside our control.</p>
+
+    <h2>Liability</h2>
+    <p>This site and its content are provided "as is." To the extent permitted by law, {{.ContactName}} is not liable for indirect or consequential damages arising from use of the site.</p>
+
+    <h2>Contact</h2>
+    <p>Questions about these terms{{if .ContactEmail}} can be sent to <a href="mailto:{{.ContactEmail}}">{{.ContactEmail}}</a>{{else}} can be sent via the <a href="{{.Nav.Booking}}">booking page</a>{{end}}.</p>
+    {{end}}
+
+    {{if eq .Slug "refund"}}
+    <h2>Paid courses</h2>
+    <p>Some courses are unlocked with a pay-what-you-want contribution (with a stated minimum, shown before you pay) rather than a fixed price. Because access to the full course content is granted immediately on payment, contributions are <strong>non-refundable</strong> once the course has been unlocked, except where the content is materially broken or inaccessible through a fault on our side — in that case, contact us and we'll make it right, including a refund if we can't fix it.</p>
+    <p>There are no hidden fees: the amount you agree to pay in the checkout window is exactly what's charged, nothing added afterward.</p>
+
+    <h2>Free courses</h2>
+    <p>Courses without a listed price are free to access — there's nothing to refund.</p>
+
+    <h2>Booking cancellations</h2>
+    <p>Since booked sessions are free, there's no charge to refund. If you need to cancel or reschedule a booked session, please reach out as far in advance as you can{{if .ContactEmail}} at <a href="mailto:{{.ContactEmail}}">{{.ContactEmail}}</a>{{else}} via the <a href="{{.Nav.Booking}}">booking page</a>{{end}} so the slot can be released for someone else.</p>
+    {{end}}
+
+    {{if eq .Slug "cookies"}}
+    <h2>What cookies this site uses</h2>
+    <p>We keep cookie use to the minimum needed to run the site:</p>
+    <ul>
+      <li><strong>Cookie consent preference</strong> — remembers that you've seen and dismissed the cookie banner, stored in your browser.</li>
+      <li><strong>Admin session</strong> — an HttpOnly, secure session cookie issued only when the site administrator logs in at <code>/admin/login</code>, used purely to keep that admin session authenticated. Visitors who never log in as admin never receive this cookie.</li>
+    </ul>
+    <p>We do not use third-party advertising or tracking cookies.</p>
+
+    <h2>Managing cookies</h2>
+    <p>You can clear or block cookies at any time through your browser settings. Blocking the admin session cookie has no effect on regular visitors — it only affects the ability to stay logged into the admin portal.</p>
+    {{end}}
+
+  </div>
+</section>
+{{end}}

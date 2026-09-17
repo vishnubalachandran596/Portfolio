@@ -1,0 +1,58 @@
+{{define "content"}}
+<section class="section page-hero">
+  <div class="container">
+    <p class="eyebrow">Book Time</p>
+    <h1>Book a 1:1 session</h1>
+    <p class="hero-subtitle">Pick an open slot below, then confirm with your details. Times shown in India Standard Time (IST).</p>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    {{if .Success}}
+    <div class="alert alert-success">Your session request is booked! You'll hear back at the email you provided.</div>
+    {{end}}
+    {{if .Error}}
+    <div class="alert alert-error">{{.Error}}</div>
+    {{end}}
+
+    {{if .Days}}
+    <form method="POST" action="/booking" id="booking-form" class="booking-form">
+      <input type="hidden" name="slot" id="slot-input" value="">
+      <div class="days-scroller">
+        {{range .Days}}
+        <div class="day-column">
+          <h3>{{.Label}}</h3>
+          <div class="slot-list">
+            {{range .Slots}}
+            <button type="button"
+              class="slot-btn{{if not .Available}} disabled{{end}}"
+              {{if not .Available}}disabled{{end}}
+              data-slot="{{.Start.Format "2006-01-02T15:04:05Z07:00"}}"
+              data-label="{{formatDateTime .Start}}">{{formatTime .Start}}</button>
+            {{end}}
+          </div>
+        </div>
+        {{end}}
+      </div>
+
+      <div class="booking-contact" id="booking-contact" hidden>
+        <p>Selected time: <strong id="selected-slot-label"></strong></p>
+        <label>Your name
+          <input type="text" name="name" required maxlength="120">
+        </label>
+        <label>Your email
+          <input type="email" name="email" required maxlength="200">
+        </label>
+        <label>What would you like to talk about? <span class="optional">(optional)</span>
+          <textarea name="message" rows="3" maxlength="1000"></textarea>
+        </label>
+        <button type="submit" class="btn btn-primary" data-loading-text="Booking…">Confirm Booking</button>
+      </div>
+    </form>
+    {{else}}
+    <p class="empty-state">No availability is configured right now — check back soon.</p>
+    {{end}}
+  </div>
+</section>
+{{end}}

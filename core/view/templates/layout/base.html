@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{.Title}}</title>
+<meta name="description" content="{{.MetaDescription}}">
+<meta name="theme-color" content="#0f172a">
+<link rel="canonical" href="{{.CanonicalURL}}">
+<link rel="icon" href="/static/img/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/css/style.css">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="{{.SiteName}}">
+<meta property="og:title" content="{{.Title}}">
+<meta property="og:description" content="{{.MetaDescription}}">
+<meta property="og:url" content="{{.CanonicalURL}}">
+<meta property="og:image" content="{{.OGImageURL}}">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{{.Title}}">
+<meta name="twitter:description" content="{{.MetaDescription}}">
+<meta name="twitter:image" content="{{.OGImageURL}}">
+
+{{block "jsonld" .}}{{end}}
+</head>
+<body data-active="{{.Active}}">
+<div id="scroll-progress" class="scroll-progress" aria-hidden="true"></div>
+<a class="skip-link" href="#main-content">Skip to content</a>
+{{template "header" .}}
+<main id="main-content">
+{{block "content" .}}{{end}}
+</main>
+{{template "footer" .}}
+<button type="button" id="back-to-top" class="back-to-top" aria-label="Back to top" hidden>↑</button>
+<a href="{{.Nav.Booking}}" class="floating-cta" aria-label="Book a session">Book time</a>
+<script src="/static/js/main.js" defer></script>
+</body>
+</html>

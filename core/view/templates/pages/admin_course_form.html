@@ -1,0 +1,53 @@
+{{define "content"}}
+{{template "adminnav" .}}
+<section class="section">
+  <div class="container">
+    <h1>{{if .IsNew}}New Course{{else}}Edit Course{{end}}</h1>
+    {{if .Error}}<div class="alert alert-error">{{.Error}}</div>{{end}}
+    <form method="POST" action="{{if .IsNew}}/admin/courses/new{{else}}/admin/courses/{{.Course.ID}}/edit{{end}}" class="admin-form">
+      <label>Title
+        <input type="text" name="title" value="{{.Course.Title}}" required>
+      </label>
+      <label>Slug <span class="optional">(leave blank to auto-generate)</span>
+        <input type="text" name="slug" value="{{.Course.Slug}}">
+      </label>
+      <label>Summary <span class="optional">(one line, shown in listings)</span>
+        <input type="text" name="summary" value="{{.Course.Summary}}" maxlength="240">
+      </label>
+      <label>Description <span class="optional">(separate paragraphs with a blank line)</span>
+        <textarea name="description" rows="8">{{.Course.Description}}</textarea>
+      </label>
+      <div class="form-row">
+        <label>Level
+          <input type="text" name="level" value="{{.Course.Level}}" placeholder="Beginner / Intermediate / Advanced">
+        </label>
+        <label>Duration
+          <input type="text" name="duration" value="{{.Course.Duration}}" placeholder="e.g. 4 weeks">
+        </label>
+      </div>
+      <div class="form-row">
+        <label>Price (cents) <span class="optional">(0 = free)</span>
+          <input type="number" name="price_cents" value="{{.Course.PriceCents}}" min="0">
+        </label>
+        <label>Currency
+          <input type="text" name="currency" value="{{if .Course.Currency}}{{.Course.Currency}}{{else}}USD{{end}}" maxlength="3">
+        </label>
+      </div>
+      <label>Image URL
+        <input type="url" name="image_url" value="{{.Course.ImageURL}}">
+      </label>
+      <label>Sort order
+        <input type="number" name="sort_order" value="{{.Course.SortOrder}}">
+      </label>
+      <label class="checkbox-label">
+        <input type="checkbox" name="is_published" {{if or .IsNew .Course.IsPublished}}checked{{end}}>
+        Published (visible on the public site)
+      </label>
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">Save Course</button>
+        <a class="btn btn-secondary" href="/admin/courses">Cancel</a>
+      </div>
+    </form>
+  </div>
+</section>
+{{end}}

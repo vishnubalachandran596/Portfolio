@@ -1,0 +1,208 @@
+package handlers
+
+import (
+	"crypto/rand"
+	"encoding/hex"
+	"encoding/json"
+	"fmt"
+	"log"
+	"net/http"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/vishnubalachandran596/portfolio/core/geo"
+	"github.com/vishnubalachandran596/portfolio/core/models"
+	"github.com/vishnubalachandran596/portfolio/core/repo"
+)
+
+func generateAccessToken() (string, error) {
+	b := make([]byte, 32)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(b), nil
+}
+
+func accessCookieName(courseID int64) string {
+	return "ca_" + strconv.FormatInt(courseID, 10)
+}
+
+func writeJSON(w http.ResponseWriter, status int, v any) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	json.NewEncoder(w).Encode(v)
+}
+
+// CheckoutCreateOrder creates a Razorpay order for a paid course. The
+// buyer picks an amount client-side (pay-what-you-want, floored at the
+// course's minimum); we re-validate that floor server-side — never trust
+// a client-supplied amount below the minimum, though paying *more* is
+// always fine.
+func (a *App) CheckoutCreateOrder(w http.ResponseWriter, r *http.Request) {
+	if !a.Razorpay.Enabled() {
+		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "Payments are not configured yet."})
+		return
+	}
+
+	slug := r.PathValue("slug")
+	course, err := a.Courses.GetBySlug(r.Context(), slug)
+	if err != nil || !course.IsPaid || !course.IsPublished {
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "Course not found."})
+		return
+	}
+
+	if err := r.ParseForm(); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Invalid form submission."})
+		return
+	}
+	email := strings.TrimSpace(r.FormValue("email"))
+	if email == "" || !strings.Contains(email, "@") {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "A valid email is required."})
+		return
+	}
+	// Currency and the minimum floor are resolved server-side from the
+	// visitor's own detected region (never from anything the client
+	// sends) — India gets an INR minimum, everyone else the international
+	// one. This is the same signal used to render the page, so it always
+	// matches what the visitor was shown.
+	currency, minCents := course.RegionalPrice(geo.CountryFromRequest(r))
+
+	amountCents, _ := strconv.Atoi(r.FormValue("amount_cents"))
+	if amountCents < minCents {
+		amountCents = minCents
+	}
+
+	token, err := generateAccessToken()
+	if err != nil {
+		a.serverError(w, "generate access token", err)
+		return
+	}
+
+	receipt := fmt.Sprintf("course-%d-%d", course.ID, time.Now().UnixNano())
+	orderID, err := a.Razorpay.CreateOrder(amountCents, currency, receipt)
+	if err != nil {
+		log.Printf("razorpay create order: %v", err)
+		writeJSON(w, http.StatusBadGateway, map[string]string{"error": "Could not start checkout. Please try again."})
+		return
+	}
+
+	if _, err := a.Purchases.Create(r.Context(), models.Purchase{
+		CourseID:        course.ID,
+		Email:           email,
+		AmountCents:     amountCents,
+		Currency:        currency,
+		RazorpayOrderID: orderID,
+		AccessToken:     token,
+	}); err != nil {
+		a.serverError(w, "record purchase", err)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{
+		"order_id":    orderID,
+		"amount":      amountCents,
+		"currency":    currency,
+		"key_id":      a.Razorpay.KeyID,
+		"course_name": course.Title,
+		"email":       email,
+	})
+}
+
+// CheckoutVerify is called by the client after Razorpay's Checkout.js
+// reports success. It verifies the HMAC signature server-side — this is
+// the only step that actually proves payment happened, so access is
+// granted here, never from the client-side "success" callback alone.
+func (a *App) CheckoutVerify(w http.ResponseWriter, r *http.Request) {
+	if !a.Razorpay.Enabled() {
+		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "Payments are not configured yet."})
+		return
+	}
+
+	slug := r.PathValue("slug")
+	course, err := a.Courses.GetBySlug(r.Context(), slug)
+	if err != nil || !course.IsPaid {
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "Course not found."})
+		return
+	}
+
+	var body struct {
+		OrderID   string `json:"razorpay_order_id"`
+		PaymentID string `json:"razorpay_payment_id"`
+		Signature string `json:"razorpay_signature"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Invalid request."})
+		return
+	}
+
+	if !a.Razorpay.VerifySignature(body.OrderID, body.PaymentID, body.Signature) {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Payment verification failed."})
+		return
+	}
+
+	ctx := r.Context()
+	purchase, err := a.Purchases.GetByRazorpayOrderID(ctx, body.OrderID)
+	if err != nil || purchase.CourseID != course.ID {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Order not found."})
+		return
+	}
+
+	if err := a.Purchases.MarkPaid(ctx, body.OrderID, body.PaymentID); err != nil && err != repo.ErrNotFound {
+		a.serverError(w, "mark purchase paid", err)
+		return
+	}
+
+	http.SetCookie(w, &http.Cookie{
+		Name:     accessCookieName(course.ID),
+		Value:    purchase.AccessToken,
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   a.Cfg.IsProduction(),
+		SameSite: http.SameSiteLaxMode,
+		Expires:  time.Now().AddDate(2, 0, 0),
+	})
+
+	writeJSON(w, http.StatusOK, map[string]string{"redirect": "/courses/" + slug + "/learn"})
+}
+
+// courseAccess reports whether the current request may view a paid
+// course's gated content: a logged-in admin, or a valid paid-purchase
+// access token (from the cookie set after checkout, or a magic-link
+// ?token= query param — set as a cookie immediately so it isn't needed
+// again). watermark identifies who's viewing, for the copy-deterrent
+// watermark on the served content.
+func (a *App) courseAccess(w http.ResponseWriter, r *http.Request, course models.Course) (ok bool, watermark string) {
+	if a.Auth.IsAuthenticated(r) {
+		return true, "Admin preview"
+	}
+
+	token := r.URL.Query().Get("token")
+	fromQuery := token != ""
+	if token == "" {
+		if c, err := r.Cookie(accessCookieName(course.ID)); err == nil {
+			token = c.Value
+		}
+	}
+	if token == "" {
+		return false, ""
+	}
+
+	purchase, err := a.Purchases.GetPaidByAccessToken(r.Context(), token)
+	if err != nil || purchase.CourseID != course.ID {
+		return false, ""
+	}
+
+	if fromQuery {
+		http.SetCookie(w, &http.Cookie{
+			Name:     accessCookieName(course.ID),
+			Value:    token,
+			Path:     "/",
+			HttpOnly: true,
+			Secure:   a.Cfg.IsProduction(),
+			SameSite: http.SameSiteLaxMode,
+			Expires:  time.Now().AddDate(2, 0, 0),
+		})
+	}
+	return true, purchase.Email
+}

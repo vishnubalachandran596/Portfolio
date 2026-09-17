@@ -1,0 +1,50 @@
+{{define "jsonld"}}<script type="application/ld+json">{{.JSONLD}}</script>{{end}}
+{{define "content"}}
+<section class="section page-hero">
+  <div class="container">
+    <p class="eyebrow"><a href="{{.Nav.Courses}}">← All courses</a></p>
+    <span class="course-level">{{.Course.Level}}</span>
+    <h1>{{.Course.Title}}</h1>
+    <p class="hero-subtitle">{{.Course.Summary}}</p>
+    <div class="course-detail-meta">
+      <span>{{.Course.RegionalPriceDisplay .Country}}</span>
+      {{if .Course.Duration}}<span>· {{.Course.Duration}}</span>{{end}}
+    </div>
+
+    {{if .Course.IsPaid}}
+      {{if .PurchaseRequired}}<div class="alert alert-error">Purchase required — pay below to unlock this course.</div>{{end}}
+      {{if .HasAccess}}
+      <div class="hero-actions">
+        <a class="btn btn-primary" href="/courses/{{.Course.Slug}}/learn">Open Course</a>
+      </div>
+      {{else if .PaymentsEnabled}}
+      <div class="purchase-box" id="purchase-box">
+        <p class="purchase-box-title">Unlock this course</p>
+        <p class="purchase-box-sub">Pay-what-you-want — {{.ResolvedMinDisplay}} minimum{{if eq .Country "IN"}} (India pricing){{end}}.</p>
+        <div id="purchase-error" class="alert alert-error" hidden></div>
+        <label>Your email <span class="optional">(access is sent here)</span>
+          <input type="email" id="purchase-email" required>
+        </label>
+        <label>Contribution ({{.ResolvedCurrency}})
+          <input type="number" id="purchase-amount" min="{{.ResolvedMinWhole}}" step="1" value="{{.ResolvedMinWhole}}">
+        </label>
+        <button type="button" class="btn btn-primary" id="purchase-btn" data-slug="{{.Course.Slug}}" data-min-cents="{{.ResolvedMinCents}}">Pay &amp; Unlock</button>
+      </div>
+      <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+      {{else}}
+      <p class="empty-state">Checkout isn't configured yet — check back soon.</p>
+      {{end}}
+    {{else}}
+    <div class="hero-actions">
+      <a class="btn btn-primary" href="{{.Nav.Booking}}">Book Time to Discuss</a>
+    </div>
+    {{end}}
+  </div>
+</section>
+
+<section class="section">
+  <div class="container course-description">
+    {{range $p := splitLines .Course.Description}}<p>{{$p}}</p>{{end}}
+  </div>
+</section>
+{{end}}

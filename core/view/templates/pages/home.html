@@ -1,0 +1,84 @@
+{{define "jsonld"}}<script type="application/ld+json">{{.JSONLD}}</script>{{end}}
+{{define "content"}}
+<section class="hero">
+  <div class="container hero-inner">
+    <p class="eyebrow">{{.Profile.Location}}</p>
+    <h1>{{.Profile.Name}}</h1>
+    <p class="hero-title">{{.Profile.Title}}</p>
+    <p class="hero-tagline">{{.Profile.Tagline}}</p>
+    <p class="hero-subtitle">{{.Profile.HeroSubtitle}}</p>
+    <div class="hero-actions">
+      <a class="btn btn-primary" href="{{.Nav.Booking}}">Book a Session</a>
+      <a class="btn btn-secondary" href="{{.Nav.About}}">About Me</a>
+    </div>
+    <p class="hero-meta">{{.Profile.YearsExperience}}+ years building software · Banking &amp; fintech platforms at scale</p>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <h2 class="section-title">What you'll find here</h2>
+    <div class="feature-grid">
+      {{range .Features}}
+      <div class="feature-card">
+        <h3>{{.Title}}</h3>
+        <p>{{.Description}}</p>
+      </div>
+      {{end}}
+    </div>
+  </div>
+</section>
+
+{{if .Courses}}
+<section class="section section-alt">
+  <div class="container">
+    <div class="section-header-row">
+      <h2 class="section-title">Featured courses</h2>
+      <a class="link-arrow" href="{{.Nav.Courses}}">View all courses →</a>
+    </div>
+    <div class="course-grid">
+      {{range .Courses}}
+      <a class="course-card" href="{{$.Nav.Courses}}/{{.Slug}}">
+        <span class="course-level">{{.Level}}</span>
+        <h3>{{.Title}}</h3>
+        <p>{{.Summary}}</p>
+        <span class="course-price">{{.RegionalPriceDisplay $.Country}}{{if not .IsFree}} <span class="course-duration">· {{.Duration}}</span>{{end}}</span>
+      </a>
+      {{end}}
+    </div>
+  </div>
+</section>
+{{end}}
+
+<section class="section section-alt">
+  <div class="container">
+    <h2 class="section-title">Frequently asked questions</h2>
+    <div class="faq-list">
+      <details class="faq-item">
+        <summary>How do I book a 1:1 session?</summary>
+        <p>Head to the <a href="{{.Nav.Booking}}">Book Time</a> page, pick any open slot from the weekly schedule shown, and submit your name, email, and what you'd like to discuss. You'll see a confirmation once it's booked.</p>
+      </details>
+      <details class="faq-item">
+        <summary>Are the courses free?</summary>
+        <p>Yes, all courses currently listed are free. If that changes for a future course, the price and refund terms will be shown clearly before you enroll — see the <a href="{{.Nav.Refund}}">Refund Policy</a>.</p>
+      </details>
+      <details class="faq-item">
+        <summary>What can I book a session for?</summary>
+        <p>Architecture reviews, technical leadership questions, career guidance, or a deeper dive into any of the engineering work on the <a href="{{.Nav.About}}">About page</a>.</p>
+      </details>
+      <details class="faq-item">
+        <summary>How is my information used?</summary>
+        <p>Only to schedule and follow up on what you book — nothing is sold or used for marketing. Full details in the <a href="{{.Nav.Privacy}}">Privacy Policy</a>.</p>
+      </details>
+    </div>
+  </div>
+</section>
+
+<section class="section cta-section">
+  <div class="container cta-inner">
+    <h2>Have a project, a team, or a career question?</h2>
+    <p>Book a focused 1:1 session and let's talk architecture, delivery, or engineering leadership.</p>
+    <a class="btn btn-primary" href="{{.Nav.Booking}}">Book Time With Me</a>
+  </div>
+</section>
+{{end}}

@@ -1,0 +1,28 @@
+{{define "content"}}
+<section class="section page-hero">
+  <div class="container">
+    <p class="eyebrow">Courses</p>
+    <h1>Learn what I've shipped in production</h1>
+    <p class="hero-subtitle">Practical, no-fluff courses on architecture, backend engineering, and technical leadership.</p>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    {{if .Courses}}
+    <div class="course-grid">
+      {{range .Courses}}
+      <a class="course-card" href="/courses/{{.Slug}}">
+        <span class="course-level">{{.Level}}</span>
+        <h3>{{.Title}}</h3>
+        <p>{{.Summary}}</p>
+        <span class="course-price">{{.RegionalPriceDisplay $.Country}}{{if .Duration}} <span class="course-duration">· {{.Duration}}</span>{{end}}</span>
+      </a>
+      {{end}}
+    </div>
+    {{else}}
+    <p class="empty-state">No courses published yet — check back soon.</p>
+    {{end}}
+  </div>
+</section>
+{{end}}
