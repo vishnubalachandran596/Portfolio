@@ -10,6 +10,8 @@ import (
 	"github.com/vishnubalachandran596/portfolio/core/config"
 	"github.com/vishnubalachandran596/portfolio/core/geo"
 	"github.com/vishnubalachandran596/portfolio/core/middleware"
+	"github.com/vishnubalachandran596/portfolio/core/notify"
+	"github.com/vishnubalachandran596/portfolio/core/oauth"
 	"github.com/vishnubalachandran596/portfolio/core/payments"
 	"github.com/vishnubalachandran596/portfolio/core/repo"
 	"github.com/vishnubalachandran596/portfolio/core/view"
@@ -36,6 +38,8 @@ type App struct {
 	Articles     *repo.ArticleRepo
 
 	Razorpay *payments.Razorpay
+	Telegram *notify.Telegram
+	Google   *oauth.Google
 	Timezone *time.Location
 }
 
@@ -104,6 +108,8 @@ func New(cfg *config.Config, db *sql.DB, renderer *view.Renderer) *App {
 		Users:        repo.NewUserRepo(db),
 		Articles:     repo.NewArticleRepo(db),
 		Razorpay:     payments.NewRazorpay(cfg.RazorpayKeyID, cfg.RazorpayKeySecret),
+		Telegram:     notify.NewTelegram(cfg.TelegramBotToken, cfg.TelegramChatID),
+		Google:       oauth.NewGoogle(cfg.GoogleClientID, cfg.GoogleClientSecret, cfg.GoogleRedirectURL),
 		Timezone:     loc,
 	}
 }

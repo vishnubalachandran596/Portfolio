@@ -686,6 +686,14 @@ input:focus, textarea:focus, select:focus {
 
 /* Login / signup */
 .auth-container { max-width: 420px; }
+.btn-google {
+  background: var(--color-surface);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  gap: 10px;
+  width: 100%;
+}
+.btn-google:hover { border-color: var(--color-accent); background: var(--color-surface-2); }
 .auth-tabs { display: flex; gap: 4px; background: var(--color-surface-2); border-radius: var(--radius-sm); padding: 4px; margin-bottom: 24px; }
 .auth-tab {
   flex: 1;

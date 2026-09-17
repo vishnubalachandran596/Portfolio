@@ -33,7 +33,13 @@ func (a *App) Home(w http.ResponseWriter, r *http.Request) {
 		articles = articles[:3]
 	}
 
-	base := a.base(r, profile.Name+" — "+profile.Title, profile.HeroSubtitle, "home")
+	// A concise, keyword-first <title> for search results — the full
+	// multi-title Profile.Title is what shows in the schema.org jobTitle
+	// and on the About page, but a search-result title tag gets
+	// truncated past ~60 characters, so lead with the two terms
+	// recruiters/clients actually search for.
+	title := profile.Name + " — Technical Consultant & Java Technical Expert"
+	base := a.base(r, title, profile.HeroSubtitle, "home")
 	var sameAs []string
 	if profile.LinkedInURL != "" {
 		sameAs = append(sameAs, profile.LinkedInURL)
@@ -46,7 +52,7 @@ func (a *App) Home(w http.ResponseWriter, r *http.Request) {
 		BaseData: base,
 		Profile:  profile,
 		Articles: articles,
-		JSONLD:   personAndWebsiteJSONLD(profile.Name, profile.Title, base.CanonicalURL, profile.Location, sameAs),
+		JSONLD:   personAndWebsiteJSONLD(profile, base.CanonicalURL, sameAs),
 	})
 }
 
@@ -82,7 +88,7 @@ func (a *App) About(w http.ResponseWriter, r *http.Request) {
 	}
 
 	a.View.Render(w, http.StatusOK, "about", AboutData{
-		BaseData:   a.base(r, "About — "+profile.Name, profile.Summary, "about"),
+		BaseData:   a.base(r, profile.Name+" — Technical Consultant, Java Expert & Software Architect", profile.Summary, "about"),
 		Profile:    profile,
 		Skills:     skills,
 		Experience: exp,
@@ -102,7 +108,7 @@ func (a *App) CoursesList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	a.View.Render(w, http.StatusOK, "courses_list", CoursesListData{
-		BaseData: a.base(r, "Courses — "+a.Cfg.SiteName, "Practical courses on architecture, backend engineering, and technical leadership.", "courses"),
+		BaseData: a.base(r, "Java, Architecture & System Design Courses — "+a.Cfg.SiteName, "Practical, production-grade courses on Java, technical architecture, system design, and distributed systems from a working technical consultant.", "courses"),
 		Courses:  courses,
 	})
 }

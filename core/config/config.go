@@ -22,6 +22,13 @@ type Config struct {
 	RazorpayKeyID     string
 	RazorpayKeySecret string
 	CheckoutCurrency  string
+
+	TelegramBotToken string
+	TelegramChatID   string
+
+	GoogleClientID     string
+	GoogleClientSecret string
+	GoogleRedirectURL  string
 }
 
 func Load() (*Config, error) {
@@ -70,6 +77,13 @@ func Load() (*Config, error) {
 		RazorpayKeyID:     os.Getenv("RAZORPAY_KEY_ID"),
 		RazorpayKeySecret: os.Getenv("RAZORPAY_KEY_SECRET"),
 		CheckoutCurrency:  checkoutCurrency,
+
+		TelegramBotToken: os.Getenv("TELEGRAM_BOT_TOKEN"),
+		TelegramChatID:   os.Getenv("TELEGRAM_CHAT_ID"),
+
+		GoogleClientID:     os.Getenv("GOOGLE_CLIENT_ID"),
+		GoogleClientSecret: os.Getenv("GOOGLE_CLIENT_SECRET"),
+		GoogleRedirectURL:  os.Getenv("GOOGLE_REDIRECT_URL"),
 	}, nil
 }
 

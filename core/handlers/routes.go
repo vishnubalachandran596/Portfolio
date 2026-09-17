@@ -32,8 +32,8 @@ func (a *App) Routes() http.Handler {
 
 	// Visitor auth.
 	mux.HandleFunc("GET /login", a.LoginPage)
-	mux.HandleFunc("POST /login", a.LoginSubmit)
-	mux.HandleFunc("POST /signup", a.SignupSubmit)
+	mux.HandleFunc("GET /login/google", a.GoogleLoginStart)
+	mux.HandleFunc("GET /login/google/callback", a.GoogleLoginCallback)
 	mux.HandleFunc("POST /logout", a.UserLogout)
 
 	// SEO.

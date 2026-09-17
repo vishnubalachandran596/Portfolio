@@ -153,6 +153,9 @@ func (a *App) CheckoutVerify(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	a.Telegram.Send(fmt.Sprintf("💰 Course purchase\nCourse: %s\nEmail: %s\nAmount: %s",
+		course.Title, purchase.Email, models.FormatMoney(purchase.AmountCents, purchase.Currency)))
+
 	http.SetCookie(w, &http.Cookie{
 		Name:     accessCookieName(course.ID),
 		Value:    purchase.AccessToken,

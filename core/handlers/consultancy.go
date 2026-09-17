@@ -22,7 +22,7 @@ type ConsultancyData struct {
 // ConsultancyPage is the informational page — the only place on the site
 // with a "Book Now" call to action, which leads to /booking.
 func (a *App) ConsultancyPage(w http.ResponseWriter, r *http.Request) {
-	base := a.base(r, "Consultancy — "+a.Cfg.SiteName, "Book a 1:1 consultancy session for architecture reviews, technical leadership, or career guidance.", "consultancy")
+	base := a.base(r, "Technical Consultant — Architecture & System Design Consulting | "+a.Cfg.SiteName, "Hire a technical consultant for architecture reviews, system design decisions, and engineering leadership — book a 1:1 session directly.", "consultancy")
 	a.View.Render(w, http.StatusOK, "consultancy", ConsultancyData{
 		BaseData:     base,
 		PriceDisplay: models.ConsultancyRegionalPriceDisplay(base.Country),
@@ -197,6 +197,13 @@ func (a *App) BookingCheckoutVerify(w http.ResponseWriter, r *http.Request) {
 		a.serverError(w, "mark booking paid", err)
 		return
 	}
+
+	if booking, berr := a.Bookings.GetByRazorpayOrderID(r.Context(), body.OrderID); berr == nil {
+		a.Telegram.Send(fmt.Sprintf("📅 Consultancy booking\nName: %s\nEmail: %s\nWhen: %s\nAmount: %s",
+			booking.Name, booking.Email, booking.SlotStart.In(a.Timezone).Format("Mon, Jan 2 · 3:04 PM MST"),
+			models.FormatMoney(booking.AmountCents, booking.Currency)))
+	}
+
 	writeJSON(w, http.StatusOK, map[string]string{"redirect": "/booking?booked=1"})
 }
 
