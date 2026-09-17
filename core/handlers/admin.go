@@ -7,9 +7,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/vishnubalachandran596/portfolio/internal/authutil"
-	"github.com/vishnubalachandran596/portfolio/internal/models"
-	"github.com/vishnubalachandran596/portfolio/internal/repo"
+	"github.com/vishnubalachandran596/portfolio/core/authutil"
+	"github.com/vishnubalachandran596/portfolio/core/models"
+	"github.com/vishnubalachandran596/portfolio/core/repo"
 )
 
 type AdminLoginData struct {

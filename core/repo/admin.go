@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"errors"
 
-	"github.com/vishnubalachandran596/portfolio/internal/models"
+	"github.com/vishnubalachandran596/portfolio/core/models"
 )
 
 type AdminRepo struct{ db *sql.DB }

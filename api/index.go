@@ -10,7 +10,7 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/vishnubalachandran596/portfolio/internal/app"
+	"github.com/vishnubalachandran596/portfolio/core/app"
 )
 
 var (

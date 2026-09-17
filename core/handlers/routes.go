@@ -3,7 +3,7 @@ package handlers
 import (
 	"net/http"
 
-	"github.com/vishnubalachandran596/portfolio/internal/middleware"
+	"github.com/vishnubalachandran596/portfolio/core/middleware"
 	"github.com/vishnubalachandran596/portfolio/web"
 )
 

@@ -6,10 +6,10 @@ import (
 	"database/sql"
 	"time"
 
-	"github.com/vishnubalachandran596/portfolio/internal/config"
-	"github.com/vishnubalachandran596/portfolio/internal/middleware"
-	"github.com/vishnubalachandran596/portfolio/internal/repo"
-	"github.com/vishnubalachandran596/portfolio/internal/view"
+	"github.com/vishnubalachandran596/portfolio/core/config"
+	"github.com/vishnubalachandran596/portfolio/core/middleware"
+	"github.com/vishnubalachandran596/portfolio/core/repo"
+	"github.com/vishnubalachandran596/portfolio/core/view"
 )
 
 type App struct {

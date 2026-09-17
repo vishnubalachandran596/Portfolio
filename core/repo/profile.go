@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"strings"
 
-	"github.com/vishnubalachandran596/portfolio/internal/models"
+	"github.com/vishnubalachandran596/portfolio/core/models"
 )
 
 type ProfileRepo struct{ db *sql.DB }

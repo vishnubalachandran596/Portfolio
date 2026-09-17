@@ -6,7 +6,7 @@ package scheduler
 import (
 	"time"
 
-	"github.com/vishnubalachandran596/portfolio/internal/models"
+	"github.com/vishnubalachandran596/portfolio/core/models"
 )
 
 type DaySlots struct {

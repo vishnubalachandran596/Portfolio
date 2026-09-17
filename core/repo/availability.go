@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"time"
 
-	"github.com/vishnubalachandran596/portfolio/internal/models"
+	"github.com/vishnubalachandran596/portfolio/core/models"
 )
 
 type AvailabilityRepo struct{ db *sql.DB }

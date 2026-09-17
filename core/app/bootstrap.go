@@ -10,11 +10,11 @@ import (
 	"log"
 	"time"
 
-	"github.com/vishnubalachandran596/portfolio/internal/authutil"
-	"github.com/vishnubalachandran596/portfolio/internal/config"
-	"github.com/vishnubalachandran596/portfolio/internal/db"
-	"github.com/vishnubalachandran596/portfolio/internal/handlers"
-	"github.com/vishnubalachandran596/portfolio/internal/view"
+	"github.com/vishnubalachandran596/portfolio/core/authutil"
+	"github.com/vishnubalachandran596/portfolio/core/config"
+	"github.com/vishnubalachandran596/portfolio/core/db"
+	"github.com/vishnubalachandran596/portfolio/core/handlers"
+	"github.com/vishnubalachandran596/portfolio/core/view"
 )
 
 // Bootstrap loads config, connects to Postgres, applies migrations,

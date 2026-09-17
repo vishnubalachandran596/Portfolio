@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"errors"
 
-	"github.com/vishnubalachandran596/portfolio/internal/models"
+	"github.com/vishnubalachandran596/portfolio/core/models"
 )
 
 var ErrNotFound = errors.New("not found")

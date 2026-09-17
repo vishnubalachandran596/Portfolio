@@ -6,9 +6,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/vishnubalachandran596/portfolio/internal/models"
-	"github.com/vishnubalachandran596/portfolio/internal/repo"
-	"github.com/vishnubalachandran596/portfolio/internal/scheduler"
+	"github.com/vishnubalachandran596/portfolio/core/models"
+	"github.com/vishnubalachandran596/portfolio/core/repo"
+	"github.com/vishnubalachandran596/portfolio/core/scheduler"
 )
 
 type HomeData struct {
