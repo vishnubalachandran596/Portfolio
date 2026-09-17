@@ -17,7 +17,13 @@ var templateFS embed.FS
 var funcs = template.FuncMap{
 	"currentYear": func() int { return time.Now().Year() },
 	"formatDate":  func(t time.Time) string { return t.Format("Jan 2, 2006") },
-	"formatTime":  func(t time.Time) string { return t.Format("3:04 PM") },
+	"formatDateOptional": func(t *time.Time) string {
+		if t == nil {
+			return "—"
+		}
+		return t.Format("Jan 2, 2006")
+	},
+	"formatTime": func(t time.Time) string { return t.Format("3:04 PM") },
 	"formatDateTime": func(t time.Time) string {
 		return t.Format("Mon, Jan 2 2006 · 3:04 PM")
 	},
@@ -61,6 +67,7 @@ func New() (*Renderer, error) {
 		"templates/pages/course_detail.html",
 		"templates/pages/consultancy.html",
 		"templates/pages/booking.html",
+		"templates/pages/articles_list.html",
 		"templates/pages/contact.html",
 		"templates/pages/login.html",
 		"templates/pages/search.html",
@@ -74,6 +81,8 @@ func New() (*Renderer, error) {
 		"templates/pages/admin_purchases.html",
 		"templates/pages/admin_availability.html",
 		"templates/pages/admin_profile.html",
+		"templates/pages/admin_articles_list.html",
+		"templates/pages/admin_article_form.html",
 	}
 
 	r := &Renderer{pages: map[string]*template.Template{}}

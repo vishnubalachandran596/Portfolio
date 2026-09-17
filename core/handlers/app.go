@@ -33,6 +33,7 @@ type App struct {
 	Admins       *repo.AdminRepo
 	Purchases    *repo.PurchaseRepo
 	Users        *repo.UserRepo
+	Articles     *repo.ArticleRepo
 
 	Razorpay *payments.Razorpay
 	Timezone *time.Location
@@ -68,6 +69,7 @@ type NavLinks struct {
 	Courses     string
 	Consultancy string
 	Booking     string
+	Articles    string
 	Contact     string
 	Search      string
 	Admin       string
@@ -100,6 +102,7 @@ func New(cfg *config.Config, db *sql.DB, renderer *view.Renderer) *App {
 		Admins:       repo.NewAdminRepo(db),
 		Purchases:    repo.NewPurchaseRepo(db),
 		Users:        repo.NewUserRepo(db),
+		Articles:     repo.NewArticleRepo(db),
 		Razorpay:     payments.NewRazorpay(cfg.RazorpayKeyID, cfg.RazorpayKeySecret),
 		Timezone:     loc,
 	}
@@ -135,6 +138,7 @@ func (a *App) base(r *http.Request, title, metaDescription, active string) BaseD
 			Courses:     a.pageURL(r, "/courses"),
 			Consultancy: a.pageURL(r, "/consultancy"),
 			Booking:     a.pageURL(r, "/booking"),
+			Articles:    a.pageURL(r, "/articles"),
 			Contact:     a.pageURL(r, "/contact"),
 			Search:      a.pageURL(r, "/search"),
 			Admin:       a.pageURL(r, "/admin"),

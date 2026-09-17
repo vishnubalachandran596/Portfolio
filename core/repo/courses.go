@@ -14,13 +14,13 @@ type CourseRepo struct{ db *sql.DB }
 
 func NewCourseRepo(db *sql.DB) *CourseRepo { return &CourseRepo{db: db} }
 
-const courseColumns = `id, slug, title, summary, description, level, duration, price_cents, currency, image_url, is_published, sort_order, is_paid, min_price_cents, min_price_cents_inr, content_key, created_at, updated_at`
+const courseColumns = `id, slug, title, summary, description, level, duration, price_cents, currency, image_url, is_published, sort_order, is_paid, min_price_cents, min_price_cents_inr, content_key, content_html, created_at, updated_at`
 
 func scanCourse(row interface{ Scan(...any) error }) (models.Course, error) {
 	var c models.Course
 	err := row.Scan(&c.ID, &c.Slug, &c.Title, &c.Summary, &c.Description, &c.Level, &c.Duration,
 		&c.PriceCents, &c.Currency, &c.ImageURL, &c.IsPublished, &c.SortOrder,
-		&c.IsPaid, &c.MinPriceCents, &c.MinPriceCentsINR, &c.ContentKey, &c.CreatedAt, &c.UpdatedAt)
+		&c.IsPaid, &c.MinPriceCents, &c.MinPriceCentsINR, &c.ContentKey, &c.ContentHTML, &c.CreatedAt, &c.UpdatedAt)
 	return c, err
 }
 
@@ -69,9 +69,11 @@ func (r *CourseRepo) GetByID(ctx context.Context, id int64) (models.Course, erro
 func (r *CourseRepo) Create(ctx context.Context, c models.Course) (int64, error) {
 	var id int64
 	err := r.db.QueryRowContext(ctx, `
-		INSERT INTO courses (slug, title, summary, description, level, duration, price_cents, currency, image_url, is_published, sort_order)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING id`,
+		INSERT INTO courses (slug, title, summary, description, level, duration, price_cents, currency, image_url, is_published, sort_order,
+			is_paid, min_price_cents, min_price_cents_inr, content_html)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) RETURNING id`,
 		c.Slug, c.Title, c.Summary, c.Description, c.Level, c.Duration, c.PriceCents, c.Currency, c.ImageURL, c.IsPublished, c.SortOrder,
+		c.IsPaid, c.MinPriceCents, c.MinPriceCentsINR, c.ContentHTML,
 	).Scan(&id)
 	return id, err
 }
@@ -79,10 +81,21 @@ func (r *CourseRepo) Create(ctx context.Context, c models.Course) (int64, error)
 func (r *CourseRepo) Update(ctx context.Context, c models.Course) error {
 	_, err := r.db.ExecContext(ctx, `
 		UPDATE courses SET slug=$1, title=$2, summary=$3, description=$4, level=$5, duration=$6,
-			price_cents=$7, currency=$8, image_url=$9, is_published=$10, sort_order=$11, updated_at=now()
-		WHERE id=$12`,
-		c.Slug, c.Title, c.Summary, c.Description, c.Level, c.Duration, c.PriceCents, c.Currency, c.ImageURL, c.IsPublished, c.SortOrder, c.ID,
+			price_cents=$7, currency=$8, image_url=$9, is_published=$10, sort_order=$11,
+			is_paid=$12, min_price_cents=$13, min_price_cents_inr=$14, updated_at=now()
+		WHERE id=$15`,
+		c.Slug, c.Title, c.Summary, c.Description, c.Level, c.Duration, c.PriceCents, c.Currency, c.ImageURL, c.IsPublished, c.SortOrder,
+		c.IsPaid, c.MinPriceCents, c.MinPriceCentsINR, c.ID,
 	)
+	return err
+}
+
+// UpdateContentHTML sets a course's admin-uploaded content, independent
+// of the rest of the form save — only called when a new file was
+// actually uploaded, so an edit without a new file leaves existing
+// content (DB-stored or compiled-in) untouched.
+func (r *CourseRepo) UpdateContentHTML(ctx context.Context, id int64, html string) error {
+	_, err := r.db.ExecContext(ctx, `UPDATE courses SET content_html = $1, updated_at = now() WHERE id = $2`, html, id)
 	return err
 }
 

@@ -85,6 +85,7 @@ type Course struct {
 	MinPriceCents    int
 	MinPriceCentsINR int
 	ContentKey       string
+	ContentHTML      string
 	CreatedAt        time.Time
 	UpdatedAt        time.Time
 }
@@ -205,6 +206,21 @@ type User struct {
 	PasswordHash string
 	Name         string
 	CreatedAt    time.Time
+}
+
+// Article is a curated link to an external piece with a short in-house
+// summary — added by the admin pasting a URL and writing the summary,
+// not scraped/re-hosted content.
+type Article struct {
+	ID            int64
+	Title         string
+	Summary       string
+	SourceURL     string
+	SourceName    string
+	PublishedDate *time.Time
+	IsPublished   bool
+	SortOrder     int
+	CreatedAt     time.Time
 }
 
 type AvailabilityRule struct {

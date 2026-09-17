@@ -1,0 +1,40 @@
+{{define "content"}}
+{{template "adminnav" .}}
+<section class="section">
+  <div class="container">
+    <h1>{{if .IsNew}}Add Article{{else}}Edit Article{{end}}</h1>
+    <p class="admin-form-note">Paste a link, write a short take — that's it. Nothing is scraped or re-hosted; the source stays linked and credited.</p>
+    {{if .Error}}<div class="alert alert-error">{{.Error}}</div>{{end}}
+    <form method="POST" action="{{if .IsNew}}/admin/articles/new{{else}}/admin/articles/{{.Article.ID}}/edit{{end}}" class="admin-form">
+      <label>Source link
+        <input type="url" name="source_url" value="{{.Article.SourceURL}}" placeholder="https://..." required>
+      </label>
+      <label>Title
+        <input type="text" name="title" value="{{.Article.Title}}" required>
+      </label>
+      <label>Your summary / take <span class="optional">(a few sentences — why it's worth reading)</span>
+        <textarea name="summary" rows="5" required>{{.Article.Summary}}</textarea>
+      </label>
+      <div class="form-row">
+        <label>Source name <span class="optional">e.g. "InfoQ", "Martin Fowler's blog"</span>
+          <input type="text" name="source_name" value="{{.Article.SourceName}}">
+        </label>
+        <label>Published date <span class="optional">(optional)</span>
+          <input type="date" name="published_date" value="{{if .Article.PublishedDate}}{{.Article.PublishedDate.Format "2006-01-02"}}{{end}}">
+        </label>
+      </div>
+      <label>Sort order
+        <input type="number" name="sort_order" value="{{.Article.SortOrder}}">
+      </label>
+      <label class="checkbox-label">
+        <input type="checkbox" name="is_published" {{if or .IsNew .Article.IsPublished}}checked{{end}}>
+        Published (visible on the public site)
+      </label>
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary" data-loading-text="Saving…">Save Article</button>
+        <a class="btn btn-secondary" href="/admin/articles">Cancel</a>
+      </div>
+    </form>
+  </div>
+</section>
+{{end}}

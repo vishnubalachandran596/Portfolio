@@ -1,0 +1,1487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Build Your Own Portfolio in Go</title>
+<meta name="description" content="A from-scratch, production-grade course: learn Go by building and shipping a real personal portfolio site — net/http, html/template, plain CSS and vanilla JS, a real Postgres database on Supabase via pgx, and deployment to Vercel with a custom domain."/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap');
+
+:root{
+  --bg:#F8FAFC; --fg:#0F172A; --card:#FFFFFF; --border:#E2E8F0; --muted:#475569;
+  --primary:#F59E0B; --primary-fg:#0F172A; --accent:#8B5CF6; --accent-fg:#ffffff;
+  --good:#16A34A; --bad:#DC2626;
+  --radius:12px;
+  --mono:ui-monospace, "SF Mono", "Cascadia Code", "IBM Plex Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#0F172A; --fg:#F8FAFC; --card:#222735; --border:#334155; --muted:#94A3B8;
+    --primary:#F59E0B; --primary-fg:#0F172A; --accent:#8B5CF6; --accent-fg:#ffffff;
+    --good:#4ADE80; --bad:#F87171;
+  }
+}
+
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0; font-family:'IBM Plex Sans', system-ui, -apple-system, sans-serif;
+  background:var(--bg); color:var(--fg); line-height:1.65; -webkit-font-smoothing:antialiased;
+  font-size:16px;
+}
+a{color:var(--accent)}
+a:hover{text-decoration:none}
+.wrap{max-width:900px; margin:0 auto; padding:0 1.25rem 6rem}
+
+/* ---------- Hero ---------- */
+header.hero{padding:3.25rem 0 2.25rem; border-bottom:1px solid var(--border)}
+.kicker{
+  display:inline-block; text-transform:uppercase; letter-spacing:.09em; font-size:.72rem;
+  font-weight:600; color:var(--primary-fg); background:var(--primary); padding:.3rem .65rem;
+  border-radius:99px; margin-bottom:1rem;
+}
+h1{font-size:clamp(1.85rem,4.4vw,2.65rem); margin:0 0 .6rem; font-weight:700; letter-spacing:-0.01em; line-height:1.15}
+.subtitle{color:var(--muted); font-size:1.12rem; margin:0; max-width:62ch; font-weight:400}
+.hero-meta{display:flex; flex-wrap:wrap; gap:.5rem; margin-top:1.25rem}
+.tag{font-size:.78rem; color:var(--muted); border:1px solid var(--border); border-radius:99px; padding:.3rem .75rem}
+
+/* ---------- TOC ---------- */
+nav.toc{margin:2rem 0 0; padding:1.35rem 1.5rem; border:1px solid var(--border); border-radius:var(--radius); background:var(--card)}
+nav.toc h2{margin:0 0 .85rem; font-size:.82rem; text-transform:uppercase; letter-spacing:.07em; color:var(--muted); font-weight:600}
+nav.toc ol{margin:0; padding-left:1.15rem; columns:2; column-gap:1.5rem}
+nav.toc li{margin:.3rem 0; break-inside:avoid; font-size:.92rem}
+nav.toc a{color:var(--fg); text-decoration:none}
+nav.toc a:hover{color:var(--accent)}
+@media (max-width:600px){ nav.toc ol{columns:1} }
+
+/* ---------- Sections ---------- */
+section.course-section{padding:2.75rem 0; border-bottom:1px solid var(--border)}
+section.course-section:last-of-type{border-bottom:none}
+.sec-kicker{text-transform:uppercase; letter-spacing:.08em; font-size:.74rem; color:var(--primary); font-weight:700; margin:0 0 .4rem}
+h2{font-size:1.55rem; margin:0 0 .75rem; font-weight:700; letter-spacing:-0.01em; scroll-margin-top:1.5rem}
+h3{font-size:1.15rem; margin:1.6rem 0 .6rem; font-weight:600}
+h4{font-size:.98rem; margin:1.2rem 0 .5rem; font-weight:600}
+.lede{font-size:1.05rem; color:var(--muted); margin:0 0 1.25rem; max-width:68ch}
+p{margin:0 0 1rem; max-width:72ch}
+ul.list,ol.list{margin:0 0 1.1rem; padding-left:1.25rem; max-width:70ch}
+ul.list li,ol.list li{margin:.4rem 0}
+strong{color:var(--fg); font-weight:600}
+code.inline{font-family:var(--mono); font-size:.85em; background:var(--card); border:1px solid var(--border); border-radius:5px; padding:.05rem .35rem}
+
+pre.code{
+  background:var(--card); border:1px solid var(--border); border-radius:10px;
+  padding:1rem 1.15rem; overflow-x:auto; margin:1rem 0 1.25rem; position:relative;
+}
+pre.code code{font-family:var(--mono); font-size:.82rem; line-height:1.55; color:var(--fg); white-space:pre}
+pre.code .filename{
+  display:block; font-family:var(--mono); font-size:.72rem; color:var(--muted); margin-bottom:.6rem;
+  text-transform:none; letter-spacing:0;
+}
+
+.callout{
+  border-left:3px solid var(--accent); background:var(--card); border:1px solid var(--border); border-left-width:3px;
+  border-radius:0 10px 10px 0; padding:1rem 1.25rem; margin:1.25rem 0; max-width:70ch;
+}
+.callout p:last-child{margin-bottom:0}
+.callout .callout-label{font-weight:700; font-size:.75rem; text-transform:uppercase; letter-spacing:.06em; color:var(--accent); margin-bottom:.4rem; display:block}
+.callout.warn{border-left-color:var(--primary)}
+.callout.warn .callout-label{color:var(--primary)}
+
+/* alt-path aside (React/Next.js note) */
+.alt-path{
+  border:1.5px dashed var(--border); border-radius:10px; padding:1.1rem 1.3rem; margin:1.4rem 0;
+  background:var(--card); max-width:70ch;
+}
+.alt-path .alt-label{
+  display:inline-flex; align-items:center; gap:.4rem; font-size:.72rem; font-weight:700; text-transform:uppercase;
+  letter-spacing:.07em; color:var(--muted); border:1px solid var(--border); border-radius:99px; padding:.25rem .65rem; margin-bottom:.75rem;
+}
+.alt-path p:last-child{margin-bottom:0}
+
+/* concept cards */
+.concept-grid{display:grid; gap:.65rem; margin:1.25rem 0 1.5rem}
+details.concept-card{border:1px solid var(--border); border-radius:10px; background:var(--card); overflow:hidden}
+details.concept-card summary{
+  cursor:pointer; padding:.85rem 1.1rem; font-weight:600; list-style:none; display:flex;
+  align-items:center; justify-content:space-between; gap:.75rem; -webkit-tap-highlight-color:transparent;
+}
+details.concept-card summary::-webkit-details-marker{display:none}
+details.concept-card summary::after{content:'+'; color:var(--accent); font-size:1.2rem; font-weight:400; flex-shrink:0}
+details.concept-card[open] summary::after{content:'\2212'}
+details.concept-card summary:focus-visible{outline:3px solid var(--primary); outline-offset:-3px}
+details.concept-card .body{padding:0 1.1rem 1rem; color:var(--muted); font-size:.94rem}
+details.concept-card .body p{max-width:none}
+
+/* tables */
+table.tbl{width:100%; border-collapse:collapse; margin:1rem 0 1.4rem; font-size:.9rem}
+table.tbl th,table.tbl td{text-align:left; padding:.55rem .65rem; border-bottom:1px solid var(--border); vertical-align:top}
+table.tbl th{color:var(--muted); font-weight:600; font-size:.78rem; text-transform:uppercase; letter-spacing:.04em}
+
+/* ---------- Exercises ---------- */
+.exercise{
+  margin:1.75rem 0; border:1px solid var(--border); border-radius:14px; background:var(--card);
+  padding:1.5rem 1.5rem 1.6rem;
+}
+.exercise-label{
+  display:inline-flex; align-items:center; gap:.4rem; font-size:.72rem; font-weight:700;
+  text-transform:uppercase; letter-spacing:.07em; color:var(--accent-fg); background:var(--accent);
+  padding:.3rem .65rem; border-radius:99px; margin-bottom:.9rem;
+}
+.exercise h3{margin-top:0}
+.exercise .ex-prompt{color:var(--muted); font-size:.95rem; margin-bottom:1.1rem}
+
+.btn{
+  background:var(--accent); color:var(--accent-fg); border:none; padding:.6rem 1.15rem;
+  border-radius:8px; cursor:pointer; font-weight:600; font-size:.9rem; font-family:inherit;
+  transition:opacity .2s, transform .15s; display:inline-flex; align-items:center; gap:.4rem;
+}
+.btn:hover{opacity:.88}
+.btn:active{transform:scale(.98)}
+.btn:focus-visible{outline:3px solid var(--primary); outline-offset:2px}
+.btn.secondary{background:transparent; border:1px solid var(--border); color:var(--fg)}
+.btn.small{padding:.4rem .8rem; font-size:.8rem}
+.btn:disabled{opacity:.45; cursor:not-allowed}
+
+.choice-row{display:flex; flex-wrap:wrap; gap:.6rem; margin:.75rem 0 1.1rem}
+.choice-btn{
+  border:1.5px solid var(--border); background:var(--bg); color:var(--fg); padding:.65rem 1rem;
+  border-radius:10px; cursor:pointer; font-weight:600; font-size:.88rem; font-family:inherit;
+  transition:border-color .2s, background .2s; text-align:left;
+}
+.choice-btn:hover{border-color:var(--accent)}
+.choice-btn:focus-visible{outline:3px solid var(--primary); outline-offset:2px}
+.choice-btn.selected{border-color:var(--accent); background:var(--accent); color:var(--accent-fg)}
+.choice-btn.correct{border-color:var(--good)}
+.choice-btn.wrong{border-color:var(--bad)}
+
+.reveal{
+  display:none; margin-top:1rem; padding:1rem 1.15rem; border-radius:10px; border:1px solid var(--border);
+  background:var(--bg); font-size:.92rem;
+}
+.reveal.show{display:block}
+.reveal h4{margin:0 0 .5rem; font-size:.85rem; text-transform:uppercase; letter-spacing:.05em; color:var(--accent)}
+.reveal .pro{color:var(--good)}
+.reveal .con{color:var(--bad)}
+.reveal ul{margin:.35rem 0; padding-left:1.1rem}
+.reveal ul li{margin:.25rem 0}
+
+/* match-row (DNS quiz) */
+.match-row{
+  display:grid; grid-template-columns:1fr 220px auto; gap:.75rem; align-items:center;
+  padding:.75rem 0; border-bottom:1px solid var(--border);
+}
+.match-row:last-of-type{border-bottom:none}
+.match-row p{margin:0; font-size:.9rem; max-width:none}
+.match-row select{
+  padding:.5rem .6rem; border-radius:8px; border:1px solid var(--border); background:var(--bg); color:var(--fg);
+  font-family:inherit; font-size:.85rem; cursor:pointer;
+}
+.match-row select:focus-visible{outline:3px solid var(--primary); outline-offset:1px}
+.match-fb{font-size:1.2rem; min-width:1.4rem; text-align:center}
+.match-fb.correct{color:var(--good)}
+.match-fb.wrong{color:var(--bad)}
+@media (max-width:640px){ .match-row{grid-template-columns:1fr; gap:.4rem} }
+
+/* checklist scorer */
+.check-list{list-style:none; margin:.75rem 0 1rem; padding:0; display:grid; gap:.5rem}
+.check-item{
+  display:flex; align-items:flex-start; gap:.65rem; padding:.65rem .8rem; border:1px solid var(--border);
+  border-radius:9px; background:var(--bg); cursor:pointer;
+}
+.check-item input{margin-top:.2rem; width:18px; height:18px; accent-color:var(--accent); cursor:pointer; flex-shrink:0}
+.check-item span{font-size:.9rem}
+.check-item:has(input:checked){border-color:var(--accent)}
+.score-bar-wrap{margin-top:1.1rem}
+.score-bar{height:10px; border-radius:99px; background:var(--border); overflow:hidden}
+.score-bar > i{display:block; height:100%; width:0%; background:var(--accent); transition:width .3s ease}
+.score-readout{display:flex; justify-content:space-between; margin-top:.5rem; font-size:.85rem; color:var(--muted)}
+.score-readout strong{color:var(--fg)}
+.score-verdict{margin-top:.85rem; padding:.85rem 1rem; border-radius:9px; background:var(--bg); border:1px solid var(--border); font-size:.9rem; min-height:1em}
+
+/* ---------- Code labs ---------- */
+.code-lab{margin-top:.5rem}
+.lab-solution{margin-bottom:1rem}
+.lab-solution summary{
+  cursor:pointer; font-weight:600; font-size:.9rem; padding:.7rem 1rem; border:1px solid var(--border);
+  border-radius:10px; background:var(--card); list-style:none;
+}
+.lab-solution summary::-webkit-details-marker{display:none}
+.lab-solution[open] summary{border-radius:10px 10px 0 0; border-bottom:none}
+.lab-solution pre.code{margin:0; border-radius:0 0 10px 10px}
+.lab-note{font-size:.85rem; color:var(--muted); margin:.5rem 0 1.1rem}
+.lab-toolbar{display:flex; flex-wrap:wrap; gap:.6rem; align-items:center; margin-bottom:.75rem}
+.lab-editor{
+  width:100%; min-height:170px; padding:.9rem 1rem; border-radius:10px; border:1px solid var(--border);
+  background:var(--card); color:var(--fg); font-family:var(--mono); font-size:.83rem; line-height:1.55;
+  resize:vertical; tab-size:2;
+}
+.lab-editor:focus-visible{outline:3px solid var(--primary); outline-offset:1px}
+.lab-error{
+  font-family:var(--mono); font-size:.82rem; color:var(--bad); white-space:pre-wrap; margin:.6rem 0 0; min-height:0;
+}
+.lab-summary{font-size:.88rem; font-weight:600; color:var(--muted)}
+.lab-summary.pass{color:var(--good)}
+.lab-summary.fail{color:var(--bad)}
+table.lab-tests{width:100%; border-collapse:collapse; margin-top:1rem; font-size:.85rem}
+table.lab-tests th,table.lab-tests td{text-align:left; padding:.5rem .6rem; border-bottom:1px solid var(--border); vertical-align:top}
+table.lab-tests th{color:var(--muted); font-weight:600; font-size:.72rem; text-transform:uppercase; letter-spacing:.04em}
+table.lab-tests td code{font-family:var(--mono); font-size:.8rem}
+.lab-pass{color:var(--good); font-weight:700}
+.lab-fail{color:var(--bad); font-weight:700}
+
+/* footer */
+footer.course-footer{padding-top:2.5rem; color:var(--muted); font-size:.85rem}
+
+@media (max-width:640px){
+  .wrap{padding:0 1rem 4rem}
+  header.hero{padding:2.25rem 0 1.75rem}
+  section.course-section{padding:2rem 0}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <span class="kicker">Go &middot; Web Development</span>
+  <h1>Build Your Own Portfolio in Go: Beginner to Expert</h1>
+  <p class="subtitle">Learn Go from zero by building and shipping a real, production personal portfolio site — the standard library's own router, server-rendered HTML, plain CSS and vanilla JS, a real Postgres database on Supabase, and deployment to Vercel with your own domain.</p>
+  <div class="hero-meta">
+    <span class="tag">12 core sections</span>
+    <span class="tag">9 hands-on exercises</span>
+    <span class="tag">Zero Go experience required</span>
+    <span class="tag">Ends with a live, deployed site</span>
+  </div>
+</header>
+
+<nav class="toc" aria-label="Table of contents">
+  <h2>On this page</h2>
+  <ol>
+    <li><a href="#why-go">1. Why Go for a Portfolio Site</a></li>
+    <li><a href="#go-basics">2. Go From Scratch</a></li>
+    <li><a href="#net-http">3. net/http Fundamentals</a></li>
+    <li><a href="#html-template">4. Server-Rendered HTML with html/template</a></li>
+    <li><a href="#styling-css">5. Styling With Plain CSS</a></li>
+    <li><a href="#vanilla-js">6. Vanilla JS, No Framework</a></li>
+    <li><a href="#frontend-backend">7. How the Frontend Talks to the Backend</a></li>
+    <li><a href="#database-supabase">8. A Real Database With Supabase</a></li>
+    <li><a href="#deploy-vercel">9. Deploying to Vercel</a></li>
+    <li><a href="#platform-capabilities">10. What Else Vercel &amp; Supabase Can Do</a></li>
+    <li><a href="#custom-domain">11. Connecting Your Own Domain</a></li>
+    <li><a href="#wrap-up">12. Wrap-Up &amp; Deployment Checklist</a></li>
+  </ol>
+</nav>
+
+<!-- =========================================================
+     SECTION 1 — WHY GO
+========================================================== -->
+<section class="course-section" id="why-go">
+  <p class="sec-kicker">Section 1</p>
+  <h2>Why Go for a Portfolio Site</h2>
+  <p class="lede">A portfolio site has a deceptively modest job: present your work clearly, load fast, and stay cheap and easy to keep running for years. Go is a genuinely good fit for exactly that job.</p>
+
+  <p>A portfolio site has a simple job: present your work clearly, load quickly, and remain easy to maintain. It does not need to prove that you use the largest framework or the most fashionable build pipeline. In many cases, the better engineering decision is to choose a small set of dependable tools and let the content take center stage. That is where Go fits especially well.</p>
+
+  <p>Go is deliberately simple. Its syntax is compact, its formatting conventions are consistent (there's one canonical way to format any Go file, enforced by <code class="inline">gofmt</code>, so you never argue about style), and the standard library provides most of the foundations needed for a web application. For a portfolio, that means you can focus on HTTP handlers, templates, database access, and content rather than learning several layers of framework-specific conventions. As a beginner, you can understand the whole application without tracing dependencies through dozens of packages. As you grow, you can still read, test, and modify it quickly, because nothing about it is hidden behind "magic."</p>
+
+  <p>Go also compiles down to a single static binary. Once your code is built, the application and its Go dependencies travel together as one file — there's no language runtime to install separately, no <code class="inline">node_modules</code> directory to sync, and no separate step to "install dependencies" on the server before your app can run. This makes local development, container images, and production releases straightforward: you build once, and you run the resulting binary anywhere with a matching OS/architecture. Compilation is also fast — a project this size builds in well under a second on a modern machine — which keeps the edit-build-run loop pleasant even as the project grows. And the standard library is unusually stable: packages like <code class="inline">net/http</code>, <code class="inline">html/template</code>, and <code class="inline">database/sql</code> have kept the same core APIs for well over a decade, so code you write today keeps working without a framework major-version migration forcing rewrites down the line.</p>
+
+  <h3>A fair comparison with Node.js and Next.js</h3>
+  <p>None of this makes Node.js or Next.js the wrong choice — they're excellent, and for a lot of teams and a lot of sites, they're the more productive option. Next.js gives you file-based routing, React components, a huge ecosystem of UI libraries, and a development experience tuned for highly interactive, client-heavy interfaces. If your portfolio needed rich client-side interactivity — live filtering, animated transitions between views, a dashboard-like feel — Next.js's tooling would genuinely save you time.</p>
+  <p>A personal portfolio, though, is mostly static content: a handful of pages, some project write-ups, a contact form. It doesn't need a client-side rendering framework to feel fast — server-rendered HTML, delivered over a fast connection, is often <em>faster</em> to first paint than a page that has to download and execute a JavaScript bundle before it can render anything. Go's trade is honest: you give up some of Next.js's ecosystem convenience and built-in interactivity tooling, and in exchange you get a smaller, simpler system — one language, one compiled artifact, no build step, no bundler configuration, no dependency tree to audit for vulnerabilities every few weeks.</p>
+
+  <h3>What you'll actually build</h3>
+  <p>By the end of this course you'll have a real, deployed personal portfolio site built the way this course's own site is actually built: routing with the standard library's <code class="inline">net/http</code> pattern-based router (no third-party router dependency), pages rendered server-side with <code class="inline">html/template</code>, styling with plain CSS using custom properties for a consistent design system, a few small vanilla-JS touches for interactivity, a real Postgres database hosted on Supabase — connected directly from Go using the <code class="inline">pgx</code> driver, not Supabase's client SDK — and a deployment to Vercel as a Go serverless function, finished off with your own custom domain.</p>
+
+  <div class="callout">
+    <span class="callout-label">Scope of this course</span>
+    <p>This course teaches you to build a clean, focused portfolio: a home page, an about/bio page, a projects or work-experience section, and a contact form. It deliberately does <strong>not</strong> cover payment integration, a paid-content gating system, or an appointment-booking system — those are real, substantial systems in their own right, and they're covered in a separate follow-up course. Here, the goal is a genuinely solid foundation: a site you understand completely, from the HTTP request down to the database row.</p>
+  </div>
+
+  <p>By the time you finish, you won't just have a deployed portfolio — you'll understand how a real Go web application is structured, how server-rendered pages are produced, how to talk to a production database safely, and how to ship a small system with confidence, on infrastructure you configured yourself. That's a foundation that transfers directly to your next Go project, whatever it turns out to be.</p>
+</section>
+
+<!-- =========================================================
+     SECTION 2 — GO FROM SCRATCH
+========================================================== -->
+<section class="course-section" id="go-basics">
+  <p class="sec-kicker">Section 2</p>
+  <h2>Go From Scratch</h2>
+  <p class="lede">If you've never written a line of Go, start here. This section assumes only that you've programmed in <em>something</em> before — the goal is to get you comfortable enough with Go's syntax and idioms to read and write the rest of this course's code without translating from another language in your head.</p>
+
+  <h3>Installing Go and starting a module</h3>
+  <p>Download the current stable release from <code class="inline">go.dev/dl</code>, choose the installer for your operating system, and run it. Open a new terminal afterward and run <code class="inline">go version</code> — a successful install prints something like <code class="inline">go version go1.24.0 darwin/arm64</code>. If the command isn't found, your terminal needs restarting, or Go's <code class="inline">bin</code> directory needs adding to your system <code class="inline">PATH</code>.</p>
+  <p>A Go project is organized as a <strong>module</strong>. Inside your project directory, run <code class="inline">go mod init github.com/yourname/portfolio</code>. This creates a <code class="inline">go.mod</code> file recording your module's import path, the Go language version it targets, and — as you add dependencies — the external packages it requires and their versions. This course's own site uses the module path <code class="inline">github.com/vishnubalachandran596/portfolio</code>, declared exactly this way in its <code class="inline">go.mod</code>.</p>
+
+  <h3>Packages, imports, and exported names</h3>
+  <p>Every Go source file starts with a <code class="inline">package</code> declaration. An executable program needs exactly one <code class="inline">package main</code> with a <code class="inline">func main()</code> — that's the entry point the compiled binary runs when you start it. Every other package is a library package that groups reusable code (this course's site, for example, has <code class="inline">package handlers</code>, <code class="inline">package db</code>, and <code class="inline">package view</code>, each with one clear responsibility).</p>
+  <p>Files in the same package can freely use each other's identifiers. Code in a <em>different</em> package can only use that package's <strong>exported</strong> identifiers — and in Go, "exported" simply means "starts with a capital letter." <code class="inline">Open</code> is visible to other packages; <code class="inline">open</code> is not. There's no separate <code class="inline">public</code>/<code class="inline">private</code> keyword — capitalization <em>is</em> the entire visibility system, which is unusual coming from most other languages but becomes second nature within a day.</p>
+  <p>You bring in other packages with <code class="inline">import</code>. The compiler refuses to build a file with an unused import or an unused local variable — it feels strict the first time you hit it, but it keeps a Go codebase free of dead weight that nobody ever cleans up.</p>
+
+  <h3>Variables, types, and zero values</h3>
+  <p>Use <code class="inline">var name Type</code> for an explicit declaration, or the short form <code class="inline">name := value</code> inside a function body when Go can infer the type from the right-hand side. The common built-in types you'll use constantly are <code class="inline">int</code> (whole numbers), <code class="inline">float64</code> (fractional numbers), <code class="inline">string</code> (text), and <code class="inline">bool</code> (<code class="inline">true</code>/<code class="inline">false</code>). One practical note that matters once you're storing course prices or invoice totals: avoid <code class="inline">float64</code> for money — its rounding behavior makes cents quietly go missing. Store money as an integer number of cents instead, exactly the way this course's own <code class="inline">money</code> template helper does.</p>
+  <p>Every Go variable has a value the instant it's declared, even with no explicit initializer — this is its <strong>zero value</strong>. The zero value of <code class="inline">int</code> and <code class="inline">float64</code> is <code class="inline">0</code>, of <code class="inline">string</code> is <code class="inline">""</code>, of <code class="inline">bool</code> is <code class="inline">false</code>, and of a pointer, slice, map, or interface is <code class="inline">nil</code>. Go's zero-value philosophy is that a type's default state should already be safe to use — a freshly declared struct already has every field at a sensible zero value, so you rarely need a separate "is this initialized" check.</p>
+
+  <h3>Functions, and Go's (value, error) idiom</h3>
+  <p>A Go function can return more than one value, and idiomatic Go leans on this constantly for a result paired with an error, e.g. <code class="inline">func Divide(a, b int) (int, error)</code>. This pattern keeps a normal result separate from failure information and forces the caller to look at the error before trusting the value — Go has no exceptions to silently propagate a failure past an unsuspecting caller. An <code class="inline">error</code> is just a value of the built-in <code class="inline">error</code> interface: it can be returned, compared, wrapped, and passed around like any other data. A successful call typically returns its result with a <code class="inline">nil</code> error; a failed call typically returns the type's zero value alongside a non-nil error describing what went wrong.</p>
+
+  <h3>Structs: grouping data that belongs together</h3>
+  <p>A struct defines a new type by grouping named fields, each with its own type:</p>
+  <pre class="code"><code>type Profile struct {
+    Name  string
+    Title string
+    Years int
+}</code></pre>
+  <p>You create struct values with struct literals — <code class="inline">Profile{Name: "Ava", Title: "Engineer", Years: 5}</code> — and named fields, rather than positional ones, are the safer default, especially once a struct grows. Structs are how you model concrete things in a Go program: a user, an incoming request, a database row. Keep a struct focused on one coherent piece of data rather than a grab-bag of unrelated fields.</p>
+
+  <h3>Methods: value receivers vs. pointer receivers</h3>
+  <p>A method is a function with a <strong>receiver</strong> — an extra parameter, written before the method name, that binds the function to a specific type:</p>
+  <pre class="code"><code>func (p Profile) DisplayName() string {
+    return p.Name + ", " + p.Title
+}
+
+func (p *Profile) SetName(name string) {
+    p.Name = name
+}</code></pre>
+  <p><code class="inline">DisplayName</code> uses a <strong>value receiver</strong> — it gets a copy of the <code class="inline">Profile</code>, so changes inside it never affect the caller's variable. That's fine for a read-only method. <code class="inline">SetName</code> uses a <strong>pointer receiver</strong> — it gets the address of the original value, so its change to <code class="inline">p.Name</code> actually sticks. The practical rule this course follows: use a pointer receiver whenever a method needs to mutate the receiver, or whenever the struct is large enough that copying it on every call is wasteful; use a value receiver for small, read-only methods. Once a type has any pointer-receiver methods, it's conventional to make <em>all</em> of that type's methods use pointer receivers, so callers don't have to remember which ones mutate.</p>
+
+  <h3>Interfaces: satisfied implicitly, used sparingly</h3>
+  <p>An interface defines a set of method signatures. In Go, a type satisfies an interface automatically just by implementing those methods — there's no <code class="inline">implements</code> keyword, no explicit declaration anywhere. If it has the right methods, it fits the interface, period.</p>
+  <pre class="code"><code>type Notifier interface {
+    Notify(message string) error
+}
+
+type EmailNotifier struct{ To string }
+
+func (e EmailNotifier) Notify(message string) error {
+    // send an email...
+    return nil
+}
+
+// EmailNotifier satisfies Notifier automatically — no declaration needed.
+var n Notifier = EmailNotifier{To: "you@example.com"}</code></pre>
+  <p>This matters practically because it lets you write code against a small interface without the concrete type needing to know that interface exists — a package can define <code class="inline">Notifier</code> for its own purposes, and any type anywhere, written before or after that interface, satisfies it as long as the method shape matches. You'll see this idea again later in the course when the database layer defines a small repository interface so the rest of the app doesn't need to know it's talking to Postgres specifically. For now, keep interfaces small and only introduce one when you actually have more than one real implementation (or a test double) — an interface with a single implementation forever is usually just unnecessary indirection.</p>
+
+  <h3>Slices: Go's everyday list type</h3>
+  <p>Go has fixed-size arrays, but you'll almost never use them directly — you'll use <strong>slices</strong>, which are a flexible, growable view over an underlying array. Declare one with <code class="inline">var tags []string</code> (a nil slice, zero value, safe to read from and append to) or a literal <code class="inline">tags := []string{"go", "postgres"}</code>. Grow a slice with <code class="inline">append</code>: <code class="inline">tags = append(tags, "vercel")</code> — note that you reassign the result, because <code class="inline">append</code> may need to allocate a new, larger backing array once the old one runs out of room, and the returned slice value is the one that reflects the new length. Practically: two slices can share the same backing array (for example, one produced by re-slicing another), so mutating an element through one can be visible through the other — this rarely bites you in straightforward code, but it's worth knowing about before you pass slices around and mutate them in more than one place.</p>
+
+  <h3>Maps and the comma-ok idiom</h3>
+  <p>A map is Go's key-value type: <code class="inline">prices := map[string]int{"basic": 1200, "pro": 2400}</code>. Reading a missing key doesn't panic — it silently returns the value type's zero value, which can hide bugs. To tell "the key was missing" apart from "the key's value happens to be zero," use the comma-ok form: <code class="inline">v, ok := prices["enterprise"]</code>. <code class="inline">ok</code> is <code class="inline">false</code> if the key wasn't present, letting you branch on it explicitly rather than guessing from the value alone.</p>
+
+  <h3>Error handling the Go way</h3>
+  <p>Go has no exceptions. Any call that can fail returns an error as its last value, and idiomatic Go checks it immediately:</p>
+  <pre class="code"><code>row, err := db.Query(ctx, "SELECT name FROM profile")
+if err != nil {
+    return fmt.Errorf("query profile: %w", err)
+}</code></pre>
+  <p>This is a deliberate design choice, not a missing feature. It forces you to look failure in the eye at the exact call site where it can happen, instead of letting it silently bubble up through call stacks you didn't write and might not control. <code class="inline">fmt.Errorf("...: %w", err)</code> wraps the original error with extra context while keeping the original inspectable (via <code class="inline">errors.Is</code>/<code class="inline">errors.As</code>), so a caller five layers up still knows exactly what actually went wrong, not just that "something did."</p>
+
+  <h3>A short, honest tour of goroutines and channels</h3>
+  <p>You'll hear a lot about Go's concurrency model, so it's worth a brief, honest mention even though this course doesn't lean on it heavily — a portfolio site's request handling is simple enough that you rarely need to reach for it directly. A <strong>goroutine</strong> is a lightweight, concurrently-scheduled function — not an OS thread; Go's runtime multiplexes many goroutines onto a small number of real threads, so starting thousands of them is cheap. You start one with the <code class="inline">go</code> keyword: <code class="inline">go doSomething()</code> runs <code class="inline">doSomething</code> concurrently and returns immediately without waiting for it. A <strong>channel</strong> is a typed pipe goroutines use to communicate safely — one goroutine sends a value with <code class="inline">ch <- value</code>, another receives it with <code class="inline">value := <-ch</code>, and the runtime handles the synchronization so you don't need locks for that handoff. In fact, Go's own standard library already runs each incoming HTTP request on its own goroutine for you — that's part of why the standard library alone is enough to build a real, concurrent web server without you writing any concurrency code at all.</p>
+</section>
+
+<!-- =========================================================
+     EXERCISE 1 — STRUCTS & METHODS
+========================================================== -->
+<div class="exercise" id="ex-struct-methods">
+  <span class="exercise-label">Exercise 1 &middot; Struct &amp; method</span>
+  <h3>Write a Project.Summary() method</h3>
+  <p class="ex-prompt">The real solution is Go. To let you run and test it instantly in the browser, the editor below runs a JavaScript twin with the exact same logic — same inputs, same expected outputs. Complete <code class="inline">projectSummary</code> so it returns <code class="inline">"Name (Year) — tag1, tag2"</code>, then run the tests.</p>
+
+  <details class="lab-solution">
+    <summary>Go solution (learning primary)</summary>
+    <pre class="code"><code>type Project struct {
+    Name string
+    Year int
+    Tags []string
+}
+
+func (p Project) Summary() string {
+    return fmt.Sprintf("%s (%d) — %s", p.Name, p.Year, strings.Join(p.Tags, ", "))
+}</code></pre>
+  </details>
+  <p class="lab-note">The lab editor below runs a JS twin of this logic — the shape of the problem is identical, only the syntax differs.</p>
+
+  <div class="code-lab" data-lab="struct-methods"></div>
+</div>
+
+<!-- =========================================================
+     EXERCISE 2 — SLICES
+========================================================== -->
+<div class="exercise" id="ex-slices">
+  <span class="exercise-label">Exercise 2 &middot; Slice manipulation</span>
+  <h3>Filter and sort a slice of projects</h3>
+  <p class="ex-prompt">Complete <code class="inline">featuredByYear</code> so it returns only featured projects, sorted by year descending (newest first).</p>
+
+  <details class="lab-solution">
+    <summary>Go solution (learning primary)</summary>
+    <pre class="code"><code>func FeaturedByYear(projects []Project) []Project {
+    var out []Project
+    for _, p := range projects {
+        if p.Featured {
+            out = append(out, p)
+        }
+    }
+    sort.Slice(out, func(i, j int) bool {
+        return out[i].Year > out[j].Year
+    })
+    return out
+}</code></pre>
+  </details>
+  <p class="lab-note">JS twin below — same filter-then-sort logic, JavaScript syntax.</p>
+
+  <div class="code-lab" data-lab="slices"></div>
+</div>
+
+<!-- =========================================================
+     EXERCISE 3 — ERROR HANDLING
+========================================================== -->
+<div class="exercise" id="ex-errors">
+  <span class="exercise-label">Exercise 3 &middot; Error handling</span>
+  <h3>Validate a contact form the Go way</h3>
+  <p class="ex-prompt">Complete <code class="inline">validateContact</code> so it checks, in order: name is non-empty, email contains <code class="inline">@</code>, message is at least 10 characters. Return <code class="inline">null</code> when valid, or a string describing the first problem found.</p>
+
+  <details class="lab-solution">
+    <summary>Go solution (learning primary)</summary>
+    <pre class="code"><code>func ValidateContact(name, email, message string) error {
+    if strings.TrimSpace(name) == "" {
+        return errors.New("name is required")
+    }
+    if !strings.Contains(email, "@") {
+        return fmt.Errorf("invalid email: %q", email)
+    }
+    if len(message) &lt; 10 {
+        return errors.New("message is too short")
+    }
+    return nil
+}</code></pre>
+  </details>
+  <p class="lab-note">JS twin below — returns <code class="inline">null</code> in place of Go's <code class="inline">nil</code> error, and a string in place of an error value.</p>
+
+  <div class="code-lab" data-lab="errors"></div>
+</div>
+
+<!-- =========================================================
+     SECTION 3 — NET/HTTP FUNDAMENTALS
+========================================================== -->
+<section class="course-section" id="net-http">
+  <p class="sec-kicker">Section 3</p>
+  <h2>net/http Fundamentals</h2>
+  <p class="lede">Go's standard library ships its own HTTP server and router — genuinely production-capable, with no third-party dependency required. This is exactly what powers this course's own site.</p>
+
+  <h3>The standard library's own router</h3>
+  <p>Since Go 1.22, <code class="inline">http.ServeMux</code> supports method-specific, wildcard-capable routing patterns directly — no external router package needed. You register routes like this:</p>
+  <pre class="code"><code>mux := http.NewServeMux()
+mux.HandleFunc("GET /{$}", a.Home)
+mux.HandleFunc("GET /about", a.About)
+mux.HandleFunc("GET /courses/{slug}", a.CourseDetail)
+mux.HandleFunc("POST /courses/{slug}/checkout/order", a.CheckoutCreateOrder)</code></pre>
+  <p>The leading <code class="inline">"GET "</code> or <code class="inline">"POST "</code> restricts the pattern to that HTTP method — a <code class="inline">GET</code> to <code class="inline">/about</code> and a hypothetical <code class="inline">POST</code> to <code class="inline">/about</code> are different registrations. <code class="inline">{slug}</code> is a wildcard segment; inside the handler, you read it back with <code class="inline">r.PathValue("slug")</code>. <code class="inline">"GET /{$}"</code> is the pattern for matching the exact root path <code class="inline">/</code> and nothing else — without the <code class="inline">{$}</code>, a plain <code class="inline">"/"</code> pattern would also match every path that doesn't match anything more specific, since <code class="inline">ServeMux</code> falls back to the least-specific matching pattern. This exact style is what this course's site uses for every route, public and admin.</p>
+
+  <h3>http.Handler and http.HandlerFunc</h3>
+  <p>Everything in <code class="inline">net/http</code> is built around one small interface:</p>
+  <pre class="code"><code>type Handler interface {
+    ServeHTTP(w http.ResponseWriter, r *http.Request)
+}</code></pre>
+  <p>Anything with a <code class="inline">ServeHTTP</code> method of that exact shape <em>is</em> a handler — that's the whole contract. <code class="inline">http.HandlerFunc</code> is a tiny adapter type that lets an ordinary function satisfy that interface, which is why you can register a plain function with <code class="inline">mux.HandleFunc(pattern, a.Home)</code> instead of having to define a struct with a method every time. This interface being this small is deliberate — it's what makes middleware, sub-routers, and testing all straightforward, because anything that behaves like "takes a request, writes a response" can be swapped in anywhere a handler is expected.</p>
+
+  <h3>Requests, responses, and static files</h3>
+  <p>Inside a handler, <code class="inline">r *http.Request</code> gives you the method, URL, headers, query parameters (<code class="inline">r.URL.Query().Get("q")</code>), form values (after calling <code class="inline">r.ParseForm()</code>), and path wildcards (<code class="inline">r.PathValue("slug")</code>). <code class="inline">w http.ResponseWriter</code> is a stream you write <em>to</em>, not a value you return — call <code class="inline">w.WriteHeader(status)</code> once (it defaults to 200 if you never call it and just start writing), set headers with <code class="inline">w.Header().Set(...)</code> before writing the body, and write bytes with <code class="inline">w.Write(...)</code> or by handing <code class="inline">w</code> to something like <code class="inline">fmt.Fprintf(w, ...)</code> or a template's <code class="inline">Execute</code>.</p>
+  <p>Static assets — CSS, JS, images — are served with <code class="inline">http.FileServerFS</code> over an embedded filesystem: <code class="inline">mux.Handle("GET /static/", http.FileServerFS(web.StaticFS))</code>. Bundling static files into the compiled binary with <code class="inline">go:embed</code> (covered fully in the next section) means there's no separate step to copy assets alongside the binary at deploy time — they travel inside it.</p>
+
+  <h3>Middleware: just a function that wraps a handler</h3>
+  <p>Middleware in Go isn't a special framework concept — it's a plain function that takes a <code class="inline">http.Handler</code> and returns a new <code class="inline">http.Handler</code> that does something extra, then calls the original. A minimal logging middleware looks like this:</p>
+  <pre class="code"><code>func Logging(next http.Handler) http.Handler {
+    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+        start := time.Now()
+        next.ServeHTTP(w, r)
+        log.Printf("%s %s %s", r.Method, r.URL.Path, time.Since(start))
+    })
+}
+
+// wrap the whole mux once:
+handler := Logging(mux)</code></pre>
+  <p>That's the entire pattern: wrap, do something before and/or after, delegate. Chaining several is just nesting the calls — <code class="inline">Logging(Auth(mux))</code> runs the logging middleware first, which calls the auth middleware, which calls your actual routes. This course's own site composes its handler exactly this way, wrapping the whole mux in a logging middleware and a domain-routing middleware in <code class="inline">Routes()</code>.</p>
+
+  <div class="callout">
+    <span class="callout-label">Why this is enough</span>
+    <p>No router version to track, no framework release notes to read before upgrading, no third-party dependency between your code and the actual TCP connection. The entire HTTP layer is something you can read the source of — literally, <code class="inline">go doc net/http</code> or the Go source tree — in a few minutes, and every piece of it composes with plain functions and interfaces you already understand from Section 2.</p>
+  </div>
+</section>
+
+<!-- =========================================================
+     EXERCISE 4 — HTTP HANDLER SHAPE
+========================================================== -->
+<div class="exercise" id="ex-handler-shape">
+  <span class="exercise-label">Exercise 4 &middot; Handler shape</span>
+  <h3>Write the logic inside a course-detail handler</h3>
+  <p class="ex-prompt">Complete <code class="inline">handleCourseRequest</code>. Given a mock request object <code class="inline">{ slug: "..." }</code>, return <code class="inline">{ status: 400, body: "missing slug" }</code> if the slug is empty, otherwise <code class="inline">{ status: 200, body: "course: " + slug }</code>.</p>
+
+  <details class="lab-solution">
+    <summary>Go solution (learning primary)</summary>
+    <pre class="code"><code>func (a *App) CourseDetail(w http.ResponseWriter, r *http.Request) {
+    slug := r.PathValue("slug")
+    if slug == "" {
+        http.Error(w, "missing slug", http.StatusBadRequest)
+        return
+    }
+    w.Header().Set("Content-Type", "text/plain")
+    fmt.Fprintf(w, "course: %s", slug)
+}</code></pre>
+  </details>
+  <p class="lab-note">JS twin below models the same branch on a plain object standing in for the request/response.</p>
+
+  <div class="code-lab" data-lab="handler-shape"></div>
+</div>
+
+<!-- =========================================================
+     SECTION 4 — HTML/TEMPLATE
+========================================================== -->
+<section class="course-section" id="html-template">
+  <p class="sec-kicker">Section 4</p>
+  <h2>Server-Rendered HTML with html/template</h2>
+  <p class="lede">Not every site needs a single-page app. A portfolio is mostly static content and a handful of pages — a full page load per navigation is fine, and often faster to first paint than shipping a JavaScript bundle before anything can render.</p>
+
+  <h3>Why server rendering is a legitimate choice here</h3>
+  <p>The trade-offs that make a client-rendered SPA worthwhile — a highly interactive, app-like interface where most navigation happens without a full reload — mostly don't apply to a portfolio site. Visiting <code class="inline">/about</code> after <code class="inline">/</code> is a rare, deliberate action, not something that needs instant, state-preserving transitions. <code class="inline">html/template</code> renders complete HTML on the server for each request, the browser gets a finished page immediately, and there's no client-side JavaScript required just to see content — search engines and screen readers get the real content on the first response too, with no rendering step required on their end.</p>
+
+  <h3>Template syntax</h3>
+  <p><code class="inline">{{.Field}}</code> accesses a field on whatever data you pass to the template. <code class="inline">{{range .Items}}...{{end}}</code> loops over a slice, and inside the loop <code class="inline">.</code> refers to the current item. <code class="inline">{{if .Condition}}...{{else}}...{{end}}</code> branches on truthiness. A real fragment from a course listing page looks like this:</p>
+  <pre class="code"><code>&lt;ul&gt;
+{{range .Courses}}
+  &lt;li&gt;
+    &lt;a href="/courses/{{.Slug}}"&gt;{{.Title}}&lt;/a&gt;
+    {{if .Featured}}&lt;span class="badge"&gt;Featured&lt;/span&gt;{{end}}
+  &lt;/li&gt;
+{{end}}
+&lt;/ul&gt;</code></pre>
+  <p>Crucially, this is <code class="inline">html/template</code>, not the lower-level <code class="inline">text/template</code> — it performs automatic <strong>contextual escaping</strong>. The same piece of untrusted data gets escaped differently depending on where it lands: inside an HTML attribute it's attribute-escaped, inside a <code class="inline">&lt;script&gt;</code> block it's JavaScript-escaped, inside a URL it's URL-escaped. That context-awareness is what actually prevents cross-site scripting — a course title containing <code class="inline">&lt;script&gt;</code> tags renders as inert text, not executable markup, without you writing a single line of sanitization code.</p>
+
+  <h3>Layouts and partials: define and template</h3>
+  <p><code class="inline">{{define "name"}}...{{end}}</code> declares a named, reusable template block; <code class="inline">{{template "name" .}}</code> renders it. This is how a base layout, a header/footer partial, and page-specific content compose together. This course's own site's <code class="inline">base.html</code> defines the outer HTML shell, includes a header partial with <code class="inline">{{template "header" .}}</code>, and leaves a named hole for page content with <code class="inline">{{block "content" .}}{{end}}</code> (a block is a define-and-immediately-use shorthand, with a default that's overridden by whichever page template also defines <code class="inline">"content"</code>):</p>
+  <pre class="code"><code>&lt;!-- layout/base.html --&gt;
+&lt;body&gt;
+{{template "header" .}}
+&lt;main&gt;
+{{block "content" .}}{{end}}
+&lt;/main&gt;
+{{template "footer" .}}
+&lt;/body&gt;
+
+&lt;!-- pages/about.html --&gt;
+{{define "content"}}
+&lt;h1&gt;{{.Profile.Name}}&lt;/h1&gt;
+&lt;p&gt;{{.Profile.Bio}}&lt;/p&gt;
+{{end}}</code></pre>
+  <p>Every page template is parsed together with the same base layout and partials, so each page only needs to define its own <code class="inline">"content"</code> block — the header, footer, and outer shell are shared, written once, and stay visually consistent across the entire site automatically.</p>
+
+  <h3>Typed data, not loose maps</h3>
+  <p>Pass a real Go struct as template data instead of a loose <code class="inline">map[string]any</code>:</p>
+  <pre class="code"><code>type AboutPageData struct {
+    Title   string
+    Profile Profile
+}
+
+data := AboutPageData{Title: "About", Profile: profile}
+renderer.Render(w, http.StatusOK, "about", data)</code></pre>
+  <p>Template field access itself is only checked at render time (a typo in <code class="inline">{{.Proflie}}</code> fails when the template runs, not when the program compiles), but the code that <em>builds</em> that data stays fully type-checked by the compiler — you can't accidentally assign a number where a struct field expects a string, and refactoring a struct's field name gives you compiler errors everywhere it's used to build page data, which a stringly-typed map would never catch.</p>
+
+  <h3>go:embed: bundling templates into the binary</h3>
+  <p>Vercel's serverless environment doesn't guarantee your source tree sits next to the running binary — the deployed artifact is the compiled function itself. <code class="inline">go:embed</code> solves this by compiling your template files directly into the binary at build time:</p>
+  <pre class="code"><code>//go:embed all:templates
+var templateFS embed.FS
+
+t, err := template.New("base.html").Funcs(funcs).ParseFS(templateFS, files...)</code></pre>
+  <p>Once embedded, <code class="inline">templateFS</code> behaves like a real filesystem your code can <code class="inline">ParseFS</code> from — except there's nothing to deploy separately and nothing that can go missing at runtime. This is exactly how this course's own <code class="inline">core/view/view.go</code> loads every page template, parsing each one against the shared base layout and partials once, at startup, and failing fast if any template is broken rather than discovering a typo mid-request in production.</p>
+</section>
+
+<!-- =========================================================
+     SECTION 5 — STYLING WITH PLAIN CSS
+========================================================== -->
+<section class="course-section" id="styling-css">
+  <p class="sec-kicker">Section 5</p>
+  <h2>Styling With Plain CSS</h2>
+  <p class="lede">A portfolio site doesn't need a CSS framework. A small, deliberate set of custom properties and a mobile-first layout gets you a consistent, professional design system with nothing to install.</p>
+
+  <h3>Design tokens as CSS custom properties</h3>
+  <p>Define your colors, spacing, and typography once, as CSS custom properties on <code class="inline">:root</code>, and reference them everywhere else. This is what gives a site a coherent visual identity instead of dozens of slightly-different one-off hex codes scattered across files:</p>
+  <pre class="code"><code>:root {
+  --color-bg: #f8fafc;
+  --color-surface: #ffffff;
+  --color-border: #e2e8f0;
+  --color-text: #0f172a;
+  --color-text-muted: #475569;
+  --color-primary: #f59e0b;
+  --color-accent: #8b5cf6;
+  --radius-md: 14px;
+}
+
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text);
+}</code></pre>
+  <p>Change one value in <code class="inline">:root</code> and every element referencing it updates together — no find-and-replace across a hundred files. This course's own site's <code class="inline">web/static/css/style.css</code> is built exactly this way: one block of tokens at the top of the file, everything else built from them.</p>
+
+  <h3>Mobile-first, plain flexbox and grid</h3>
+  <p>Write your base styles for a narrow viewport first, then widen the layout inside a <code class="inline">min-width</code> media query, rather than the reverse. A simple responsive nav or card grid needs nothing more than flexbox or CSS grid:</p>
+  <pre class="code"><code>.project-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.25rem;
+}
+
+@media (min-width: 720px) {
+  .project-grid { grid-template-columns: repeat(2, 1fr); }
+}</code></pre>
+  <p>Tailwind and Bootstrap are entirely reasonable choices too — they trade some CSS-writing time for a utility-class or component vocabulary, at the cost of a build step (Tailwind) or a large stylesheet dependency (Bootstrap). For a site this size, plain CSS with a token system gets you the same visual consistency with zero extra tooling, which is why this course teaches it as the default.</p>
+
+  <h3>Light and dark mode: automatic, plus a manual override</h3>
+  <p>Respect the visitor's OS preference by default with <code class="inline">prefers-color-scheme</code>, then let a header toggle override it explicitly by writing a <code class="inline">data-theme</code> attribute onto the root element:</p>
+  <pre class="code"><code>@media (prefers-color-scheme: dark) {
+  :root { --color-bg: #0f172a; --color-text: #f8fafc; }
+}
+
+/* explicit override beats the OS preference either way */
+:root[data-theme="dark"] { --color-bg: #0f172a; --color-text: #f8fafc; }
+:root[data-theme="light"] { --color-bg: #f8fafc; --color-text: #0f172a; }</code></pre>
+  <pre class="code"><code>// theme-toggle.js
+var stored = localStorage.getItem("theme");
+if (stored) document.documentElement.setAttribute("data-theme", stored);
+
+toggleButton.addEventListener("click", function () {
+  var next = document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark";
+  document.documentElement.setAttribute("data-theme", next);
+  localStorage.setItem("theme", next);
+});</code></pre>
+  <p>The CSS attribute selector always wins over the media query once it's present, so a visitor who explicitly picks light or dark stays on that choice across visits (persisted in <code class="inline">localStorage</code>), while a first-time visitor with no stored preference still gets a theme that matches their OS out of the box.</p>
+</section>
+
+<!-- =========================================================
+     SECTION 6 — VANILLA JS
+========================================================== -->
+<section class="course-section" id="vanilla-js">
+  <p class="sec-kicker">Section 6</p>
+  <h2>Vanilla JS, No Framework</h2>
+  <p class="lede">A site this size doesn't need React, Vue, or jQuery. A few small, well-placed scripts using plain DOM APIs cover everything a portfolio actually needs from client-side JavaScript.</p>
+
+  <h3>Progressive enhancement: JS adds polish, it doesn't gate content</h3>
+  <p>The guiding principle: the site works without JavaScript, and JavaScript makes it nicer. Links are real <code class="inline">&lt;a href&gt;</code> elements that navigate normally even with scripts disabled; forms submit as real HTML forms by default. JavaScript then layers small improvements on top — a mobile nav toggle, a one-click "copy email" button, a bit of client-side validation before a submit — without which the site still fundamentally works. This matters for resilience (a script error on one page doesn't break navigation on every other page) and for accessibility (screen readers and every browser, old or new, get a working baseline).</p>
+
+  <h3>Example: a mobile nav toggle</h3>
+  <pre class="code"><code>var navToggle = document.getElementById("nav-toggle");
+var sidePanel = document.getElementById("side-panel");
+
+navToggle.addEventListener("click", function () {
+  var isOpen = sidePanel.classList.toggle("open");
+  navToggle.setAttribute("aria-expanded", String(isOpen));
+  sidePanel.setAttribute("aria-hidden", String(!isOpen));
+});</code></pre>
+  <p>No framework, no virtual DOM — just <code class="inline">classList.toggle</code> and keeping the ARIA attributes in sync so assistive tech announces the state change correctly. This course's own site's <code class="inline">main.js</code> implements its side-panel menu with this exact approach.</p>
+
+  <h3>Example: a "copy email" button</h3>
+  <p>A small, genuinely useful touch on a contact page — click a button, the email address lands on the clipboard, and the button confirms it happened:</p>
+  <pre class="code"><code>var copyBtn = document.getElementById("copy-email");
+copyBtn.addEventListener("click", function () {
+  navigator.clipboard.writeText(copyBtn.dataset.email).then(function () {
+    var original = copyBtn.textContent;
+    copyBtn.textContent = "Copied!";
+    setTimeout(function () { copyBtn.textContent = original; }, 1800);
+  });
+});</code></pre>
+  <p>Try the working version of this below.</p>
+</section>
+
+<!-- =========================================================
+     EXERCISE 5 — VANILLA JS COPY EMAIL (REAL JS, NOT A LAB)
+========================================================== -->
+<div class="exercise" id="ex-vanilla-js">
+  <span class="exercise-label">Exercise 5 &middot; Vanilla JS in the browser</span>
+  <h3>Try it: the copy-email button</h3>
+  <p class="ex-prompt">This one is genuine, unmodified JavaScript — the same code shown above, actually running on this page. Click the button.</p>
+  <button type="button" class="btn" id="copy-email-demo" data-email="hello@example.com">Copy email address</button>
+  <p class="lab-note" id="copy-email-status" aria-live="polite">hello@example.com</p>
+</div>
+
+<!-- =========================================================
+     SECTION 7 — FRONTEND / BACKEND COMMUNICATION
+========================================================== -->
+<section class="course-section" id="frontend-backend">
+  <p class="sec-kicker">Section 7</p>
+  <h2>How the Frontend Talks to the Backend</h2>
+  <p class="lede">In this architecture, most navigation is classic and simple: a link is a full page load, handled entirely by a Go route. <code class="inline">fetch()</code> earns its place only for the handful of spots where an in-page update, without a full reload, genuinely improves the experience.</p>
+
+  <h3>The default: server-rendered navigation</h3>
+  <p>Clicking a link to <code class="inline">/about</code> is a normal browser navigation — the browser requests <code class="inline">/about</code>, the Go route matches it, <code class="inline">html/template</code> renders the full page, and the browser replaces the document. No client-side router, no JSON round-trip just to figure out what to show. This is the right default for a portfolio: most of the site is "go look at a different page," not "update part of the current page in place."</p>
+
+  <h3>The exception: a contact form that doesn't leave the page</h3>
+  <p>Submitting a contact form is a good candidate for <code class="inline">fetch()</code> — the visitor wants confirmation the message sent, without losing their place on the page or triggering a jarring full reload. The pattern is: a Go handler that accepts JSON (or form data), validates it, and responds with JSON; and a small script that intercepts the form's submit, sends the request, and swaps in a success or error message.</p>
+
+  <h4>The Go side: a POST /contact handler</h4>
+  <pre class="code"><code>type contactRequest struct {
+    Name    string `json:"name"`
+    Email   string `json:"email"`
+    Message string `json:"message"`
+}
+
+func (a *App) ContactSubmit(w http.ResponseWriter, r *http.Request) {
+    var req contactRequest
+    if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+        http.Error(w, "invalid request body", http.StatusBadRequest)
+        return
+    }
+    if err := ValidateContact(req.Name, req.Email, req.Message); err != nil {
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusUnprocessableEntity)
+        json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+        return
+    }
+    // ...save the message, e.g. an INSERT into a contact_messages table...
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(map[string]bool{"ok": true})
+}</code></pre>
+
+  <h4>The JS side: fetch, then update the page in place</h4>
+  <pre class="code"><code>var form = document.getElementById("contact-form");
+form.addEventListener("submit", function (e) {
+  e.preventDefault();
+  var payload = {
+    name: form.name.value,
+    email: form.email.value,
+    message: form.message.value,
+  };
+  fetch("/contact/submit", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  })
+    .then(function (res) { return res.json().then(function (body) { return { ok: res.ok, body: body }; }); })
+    .then(function (result) {
+      var status = document.getElementById("contact-status");
+      if (result.ok) {
+        status.textContent = "Message sent — thanks, I'll get back to you soon.";
+        form.reset();
+      } else {
+        status.textContent = "Couldn't send that: " + result.body.error;
+      }
+    });
+});</code></pre>
+  <p>Note the shapes on both sides match deliberately: the JS sends a JSON object with <code class="inline">name</code>/<code class="inline">email</code>/<code class="inline">message</code>, and the Go struct's <code class="inline">json</code> tags decode exactly those field names. A validation failure comes back as a <code class="inline">422</code> with a JSON <code class="inline">{"error": "..."}</code> body that the JS reads and displays — the same <code class="inline">ValidateContact</code> function from Exercise 3, reused server-side where it actually protects the database, with the client-side check (Section 6) only there to give faster feedback before a round-trip.</p>
+
+  <div class="alt-path">
+    <span class="alt-label">Optional alternative path &middot; not what this course builds</span>
+    <p>If you'd rather use a JS framework instead of server-rendered templates, that's a legitimate choice too — React or Next.js can serve as a fully decoupled frontend that calls the same kind of JSON endpoints shown above. What changes: your Go backend becomes API-only (it returns JSON everywhere instead of rendering HTML), you add CORS headers so the browser allows a frontend on a different origin to call it, and the frontend deploys separately (its own Vercel project, its own domain or subpath) rather than being served by the same Go binary. Everything else in this course — the database layer, the migrations, the deployment concepts — still applies underneath either frontend. This course builds the real, server-rendered <code class="inline">html/template</code> approach throughout, because that's what this site actually runs.</p>
+  </div>
+</section>
+
+<!-- =========================================================
+     SECTION 8 — SUPABASE / POSTGRES
+========================================================== -->
+<section class="course-section" id="database-supabase">
+  <p class="sec-kicker">Section 8</p>
+  <h2>A Real Database With Supabase</h2>
+  <p class="lede">Supabase is a managed platform built around Postgres, with a whole set of optional extras layered on top. This course uses exactly one part of it, deliberately: the Postgres database itself, reached directly over the Postgres wire protocol.</p>
+
+  <h3>What Supabase actually is — and what this project actually uses</h3>
+  <p>Supabase gives you a hosted, managed Postgres instance, plus a bundle of optional extras built around it: an auto-generated REST and GraphQL API (via PostgREST), Row Level Security policy tooling, authentication, file storage, realtime subscriptions, and edge functions. It's tempting to reach for all of it at once — but this course, and this course's own site, uses only the database. Go connects directly over the Postgres wire protocol using <code class="inline">github.com/jackc/pgx/v5</code>, specifically its <code class="inline">stdlib</code> driver so it plugs into the standard <code class="inline">database/sql</code> package. There's no Supabase client SDK anywhere in the Go code, and no call to Supabase's auto-generated REST API — as far as your Go program is concerned, it's just talking to Postgres, the same way it would talk to Postgres running anywhere else.</p>
+
+  <h3>Creating a project and finding your connection string</h3>
+  <ol class="list">
+    <li>Create a free project at <a href="https://supabase.com" target="_blank" rel="noopener">supabase.com</a> and set a database password when prompted (save it somewhere safe — it's shown only once).</li>
+    <li>In <strong>Project Settings → Database → Connection string</strong>, you'll see more than one connection string. This distinction matters more than it looks like it should.</li>
+  </ol>
+
+  <h3>Direct connection vs. the pooled Transaction pooler — and why it matters for Vercel</h3>
+  <p>Supabase exposes two different ways to reach the same database:</p>
+  <table class="tbl">
+    <tr><th>Connection type</th><th>Network</th><th>Port</th><th>Good fit</th></tr>
+    <tr><td>Direct connection</td><td>IPv6</td><td>5432</td><td>Local development, a long-running server process that holds a small, stable pool of connections open</td></tr>
+    <tr><td>Transaction pooler (Supavisor / PgBouncer)</td><td>IPv4</td><td>6543</td><td>Serverless functions — many short-lived instances that may all try to connect at once</td></tr>
+  </table>
+  <p>This distinction isn't a minor detail — it's the difference between a working deployment and one that silently fails. A serverless platform like Vercel can spin up many concurrent invocations of your function, each potentially opening its own database connection; Postgres has a hard limit on total connections, and a fleet of serverless instances each holding one open can exhaust it fast. The pooler sits in front of Postgres and hands out a connection per transaction rather than per client, so far more concurrent callers can be served without exhausting Postgres' own connection limit. It also happens to be reachable over IPv4, which matters because Vercel's serverless functions don't have IPv6 egress by default — so for a Vercel deployment specifically, the pooled connection string on port <code class="inline">6543</code> is the one you need, not the direct one on <code class="inline">5432</code>.</p>
+  <pre class="code"><code>// illustrative placeholder — never a real credential
+DATABASE_URL=postgresql://postgres.xxxxxxxxxxxx:[YOUR-PASSWORD]@aws-0-REGION.pooler.supabase.com:6543/postgres?sslmode=require</code></pre>
+  <p>One more wrinkle worth knowing before you hit it: a pooler running in transaction mode hands out a <em>different</em> backend connection per transaction, so server-side prepared statements — which pgx uses by default for performance — don't reliably survive between one query and the next. The fix is one line: force pgx to use Postgres' simple query protocol instead, which sends each query as a fully self-contained statement.</p>
+  <pre class="code"><code>cfg, err := pgx.ParseConfig(databaseURL)
+// ...
+cfg.DefaultQueryExecMode = pgx.QueryExecModeSimpleProtocol
+conn := stdlib.OpenDB(*cfg)</code></pre>
+  <p>This is exactly what this course's own site's <code class="inline">core/db/db.go</code> does — it's a small setting, but skipping it is one of the most common ways a Postgres-on-serverless deployment breaks in a way that's confusing to debug from the error message alone.</p>
+
+  <h3>A SQL migration file and a tiny Go migration runner</h3>
+  <p>A migration is just a plain <code class="inline">.sql</code> file describing one schema change, applied in order and tracked so it never runs twice:</p>
+  <pre class="code"><code>-- core/db/migrations/003_profile.sql
+CREATE TABLE IF NOT EXISTS profile (
+    id    SERIAL PRIMARY KEY,
+    name  TEXT NOT NULL,
+    title TEXT NOT NULL,
+    bio   TEXT NOT NULL
+);</code></pre>
+  <p>The migration runner's job is small but important: keep a table recording which migration files have already run, so restarting the app (or deploying it again) never re-applies a migration that already succeeded.</p>
+  <pre class="code"><code>func Migrate(ctx context.Context, conn *sql.DB) error {
+    conn.ExecContext(ctx, `CREATE TABLE IF NOT EXISTS schema_migrations (
+        version TEXT PRIMARY KEY,
+        applied_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    )`)
+
+    entries, _ := migrationFiles.ReadDir("migrations")
+    // ...sort filenames, then for each one not yet in schema_migrations:
+    //   run it and the INSERT recording it inside one transaction, so a failed
+    //   migration never gets marked as applied.
+}</code></pre>
+  <p>This course's own site embeds its <code class="inline">.sql</code> files with <code class="inline">go:embed migrations/*.sql</code> and runs exactly this check-then-apply-then-record loop, wrapping each migration and its <code class="inline">schema_migrations</code> insert in a single transaction — so a migration that fails partway through never gets marked as applied, and the next startup retries it cleanly instead of leaving the schema in an inconsistent, undetectable state.</p>
+
+  <h3>Worked example: a profile table, a struct, and a repository read</h3>
+  <p>Once a table exists, reading it into a Go struct is a <code class="inline">SELECT</code> plus a <code class="inline">Scan</code>:</p>
+  <pre class="code"><code>type Profile struct {
+    Name  string
+    Title string
+    Bio   string
+}
+
+type ProfileRepo struct {
+    db *sql.DB
+}
+
+func (r *ProfileRepo) Get(ctx context.Context) (Profile, error) {
+    var p Profile
+    err := r.db.QueryRowContext(ctx,
+        `SELECT name, title, bio FROM profile LIMIT 1`,
+    ).Scan(&p.Name, &p.Title, &p.Bio)
+    if err != nil {
+        return Profile{}, fmt.Errorf("get profile: %w", err)
+    }
+    return p, nil
+}</code></pre>
+  <p><code class="inline">Scan</code> takes pointers to each destination field, in the same order as the columns selected — the database driver reads the row and writes each column's value directly into the Go variable behind that pointer. Wrapping it in a small <code class="inline">ProfileRepo</code> type (the "repository pattern") keeps every SQL string in one place per table, gives handlers a typed method to call instead of raw SQL scattered through the codebase, and is the kind of narrow interface boundary Section 2 mentioned you'd see again.</p>
+</section>
+
+<!-- =========================================================
+     EXERCISE 6 — REPOSITORY SCAN
+========================================================== -->
+<div class="exercise" id="ex-repo-scan">
+  <span class="exercise-label">Exercise 6 &middot; Repository pattern</span>
+  <h3>Scan a database row into a struct</h3>
+  <p class="ex-prompt">Complete <code class="inline">scanProfile(row)</code>, where <code class="inline">row</code> is either an array <code class="inline">[name, title, bio]</code> (a found row) or <code class="inline">null</code> (no row found — Go's <code class="inline">sql.ErrNoRows</code>). Return an object <code class="inline">{ name, title, bio }</code> on success, or throw an <code class="inline">Error</code> with the message <code class="inline">"get profile: no rows"</code> when <code class="inline">row</code> is <code class="inline">null</code> — mirroring the <code class="inline">fmt.Errorf("get profile: %w", err)</code> wrapping shown above.</p>
+
+  <details class="lab-solution">
+    <summary>Go solution (learning primary)</summary>
+    <pre class="code"><code>func (r *ProfileRepo) Get(ctx context.Context) (Profile, error) {
+    var p Profile
+    err := r.db.QueryRowContext(ctx,
+        `SELECT name, title, bio FROM profile LIMIT 1`,
+    ).Scan(&p.Name, &p.Title, &p.Bio)
+    if err != nil {
+        return Profile{}, fmt.Errorf("get profile: %w", err)
+    }
+    return p, nil
+}</code></pre>
+  </details>
+  <p class="lab-note">JS twin below — an array standing in for the scanned row, an exception standing in for the wrapped Go error.</p>
+
+  <div class="code-lab" data-lab="repo-scan"></div>
+</div>
+
+<!-- =========================================================
+     SECTION 9 — DEPLOYING TO VERCEL
+========================================================== -->
+<section class="course-section" id="deploy-vercel">
+  <p class="sec-kicker">Section 9</p>
+  <h2>Deploying to Vercel</h2>
+  <p class="lede">Vercel gives you git-triggered deployments, a global edge network, and serverless functions — including, specifically, Go functions. Here's how a Go app fits its model.</p>
+
+  <h3>What Vercel actually provides</h3>
+  <p>At its core, Vercel watches a connected GitHub repository and deploys automatically on every push: a production deploy on your main branch, and a separate preview deploy for every other branch and pull request. Deployed code runs as a serverless function on Vercel's platform, served from a global edge network that handles TLS termination, CDN caching for static assets, and routing to your function.</p>
+
+  <h3>Vercel's Go serverless function convention</h3>
+  <p>Vercel treats every file under an <code class="inline">/api</code> directory as its own serverless function. For a Go file, the convention is a <code class="inline">package handler</code> exposing a function matching this exact signature:</p>
+  <pre class="code"><code>package handler
+
+import "net/http"
+
+func Handler(w http.ResponseWriter, r *http.Request) {
+    // ...
+}</code></pre>
+  <p>Vercel compiles that package and, on each incoming request, invokes <code class="inline">Handler</code> with a real <code class="inline">http.ResponseWriter</code> and <code class="inline">*http.Request</code> — the same two types you've used throughout this course, so nothing about your handler logic changes because it's running on Vercel instead of a plain server.</p>
+
+  <h3>One catch-all function, not one function per route</h3>
+  <p>You could give every route its own file under <code class="inline">/api</code>, and Vercel would treat each as a separate function — but for a template-driven, multi-page site, a single catch-all function that owns its own internal routing is the cleaner pattern. This course's own site does exactly that: one <code class="inline">api/index.go</code>, whose <code class="inline">Handler</code> boots the app once (reusing the same <code class="inline">handlers.App</code> — and its database connection pool — across warm invocations of the same instance) and then delegates every request to the app's own <code class="inline">net/http</code> router from Section 3:</p>
+  <pre class="code"><code>var (
+    once   sync.Once
+    routes http.Handler
+)
+
+func Handler(w http.ResponseWriter, r *http.Request) {
+    once.Do(func() {
+        a, _, err := app.Bootstrap()
+        routes = a.Routes()
+    })
+    routes.ServeHTTP(w, r)
+}</code></pre>
+  <p><code class="inline">vercel.json</code> then rewrites every incoming path to that one function, so Vercel's own routing layer stays out of the way and your Go <code class="inline">ServeMux</code> handles <code class="inline">/</code>, <code class="inline">/about</code>, <code class="inline">/courses/...</code>, and everything else exactly the way it would on a plain server:</p>
+  <pre class="code"><code>{
+  "functions": { "api/index.go": { "maxDuration": 15 } },
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/api/index" }
+  ]
+}</code></pre>
+  <p>This keeps your route table in one place (your Go code, testable and readable like any other Go program) instead of split between Vercel's routing config and your application — and it means the exact same <code class="inline">Routes()</code> function also powers <code class="inline">cmd/server</code>, a plain long-running binary you can run anywhere with no Vercel-specific code at all, should you ever want to move off serverless entirely.</p>
+
+  <h3>Connecting your GitHub repo and setting environment variables</h3>
+  <p>Import the repository from your Vercel dashboard (or run <code class="inline">vercel</code> from the project root) — Vercel auto-detects the Go function via <code class="inline">vercel.json</code>. Then, in the project's <strong>Settings → Environment Variables</strong>, set at minimum:</p>
+  <ul class="list">
+    <li><code class="inline">DATABASE_URL</code> — the Supabase pooled connection string from Section 8</li>
+    <li><code class="inline">JWT_SECRET</code> — a random secret, e.g. generated with <code class="inline">openssl rand -hex 32</code></li>
+    <li><code class="inline">APP_ENV=production</code></li>
+    <li><code class="inline">SITE_NAME</code> / <code class="inline">SITE_URL</code> — your site's display name and production URL</li>
+  </ul>
+  <div class="callout warn">
+    <span class="callout-label">Secrets never go in the repo</span>
+    <p>Every one of these is set in the Vercel dashboard, never committed to a file in git — not in a <code class="inline">.env</code> file that gets pushed, not hardcoded in a Go source file "just for now." Your code reads them at runtime with <code class="inline">os.Getenv("DATABASE_URL")</code>. A leaked database password or JWT signing secret in git history is a real, lasting compromise — anyone with read access to the repository (or its history, forever, even after you "remove" it in a later commit) has it.</p>
+  </div>
+  <p>Once environment variables are set and the repo is connected, pushing to your main branch deploys to production automatically. On the function's first invocation after a deploy, this course's own site's <code class="inline">Bootstrap()</code> applies any pending migrations and bootstraps the first admin account if configured — so a fresh deploy comes up with a ready schema with no manual step.</p>
+</section>
+
+<!-- =========================================================
+     EXERCISE 7 — SPOT THE EXPOSED SECRET
+========================================================== -->
+<div class="exercise" id="ex-secret-spotter">
+  <span class="exercise-label">Exercise 7 &middot; Spot the exposed secret</span>
+  <h3>What's wrong with this snippet?</h3>
+  <p class="ex-prompt">This Go snippet was found in a pull request. Pick the best response.</p>
+  <pre class="code"><code>func connectDB() (*sql.DB, error) {
+    return sql.Open("pgx",
+        "postgresql://postgres:Sup3rSecret!@aws-0-us-east-1.pooler.supabase.com:6543/postgres")
+}</code></pre>
+  <div class="choice-row" id="secret-choices" role="group" aria-label="What should happen to this code">
+    <button class="choice-btn" type="button" data-choice="fine">This is fine — it only runs on the server, nobody sees it</button>
+    <button class="choice-btn" type="button" data-choice="rename">Just rename the variable to something less obvious</button>
+    <button class="choice-btn" type="button" data-choice="env">The password must come from an environment variable, not the source file</button>
+  </div>
+  <div class="reveal" id="secret-reveal">
+    <h4 id="secret-reveal-title">Select an option</h4>
+    <div id="secret-reveal-body"></div>
+  </div>
+</div>
+
+<!-- =========================================================
+     SECTION 10 — PLATFORM CAPABILITIES
+========================================================== -->
+<section class="course-section" id="platform-capabilities">
+  <p class="sec-kicker">Section 10</p>
+  <h2>What Else Vercel &amp; Supabase Can Do</h2>
+  <p class="lede">This course uses a deliberately small slice of both platforms. It's worth knowing what else is there, for when a future project actually needs it.</p>
+
+  <h3>Vercel, beyond what this course uses</h3>
+  <div class="concept-grid">
+    <details class="concept-card">
+      <summary>Preview deployments per pull request</summary>
+      <div class="body"><p>Every pull request gets its own live, shareable URL running that branch's code, separate from production — useful for reviewing a change (or showing a client a work-in-progress) before it merges.</p></div>
+    </details>
+    <details class="concept-card">
+      <summary>Environment variable scoping</summary>
+      <div class="body"><p>Variables can be set separately for Production, Preview, and Development, so a preview deploy can point at a staging database while production points at the real one, without any code branching on environment.</p></div>
+    </details>
+    <details class="concept-card">
+      <summary>Custom domains &amp; automatic HTTPS</summary>
+      <div class="body"><p>Add any domain you own in the dashboard; once DNS resolves correctly, Vercel provisions and renews a TLS certificate automatically — no manual certificate management, ever. Covered fully in Section 11.</p></div>
+    </details>
+    <details class="concept-card">
+      <summary>Edge network / CDN caching</summary>
+      <div class="body"><p>Static assets (your CSS, JS, images) are served from edge locations close to each visitor and cached aggressively, independent of how far away your serverless function's region is.</p></div>
+    </details>
+    <details class="concept-card">
+      <summary>Deployment logs &amp; rollback</summary>
+      <div class="body"><p>Every deployment is kept, with its build and runtime logs. If a deploy breaks something, you can instantly roll back to a previous, known-good deployment from the dashboard — no re-running a build, no git revert required to recover.</p></div>
+    </details>
+  </div>
+
+  <h3>Supabase, beyond what this course uses</h3>
+  <div class="concept-grid">
+    <details class="concept-card">
+      <summary>Auto-generated REST &amp; GraphQL API (PostgREST)</summary>
+      <div class="body"><p>Supabase can expose your tables directly as a REST or GraphQL API with no backend code at all — useful for a frontend-only app talking straight to the database, but this course's Go backend never uses it; Go talks to Postgres itself.</p></div>
+    </details>
+    <details class="concept-card">
+      <summary>Row Level Security (RLS) policies</summary>
+      <div class="body"><p>Postgres-native policies that restrict which rows a given database role can see or modify — essential if untrusted clients query the database directly (e.g. through the auto-generated API above), but less relevant when, as here, a trusted backend is the only thing that ever connects.</p></div>
+    </details>
+    <details class="concept-card">
+      <summary>Auth, Storage, Realtime, Edge Functions</summary>
+      <div class="body"><p>A hosted user-authentication system, a file/object storage bucket, websocket-based realtime table subscriptions, and Deno-based edge functions. All genuinely useful for the right project — a chat app, user-generated file uploads, a mobile app's backend — none of which this portfolio site needs.</p></div>
+    </details>
+  </div>
+  <p>The honest reason this project sticks to "just the database": every one of those extras is one more moving part, one more vendor-specific API surface, and one more thing to learn and depend on. A portfolio site's actual requirements — read a profile, list some projects, save a contact message — are fully served by plain Postgres and a few SQL queries. Reaching for the rest before you need it costs you flexibility (RLS policies and PostgREST assume a specific access pattern) in exchange for convenience you're not using yet.</p>
+</section>
+
+<!-- =========================================================
+     SECTION 11 — CUSTOM DOMAIN
+========================================================== -->
+<section class="course-section" id="custom-domain">
+  <p class="sec-kicker">Section 11</p>
+  <h2>Connecting Your Own Domain</h2>
+  <p class="lede">A working <code class="inline">*.vercel.app</code> URL is a fine place to develop, but a portfolio deserves its own domain. Buying one and pointing it at Vercel takes a few minutes.</p>
+
+  <h3>Buy a domain, then add it in Vercel</h3>
+  <p>Register a domain from any registrar — Namecheap, GoDaddy, Google Domains successors, Porkbun, or Vercel's own domain registration are all fine choices. Then, in your Vercel project's <strong>Settings → Domains</strong>, add the domain you bought. Vercel will show you what DNS configuration it expects, and there are two genuinely different ways to satisfy it.</p>
+
+  <h3>Two ways to point DNS at Vercel</h3>
+  <table class="tbl">
+    <tr><th>Approach</th><th>What you do</th><th>Trade-off</th></tr>
+    <tr><td>Update specific records</td><td>At your existing registrar's DNS panel, add an <code class="inline">A</code> record (for the apex domain, e.g. <code class="inline">example.com</code>) pointing at Vercel's IP, and/or a <code class="inline">CNAME</code> record (for a subdomain, e.g. <code class="inline">www.example.com</code>) pointing at <code class="inline">cname.vercel-dns.com</code></td><td>Your registrar stays authoritative for DNS; you keep any other records (email, other subdomains) exactly as they were, and only add what Vercel needs</td></tr>
+    <tr><td>Nameserver delegation</td><td>Change your domain's nameservers at the registrar to Vercel's own — <code class="inline">ns1.vercel-dns.com</code> and <code class="inline">ns2.vercel-dns.com</code></td><td>Vercel now manages all DNS for the domain, including future subdomains, automatically — simpler day-to-day, but your registrar's DNS panel is no longer authoritative for anything on that domain; any existing records (email/MX, other services) need re-creating inside Vercel's DNS settings</td></tr>
+  </table>
+  <p>Specific-record updates are the safer default if you already have other things pointed at that domain — email, a different subdomain, an unrelated service. Nameserver delegation is simpler if this domain is purely for the site: add a new subdomain later and Vercel just handles it, no trip back to the registrar required.</p>
+
+  <h3>HTTPS is automatic, once DNS is correct</h3>
+  <p>You don't request, install, or renew a certificate yourself. Once Vercel can see the domain correctly pointed at it (via either method above), it automatically provisions a TLS certificate and keeps it renewed for as long as the domain stays pointed at Vercel. Until DNS propagates and resolves correctly, the domain in the dashboard will show a pending state — that's expected, and usually resolves within minutes to a few hours depending on your registrar and previous DNS TTL settings.</p>
+</section>
+
+<!-- =========================================================
+     EXERCISE 8 — DNS RECORD TYPE QUIZ
+========================================================== -->
+<div class="exercise" id="ex-dns-quiz">
+  <span class="exercise-label">Exercise 8 &middot; DNS record matching</span>
+  <h3>Match each scenario to the right DNS approach</h3>
+  <p class="ex-prompt">For each scenario, choose A record, CNAME record, or nameserver delegation, then check your answers.</p>
+  <div id="dns-rows">
+    <div class="match-row" data-answer="a">
+      <p>Point the bare apex domain <code class="inline">example.com</code> directly at Vercel's IP address.</p>
+      <select><option value="">Choose&hellip;</option><option value="a">A record</option><option value="cname">CNAME record</option><option value="ns">Nameserver delegation</option></select>
+      <span class="match-fb" aria-live="polite"></span>
+    </div>
+    <div class="match-row" data-answer="cname">
+      <p>Point <code class="inline">www.example.com</code> at <code class="inline">cname.vercel-dns.com</code>, while keeping your existing MX (email) records untouched at your current registrar.</p>
+      <select><option value="">Choose&hellip;</option><option value="a">A record</option><option value="cname">CNAME record</option><option value="ns">Nameserver delegation</option></select>
+      <span class="match-fb" aria-live="polite"></span>
+    </div>
+    <div class="match-row" data-answer="ns">
+      <p>Hand DNS management for the whole domain over to Vercel, so future subdomains just work with no trip back to the registrar.</p>
+      <select><option value="">Choose&hellip;</option><option value="a">A record</option><option value="cname">CNAME record</option><option value="ns">Nameserver delegation</option></select>
+      <span class="match-fb" aria-live="polite"></span>
+    </div>
+    <div class="match-row" data-answer="cname">
+      <p>Point a subdomain like <code class="inline">blog.example.com</code> at a different hosted service's provided hostname, without moving the rest of the domain's DNS.</p>
+      <select><option value="">Choose&hellip;</option><option value="a">A record</option><option value="cname">CNAME record</option><option value="ns">Nameserver delegation</option></select>
+      <span class="match-fb" aria-live="polite"></span>
+    </div>
+  </div>
+  <button class="btn" id="dns-check" type="button">Check answers</button>
+  <button class="btn secondary small" id="dns-reset" type="button" style="margin-left:.5rem">Reset</button>
+  <div class="reveal" id="dns-reveal"><h4>Result</h4><div id="dns-reveal-body"></div></div>
+</div>
+
+<!-- =========================================================
+     SECTION 12 — WRAP-UP
+========================================================== -->
+<section class="course-section" id="wrap-up">
+  <p class="sec-kicker">Section 12</p>
+  <h2>Wrap-Up &amp; Deployment Checklist</h2>
+  <p class="lede">You've gone from zero Go experience to a real, deployed site: routing with the standard library, server-rendered pages, a production Postgres database, and a custom domain with automatic HTTPS. Here's what to confirm before calling it shipped.</p>
+
+  <p>Run through this before you consider the deploy finished: environment variables set in Vercel (<code class="inline">DATABASE_URL</code> pointed at the pooled connection, <code class="inline">JWT_SECRET</code>, and anything else your app reads), migrations confirmed applied against the real database, the custom domain added and its DNS verified, and HTTPS showing as active rather than pending. The interactive checklist below scores exactly this.</p>
+
+  <h3>Where to go from here</h3>
+  <p>From here, natural next steps include writing tests for your handlers and repository functions, adding structured logging, and tightening up the templates' accessibility and SEO metadata. If you'd eventually like to sell access to content on a site like this one — payment integration, gated course content, or an appointment-booking system — that's intentionally out of scope here and covered in a separate, dedicated course; what you've built in this one is the solid, well-understood foundation everything else would sit on top of.</p>
+</section>
+
+<!-- =========================================================
+     EXERCISE 9 — DEPLOYMENT CHECKLIST SCORER
+========================================================== -->
+<div class="exercise" id="ex-checklist">
+  <span class="exercise-label">Exercise 9 &middot; Deployment checklist</span>
+  <h3>Score your own deployment readiness</h3>
+  <p class="ex-prompt">Check off each item as you complete it on your own project. This doesn't save anywhere — it's just a quick self-check.</p>
+  <ul class="check-list" id="checklist-items">
+    <li class="check-item"><label style="display:flex;gap:.65rem;align-items:flex-start;width:100%;cursor:pointer;"><input type="checkbox" data-weight="1"><span><code class="inline">DATABASE_URL</code> is the Supabase pooled (port 6543) connection string, set in Vercel's dashboard — not committed to the repo</span></label></li>
+    <li class="check-item"><label style="display:flex;gap:.65rem;align-items:flex-start;width:100%;cursor:pointer;"><input type="checkbox" data-weight="1"><span><code class="inline">JWT_SECRET</code> and any other secrets are set as Vercel environment variables, generated with a real random source</span></label></li>
+    <li class="check-item"><label style="display:flex;gap:.65rem;align-items:flex-start;width:100%;cursor:pointer;"><input type="checkbox" data-weight="1"><span>Migrations have run against the production database and the schema matches what your code expects</span></label></li>
+    <li class="check-item"><label style="display:flex;gap:.65rem;align-items:flex-start;width:100%;cursor:pointer;"><input type="checkbox" data-weight="1"><span>Your custom domain is added in Vercel's Domains settings and DNS is pointed at it (A/CNAME or nameserver delegation)</span></label></li>
+    <li class="check-item"><label style="display:flex;gap:.65rem;align-items:flex-start;width:100%;cursor:pointer;"><input type="checkbox" data-weight="1"><span>HTTPS shows as active (not pending) for the custom domain</span></label></li>
+    <li class="check-item"><label style="display:flex;gap:.65rem;align-items:flex-start;width:100%;cursor:pointer;"><input type="checkbox" data-weight="1"><span>Any bootstrap/default admin password has been rotated after first login</span></label></li>
+  </ul>
+  <div class="score-bar-wrap">
+    <div class="score-bar"><i id="checklist-fill"></i></div>
+    <div class="score-readout"><span>Readiness</span><strong id="checklist-score">0 / 6</strong></div>
+  </div>
+  <div class="score-verdict" id="checklist-verdict">Check off items above to see your readiness score.</div>
+</div>
+
+<footer class="course-footer">
+  <p>You now have a working mental model of a real Go web application, end to end — from <code class="inline">go mod init</code> to a live domain with HTTPS. The best next step is the obvious one: build your own version, deploy it, and keep it running.</p>
+</footer>
+</div>
+<script>
+(function () {
+  "use strict";
+
+  /* =====================================================
+     Code lab engine — a JS twin of each Go exercise runs
+     via new Function() in the browser. This mirrors the
+     established lab pattern used elsewhere in this course
+     catalog, trimmed down for standalone, self-contained use.
+  ===================================================== */
+  function esc(s) {
+    return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+  function fmt(v) {
+    try { return JSON.stringify(v); } catch (e) { return String(v); }
+  }
+  function deepEq(a, b) {
+    try { return JSON.stringify(a) === JSON.stringify(b); } catch (e) { return a === b; }
+  }
+
+  function compile(code, exportName) {
+    var src = code + "\n;if (typeof " + exportName + " === 'undefined') " +
+      "throw new Error('Missing function: " + exportName + "');\nreturn " + exportName + ";";
+    // eslint-disable-next-line no-new-func
+    var factory = new Function(src);
+    return factory();
+  }
+
+  function runLab(root, def) {
+    var editor = root.querySelector(".lab-editor");
+    var tbody = root.querySelector(".lab-tests tbody");
+    var errEl = root.querySelector(".lab-error");
+    var summaryEl = root.querySelector(".lab-summary");
+
+    function render(results, compileError) {
+      errEl.textContent = compileError ? compileError : "";
+      tbody.innerHTML = "";
+      if (compileError) {
+        summaryEl.textContent = "Could not run — fix the error above";
+        summaryEl.className = "lab-summary fail";
+        return;
+      }
+      var passed = 0;
+      results.forEach(function (r, i) {
+        var tr = document.createElement("tr");
+        tr.innerHTML =
+          "<td>" + (i + 1) + "</td>" +
+          "<td>" + esc(r.label || "") + "</td>" +
+          "<td><code>" + esc(fmt(r.args)) + "</code></td>" +
+          "<td><code>" + esc(r.expectedStr) + "</code></td>" +
+          "<td><code>" + esc(r.actualStr) + "</code></td>" +
+          "<td class=\"" + (r.pass ? "lab-pass" : "lab-fail") + "\">" + (r.pass ? "PASS" : "FAIL") + "</td>";
+        tbody.appendChild(tr);
+        if (r.pass) passed++;
+      });
+      var allPass = passed === results.length;
+      summaryEl.textContent = passed + " / " + results.length + " tests passed";
+      summaryEl.className = "lab-summary " + (allPass ? "pass" : "fail");
+    }
+
+    // A test case is either { args, expected } — the function must return
+    // `expected` — or { args, throws } — the function must throw an Error
+    // whose message equals `throws`. Mirrors a Go function either returning
+    // a value or returning a non-nil error.
+    function runOne(fn, t) {
+      if (t.throws !== undefined) {
+        try {
+          var v = fn.apply(null, t.args);
+          return { label: t.label, args: t.args, expectedStr: "throws: " + t.throws, actualStr: "no error, returned " + fmt(v), pass: false };
+        } catch (e) {
+          var msg = e && e.message ? e.message : String(e);
+          return { label: t.label, args: t.args, expectedStr: "throws: " + t.throws, actualStr: "threw: " + msg, pass: msg === t.throws };
+        }
+      }
+      try {
+        var actual = fn.apply(null, t.args);
+        return { label: t.label, args: t.args, expectedStr: fmt(t.expected), actualStr: fmt(actual), pass: deepEq(actual, t.expected) };
+      } catch (e) {
+        return { label: t.label, args: t.args, expectedStr: fmt(t.expected), actualStr: "threw: " + (e && e.message ? e.message : String(e)), pass: false };
+      }
+    }
+
+    function runAll() {
+      var fn;
+      try {
+        fn = compile(editor.value, def.exportName);
+      } catch (e) {
+        render([], String(e && e.message ? e.message : e));
+        return;
+      }
+      render(def.tests.map(function (t) { return runOne(fn, t); }), null);
+    }
+
+    root.querySelector('[data-lab-act="run"]').addEventListener("click", runAll);
+    root.querySelector('[data-lab-act="reset"]').addEventListener("click", function () {
+      editor.value = def.code;
+      errEl.textContent = "";
+      tbody.innerHTML = "";
+      summaryEl.textContent = "";
+      summaryEl.className = "lab-summary";
+    });
+
+    editor.value = def.code;
+  }
+
+  function labHTML() {
+    return (
+      '<div class="lab-toolbar">' +
+      '<button type="button" class="btn" data-lab-act="run">Run tests</button>' +
+      '<button type="button" class="btn secondary small" data-lab-act="reset">Reset to starter code</button>' +
+      '<span class="lab-summary"></span>' +
+      "</div>" +
+      '<textarea class="lab-editor" spellcheck="false" aria-label="JavaScript twin editor"></textarea>' +
+      '<pre class="lab-error"></pre>' +
+      '<table class="lab-tests"><thead><tr><th>#</th><th>Case</th><th>Args</th><th>Expected</th><th>Actual</th><th>Result</th></tr></thead><tbody></tbody></table>'
+    );
+  }
+
+  var LABS = {
+    "struct-methods": {
+      exportName: "projectSummary",
+      code:
+        "// JS twin of Project.Summary() — complete the function below.\n" +
+        "function projectSummary(project) {\n" +
+        "  // project = { name, year, tags: [] }\n" +
+        "  // return \"Name (Year) — tag1, tag2\"\n" +
+        "  // TODO: implement this\n" +
+        "  return \"\";\n" +
+        "}",
+      tests: [
+        { label: "typical project", args: [{ name: "Portfolio Site", year: 2026, tags: ["go", "postgres"] }], expected: "Portfolio Site (2026) — go, postgres" },
+        { label: "single tag", args: [{ name: "CLI Tool", year: 2024, tags: ["go"] }], expected: "CLI Tool (2024) — go" },
+        { label: "no tags", args: [{ name: "Old Project", year: 2019, tags: [] }], expected: "Old Project (2019) — " },
+      ],
+    },
+    "slices": {
+      exportName: "featuredByYear",
+      code:
+        "// JS twin of FeaturedByYear() — complete the function below.\n" +
+        "function featuredByYear(projects) {\n" +
+        "  // projects = [{ name, year, featured }]\n" +
+        "  // return only featured projects, sorted by year descending\n" +
+        "  // TODO: implement this\n" +
+        "  return [];\n" +
+        "}",
+      tests: [
+        {
+          label: "mixed featured flags",
+          args: [[
+            { name: "A", year: 2022, featured: true },
+            { name: "B", year: 2024, featured: false },
+            { name: "C", year: 2023, featured: true },
+            { name: "D", year: 2026, featured: true },
+          ]],
+          expected: [
+            { name: "D", year: 2026, featured: true },
+            { name: "C", year: 2023, featured: true },
+            { name: "A", year: 2022, featured: true },
+          ],
+        },
+        { label: "none featured", args: [[{ name: "X", year: 2020, featured: false }]], expected: [] },
+      ],
+    },
+    "errors": {
+      exportName: "validateContact",
+      code:
+        "// JS twin of ValidateContact() — complete the function below.\n" +
+        "// Return null when valid, or a string describing the FIRST problem found.\n" +
+        "// Check order: name, then email, then message length (>= 10 chars).\n" +
+        "function validateContact(name, email, message) {\n" +
+        "  // TODO: implement this\n" +
+        "  return null;\n" +
+        "}",
+      tests: [
+        { label: "valid input", args: ["Ava", "ava@example.com", "Hello, I would like to talk about a project."], expected: null },
+        { label: "empty name", args: ["", "ava@example.com", "Hello, I would like to talk."], expected: "name is required" },
+        { label: "missing @ in email", args: ["Ava", "ava-example.com", "Hello, I would like to talk."], expected: 'invalid email: "ava-example.com"' },
+        { label: "message too short", args: ["Ava", "ava@example.com", "hi"], expected: "message is too short" },
+        { label: "name checked before email", args: ["  ", "not-an-email", "short"], expected: "name is required" },
+      ],
+    },
+    "handler-shape": {
+      exportName: "handleCourseRequest",
+      code:
+        "// JS twin of the CourseDetail handler — complete the function below.\n" +
+        "// req = { slug: \"...\" }\n" +
+        "// Return { status: 400, body: \"missing slug\" } if slug is empty,\n" +
+        "// otherwise { status: 200, body: \"course: \" + slug }.\n" +
+        "function handleCourseRequest(req) {\n" +
+        "  // TODO: implement this\n" +
+        "  return { status: 500, body: \"\" };\n" +
+        "}",
+      tests: [
+        { label: "valid slug", args: [{ slug: "go-portfolio-from-scratch" }], expected: { status: 200, body: "course: go-portfolio-from-scratch" } },
+        { label: "empty slug", args: [{ slug: "" }], expected: { status: 400, body: "missing slug" } },
+      ],
+    },
+    "repo-scan": {
+      exportName: "scanProfile",
+      code:
+        "// JS twin of ProfileRepo.Get() — complete the function below.\n" +
+        "// row = [name, title, bio] or null (no row found).\n" +
+        "// Return { name, title, bio } on success.\n" +
+        "// Throw new Error(\"get profile: no rows\") when row is null.\n" +
+        "function scanProfile(row) {\n" +
+        "  // TODO: implement this\n" +
+        "  return null;\n" +
+        "}",
+      tests: [
+        { label: "row found", args: [["Ava", "Software Engineer", "Builds things with Go."]], expected: { name: "Ava", title: "Software Engineer", bio: "Builds things with Go." } },
+        { label: "no row", args: [null], throws: "get profile: no rows" },
+      ],
+    },
+  };
+
+  document.querySelectorAll(".code-lab").forEach(function (root) {
+    var id = root.getAttribute("data-lab");
+    var def = LABS[id];
+    if (!def) return;
+    root.innerHTML = labHTML();
+    runLab(root, def);
+  });
+
+  /* =====================================================
+     Exercise 5 — real vanilla JS copy-email button
+  ===================================================== */
+  var copyBtn = document.getElementById("copy-email-demo");
+  var copyStatus = document.getElementById("copy-email-status");
+  if (copyBtn) {
+    copyBtn.addEventListener("click", function () {
+      var email = copyBtn.dataset.email;
+      var done = function () {
+        var original = copyBtn.textContent;
+        copyBtn.textContent = "Copied!";
+        if (copyStatus) copyStatus.textContent = "Copied " + email + " to your clipboard.";
+        setTimeout(function () { copyBtn.textContent = original; }, 1800);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(email).then(done, function () {
+          if (copyStatus) copyStatus.textContent = email + " (copy not permitted in this context — select and copy manually)";
+        });
+      } else {
+        if (copyStatus) copyStatus.textContent = email + " (clipboard API unavailable here — select and copy manually)";
+      }
+    });
+  }
+
+  /* =====================================================
+     Exercise 7 — spot the exposed secret
+  ===================================================== */
+  var secretAnswers = {
+    fine: {
+      title: "Not fine",
+      body:
+        '<p class="con">The fact that only your server sees this file at runtime does not make it safe. Anyone with read access to the git repository — including its full history, forever, even after a later commit "removes" it — has this database password.</p>' +
+        "<p>A pull request review, a public fork, a CI log that echoes the file, or a leaked laptop with the repo cloned are all real ways this reaches someone it shouldn't.</p>",
+    },
+    rename: {
+      title: "Doesn't fix the problem",
+      body:
+        '<p class="con">Renaming the variable changes nothing about what\'s exposed — the literal connection string, password included, is still sitting in the source file and in git history.</p>' +
+        "<p>The fix has to remove the secret from the code entirely, not just make it look tidier.</p>",
+    },
+    env: {
+      title: "Correct",
+      body:
+        '<p class="pro">Read it from an environment variable at runtime instead, and set the real value only in Vercel\'s dashboard — never in a file that gets committed:</p>' +
+        '<pre class="code"><code>func connectDB() (*sql.DB, error) {\n    return sql.Open("pgx", os.Getenv("DATABASE_URL"))\n}</code></pre>' +
+        "<p>If this password was ever actually committed, the fix also includes rotating it in Supabase — removing it from a future commit doesn't undo its exposure in history.</p>",
+    },
+  };
+  (function () {
+    var row = document.getElementById("secret-choices");
+    if (!row) return;
+    var reveal = document.getElementById("secret-reveal");
+    var title = document.getElementById("secret-reveal-title");
+    var body = document.getElementById("secret-reveal-body");
+    row.querySelectorAll(".choice-btn").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        row.querySelectorAll(".choice-btn").forEach(function (b) {
+          b.classList.remove("selected", "correct", "wrong");
+        });
+        var key = btn.getAttribute("data-choice");
+        var ans = secretAnswers[key];
+        btn.classList.add("selected", key === "env" ? "correct" : "wrong");
+        title.textContent = ans.title;
+        body.innerHTML = ans.body;
+        reveal.classList.add("show");
+      });
+    });
+  })();
+
+  /* =====================================================
+     Exercise 8 — DNS record type quiz
+  ===================================================== */
+  (function () {
+    var checkBtn = document.getElementById("dns-check");
+    if (!checkBtn) return;
+    var resetBtn = document.getElementById("dns-reset");
+    var reveal = document.getElementById("dns-reveal");
+    var revealBody = document.getElementById("dns-reveal-body");
+    var rows = document.querySelectorAll("#dns-rows .match-row");
+
+    checkBtn.addEventListener("click", function () {
+      var correct = 0;
+      rows.forEach(function (row) {
+        var select = row.querySelector("select");
+        var fb = row.querySelector(".match-fb");
+        var answer = row.getAttribute("data-answer");
+        if (!select.value) {
+          fb.textContent = "";
+          fb.className = "match-fb";
+          return;
+        }
+        if (select.value === answer) {
+          fb.textContent = "✓";
+          fb.className = "match-fb correct";
+          correct++;
+        } else {
+          fb.textContent = "✗";
+          fb.className = "match-fb wrong";
+        }
+      });
+      reveal.classList.add("show");
+      revealBody.innerHTML = "<p>" + correct + " / " + rows.length + " correct.</p>";
+    });
+    resetBtn.addEventListener("click", function () {
+      rows.forEach(function (row) {
+        row.querySelector("select").value = "";
+        var fb = row.querySelector(".match-fb");
+        fb.textContent = "";
+        fb.className = "match-fb";
+      });
+      reveal.classList.remove("show");
+    });
+  })();
+
+  /* =====================================================
+     Exercise 9 — deployment checklist scorer
+  ===================================================== */
+  (function () {
+    var list = document.getElementById("checklist-items");
+    if (!list) return;
+    var fill = document.getElementById("checklist-fill");
+    var scoreEl = document.getElementById("checklist-score");
+    var verdict = document.getElementById("checklist-verdict");
+    var boxes = list.querySelectorAll('input[type="checkbox"]');
+
+    function verdictFor(pct) {
+      if (pct === 100) return "Ready to ship — every box checked.";
+      if (pct >= 66) return "Close. Finish the remaining items before you call this deployed.";
+      if (pct >= 33) return "Partway there — a few important steps are still open.";
+      return "Not deployment-ready yet — work through the list above.";
+    }
+
+    function update() {
+      var checked = 0;
+      boxes.forEach(function (b) { if (b.checked) checked++; });
+      var pct = Math.round((checked / boxes.length) * 100);
+      fill.style.width = pct + "%";
+      scoreEl.textContent = checked + " / " + boxes.length;
+      verdict.textContent = verdictFor(pct);
+    }
+    boxes.forEach(function (b) { b.addEventListener("change", update); });
+    update();
+  })();
+})();
+</script>
+</body>
+</html>

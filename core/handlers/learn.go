@@ -38,10 +38,17 @@ func (a *App) CourseLearn(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	raw, found := content.Get(course.ContentKey)
-	if !found {
-		a.serverError(w, "load course content", fmt.Errorf("no content registered for key %q", course.ContentKey))
-		return
+	// An admin-uploaded HTML file (stored directly in the database) takes
+	// priority over a compiled-in content_key — it's how a new course's
+	// content gets added without a code deploy.
+	raw := course.ContentHTML
+	if raw == "" {
+		var found bool
+		raw, found = content.Get(course.ContentKey)
+		if !found {
+			a.serverError(w, "load course content", fmt.Errorf("no content registered for key %q", course.ContentKey))
+			return
+		}
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")

@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"io"
 	"log"
 	"net/http"
 	"strconv"
@@ -174,9 +175,11 @@ func (a *App) AdminCourseEditPage(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+const maxCourseUploadBytes = 8 << 20 // 8MB — comfortably covers even the largest course content file
+
 func (a *App) AdminCourseSave(w http.ResponseWriter, r *http.Request) {
-	if err := r.ParseForm(); err != nil {
-		http.Error(w, "invalid form", http.StatusBadRequest)
+	if err := r.ParseMultipartForm(maxCourseUploadBytes); err != nil {
+		http.Error(w, "invalid form (file may be too large)", http.StatusBadRequest)
 		return
 	}
 
@@ -192,20 +195,26 @@ func (a *App) AdminCourseSave(w http.ResponseWriter, r *http.Request) {
 
 	price, _ := strconv.Atoi(r.FormValue("price_cents"))
 	sortOrder, _ := strconv.Atoi(r.FormValue("sort_order"))
+	minPriceCents, _ := strconv.Atoi(r.FormValue("min_price_cents"))
+	minPriceCentsINR, _ := strconv.Atoi(r.FormValue("min_price_cents_inr"))
+	isPaid := r.FormValue("is_paid") == "on"
 
 	course := models.Course{
-		ID:          id,
-		Slug:        slugify(r.FormValue("slug")),
-		Title:       strings.TrimSpace(r.FormValue("title")),
-		Summary:     strings.TrimSpace(r.FormValue("summary")),
-		Description: strings.TrimSpace(r.FormValue("description")),
-		Level:       strings.TrimSpace(r.FormValue("level")),
-		Duration:    strings.TrimSpace(r.FormValue("duration")),
-		PriceCents:  price,
-		Currency:    orDefault(r.FormValue("currency"), "USD"),
-		ImageURL:    strings.TrimSpace(r.FormValue("image_url")),
-		IsPublished: r.FormValue("is_published") == "on",
-		SortOrder:   sortOrder,
+		ID:               id,
+		Slug:             slugify(r.FormValue("slug")),
+		Title:            strings.TrimSpace(r.FormValue("title")),
+		Summary:          strings.TrimSpace(r.FormValue("summary")),
+		Description:      strings.TrimSpace(r.FormValue("description")),
+		Level:            strings.TrimSpace(r.FormValue("level")),
+		Duration:         strings.TrimSpace(r.FormValue("duration")),
+		PriceCents:       price,
+		Currency:         orDefault(r.FormValue("currency"), "USD"),
+		ImageURL:         strings.TrimSpace(r.FormValue("image_url")),
+		IsPublished:      r.FormValue("is_published") == "on",
+		SortOrder:        sortOrder,
+		IsPaid:           isPaid,
+		MinPriceCents:    minPriceCents,
+		MinPriceCentsINR: minPriceCentsINR,
 	}
 	if course.Slug == "" {
 		course.Slug = slugify(course.Title)
@@ -221,10 +230,35 @@ func (a *App) AdminCourseSave(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// An uploaded content file, if present, is how a course's full
+	// interactive HTML gets added without a code deploy — read it now so
+	// a brand-new course can be created with its content in one save.
+	var uploadedHTML string
+	if file, header, ferr := r.FormFile("content_file"); ferr == nil {
+		defer file.Close()
+		if !strings.HasSuffix(strings.ToLower(header.Filename), ".html") && !strings.HasSuffix(strings.ToLower(header.Filename), ".htm") {
+			formData := AdminCourseFormData{
+				BaseData: a.base(r, "Course — Admin", "", "admin"),
+				Course:   course,
+				IsNew:    id == 0,
+				Error:    "Course content must be an .html file.",
+			}
+			a.View.Render(w, http.StatusUnprocessableEntity, "admin_course_form", formData)
+			return
+		}
+		b, rerr := io.ReadAll(io.LimitReader(file, maxCourseUploadBytes))
+		if rerr != nil {
+			a.serverError(w, "read uploaded course content", rerr)
+			return
+		}
+		uploadedHTML = string(b)
+		course.ContentHTML = uploadedHTML
+	}
+
 	ctx := r.Context()
 	var err error
 	if id == 0 {
-		_, err = a.Courses.Create(ctx, course)
+		id, err = a.Courses.Create(ctx, course)
 	} else {
 		err = a.Courses.Update(ctx, course)
 	}
@@ -238,6 +272,12 @@ func (a *App) AdminCourseSave(w http.ResponseWriter, r *http.Request) {
 		}
 		a.View.Render(w, http.StatusUnprocessableEntity, "admin_course_form", formData)
 		return
+	}
+	if uploadedHTML != "" {
+		if err := a.Courses.UpdateContentHTML(ctx, id, uploadedHTML); err != nil {
+			a.serverError(w, "save uploaded course content", err)
+			return
+		}
 	}
 
 	http.Redirect(w, r, "/admin/courses", http.StatusSeeOther)

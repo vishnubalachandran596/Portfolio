@@ -1,0 +1,31 @@
+{{define "content"}}
+<section class="section page-hero">
+  <div class="container">
+    <p class="eyebrow">Articles</p>
+    <h1>Worth reading</h1>
+    <p class="hero-subtitle">A short take on pieces worth your time — architecture, AI, and engineering careers — each one linked back to its original source.</p>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    {{if .Articles}}
+    <div class="article-grid">
+      {{range .Articles}}
+      <a class="article-card" href="{{.SourceURL}}" target="_blank" rel="noopener noreferrer">
+        <div class="article-card-body">
+          <h3>{{.Title}}</h3>
+          <p>{{.Summary}}</p>
+        </div>
+        <div class="article-card-meta">
+          <span>{{if .SourceName}}{{.SourceName}}{{else}}Read the original{{end}} ↗</span>
+        </div>
+      </a>
+      {{end}}
+    </div>
+    {{else}}
+    <p class="empty-state">No articles yet — check back soon.</p>
+    {{end}}
+  </div>
+</section>
+{{end}}

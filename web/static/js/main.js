@@ -1,6 +1,31 @@
 (function () {
   "use strict";
 
+  // --- First-visit splash (once per tab) -------------------------------
+  var splash = document.getElementById("splash-loader");
+  if (splash) {
+    var seen = false;
+    try {
+      seen = sessionStorage.getItem("splash-seen") === "1";
+    } catch (e) {}
+    if (seen) {
+      splash.classList.add("hide");
+    } else {
+      try {
+        sessionStorage.setItem("splash-seen", "1");
+      } catch (e) {}
+      window.addEventListener("load", function () {
+        setTimeout(function () {
+          splash.classList.add("hide");
+        }, 450);
+      });
+      // Never block the page for more than a moment even if load is slow.
+      setTimeout(function () {
+        splash.classList.add("hide");
+      }, 2200);
+    }
+  }
+
   // --- Side panel (the "three bars" menu) -----------------------------
   var navToggle = document.getElementById("nav-toggle");
   var sidePanel = document.getElementById("side-panel");

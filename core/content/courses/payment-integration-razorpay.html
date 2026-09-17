@@ -1,0 +1,1290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Integrating Payments, Courses &amp; Bookings Into Your Portfolio (Razorpay)</title>
+<meta name="description" content="A working developer's course on adding real monetization to a portfolio site with Razorpay: the Orders API, Checkout.js, server-side HMAC signature verification, selling paid courses, selling paid bookings without double-booking, regional pricing, and checkout UX that doesn't feel amateur."/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap');
+
+:root{
+  --bg:#F8FAFC; --fg:#0F172A; --card:#FFFFFF; --border:#E2E8F0; --muted:#475569;
+  --primary:#F59E0B; --primary-fg:#0F172A; --accent:#8B5CF6; --accent-fg:#ffffff;
+  --good:#16A34A; --bad:#DC2626;
+  --radius:12px;
+  --mono:ui-monospace, "SF Mono", "Cascadia Code", "IBM Plex Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#0F172A; --fg:#F8FAFC; --card:#222735; --border:#334155; --muted:#94A3B8;
+    --primary:#F59E0B; --primary-fg:#0F172A; --accent:#8B5CF6; --accent-fg:#ffffff;
+    --good:#4ADE80; --bad:#F87171;
+  }
+}
+
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0; font-family:'IBM Plex Sans', system-ui, -apple-system, sans-serif;
+  background:var(--bg); color:var(--fg); line-height:1.65; -webkit-font-smoothing:antialiased;
+  font-size:16px;
+}
+a{color:var(--accent)}
+a:hover{text-decoration:none}
+.wrap{max-width:900px; margin:0 auto; padding:0 1.25rem 6rem}
+
+/* ---------- Hero ---------- */
+header.hero{padding:3.25rem 0 2.25rem; border-bottom:1px solid var(--border)}
+.kicker{
+  display:inline-block; text-transform:uppercase; letter-spacing:.09em; font-size:.72rem;
+  font-weight:600; color:var(--primary-fg); background:var(--primary); padding:.3rem .65rem;
+  border-radius:99px; margin-bottom:1rem;
+}
+h1{font-size:clamp(1.85rem,4.4vw,2.65rem); margin:0 0 .6rem; font-weight:700; letter-spacing:-0.01em; line-height:1.15}
+.subtitle{color:var(--muted); font-size:1.12rem; margin:0; max-width:62ch; font-weight:400}
+.hero-meta{display:flex; flex-wrap:wrap; gap:.5rem; margin-top:1.25rem}
+.tag{font-size:.78rem; color:var(--muted); border:1px solid var(--border); border-radius:99px; padding:.3rem .75rem}
+
+/* ---------- TOC ---------- */
+nav.toc{margin:2rem 0 0; padding:1.35rem 1.5rem; border:1px solid var(--border); border-radius:var(--radius); background:var(--card)}
+nav.toc h2{margin:0 0 .85rem; font-size:.82rem; text-transform:uppercase; letter-spacing:.07em; color:var(--muted); font-weight:600}
+nav.toc ol{margin:0; padding-left:1.15rem; columns:2; column-gap:1.5rem}
+nav.toc li{margin:.3rem 0; break-inside:avoid; font-size:.92rem}
+nav.toc a{color:var(--fg); text-decoration:none}
+nav.toc a:hover{color:var(--accent)}
+@media (max-width:600px){ nav.toc ol{columns:1} }
+
+/* ---------- Prereq callout ---------- */
+.callout{
+  border-left:3px solid var(--accent); background:var(--card); border:1px solid var(--border); border-left-width:3px;
+  border-radius:0 10px 10px 0; padding:1rem 1.25rem; margin:1.5rem 0; max-width:70ch;
+}
+.callout p:last-child{margin-bottom:0}
+.callout .callout-label{font-weight:700; font-size:.75rem; text-transform:uppercase; letter-spacing:.06em; color:var(--accent); margin-bottom:.4rem; display:block}
+.callout.warn{border-left-color:var(--primary)}
+.callout.warn .callout-label{color:var(--primary)}
+
+/* ---------- Sections ---------- */
+section.course-section{padding:2.75rem 0; border-bottom:1px solid var(--border)}
+section.course-section:last-of-type{border-bottom:none}
+.sec-kicker{text-transform:uppercase; letter-spacing:.08em; font-size:.74rem; color:var(--primary); font-weight:700; margin:0 0 .4rem}
+h2{font-size:1.55rem; margin:0 0 .75rem; font-weight:700; letter-spacing:-0.01em; scroll-margin-top:1.5rem}
+h3{font-size:1.15rem; margin:1.6rem 0 .6rem; font-weight:600}
+.lede{font-size:1.05rem; color:var(--muted); margin:0 0 1.25rem; max-width:68ch}
+p{margin:0 0 1rem; max-width:72ch}
+ul.list,ol.list{margin:0 0 1.1rem; padding-left:1.25rem; max-width:70ch}
+ul.list li,ol.list li{margin:.4rem 0}
+strong{color:var(--fg); font-weight:600}
+code.inline{font-family:var(--mono); font-size:.85em; background:var(--card); border:1px solid var(--border); border-radius:5px; padding:.05rem .35rem}
+
+pre.code{
+  background:var(--card); border:1px solid var(--border); border-radius:10px;
+  padding:1rem 1.15rem; overflow-x:auto; margin:1rem 0 1.25rem;
+}
+pre.code code{font-family:var(--mono); font-size:.82rem; line-height:1.55; color:var(--fg); white-space:pre}
+.code-label{font-size:.72rem; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); margin:0 0 .4rem; font-weight:600}
+
+/* concept cards */
+.concept-grid{display:grid; gap:.65rem; margin:1.25rem 0 1.5rem}
+details.concept-card{border:1px solid var(--border); border-radius:10px; background:var(--card); overflow:hidden}
+details.concept-card summary{
+  cursor:pointer; padding:.85rem 1.1rem; font-weight:600; list-style:none; display:flex;
+  align-items:center; justify-content:space-between; gap:.75rem; -webkit-tap-highlight-color:transparent;
+}
+details.concept-card summary::-webkit-details-marker{display:none}
+details.concept-card summary::after{content:'+'; color:var(--accent); font-size:1.2rem; font-weight:400; flex-shrink:0}
+details.concept-card[open] summary::after{content:'\2212'}
+details.concept-card summary:focus-visible{outline:3px solid var(--primary); outline-offset:-3px}
+details.concept-card .body{padding:0 1.1rem 1.1rem; color:var(--muted); font-size:.94rem}
+details.concept-card .body p{max-width:none}
+
+/* tables */
+table.tbl{width:100%; border-collapse:collapse; margin:1rem 0 1.4rem; font-size:.9rem}
+table.tbl th,table.tbl td{text-align:left; padding:.55rem .65rem; border-bottom:1px solid var(--border); vertical-align:top}
+table.tbl th{color:var(--muted); font-weight:600; font-size:.78rem; text-transform:uppercase; letter-spacing:.04em}
+
+/* ---------- Exercises ---------- */
+.exercise{
+  margin:1.75rem 0; border:1px solid var(--border); border-radius:14px; background:var(--card);
+  padding:1.5rem 1.5rem 1.6rem;
+}
+.exercise-label{
+  display:inline-flex; align-items:center; gap:.4rem; font-size:.72rem; font-weight:700;
+  text-transform:uppercase; letter-spacing:.07em; color:var(--accent-fg); background:var(--accent);
+  padding:.3rem .65rem; border-radius:99px; margin-bottom:.9rem;
+}
+.exercise h3{margin-top:0}
+.exercise .ex-prompt{color:var(--muted); font-size:.95rem; margin-bottom:1.1rem}
+
+.btn{
+  background:var(--accent); color:var(--accent-fg); border:none; padding:.6rem 1.15rem;
+  border-radius:8px; cursor:pointer; font-weight:600; font-size:.9rem; font-family:inherit;
+  transition:opacity .2s, transform .15s; display:inline-flex; align-items:center; gap:.4rem;
+}
+.btn:hover{opacity:.88}
+.btn:active{transform:scale(.98)}
+.btn:focus-visible{outline:3px solid var(--primary); outline-offset:2px}
+.btn.secondary{background:transparent; border:1px solid var(--border); color:var(--fg)}
+.btn.small{padding:.4rem .8rem; font-size:.8rem}
+.btn:disabled{opacity:.45; cursor:not-allowed}
+.btn-row{display:flex; flex-wrap:wrap; gap:.6rem; margin:.9rem 0}
+
+.choice-row{display:flex; flex-wrap:wrap; gap:.6rem; margin:.75rem 0 1.1rem}
+.choice-btn{
+  border:1.5px solid var(--border); background:var(--bg); color:var(--fg); padding:.65rem 1rem;
+  border-radius:10px; cursor:pointer; font-weight:600; font-size:.88rem; font-family:inherit;
+  transition:border-color .2s, background .2s;
+}
+.choice-btn:hover{border-color:var(--accent)}
+.choice-btn:focus-visible{outline:3px solid var(--primary); outline-offset:2px}
+.choice-btn.selected{border-color:var(--accent); background:var(--accent); color:var(--accent-fg)}
+
+.reveal{
+  display:none; margin-top:1rem; padding:1rem 1.15rem; border-radius:10px; border:1px solid var(--border);
+  background:var(--bg); font-size:.92rem;
+}
+.reveal.show{display:block}
+.reveal h4{margin:0 0 .5rem; font-size:.85rem; text-transform:uppercase; letter-spacing:.05em; color:var(--accent)}
+.reveal .pro{color:var(--good)}
+.reveal .con{color:var(--bad)}
+.reveal ul{margin:.35rem 0; padding-left:1.1rem}
+.reveal ul li{margin:.25rem 0}
+
+/* form fields (signature sim, amount floor) */
+.field{margin-bottom:.9rem}
+.field label{display:block; font-size:.78rem; font-weight:600; margin-bottom:.35rem; color:var(--muted); text-transform:uppercase; letter-spacing:.04em}
+.field input[type=text],.field input[type=number],.field select{
+  width:100%; padding:.6rem .75rem; border-radius:9px; border:1px solid var(--border);
+  background:var(--bg); color:var(--fg); font-family:var(--mono); font-size:.87rem;
+}
+.field select{font-family:inherit; cursor:pointer}
+.field input:focus-visible,.field select:focus-visible{outline:3px solid var(--primary); outline-offset:1px}
+.field-row{display:grid; grid-template-columns:1fr 1fr; gap:.9rem}
+@media (max-width:560px){ .field-row{grid-template-columns:1fr} }
+
+.mono-out{
+  font-family:var(--mono); font-size:.82rem; background:var(--bg); border:1px solid var(--border);
+  border-radius:8px; padding:.75rem .9rem; word-break:break-all; margin:.6rem 0;
+}
+.mono-out.match{border-color:var(--good); color:var(--good)}
+.mono-out.nomatch{border-color:var(--bad); color:var(--bad)}
+.mono-out .k{color:var(--muted); display:block; font-size:.72rem; text-transform:uppercase; letter-spacing:.04em; margin-bottom:.25rem}
+
+/* simulation log */
+.sim-log{
+  font-family:var(--mono); font-size:.8rem; background:var(--bg); border:1px solid var(--border);
+  border-radius:9px; padding:.85rem .95rem; max-height:280px; overflow-y:auto; line-height:1.65;
+}
+.sim-log .win{color:var(--good)}
+.sim-log .lose{color:var(--bad)}
+.sim-log .muted{color:var(--muted)}
+.sim-log div{white-space:pre-wrap}
+
+.tally{display:flex; flex-wrap:wrap; gap:1.5rem; margin:1rem 0; padding:1rem; border-radius:10px; background:var(--bg); border:1px solid var(--border)}
+.tally .stat{min-width:150px}
+.tally .stat .n{font-size:1.6rem; font-weight:700}
+.tally .stat .n.ok{color:var(--good)}
+.tally .stat .n.bad{color:var(--bad)}
+.tally .stat .l{font-size:.72rem; text-transform:uppercase; color:var(--muted); letter-spacing:.05em; margin-top:.1rem}
+
+/* checklist scorer */
+.check-list{list-style:none; margin:.75rem 0 1rem; padding:0; display:grid; gap:.5rem}
+.check-item{
+  display:flex; align-items:flex-start; gap:.65rem; padding:.65rem .8rem; border:1px solid var(--border);
+  border-radius:9px; background:var(--bg); cursor:pointer;
+}
+.check-item input{margin-top:.2rem; width:18px; height:18px; accent-color:var(--accent); cursor:pointer; flex-shrink:0}
+.check-item span{font-size:.9rem}
+.check-item:has(input:checked){border-color:var(--accent)}
+.score-bar-wrap{margin-top:1.1rem}
+.score-bar{height:10px; border-radius:99px; background:var(--border); overflow:hidden}
+.score-bar > i{display:block; height:100%; width:0%; background:var(--accent); transition:width .3s ease}
+.score-readout{display:flex; justify-content:space-between; margin-top:.5rem; font-size:.85rem; color:var(--muted)}
+.score-readout strong{color:var(--fg)}
+.score-verdict{margin-top:.85rem; padding:.85rem 1rem; border-radius:9px; background:var(--bg); border:1px solid var(--border); font-size:.9rem; min-height:1em}
+
+.hint{font-size:.82rem; color:var(--muted); margin-top:.4rem}
+
+/* footer */
+footer.course-footer{padding-top:2.5rem; color:var(--muted); font-size:.85rem}
+
+@media (max-width:640px){
+  .wrap{padding:0 1rem 4rem}
+  header.hero{padding:2.25rem 0 1.75rem}
+  section.course-section{padding:2rem 0}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <span class="kicker">Payments &amp; Monetization</span>
+  <h1>Integrating Payments, Courses &amp; Bookings Into Your Portfolio (Razorpay)</h1>
+  <p class="subtitle">Add real monetization to a site you've already built &mdash; selling paid content and taking paid bookings &mdash; using Razorpay's Orders API, Checkout.js, and the one server-side check that actually matters: verifying the payment signature before you grant anything.</p>
+  <div class="hero-meta">
+    <span class="tag">10 core sections</span>
+    <span class="tag">7 interactive exercises</span>
+    <span class="tag">Grounded in a real, shipped Razorpay integration</span>
+  </div>
+</header>
+
+<div class="callout">
+  <span class="callout-label">Before you start</span>
+  <p>This course assumes you already have a working backend to attach payments to. If you don't yet, the sibling course <strong>"Build Your Own Portfolio in Go: Beginner to Expert"</strong> is a helpful, entirely optional prerequisite &mdash; it gets you to a running Go server with routes, a database, and handlers, which is the shape every code example here plugs into.</p>
+  <p>That said, nothing about Razorpay is Go-specific. Everything in this course &mdash; the Orders API, the Checkout.js widget, the signature-verification formula, the double-booking fix, the regional pricing logic &mdash; applies identically to a Node/Express backend, a Python/Django or Flask backend, a PHP backend, or anything else that can make an outbound HTTPS request and run HMAC-SHA256. Go is used for the concrete code because it's this course's reference implementation, not because Razorpay requires it.</p>
+</div>
+
+<nav class="toc" aria-label="Table of contents">
+  <h2>On this page</h2>
+  <ol>
+    <li><a href="#what-is-razorpay">1. What Razorpay Actually Is</a></li>
+    <li><a href="#before-you-start">2. What You Actually Need Before You Start</a></li>
+    <li><a href="#two-sided-architecture">3. The Two-Sided Architecture</a></li>
+    <li><a href="#selling-a-course">4. Selling a Paid Course, End to End</a></li>
+    <li><a href="#selling-a-booking">5. Selling a Paid Booking, End to End</a></li>
+    <li><a href="#regional-pricing">6. Regional &amp; Pay-What-You-Want Pricing</a></li>
+    <li><a href="#failure-edge-cases">7. Handling Failure and Edge Cases</a></li>
+    <li><a href="#checkout-ux">8. Checkout UX That Doesn't Feel Amateur</a></li>
+    <li><a href="#ai-vs-manual">9. What AI Can Do vs. What You Must Do Manually</a></li>
+    <li><a href="#going-live">10. Going Live: A Checklist</a></li>
+  </ol>
+</nav>
+
+<!-- =========================================================
+     SECTION 1
+========================================================== -->
+<section class="course-section" id="what-is-razorpay">
+  <p class="sec-kicker">Section 1</p>
+  <h2>What Razorpay Actually Is</h2>
+  <p class="lede">Razorpay is an Indian payment gateway and payments aggregator: one account, one API, and one checkout widget that let you accept cards, UPI, netbanking, and wallets without building a separate integration for each.</p>
+
+  <p>Payment preferences vary by buyer. Some people pay by card. In India, a large share pay by UPI. Others use their bank's netbanking portal, or a stored wallet balance. Razorpay's value is consolidating all of that behind a single REST API and a single drop-in widget, so you write one integration instead of four.</p>
+
+  <p>For a backend, that integration has two moving parts:</p>
+  <ul class="list">
+    <li>A REST-style <strong>Orders API</strong>, which your server calls to create an order (amount, currency, a receipt id) before any payment happens.</li>
+    <li><strong>Checkout.js</strong>, a drop-in hosted widget that opens in the browser, shows the available payment methods, and collects the actual card/UPI/netbanking details itself &mdash; directly with Razorpay, not with your frontend.</li>
+  </ul>
+
+  <p>That second point is the one worth sitting with. Because the customer types their card number into Razorpay's hosted widget rather than an input your application controls, your frontend and your backend never receive, transmit, or store raw card data. That materially reduces your <strong>PCI DSS</strong> scope &mdash; PCI DSS is the security standard that applies to any system storing, processing, or transmitting cardholder data. When Razorpay's widget owns that surface, your own infrastructure has far less sensitive data to protect, audit, and worry about losing. You still need sound general security practices (this whole course is largely about one of them), but you avoid the much heavier burden of building and certifying a system that directly handles card numbers.</p>
+
+  <p>Razorpay is a particularly good fit if your buyers are largely India-based: UPI is a first-class, dominant payment method there, and settlement happens in INR, which keeps your accounting simple. Cards, netbanking, and wallets remain available behind the same integration for everyone else, so you're not maintaining separate payment stacks for different buyer segments.</p>
+
+  <p>Finally, and this matters more than it sounds: Razorpay ships a full <strong>test mode</strong>. It publishes test card numbers and supports simulated UPI flows, so you can build the entire integration &mdash; order creation, the widget, signature verification, your access-granting logic &mdash; and exercise every success and failure path, without ever moving real money. You should not write a line of the code in this course against live keys. Build and break it in test mode first.</p>
+
+  <p>For a solo developer or small business adding monetization to an existing site, that combination &mdash; broad India-relevant payment method coverage, a hosted widget that keeps you out of card-data handling, and a test mode that lets you validate the whole flow safely &mdash; is what makes Razorpay a reasonable default choice rather than a large infrastructure project.</p>
+</section>
+
+<!-- =========================================================
+     SECTION 2
+========================================================== -->
+<section class="course-section" id="before-you-start">
+  <p class="sec-kicker">Section 2</p>
+  <h2>What You Actually Need Before You Start</h2>
+  <p class="lede">A few of the steps here are manual, human-only, and outside what any AI assistant can do for you. Get these straight before you write a single handler.</p>
+
+  <p>Creating a Razorpay account is free and takes a few minutes through their dashboard. You do not need a live business, a completed KYC review, or a production deployment to start &mdash; you can begin building immediately in test mode.</p>
+
+  <p><strong>Test mode works with zero verification.</strong> Accepting <strong>live</strong> payments is different: it requires completing business KYC through the Razorpay dashboard &mdash; PAN details, bank account information, and proof of the business &mdash; followed by a manual human review on Razorpay's side. This review happens on their timeline, not yours, and nothing about writing better code speeds it up. Plan to build and fully verify your integration in test mode while a live-account application is pending, so the review isn't blocking your development.</p>
+
+  <p>Once you have an account, your API credentials live in the dashboard under <strong>Settings &rsaquo; API Keys</strong>. Each mode (test and live) gives you two values:</p>
+  <ul class="list">
+    <li>A <strong>Key ID</strong> &mdash; identifies your account to Checkout.js. It's not a secret; Checkout.js needs it client-side to open the widget.</li>
+    <li>A <strong>Key Secret</strong> &mdash; authorizes privileged server-side calls (creating orders, verifying signatures). This one must never reach a browser.</li>
+  </ul>
+
+  <p>Test keys are prefixed <code class="inline">rzp_test_</code>, live keys <code class="inline">rzp_live_</code>. Check the prefix before you use a credential anywhere. Razorpay keeps test and live orders, payments, and data completely separate &mdash; a test order can't be paid with a real card, and a live order can't be completed with a test one. Mixing the two up is a configuration mistake you'll catch immediately, not a subtle bug.</p>
+
+  <div class="callout warn">
+    <span class="callout-label">Non-negotiable</span>
+    <p>The Key Secret lives only in a server-side environment variable. Never commit it to git (including a "private" repo), never place it in a frontend JS bundle, never log it, never paste it into a support ticket or an error message. If it leaks, an attacker can forge valid-looking HMAC signatures for fake payments &mdash; the exact check that's supposed to be your security boundary &mdash; or call the Orders/Payments API directly under your account. Treat a leaked Key Secret as a compromised production credential: rotate it immediately from the dashboard and audit recent orders for anything you didn't create.</p>
+  </div>
+</section>
+
+<!-- =========================================================
+     SECTION 3
+========================================================== -->
+<section class="course-section" id="two-sided-architecture">
+  <p class="sec-kicker">Section 3</p>
+  <h2>The Two-Sided Architecture of Every Razorpay Integration</h2>
+  <p class="lede">Every Razorpay integration has a trusted side and an untrusted side. The server owns secrets and decides whether money is actually owed. The browser only starts the payment and relays what Razorpay's widget tells it. Confusing the two is where every real vulnerability in this space comes from.</p>
+
+  <p>The flow has four steps, and the order matters:</p>
+
+  <p><strong>(a) Your server creates an Order.</strong> Before any payment happens, your backend calls Razorpay's Orders API with an amount (in the smallest currency unit &mdash; paise for INR, cents for USD), a currency, and a receipt id. Razorpay returns an order id. This order is a record of intent, not a charge &mdash; no money has moved yet.</p>
+
+  <p><strong>(b) The browser opens Checkout.js with that order id.</strong> The widget itself &mdash; not your JavaScript, not your server &mdash; collects the card/UPI/netbanking details, directly with Razorpay. Your code never sees or touches actual payment credentials at any point.</p>
+
+  <p><strong>(c) On success, the widget calls your JS success handler</strong> with three values: a payment id, the order id, and a <strong>signature</strong>. This is a claim made by code running in the buyer's browser. It is not proof of anything by itself.</p>
+
+  <p><strong>(d) The critical, non-negotiable step: your server recomputes the signature itself.</strong> Using the formula Razorpay documents &mdash; <code class="inline">hex(HMAC-SHA256(key_secret, order_id + "|" + payment_id))</code> &mdash; your backend independently computes what the signature <em>should</em> be, using your Key Secret, and compares it to what the client sent. Only if they match do you grant course access or confirm a booking.</p>
+
+  <p>Skipping step (d) and trusting the client-side "success" callback alone is a real, exploitable vulnerability &mdash; not a theoretical one. Here is exactly how it gets exploited: an attacker opens their browser's dev tools, inspects your page's JavaScript, and finds the request your success handler fires after "payment success" &mdash; something like a POST to <code class="inline">/api/checkout/verify</code> or whatever grants access. They then issue that exact same HTTP request directly, by hand, with a made-up or replayed <code class="inline">order_id</code>, <code class="inline">payment_id</code>, and <code class="inline">signature</code>. If your server trusts those fields without recomputing the signature, it grants access &mdash; and the attacker has never completed a payment, never entered a card number, never interacted with Razorpay at all. Nothing in that forged request proves Razorpay received money, that the amount matches the order, or that the payment belongs to the claimed order. The server simply accepted a browser's unverified assertion.</p>
+
+  <p>JavaScript running in someone's browser is fully within that person's control. They can read it, edit it, disable it, replay it, or skip it entirely and talk to your endpoints directly with <code class="inline">curl</code>. It can never be trusted to gate anything of value. Server-side signature verification isn't an optional hardening step you add later &mdash; it <em>is</em> the authorization boundary between "a browser said a payment happened" and "a payment actually happened." Everything else in this course builds on that one idea.</p>
+
+  <h3>The Razorpay client, in full</h3>
+  <p class="code-label">payments/razorpay.go</p>
+  <pre class="code"><code>package payments
+
+import (
+    "bytes"
+    "crypto/hmac"
+    "crypto/sha256"
+    "encoding/hex"
+    "encoding/json"
+    "fmt"
+    "net/http"
+)
+
+type Razorpay struct {
+    KeyID     string
+    KeySecret string
+    client    *http.Client
+}
+
+// CreateOrder asks Razorpay for a new order and returns its order ID.
+// amountCents is in the smallest currency unit (paise for INR, cents
+// for USD) — Razorpay never accepts a decimal amount.
+func (r *Razorpay) CreateOrder(amountCents int, currency, receipt string) (string, error) {
+    body, _ := json.Marshal(map[string]any{
+        "amount":   amountCents,
+        "currency": currency,
+        "receipt":  receipt,
+    })
+    req, _ := http.NewRequest(http.MethodPost,
+        "https://api.razorpay.com/v1/orders", bytes.NewReader(body))
+    req.SetBasicAuth(r.KeyID, r.KeySecret)
+    req.Header.Set("Content-Type", "application/json")
+
+    resp, err := r.client.Do(req)
+    if err != nil {
+        return "", fmt.Errorf("razorpay create order: %w", err)
+    }
+    defer resp.Body.Close()
+
+    var parsed struct {
+        ID    string `json:"id"`
+        Error *struct{ Description string } `json:"error"`
+    }
+    json.NewDecoder(resp.Body).Decode(&parsed)
+    if parsed.Error != nil {
+        return "", fmt.Errorf("razorpay: %s", parsed.Error.Description)
+    }
+    return parsed.ID, nil
+}
+
+// VerifySignature checks the HMAC-SHA256 signature Checkout.js returns
+// after a successful payment, per Razorpay's documented formula:
+//   hex(HMAC-SHA256(key_secret, order_id + "|" + payment_id)) == signature
+// This is the step that actually proves a payment happened — never
+// grant anything based on a client-side "success" callback alone.
+func (r *Razorpay) VerifySignature(orderID, paymentID, signature string) bool {
+    mac := hmac.New(sha256.New, []byte(r.KeySecret))
+    mac.Write([]byte(orderID + "|" + paymentID))
+    expected := hex.EncodeToString(mac.Sum(nil))
+    return hmac.Equal([]byte(expected), []byte(signature))
+}</code></pre>
+
+  <!-- ================= EXERCISE 1 ================= -->
+  <div class="exercise" id="ex-signature-sim">
+    <span class="exercise-label">Exercise 1 &middot; Hands-on</span>
+    <h3>Signature Verification Simulator</h3>
+    <p class="ex-prompt">This runs the real algorithm &mdash; HMAC-SHA256 over <code class="inline">order_id|payment_id</code>, keyed by the secret, hex-encoded &mdash; using your browser's built-in <code class="inline">crypto.subtle</code> API. It is mechanically identical to what <code class="inline">hmac.New(sha256.New, secret)</code> computes in Go. Compute the correct signature, then try submitting the real one versus a forged one.</p>
+
+    <div class="field-row">
+      <div class="field">
+        <label for="sig-secret">Key secret (demo value)</label>
+        <input type="text" id="sig-secret" value="YOUR_KEY_SECRET_demo"/>
+      </div>
+      <div class="field">
+        <label for="sig-order">order_id</label>
+        <input type="text" id="sig-order" value="order_DemoABC123"/>
+      </div>
+    </div>
+    <div class="field">
+      <label for="sig-payment">payment_id</label>
+      <input type="text" id="sig-payment" value="pay_DemoXYZ789"/>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn" id="sig-compute">Compute the correct signature</button>
+    </div>
+    <div id="sig-expected-out"></div>
+
+    <div class="field" style="margin-top:1rem">
+      <label for="sig-submitted">Signature submitted by the "client"</label>
+      <input type="text" id="sig-submitted" placeholder="paste or type a signature to test"/>
+    </div>
+    <div class="btn-row">
+      <button class="btn secondary small" id="sig-fill-correct">Fill with the correct signature</button>
+      <button class="btn secondary small" id="sig-fill-forged">Fill with a forged signature</button>
+      <button class="btn" id="sig-verify">Verify (server-side check)</button>
+    </div>
+    <div id="sig-verify-out"></div>
+    <p class="hint">In real Go code, the comparison is <code class="inline">hmac.Equal(expected, submitted)</code> &mdash; not <code class="inline">==</code>. See Section 4 for why that distinction matters.</p>
+  </div>
+
+  <!-- ================= EXERCISE 2 ================= -->
+  <div class="exercise" id="ex-spot-vuln">
+    <span class="exercise-label">Exercise 2 &middot; Code review</span>
+    <h3>Spot the Vulnerability</h3>
+    <p class="ex-prompt">Four short snippets, each with a real flaw covered somewhere in this course. Read each one, form a guess, then reveal the explanation.</p>
+
+    <div class="concept-grid">
+      <details class="concept-card">
+        <summary>Snippet 1 &mdash; the success handler</summary>
+        <div class="body">
+          <pre class="code"><code>handler: function (response) {
+  // Razorpay says it worked — unlock the course.
+  document.cookie = "course_access=granted; path=/";
+  window.location.href = "/courses/foo/learn";
+}</code></pre>
+          <button class="btn small reveal-btn" data-target="reveal-1">Reveal the flaw &amp; fix</button>
+          <div class="reveal" id="reveal-1">
+            <h4>The flaw</h4>
+            <p class="con">Access is granted entirely in the browser, based on the client-side success callback. Nothing server-side ever confirms a payment happened. Anyone can set that cookie or call the redirect directly &mdash; without Checkout.js, without Razorpay, without paying.</p>
+            <h4>The fix</h4>
+            <p class="pro">The handler should only <em>forward</em> the payment id, order id, and signature to a server endpoint. That endpoint recomputes the HMAC signature itself and only then sets an HttpOnly access cookie or marks a purchase paid. See Section 3(d) and Section 4.</p>
+          </div>
+        </div>
+      </details>
+
+      <details class="concept-card">
+        <summary>Snippet 2 &mdash; the checkout page's script tag</summary>
+        <div class="body">
+          <pre class="code"><code>&lt;script&gt;
+  const RAZORPAY_KEY_SECRET = "abcd1234efgh5678";
+  // ...used later to "double check" the signature client-side
+&lt;/script&gt;</code></pre>
+          <button class="btn small reveal-btn" data-target="reveal-2">Reveal the flaw &amp; fix</button>
+          <div class="reveal" id="reveal-2">
+            <h4>The flaw</h4>
+            <p class="con">The Key Secret is embedded in frontend JavaScript, which means it's shipped to every visitor's browser and visible in "view source." Anyone can read it and use it to forge signatures against your own Razorpay account, or call the Orders API as you. This defeats the entire signature-verification scheme.</p>
+            <h4>The fix</h4>
+            <p class="pro">The Key Secret never leaves the server. Client-side code only ever needs the Key ID (safe to expose) to open the Checkout.js widget. Signature verification happens exclusively in a server-side handler. See Section 2.</p>
+          </div>
+        </div>
+      </details>
+
+      <details class="concept-card">
+        <summary>Snippet 3 &mdash; the verify handler's comparison</summary>
+        <div class="body">
+          <pre class="code"><code>expected := hex.EncodeToString(mac.Sum(nil))
+if expected == submittedSignature {
+    grantAccess()
+}</code></pre>
+          <button class="btn small reveal-btn" data-target="reveal-3">Reveal the flaw &amp; fix</button>
+          <div class="reveal" id="reveal-3">
+            <h4>The flaw</h4>
+            <p class="con">Go's <code class="inline">==</code> on strings compares byte-by-byte and returns as soon as it finds a mismatch. That means how long the comparison takes can depend on how many leading bytes were correct &mdash; a timing side-channel. Given enough network requests and careful measurement, an attacker can in principle exploit that timing difference to reconstruct a valid signature one byte at a time, without ever knowing the Key Secret.</p>
+            <h4>The fix</h4>
+            <p class="pro">Use <code class="inline">hmac.Equal(expected, submitted)</code>, which is specifically written to take the same amount of time regardless of where a mismatch occurs, removing the timing signal entirely. It's a one-line fix with no downside &mdash; there's no reason to ever compare a signature with <code class="inline">==</code>.</p>
+          </div>
+        </div>
+      </details>
+
+      <details class="concept-card">
+        <summary>Snippet 4 &mdash; the order-creation handler</summary>
+        <div class="body">
+          <pre class="code"><code>amountCents, _ := strconv.Atoi(r.FormValue("amount_cents"))
+orderID, _ := razorpay.CreateOrder(amountCents, "INR", receipt)</code></pre>
+          <button class="btn small reveal-btn" data-target="reveal-4">Reveal the flaw &amp; fix</button>
+          <div class="reveal" id="reveal-4">
+            <h4>The flaw</h4>
+            <p class="con">The amount is taken straight from client-submitted form data with no server-side floor or validation. A buyer can submit any HTTP request directly &mdash; bypassing your UI's minimum-price input entirely &mdash; with <code class="inline">amount_cents=1</code>, or even a negative number, and get a Razorpay order created for that amount.</p>
+            <h4>The fix</h4>
+            <p class="pro">Always clamp the amount server-side to at least a configured minimum before calling <code class="inline">CreateOrder</code>: <code class="inline">if amountCents &lt; minCents { amountCents = minCents }</code>. The client can suggest an amount (for pay-what-you-want pricing); the server decides what's actually charged. See Section 6.</p>
+          </div>
+        </div>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- =========================================================
+     SECTION 4
+========================================================== -->
+<section class="course-section" id="selling-a-course">
+  <p class="sec-kicker">Section 4</p>
+  <h2>Selling a Paid Course, End to End</h2>
+  <p class="lede">This walks through the complete purchase path: creating a Razorpay order, collecting payment in the browser, verifying the result on the server, and granting access only after verification succeeds.</p>
+
+  <p>Start with the order-creation handler. It looks up the course, and &mdash; critically &mdash; never trusts a client-supplied amount. It re-reads the server's own price floor and clamps whatever the client sent up to at least that floor before creating the order:</p>
+
+  <p class="code-label">handlers/checkout.go &mdash; create the order</p>
+  <pre class="code"><code>func (a *App) CheckoutCreateOrder(w http.ResponseWriter, r *http.Request) {
+    course, err := a.Courses.GetBySlug(r.Context(), r.PathValue("slug"))
+    if err != nil || !course.IsPaid {
+        writeJSON(w, http.StatusNotFound, map[string]string{"error": "Course not found."})
+        return
+    }
+
+    // Never trust a client-supplied amount below the floor. The floor
+    // itself is resolved server-side from the visitor's detected
+    // region — see Section 6.
+    currency, minCents := course.RegionalPrice(geo.CountryFromRequest(r))
+    amountCents, _ := strconv.Atoi(r.FormValue("amount_cents"))
+    if amountCents &lt; minCents {
+        amountCents = minCents
+    }
+
+    token := generateAccessToken() // random 32-byte hex string
+    receipt := fmt.Sprintf("course-%d-%d", course.ID, time.Now().UnixNano())
+
+    orderID, err := a.Razorpay.CreateOrder(amountCents, currency, receipt)
+    if err != nil {
+        writeJSON(w, http.StatusBadGateway, map[string]string{"error": "Could not start checkout."})
+        return
+    }
+
+    a.Purchases.Create(r.Context(), models.Purchase{
+        CourseID: course.ID, AmountCents: amountCents, Currency: currency,
+        RazorpayOrderID: orderID, AccessToken: token, Status: "pending",
+    })
+
+    writeJSON(w, http.StatusOK, map[string]any{
+        "order_id": orderID, "amount": amountCents, "currency": currency,
+        "key_id": a.Razorpay.KeyID, // safe to send — it's not a secret
+    })
+}</code></pre>
+
+  <p>Note the purchase row is created in a <code class="inline">pending</code> state the moment the order exists &mdash; before any payment. This row, keyed by the Razorpay order id, is what the verify handler will later look up and flip to <code class="inline">paid</code>.</p>
+
+  <p>On the frontend, vanilla JS fetches that order, opens the Checkout.js widget with it, and wires up two handlers: one for success, one for the buyer closing the widget without paying.</p>
+
+  <p class="code-label">Checkout.js integration &mdash; vanilla JS</p>
+  <pre class="code"><code>async function startCheckout(slug) {
+  payBtn.disabled = true;
+  payBtn.textContent = "Starting checkout…";
+
+  const res = await fetch(`/courses/${slug}/checkout/order`, { method: "POST" });
+  const order = await res.json();
+  if (!res.ok) { showError(order.error); payBtn.disabled = false; return; }
+
+  const rzp = new Razorpay({
+    key: order.key_id,
+    amount: order.amount,
+    currency: order.currency,
+    order_id: order.order_id,
+    handler: async function (response) {
+      // response has razorpay_payment_id, razorpay_order_id, razorpay_signature
+      showConfirming(); // "Confirming your payment…" state — see Section 8
+      const verifyRes = await fetch(`/courses/${slug}/checkout/verify`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          razorpay_order_id: response.razorpay_order_id,
+          razorpay_payment_id: response.razorpay_payment_id,
+          razorpay_signature: response.razorpay_signature,
+        }),
+      });
+      const result = await verifyRes.json();
+      if (result.redirect) window.location.href = result.redirect;
+      else showError(result.error || "Payment could not be verified.");
+    },
+    modal: {
+      ondismiss: function () {
+        // Buyer closed the widget without paying. Nothing is granted;
+        // the pending row simply ages out (Section 7).
+        payBtn.disabled = false;
+        payBtn.textContent = "Pay & Unlock";
+      },
+    },
+  });
+  rzp.open();
+  payBtn.disabled = false;
+}</code></pre>
+
+  <p>The verify handler is where the real work happens. It recomputes the signature, and only on a match does it touch the database:</p>
+
+  <p class="code-label">handlers/checkout.go &mdash; verify &amp; grant access</p>
+  <pre class="code"><code>func (a *App) CheckoutVerify(w http.ResponseWriter, r *http.Request) {
+    var body struct {
+        OrderID   string `json:"razorpay_order_id"`
+        PaymentID string `json:"razorpay_payment_id"`
+        Signature string `json:"razorpay_signature"`
+    }
+    json.NewDecoder(r.Body).Decode(&body)
+
+    // The one step that actually proves a payment happened.
+    if !a.Razorpay.VerifySignature(body.OrderID, body.PaymentID, body.Signature) {
+        writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Payment verification failed."})
+        return
+    }
+
+    purchase, err := a.Purchases.GetByRazorpayOrderID(r.Context(), body.OrderID)
+    if err != nil {
+        writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Order not found."})
+        return
+    }
+
+    // Idempotent by construction — see Section 7. A retried or replayed
+    // call to this handler is a safe no-op the second time.
+    a.Purchases.MarkPaid(r.Context(), body.OrderID, body.PaymentID)
+
+    http.SetCookie(w, &http.Cookie{
+        Name:     "ca_" + strconv.FormatInt(purchase.CourseID, 10),
+        Value:    purchase.AccessToken,
+        Path:     "/",
+        HttpOnly: true,
+        Secure:   true,
+        SameSite: http.SameSiteLaxMode,
+        Expires:  time.Now().AddDate(2, 0, 0),
+    })
+    writeJSON(w, http.StatusOK, map[string]string{"redirect": "/courses/" + r.PathValue("slug") + "/learn"})
+}</code></pre>
+
+  <p>Why <code class="inline">hmac.Equal</code> instead of a plain <code class="inline">==</code> string comparison? Go's <code class="inline">==</code> on strings compares bytes and can return as soon as the first mismatched byte is found. That means the comparison's execution time can depend on how many leading bytes happened to match &mdash; a timing side-channel. Given enough remote, carefully-timed requests, that's a theoretical avenue for an attacker to reconstruct a valid signature byte-by-byte without ever seeing your Key Secret. This is a genuine, well-documented class of attack (a <strong>timing attack</strong>), and <code class="inline">hmac.Equal</code> exists specifically to close it: it's implemented to take a constant amount of time regardless of where or whether a mismatch occurs, so there's no timing signal to measure in the first place. There's no downside to using it, so there's no reason not to.</p>
+
+  <p>The access token itself deserves attention too. It's set as an <strong>HttpOnly</strong> cookie, which means JavaScript running on the page &mdash; including any script injected through an XSS vulnerability elsewhere on your site &mdash; cannot read its value. That closes off a whole class of script-based token theft. The token should be a long, cryptographically random value (32 random bytes, hex-encoded, is plenty) that's looked up against the database on each request to gated content. It should never be a guessable, sequential, or self-describing value &mdash; the database record, not the token's contents, is what carries the actual relationship between the token, the purchase, and what it unlocks.</p>
+</section>
+
+<!-- =========================================================
+     SECTION 5
+========================================================== -->
+<section class="course-section" id="selling-a-booking">
+  <p class="sec-kicker">Section 5</p>
+  <h2>Selling a Paid Booking, End to End</h2>
+  <p class="lede">Booking a time slot has one hard problem that selling a course doesn't: two different buyers can both see the same open slot and both try to book it at nearly the same instant. Get this wrong and you double-book a real person's calendar.</p>
+
+  <p>A naive implementation checks whether a slot is free, then inserts a reservation. There's a race window between those two operations. Two concurrent requests can both read "available" before either insert lands &mdash; both pass the check, both create a booking for the same slot. Checking again immediately before the insert only narrows that window; it doesn't remove it, because the check and the insert are still two separate operations with a gap between them.</p>
+
+  <p>The reliable fix is to reserve the slot in the database at the exact moment the Razorpay order is created &mdash; not after payment completes &mdash; backed by a <strong>UNIQUE database constraint</strong> on the slot's start time:</p>
+
+  <p class="code-label">migrations &mdash; bookings table</p>
+  <pre class="code"><code>CREATE TABLE bookings (
+    id                   SERIAL PRIMARY KEY,
+    slot_start           TIMESTAMPTZ NOT NULL UNIQUE,
+    slot_end             TIMESTAMPTZ NOT NULL,
+    status               TEXT NOT NULL DEFAULT 'pending_payment', -- pending_payment | confirmed
+    amount_cents         INT NOT NULL,
+    currency             TEXT NOT NULL,
+    razorpay_order_id    TEXT NOT NULL DEFAULT '',
+    razorpay_payment_id  TEXT NOT NULL DEFAULT '',
+    created_at           TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+-- The UNIQUE constraint on slot_start makes the database — not the
+-- application — the arbiter of who gets the slot.</code></pre>
+
+  <p>Here's precisely why this works where check-then-insert doesn't: when two concurrent requests both attempt to insert a row for the same <code class="inline">slot_start</code>, the database guarantees that only one of those inserts can succeed. The other fails immediately with a uniqueness-violation error. Your application code just needs to catch that specific error and turn it into an ordinary "sorry, that slot was just taken &mdash; please pick another" response for the loser. No application-level locking, no distributed lock, no check-then-insert logic required &mdash; the guarantee is enforced atomically at the data layer, which is the only place it can actually be enforced correctly under concurrency.</p>
+
+  <p>Once payment verification succeeds for the winning reservation, flip its status from <code class="inline">pending_payment</code> to <code class="inline">confirmed</code>:</p>
+
+  <p class="code-label">handlers/consultancy.go &mdash; verify the booking</p>
+  <pre class="code"><code>func (a *App) BookingCheckoutVerify(w http.ResponseWriter, r *http.Request) {
+    var body struct {
+        OrderID, PaymentID, Signature string // json tags as in Section 4
+    }
+    json.NewDecoder(r.Body).Decode(&body)
+
+    if !a.Razorpay.VerifySignature(body.OrderID, body.PaymentID, body.Signature) {
+        writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Payment verification failed."})
+        return
+    }
+    // Scoped exactly like the course purchase update: only a still-
+    // pending row flips to confirmed, so a duplicate call is a no-op.
+    a.Bookings.MarkPaid(r.Context(), body.OrderID, body.PaymentID)
+    writeJSON(w, http.StatusOK, map[string]string{"redirect": "/booking?booked=1"})
+}</code></pre>
+
+  <h3>Abandoned checkouts: aging out without a cron job</h3>
+  <p>What happens if someone reserves a slot (creating a <code class="inline">pending_payment</code> row) and then never pays? Left alone, that row would permanently squat on the slot. The fix isn't a background cron job sweeping for stale rows &mdash; it's a <strong>query-time filter</strong>. When listing available slots, treat any row still in <code class="inline">pending_payment</code> whose <code class="inline">created_at</code> is older than roughly 15&ndash;20 minutes as if it doesn't exist:</p>
+
+  <pre class="code"><code>SELECT slot_start FROM bookings
+ WHERE status = 'confirmed'
+    OR (status = 'pending_payment' AND created_at > now() - interval '20 minutes');
+-- Anything NOT returned by this query is treated as free — including a
+-- pending_payment row old enough to be an abandoned checkout.</code></pre>
+
+  <p>That makes the slot bookable again automatically, the next time anyone loads the availability list &mdash; no background sweep, no deletion, no separate expiry job to keep running.</p>
+
+  <p>There's a subtlety worth being precise about: the query above decides what's <em>shown</em> as available, but the plain <code class="inline">UNIQUE(slot_start)</code> constraint would still reject a second buyer's <code class="inline">INSERT</code> for that same stale slot, because the old row is still physically there. The correct write-side counterpart is to <em>reclaim</em> the stale row atomically, using the same constraint that protects you from real races:</p>
+
+  <pre class="code"><code>INSERT INTO bookings (slot_start, slot_end, status, amount_cents, currency, razorpay_order_id, created_at)
+VALUES ($1, $2, 'pending_payment', $3, $4, $5, now())
+ON CONFLICT (slot_start) DO UPDATE
+   SET status = 'pending_payment',
+       amount_cents = EXCLUDED.amount_cents,
+       currency = EXCLUDED.currency,
+       razorpay_order_id = EXCLUDED.razorpay_order_id,
+       created_at = now()
+ WHERE bookings.status = 'pending_payment'
+   AND bookings.created_at &lt; now() - interval '20 minutes';
+-- If the existing row is 'confirmed', or is a still-fresh
+-- pending_payment, the WHERE clause matches nothing and the whole
+-- statement affects zero rows — which the handler reads as "someone
+-- else already holds this slot" and returns the normal conflict error.</code></pre>
+
+  <p>This is the same idea as the course purchase's idempotent update from Section 4, applied to a slightly harder problem: the database enforces the invariant ("at most one live reservation per slot") atomically, in every case, including the abandoned-checkout case, without your application code ever needing to coordinate anything itself.</p>
+
+  <!-- ================= EXERCISE 3 ================= -->
+  <div class="exercise" id="ex-race-sim">
+    <span class="exercise-label">Exercise 3 &middot; Hands-on</span>
+    <h3>Double-Booking Race Simulator</h3>
+    <p class="ex-prompt">Two simulated buyers race for the same 3:00pm slot, over and over, with randomized network timing. Compare a naive "check, then insert" approach against a "unique constraint" approach that performs the check-and-claim as a single synchronous, atomic step &mdash; exactly what a real UNIQUE constraint guarantees at the database layer.</p>
+
+    <div class="field">
+      <label for="race-trials">Number of trials</label>
+      <input type="number" id="race-trials" value="30" min="5" max="200"/>
+    </div>
+    <div class="btn-row">
+      <button class="btn" id="race-run">Run the simulation</button>
+    </div>
+
+    <div class="tally">
+      <div class="stat">
+        <div class="n bad" id="race-naive-doubles">&mdash;</div>
+        <div class="l">Naive approach: double-bookings</div>
+      </div>
+      <div class="stat">
+        <div class="n ok" id="race-unique-doubles">&mdash;</div>
+        <div class="l">Unique-constraint approach: double-bookings</div>
+      </div>
+    </div>
+    <div class="sim-log" id="race-log">Click "Run the simulation" to start.</div>
+  </div>
+</section>
+
+<!-- =========================================================
+     SECTION 6
+========================================================== -->
+<section class="course-section" id="regional-pricing">
+  <p class="sec-kicker">Section 6</p>
+  <h2>Regional &amp; Pay-What-You-Want Pricing</h2>
+  <p class="lede">You can charge a locally-appropriate price by detecting a visitor's approximate country &mdash; but every piece of that detection and every amount it produces has to be trusted at the server, never the client.</p>
+
+  <p>Hosting providers commonly attach a geo header at the CDN edge before a request ever reaches your application. Vercel, for example, sets <code class="inline">X-Vercel-IP-Country</code>. You read that header server-side and use it to pick a currency &mdash; an INR floor for Indian visitors, a USD floor for everyone else:</p>
+
+  <pre class="code"><code>func CountryFromRequest(r *http.Request) string {
+    // Set by the hosting provider's edge before the request reaches
+    // your app. Trustworthy precisely because it's attached by
+    // infrastructure you control, not sent by the visitor's browser.
+    return r.Header.Get("X-Vercel-IP-Country")
+}
+
+func RegionalPrice(country string) (currency string, minCents int) {
+    if country == "IN" {
+        return "INR", minPriceCentsINR
+    }
+    return "USD", minPriceCentsUSD
+}</code></pre>
+
+  <p>Treat this as an approximation, not proof of identity — VPNs, proxies, and imperfect geo databases exist. Use it to select a <em>display</em> price, not to make legal or tax determinations.</p>
+
+  <p>The non-negotiable rule: region detection happens <strong>server-side, at order-creation time</strong>, and is re-derived there &mdash; never trusted from a client-supplied country or currency field. A client can set a form field, a query param, or a JSON body to anything it wants. If your order-creation handler ever reads the currency from something the browser sent instead of recomputing it from the request's own edge header, a visitor can simply claim to be wherever gets them the cheapest price. Deriving it the same way, from the same trusted source, every time, is what keeps the price shown to a visitor and the price actually charged to them in sync.</p>
+
+  <h3>Pay-what-you-want, with a floor</h3>
+  <p>Letting a buyer voluntarily pay more than a set minimum is good for flexibility and goodwill. But the submitted amount is still untrusted client input, exactly like the country field. The server must always <strong>re-floor</strong> whatever amount the client submits &mdash; clamp it up to at least the configured minimum &mdash; rather than trusting the number as-is:</p>
+
+  <pre class="code"><code>amountCents, _ := strconv.Atoi(r.FormValue("amount_cents"))
+if amountCents &lt; minCents {
+    amountCents = minCents // re-floor: paying more is fine, paying less isn't
+}</code></pre>
+
+  <p>Without this, a buyer could bypass your UI's minimum-price input entirely by sending a raw HTTP request straight to the order-creation endpoint with <code class="inline">amount_cents=1</code>, or a zero, or a negative number. The UI-level minimum is a convenience for honest buyers, not a security boundary &mdash; the floor only actually holds if the server enforces it.</p>
+
+  <!-- ================= EXERCISE 4 ================= -->
+  <div class="exercise" id="ex-region-quiz">
+    <span class="exercise-label">Exercise 4 &middot; Quiz</span>
+    <h3>Regional Pricing Decision Quiz</h3>
+    <p class="ex-prompt">Given a course with a $12.00 USD floor and a &#8377;800 INR floor, pick a visitor's detected country and see which price the server would actually show and charge.</p>
+    <div class="choice-row" id="region-choices">
+      <button class="choice-btn" data-country="IN">India (IN)</button>
+      <button class="choice-btn" data-country="US">United States (US)</button>
+      <button class="choice-btn" data-country="DE">Germany (DE)</button>
+      <button class="choice-btn" data-country="">No header / VPN / unknown</button>
+    </div>
+    <div id="region-out"></div>
+  </div>
+
+  <!-- ================= EXERCISE 7 ================= -->
+  <div class="exercise" id="ex-floor-sim">
+    <span class="exercise-label">Exercise 7 &middot; Hands-on</span>
+    <h3>Server-Side Amount Floor Simulator</h3>
+    <p class="ex-prompt">Play the attacker: pick a region and type in whatever amount you want &mdash; even zero or negative &mdash; and submit it directly to a simulated order-creation endpoint. Watch the server re-floor it.</p>
+    <div class="field-row">
+      <div class="field">
+        <label for="floor-region">Detected region (server-derived, not client input)</label>
+        <select id="floor-region">
+          <option value="IN">India &mdash; floor &#8377;800.00</option>
+          <option value="US">Everywhere else &mdash; floor $12.00</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="floor-amount">Amount you submit (whole units, e.g. dollars or rupees)</label>
+        <input type="number" id="floor-amount" value="1" step="0.01"/>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn" id="floor-submit">Submit to /checkout/order</button>
+    </div>
+    <div id="floor-out"></div>
+  </div>
+</section>
+
+<!-- =========================================================
+     SECTION 7
+========================================================== -->
+<section class="course-section" id="failure-edge-cases">
+  <p class="sec-kicker">Section 7</p>
+  <h2>Handling Failure and Edge Cases</h2>
+  <p class="lede">A payment flow isn't finished when Checkout.js closes. Three situations need explicit, deliberate handling.</p>
+
+  <h3>The buyer closes the widget without paying</h3>
+  <p>Closing the modal only ends the buyer's interaction with the widget &mdash; it says nothing about whether an order was authorized or captured. Treat it as indeterminate, not as cancellation or success. Grant nothing: don't mark the purchase complete, don't issue access, don't send anything implying fulfillment. The pending database row from order creation is still the source of truth, and it simply ages out per the query-time filter covered in Section 5. No special cleanup code is required for this case &mdash; the same mechanism that reclaims an abandoned booking slot reclaims an abandoned course purchase.</p>
+
+  <h3>The verify endpoint gets called twice for the same order</h3>
+  <p>A flaky network can cause a browser to retry a POST after the server already committed the result. Someone can also deliberately replay a captured request. Either way, repetition must not multiply the effect. The fix is to scope the "mark paid" database update so it only ever affects rows still in a <code class="inline">pending</code> state:</p>
+
+  <pre class="code"><code>UPDATE purchases
+   SET status = 'paid', razorpay_payment_id = $2, paid_at = now()
+ WHERE razorpay_order_id = $1
+   AND status = 'pending';
+-- Idempotent by construction: once a row is 'paid', a second call with
+-- the same order_id matches zero rows and changes nothing.</code></pre>
+
+  <p>The Razorpay order id identifies the claim; the <code class="inline">status = 'pending'</code> predicate is what makes the second call harmless. If the first request already succeeded and a retry arrives later, the update affects zero rows &mdash; and the handler should read that as a success, not an error. Check the row's current status after the update: if it's already <code class="inline">paid</code>, return exactly the same successful response the first call would have returned. Never grant access twice, never send a duplicate confirmation, never re-run a booking side effect. This only works correctly if the status check and the update are the same atomic statement &mdash; a separate <code class="inline">SELECT</code> followed by an unconditional <code class="inline">UPDATE</code> reopens the same race window from Section 5.</p>
+
+  <h3>Signature verification genuinely fails</h3>
+  <p>If the recomputed signature doesn't match &mdash; a real forgery attempt, or corrupted data in transit &mdash; reject the payment claim and grant nothing. But never fail silently. Show the buyer something specific and actionable: <em>"We could not verify this payment. No access has been granted. If you believe you were charged, contact support with your payment ID."</em> A buyer who genuinely did pay, but hit a verification bug or an unusual edge case, deserves a concrete path to resolution &mdash; not a blank screen or a generic "something went wrong." Support should be able to take the supplied payment id and reconcile it against the Razorpay dashboard directly.</p>
+
+  <!-- ================= EXERCISE 6 ================= -->
+  <div class="exercise" id="ex-idempotency">
+    <span class="exercise-label">Exercise 6 &middot; Hands-on</span>
+    <h3>Idempotency Exercise: A Duplicate Verify Call</h3>
+    <p class="ex-prompt">A simulated <code class="inline">purchases</code> row starts <code class="inline">pending</code>. Fire the same verify call twice in a row &mdash; as a flaky network retry would &mdash; and watch the scoped <code class="inline">UPDATE ... WHERE status='pending'</code> apply exactly once.</p>
+    <div class="btn-row">
+      <button class="btn" id="idem-reset">Reset row to 'pending'</button>
+      <button class="btn secondary" id="idem-fire-twice">Simulate the verify call arriving twice</button>
+    </div>
+    <div class="sim-log" id="idem-log">Row status: <strong id="idem-status">pending</strong></div>
+  </div>
+</section>
+
+<!-- =========================================================
+     SECTION 8
+========================================================== -->
+<section class="course-section" id="checkout-ux">
+  <p class="sec-kicker">Section 8</p>
+  <h2>Checkout UX That Doesn't Feel Scammy or Amateur</h2>
+  <p class="lede">These are well-established, widely-published e-commerce checkout conventions &mdash; not proprietary secrets. Following them costs little and is the difference between a checkout that feels trustworthy and one that makes a buyer hesitate at the last second.</p>
+
+  <p>Show the exact price and currency <strong>before</strong> any payment action is taken. The buyer should see the amount, currency, and what they're buying in the same place, without needing to reach a final step to discover an extra charge. If taxes or fees apply, fold them into the displayed total from the start &mdash; never surprise-add a fee at the last step. A last-minute increase makes the whole transaction feel manipulative, even when the fee itself is entirely legitimate.</p>
+
+  <p>Use a clearly labeled, specific primary action. <em>"Submit"</em> describes an internal operation, not the buyer's decision. <em>"Pay Now"</em> is better but still withholds the amount. <em>"Pay &#8377;500 &amp; Unlock"</em> is strongest &mdash; it tells the buyer exactly what it costs and what they get, in the same glance, on the same button.</p>
+
+  <p>The instant the pay button is clicked, disable it and show a loading state &mdash; before waiting for any network response. Checkout isn't an ordinary form: a duplicate click can create two Razorpay orders, open two widget instances, or fire two verify requests, producing confusing duplicate charges and reconciliation headaches that are much harder to untangle than a slightly slower button felt.</p>
+
+  <p>Razorpay's Checkout.js widget is itself a recognizable, trusted piece of UI &mdash; buyers have likely seen it before. Let the widget handle the sensitive payment fields rather than building a custom card form; a homemade form asking for card details reads as amateur or suspicious even when the backend behind it is perfectly secure.</p>
+
+  <p>The most easily-mishandled moment is the gap between the widget reporting success and your server finishing verification &mdash; typically a second or two, but a blank screen during that gap reads as broken. Show an explicit <em>"Confirming your payment&hellip;"</em> state immediately, and keep it visible until the verify response comes back.</p>
+
+  <p>Finally, make the confirmation state unambiguous. A clear success message or a dedicated confirmation view &mdash; <em>"Payment successful. Your course access is now unlocked."</em> &mdash; beats a bare redirect that might look like nothing happened. The interface should communicate the server's verified result, never the widget's optimistic client-side signal alone.</p>
+
+  <!-- ================= EXERCISE 5 ================= -->
+  <div class="exercise" id="ex-ux-scorer">
+    <span class="exercise-label">Exercise 5 &middot; Self-check</span>
+    <h3>Checkout UX Checklist Scorer</h3>
+    <p class="ex-prompt">Check off what a checkout flow you've built (or are about to build) actually does.</p>
+    <ul class="check-list" id="ux-check-list">
+      <li class="check-item"><input type="checkbox" data-weight="2"/><span>Exact price and currency shown before any pay action</span></li>
+      <li class="check-item"><input type="checkbox" data-weight="2"/><span>No fee or amount changes appear at the last step</span></li>
+      <li class="check-item"><input type="checkbox" data-weight="1"/><span>Pay button label states the amount and the outcome (e.g. "Pay $12 & Unlock")</span></li>
+      <li class="check-item"><input type="checkbox" data-weight="2"/><span>Pay button disables and shows a loading state the instant it's clicked</span></li>
+      <li class="check-item"><input type="checkbox" data-weight="1"/><span>Payment fields are collected only inside Razorpay's own Checkout.js widget</span></li>
+      <li class="check-item"><input type="checkbox" data-weight="2"/><span>An explicit "Confirming your payment…" state covers the verify round-trip</span></li>
+      <li class="check-item"><input type="checkbox" data-weight="2"/><span>A clear, explicit success message or confirmation view on completion</span></li>
+      <li class="check-item"><input type="checkbox" data-weight="1"/><span>A specific, actionable error message (with support guidance) on verification failure</span></li>
+    </ul>
+    <div class="score-bar-wrap">
+      <div class="score-bar"><i id="ux-score-fill"></i></div>
+      <div class="score-readout"><span>Score: <strong id="ux-score-pts">0</strong> / <span id="ux-score-max">0</span></span><span id="ux-score-pct">0%</span></div>
+    </div>
+    <div class="score-verdict" id="ux-verdict">Check the boxes that honestly apply.</div>
+  </div>
+</section>
+
+<!-- =========================================================
+     SECTION 9
+========================================================== -->
+<section class="course-section" id="ai-vs-manual">
+  <p class="sec-kicker">Section 9</p>
+  <h2>What AI Can Do vs. What You Must Do Manually</h2>
+  <p class="lede">An AI coding assistant can accelerate the implementation in this course considerably. It cannot perform the real-world steps that establish trust in the payment flow &mdash; those require an authorized human with access to real accounts, documents, and funds.</p>
+
+  <h3>Manual, human-only</h3>
+  <ul class="list">
+    <li>Creating the actual Razorpay account.</li>
+    <li>Completing business KYC for live mode &mdash; submitting real identity and bank documents for Razorpay's human review.</li>
+    <li>Copying the real API keys into your host's environment-variable settings; credential handling belongs to the account owner, not an assistant.</li>
+    <li>Actually flipping test keys to live keys when you go live.</li>
+    <li>Personally reviewing the integration and making at least one real test payment yourself before shipping to real customers &mdash; no amount of AI-written code substitutes for a human watching money actually move through the system once.</li>
+  </ul>
+
+  <h3>AI-assistable</h3>
+  <ul class="list">
+    <li>Writing the order-creation handler.</li>
+    <li>Writing the Checkout.js integration JavaScript.</li>
+    <li>Writing the signature-verification code.</li>
+    <li>Writing the database migration for a purchases/bookings table, including the constraints that make it safe.</li>
+    <li>Writing tests that simulate both a valid and a forged signature.</li>
+  </ul>
+
+  <h3>Prompts you can actually use</h3>
+  <p>Be specific: name your stack, your existing patterns, and the exact security property you want. For example:</p>
+  <ul class="list">
+    <li>"Add a POST /api/checkout/order handler in Go that creates a Razorpay order for a fixed amount and stores a pending purchase row in Postgres, matching the style of $EXISTING_HANDLER_FILE."</li>
+    <li>"Write the Razorpay Checkout.js integration in vanilla JS that opens the widget with this order and posts the result to /api/checkout/verify."</li>
+    <li>"Write a Go function that verifies a Razorpay payment signature using HMAC-SHA256 and hmac.Equal, matching Razorpay's documented signature scheme."</li>
+    <li>"Add a unique constraint and a status column to the bookings table to prevent double-booking the same slot."</li>
+    <li>"Write a test that proves a forged signature is rejected by the verify handler."</li>
+    <li>"Add a POST /api/checkout/verify handler in Go that verifies the Razorpay signature before marking the pending purchase as paid, using an UPDATE scoped to status='pending' so a duplicate call is a no-op."</li>
+  </ul>
+
+  <p class="code-label">A test worth actually running</p>
+  <pre class="code"><code>func TestVerifySignature(t *testing.T) {
+    rp := &Razorpay{KeySecret: "test_secret"}
+
+    mac := hmac.New(sha256.New, []byte("test_secret"))
+    mac.Write([]byte("order_ABC|pay_XYZ"))
+    valid := hex.EncodeToString(mac.Sum(nil))
+
+    if !rp.VerifySignature("order_ABC", "pay_XYZ", valid) {
+        t.Fatal("expected a correctly computed signature to verify")
+    }
+    if rp.VerifySignature("order_ABC", "pay_XYZ", "deadbeef00") {
+        t.Fatal("expected a forged signature to be rejected")
+    }
+}</code></pre>
+
+  <div class="callout warn">
+    <span class="callout-label">Read the code before you ship it</span>
+    <p>Always read and understand AI-generated payment code before deploying it &mdash; especially the signature-verification step. A subtle mistake there (comparing the wrong fields, using <code class="inline">==</code> instead of <code class="inline">hmac.Equal</code>, hashing over the wrong string order, or verifying against the wrong secret) can silently make the entire payment gate worthless while looking, at a glance, like it works.</p>
+  </div>
+</section>
+
+<!-- =========================================================
+     SECTION 10
+========================================================== -->
+<section class="course-section" id="going-live">
+  <p class="sec-kicker">Section 10</p>
+  <h2>Going Live: A Checklist</h2>
+  <p class="lede">Treat flipping the switch on live payments as a deliberate deployment, not a config change you make and forget.</p>
+
+  <ul class="list">
+    <li><strong>Swap keys in environment variables only.</strong> Replace the <code class="inline">rzp_test_</code> pair with the <code class="inline">rzp_live_</code> pair in your host's secret settings. Never hardcode either value in source. Confirm your production environment is actually loading the new values &mdash; don't assume a staging variable propagated.</li>
+    <li><strong>Do one real end-to-end test payment yourself</strong>, for a small real amount, before announcing anything is live. Walk the entire buyer journey &mdash; product page, order creation, Checkout.js, your success handler, your verify endpoint, your confirmation screen.</li>
+    <li><strong>Watch it land in both places.</strong> Confirm the payment appears correctly in the Razorpay dashboard, and confirm a matching confirmed row exists in your own database with the right amount, currency, and payment id. If it reaches Razorpay but your app doesn't record it correctly, you're not actually live yet.</li>
+    <li><strong>Set up basic monitoring.</strong> It doesn't need to be elaborate &mdash; an admin list page built directly on the same purchases/bookings schema, showing recent rows and their status (pending/paid/failed), is enough to make a stuck or failed payment visible instead of silent.</li>
+    <li><strong>Write your refund policy down before you need it.</strong> Razorpay supports issuing refunds through its dashboard or API &mdash; that's the mechanism. What you'll actually refund, under what conditions, and within what time window is a business decision, not a technical one. Decide it and show it to buyers before they pay, not after the first refund request arrives.</li>
+  </ul>
+</section>
+
+<footer class="course-footer">
+  <p>Integrating Payments, Courses &amp; Bookings Into Your Portfolio (Razorpay) &mdash; grounded in a real, shipped Razorpay integration: the Orders API client, the signature-verification handler, the paid-course checkout flow, and the paid-booking reservation flow that prevents double-booking.</p>
+</footer>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------------- shared: reveal toggles ---------------- */
+  document.querySelectorAll('.reveal-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var target = document.getElementById(btn.getAttribute('data-target'));
+      if (!target) return;
+      target.classList.toggle('show');
+      btn.textContent = target.classList.contains('show') ? 'Hide the flaw & fix' : 'Reveal the flaw & fix';
+    });
+  });
+
+  /* ---------------- HMAC-SHA256 via SubtleCrypto (matches hmac.New(sha256.New, secret)) ---------------- */
+  async function hmacSha256Hex(secret, message){
+    var enc = new TextEncoder();
+    var key = await crypto.subtle.importKey(
+      'raw', enc.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+    );
+    var sigBuf = await crypto.subtle.sign('HMAC', key, enc.encode(message));
+    return Array.from(new Uint8Array(sigBuf)).map(function(b){ return b.toString(16).padStart(2, '0'); }).join('');
+  }
+
+  /* ---------------- Exercise 1: signature verification simulator ---------------- */
+  (function(){
+    var computeBtn = document.getElementById('sig-compute');
+    if (!computeBtn) return;
+
+    var secretEl = document.getElementById('sig-secret');
+    var orderEl = document.getElementById('sig-order');
+    var paymentEl = document.getElementById('sig-payment');
+    var expectedOut = document.getElementById('sig-expected-out');
+    var submittedEl = document.getElementById('sig-submitted');
+    var verifyOut = document.getElementById('sig-verify-out');
+    var lastExpected = null;
+
+    async function computeExpected(){
+      var message = orderEl.value.trim() + '|' + paymentEl.value.trim();
+      lastExpected = await hmacSha256Hex(secretEl.value, message);
+      return lastExpected;
+    }
+
+    computeBtn.addEventListener('click', async function(){
+      computeBtn.disabled = true;
+      computeBtn.textContent = 'Computing…';
+      var hex = await computeExpected();
+      expectedOut.innerHTML =
+        '<div class="mono-out"><span class="k">HMAC-SHA256(secret, order_id + "|" + payment_id)</span>' + hex + '</div>';
+      computeBtn.disabled = false;
+      computeBtn.textContent = 'Compute the correct signature';
+    });
+
+    document.getElementById('sig-fill-correct').addEventListener('click', async function(){
+      var hex = await computeExpected();
+      submittedEl.value = hex;
+    });
+
+    document.getElementById('sig-fill-forged').addEventListener('click', function(){
+      // A plausible-looking but wrong hex string — what an attacker
+      // guessing blind would actually have to submit.
+      var chars = '0123456789abcdef';
+      var out = '';
+      for (var i = 0; i < 64; i++) out += chars[Math.floor(Math.random() * 16)];
+      submittedEl.value = out;
+    });
+
+    document.getElementById('sig-verify').addEventListener('click', async function(){
+      var expected = await computeExpected();
+      var submitted = submittedEl.value.trim();
+      var match = expected === submitted && submitted.length > 0;
+      verifyOut.innerHTML =
+        '<div class="mono-out ' + (match ? 'match' : 'nomatch') + '">' +
+        '<span class="k">Server-side verification result</span>' +
+        (match
+          ? 'MATCH — signature accepted. Access would be granted.'
+          : 'NO MATCH — signature rejected. HTTP 400, nothing granted.') +
+        '</div>';
+    });
+  })();
+
+  /* ---------------- Exercise 3: double-booking race simulator ---------------- */
+  (function(){
+    var runBtn = document.getElementById('race-run');
+    if (!runBtn) return;
+    var logEl = document.getElementById('race-log');
+    var naiveOut = document.getElementById('race-naive-doubles');
+    var uniqueOut = document.getElementById('race-unique-doubles');
+
+    function delay(ms){ return new Promise(function(r){ setTimeout(r, ms); }); }
+
+    // Naive approach: check, THEN (after a delay simulating network/DB
+    // round-trip) insert. Two concurrent buyers can both pass the check
+    // before either insert lands.
+    async function naiveAttempt(state, buyer){
+      await delay(Math.random() * 8); // simulate the check's own latency
+      var wasFreeAtCheckTime = !state.naiveBooked;
+      await delay(Math.random() * 8); // the gap between check and insert
+      if (wasFreeAtCheckTime) {
+        state.naiveWinners.push(buyer);
+        state.naiveBooked = true;
+        return true;
+      }
+      return false;
+    }
+
+    // Unique-constraint approach: the claim itself is a single
+    // synchronous check-and-set — exactly what an atomic DB constraint
+    // guarantees, regardless of how the surrounding requests are timed.
+    async function uniqueAttempt(state, buyer){
+      await delay(Math.random() * 8); // requests can still arrive at any time
+      if (!state.uniqueBooked) {
+        state.uniqueBooked = true; // atomic: no gap between check and claim
+        state.uniqueWinners.push(buyer);
+        return true;
+      }
+      return false;
+    }
+
+    runBtn.addEventListener('click', async function(){
+      var trials = Math.max(5, Math.min(200, parseInt(document.getElementById('race-trials').value, 10) || 30));
+      runBtn.disabled = true;
+      var naiveDoubles = 0, uniqueDoubles = 0;
+      var lines = [];
+
+      for (var i = 0; i < trials; i++){
+        var naiveState = { naiveBooked: false, naiveWinners: [] };
+        var uniqueState = { uniqueBooked: false, uniqueWinners: [] };
+
+        await Promise.all([
+          naiveAttempt(naiveState, 'Buyer A'),
+          naiveAttempt(naiveState, 'Buyer B')
+        ]);
+        await Promise.all([
+          uniqueAttempt(uniqueState, 'Buyer A'),
+          uniqueAttempt(uniqueState, 'Buyer B')
+        ]);
+
+        var naiveDouble = naiveState.naiveWinners.length > 1;
+        var uniqueDouble = uniqueState.uniqueWinners.length > 1;
+        if (naiveDouble) naiveDoubles++;
+        if (uniqueDouble) uniqueDoubles++;
+
+        if (i < 12) {
+          lines.push('Trial ' + (i+1) + ' — naive: ' +
+            (naiveDouble ? '<span class="lose">DOUBLE-BOOKED (' + naiveState.naiveWinners.join(' & ') + ')</span>' : '<span class="win">ok (' + naiveState.naiveWinners.join(', ') + ' won)</span>') +
+            '  |  unique: ' +
+            (uniqueDouble ? '<span class="lose">DOUBLE-BOOKED</span>' : '<span class="win">ok (' + uniqueState.uniqueWinners.join(', ') + ' won)</span>'));
+        }
+      }
+
+      if (trials > 12) lines.push('<span class="muted">… ' + (trials - 12) + ' more trials run, tallied below.</span>');
+
+      logEl.innerHTML = lines.map(function(l){ return '<div>' + l + '</div>'; }).join('');
+      naiveOut.textContent = naiveDoubles + ' / ' + trials;
+      uniqueOut.textContent = uniqueDoubles + ' / ' + trials;
+      runBtn.disabled = false;
+    });
+  })();
+
+  /* ---------------- Exercise 4: regional pricing quiz ---------------- */
+  (function(){
+    var choices = document.getElementById('region-choices');
+    if (!choices) return;
+    var out = document.getElementById('region-out');
+
+    function regionalPrice(country){
+      if (country === 'IN') return { currency: 'INR', display: '₹800.00' };
+      return { currency: 'USD', display: '$12.00' };
+    }
+
+    choices.querySelectorAll('.choice-btn').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        choices.querySelectorAll('.choice-btn').forEach(function(b){ b.classList.remove('selected'); });
+        btn.classList.add('selected');
+        var country = btn.getAttribute('data-country');
+        var price = regionalPrice(country);
+        var label = country || 'no country header (VPN / unknown / local dev)';
+        out.innerHTML = '<div class="mono-out match">' +
+          '<span class="k">Server-derived from the request\'s edge header</span>' +
+          'X-Vercel-IP-Country = "' + (country || '') + '"  →  detected: ' + label + '\n' +
+          'Currency: ' + price.currency + '   Price shown & charged: ' + price.display +
+          '</div>';
+      });
+    });
+  })();
+
+  /* ---------------- Exercise 7: server-side amount floor simulator ---------------- */
+  (function(){
+    var submitBtn = document.getElementById('floor-submit');
+    if (!submitBtn) return;
+    var regionEl = document.getElementById('floor-region');
+    var amountEl = document.getElementById('floor-amount');
+    var out = document.getElementById('floor-out');
+
+    var floors = { IN: { cents: 80000, symbol: '₹', currency: 'INR' }, US: { cents: 1200, symbol: '$', currency: 'USD' } };
+
+    submitBtn.addEventListener('click', function(){
+      var region = floors[regionEl.value] || floors.US;
+      var submittedUnits = parseFloat(amountEl.value);
+      if (isNaN(submittedUnits)) submittedUnits = 0;
+      var submittedCents = Math.round(submittedUnits * 100);
+      var flooredCents = Math.max(submittedCents, region.cents);
+      var wasClamped = flooredCents !== submittedCents;
+
+      out.innerHTML =
+        '<div class="mono-out ' + (wasClamped ? 'nomatch' : 'match') + '">' +
+        '<span class="k">POST /checkout/order — server-side handling</span>' +
+        'Client submitted: ' + region.symbol + (submittedCents/100).toFixed(2) + ' (' + submittedCents + ' ' + region.currency + ' minor units)\n' +
+        'Configured floor: ' + region.symbol + (region.cents/100).toFixed(2) + '\n' +
+        'Order actually created for: ' + region.symbol + (flooredCents/100).toFixed(2) +
+        (wasClamped ? '  — clamped up to the floor, client value ignored' : '  — client value accepted as-is (at or above the floor)') +
+        '</div>';
+    });
+  })();
+
+  /* ---------------- Exercise 6: idempotency simulator ---------------- */
+  (function(){
+    var fireBtn = document.getElementById('idem-fire-twice');
+    if (!fireBtn) return;
+    var resetBtn = document.getElementById('idem-reset');
+    var logEl = document.getElementById('idem-log');
+    var statusEl = document.getElementById('idem-status');
+    var row = { status: 'pending' };
+
+    function scopedUpdate(){
+      // UPDATE purchases SET status='paid' WHERE razorpay_order_id=$1 AND status='pending'
+      if (row.status === 'pending') {
+        row.status = 'paid';
+        return 1; // rows affected
+      }
+      return 0; // already paid — matches nothing, changes nothing
+    }
+
+    function render(lines){
+      statusEl.textContent = row.status;
+      var out = '<div>Row status: <strong>' + row.status + '</strong></div>';
+      lines.forEach(function(l){ out += '<div>' + l + '</div>'; });
+      logEl.innerHTML = out;
+    }
+
+    resetBtn.addEventListener('click', function(){
+      row.status = 'pending';
+      render(['<span class="muted">Row reset to pending.</span>']);
+    });
+
+    fireBtn.addEventListener('click', function(){
+      var lines = [];
+      var affected1 = scopedUpdate();
+      lines.push('Verify call #1 (original) — UPDATE affected ' + affected1 + ' row' + (affected1 === 1 ? '' : 's') +
+        (affected1 === 1 ? ' <span class="win">→ marked paid, access granted</span>' : ' <span class="muted">(already paid)</span>'));
+      var affected2 = scopedUpdate();
+      lines.push('Verify call #2 (network retry, same order_id) — UPDATE affected ' + affected2 + ' rows' +
+        (affected2 === 0 ? ' <span class="win">→ safe no-op, still returns success, access NOT granted twice</span>' : ' <span class="lose">→ unexpectedly affected a row!</span>'));
+      render(lines);
+    });
+
+    render(['Click "Simulate the verify call arriving twice" to run it.']);
+  })();
+
+  /* ---------------- Exercise 5: checkout UX checklist scorer ---------------- */
+  (function(){
+    var list = document.getElementById('ux-check-list');
+    if (!list) return;
+    var inputs = list.querySelectorAll('input[type=checkbox]');
+    var maxScore = 0;
+    inputs.forEach(function(inp){ maxScore += parseInt(inp.getAttribute('data-weight'), 10) || 1; });
+    document.getElementById('ux-score-max').textContent = maxScore;
+
+    function recompute(){
+      var score = 0;
+      inputs.forEach(function(inp){ if (inp.checked) score += parseInt(inp.getAttribute('data-weight'), 10) || 1; });
+      var pct = Math.round((score / maxScore) * 100);
+      document.getElementById('ux-score-pts').textContent = score;
+      document.getElementById('ux-score-pct').textContent = pct + '%';
+      document.getElementById('ux-score-fill').style.width = pct + '%';
+      var verdictEl = document.getElementById('ux-verdict');
+      var verdict;
+      if (pct >= 85) {
+        verdict = 'This reads as a professional checkout. The remaining gaps, if any, are usually the "Confirming your payment…" state — the easiest one to forget because it only matters on a slow connection.';
+      } else if (pct >= 50) {
+        verdict = 'Solid basics, real gaps. Missing states around the verification round-trip (loading, confirming, unambiguous success) are the most common cause of buyers thinking a real payment failed.';
+      } else if (score > 0) {
+        verdict = 'Several conventions are missing. None of these are hard to add — they\'re mostly about showing explicit state at each step instead of leaving the buyer to guess.';
+      } else {
+        verdict = 'Check the boxes that honestly apply to see where a real checkout flow lands.';
+      }
+      verdictEl.textContent = verdict;
+    }
+    inputs.forEach(function(inp){ inp.addEventListener('change', recompute); });
+    recompute();
+  })();
+
+})();
+</script>
+</body>
+</html>

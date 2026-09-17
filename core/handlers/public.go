@@ -12,8 +12,9 @@ import (
 
 type HomeData struct {
 	BaseData
-	Profile models.Profile
-	JSONLD  template.JS
+	Profile  models.Profile
+	Articles []models.Article
+	JSONLD   template.JS
 }
 
 func (a *App) Home(w http.ResponseWriter, r *http.Request) {
@@ -22,6 +23,14 @@ func (a *App) Home(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		a.serverError(w, "load profile", err)
 		return
+	}
+	articles, err := a.Articles.ListPublished(ctx)
+	if err != nil {
+		a.serverError(w, "load articles", err)
+		return
+	}
+	if len(articles) > 3 {
+		articles = articles[:3]
 	}
 
 	base := a.base(r, profile.Name+" — "+profile.Title, profile.HeroSubtitle, "home")
@@ -36,6 +45,7 @@ func (a *App) Home(w http.ResponseWriter, r *http.Request) {
 	a.View.Render(w, http.StatusOK, "home", HomeData{
 		BaseData: base,
 		Profile:  profile,
+		Articles: articles,
 		JSONLD:   personAndWebsiteJSONLD(profile.Name, profile.Title, base.CanonicalURL, profile.Location, sameAs),
 	})
 }
