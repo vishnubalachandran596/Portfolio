@@ -12,25 +12,52 @@ type PurchaseRepo struct{ db *sql.DB }
 
 func NewPurchaseRepo(db *sql.DB) *PurchaseRepo { return &PurchaseRepo{db: db} }
 
-const purchaseColumns = `id, course_id, email, amount_cents, currency, status, razorpay_order_id, razorpay_payment_id, access_token, created_at, paid_at`
+const purchaseColumns = `id, course_id, user_id, email, amount_cents, currency, status, razorpay_order_id, razorpay_payment_id, access_token, created_at, paid_at`
 
 func scanPurchase(row interface{ Scan(...any) error }) (models.Purchase, error) {
 	var p models.Purchase
-	err := row.Scan(&p.ID, &p.CourseID, &p.Email, &p.AmountCents, &p.Currency, &p.Status,
+	var userID sql.NullInt64
+	err := row.Scan(&p.ID, &p.CourseID, &userID, &p.Email, &p.AmountCents, &p.Currency, &p.Status,
 		&p.RazorpayOrderID, &p.RazorpayPaymentID, &p.AccessToken, &p.CreatedAt, &p.PaidAt)
+	p.UserID = userID.Int64
 	return p, err
 }
 
 // Create records a new Razorpay order in "created" state, before the buyer
-// completes checkout.
+// completes checkout. UserID is 0 for a guest checkout (not logged in).
 func (r *PurchaseRepo) Create(ctx context.Context, p models.Purchase) (int64, error) {
 	var id int64
+	var userID any
+	if p.UserID != 0 {
+		userID = p.UserID
+	}
 	err := r.db.QueryRowContext(ctx, `
-		INSERT INTO purchases (course_id, email, amount_cents, currency, status, razorpay_order_id, access_token)
-		VALUES ($1,$2,$3,$4,'created',$5,$6) RETURNING id`,
-		p.CourseID, p.Email, p.AmountCents, p.Currency, p.RazorpayOrderID, p.AccessToken,
+		INSERT INTO purchases (course_id, user_id, email, amount_cents, currency, status, razorpay_order_id, access_token)
+		VALUES ($1,$2,$3,$4,$5,'created',$6,$7) RETURNING id`,
+		p.CourseID, userID, p.Email, p.AmountCents, p.Currency, p.RazorpayOrderID, p.AccessToken,
 	).Scan(&id)
 	return id, err
+}
+
+// ListPaidByUserID returns every paid course purchase made by a given
+// account, newest first — the source for the "My Courses" section of
+// /account.
+func (r *PurchaseRepo) ListPaidByUserID(ctx context.Context, userID int64) ([]models.Purchase, error) {
+	rows, err := r.db.QueryContext(ctx, `SELECT `+purchaseColumns+` FROM purchases WHERE user_id = $1 AND status = 'paid' ORDER BY paid_at DESC`, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var out []models.Purchase
+	for rows.Next() {
+		p, err := scanPurchase(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, p)
+	}
+	return out, rows.Err()
 }
 
 func (r *PurchaseRepo) GetByRazorpayOrderID(ctx context.Context, orderID string) (models.Purchase, error) {

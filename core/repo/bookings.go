@@ -84,6 +84,18 @@ func (r *BookingRepo) ListUpcoming(ctx context.Context) ([]models.Booking, error
 	return scanBookings(rows)
 }
 
+// ListByUserID returns every booking (any status) made by a given account,
+// newest slot first — the source for the "My Bookings" section of
+// /account.
+func (r *BookingRepo) ListByUserID(ctx context.Context, userID int64) ([]models.Booking, error) {
+	rows, err := r.db.QueryContext(ctx, `SELECT `+bookingColumns+` FROM bookings WHERE user_id = $1 ORDER BY slot_start DESC`, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	return scanBookings(rows)
+}
+
 func (r *BookingRepo) ListAll(ctx context.Context) ([]models.Booking, error) {
 	rows, err := r.db.QueryContext(ctx, `SELECT `+bookingColumns+` FROM bookings ORDER BY slot_start DESC`)
 	if err != nil {

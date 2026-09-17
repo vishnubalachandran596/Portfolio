@@ -26,36 +26,6 @@
     }
   }
 
-  // --- Side panel (the "three bars" menu) -----------------------------
-  var navToggle = document.getElementById("nav-toggle");
-  var sidePanel = document.getElementById("side-panel");
-  var sidePanelBackdrop = document.getElementById("side-panel-backdrop");
-  var sidePanelClose = document.getElementById("side-panel-close");
-  function openSidePanel() {
-    if (!sidePanel || !sidePanelBackdrop) return;
-    sidePanelBackdrop.hidden = false;
-    requestAnimationFrame(function () {
-      sidePanel.classList.add("open");
-      sidePanelBackdrop.classList.add("open");
-    });
-    sidePanel.setAttribute("aria-hidden", "false");
-    if (navToggle) navToggle.setAttribute("aria-expanded", "true");
-  }
-  function closeSidePanel() {
-    if (!sidePanel || !sidePanelBackdrop) return;
-    sidePanel.classList.remove("open");
-    sidePanelBackdrop.classList.remove("open");
-    sidePanel.setAttribute("aria-hidden", "true");
-    if (navToggle) navToggle.setAttribute("aria-expanded", "false");
-    setTimeout(function () { sidePanelBackdrop.hidden = true; }, 240);
-  }
-  if (navToggle) navToggle.addEventListener("click", openSidePanel);
-  if (sidePanelClose) sidePanelClose.addEventListener("click", closeSidePanel);
-  if (sidePanelBackdrop) sidePanelBackdrop.addEventListener("click", closeSidePanel);
-  document.addEventListener("keydown", function (e) {
-    if (e.key === "Escape") closeSidePanel();
-  });
-
   // --- Page transitions -------------------------------------------------
   // A light fade-out before navigating to an internal link, and a spinner
   // for anything slower than an instant cache hit, instead of a hard jump.

@@ -1,7 +1,10 @@
 {{define "header"}}
 <header class="site-header">
   <div class="container header-inner">
-    <a class="brand" href="{{.Nav.Home}}">{{.SiteName}}</a>
+    <a class="brand" href="{{.Nav.Home}}">
+      <span class="brand-full">{{.SiteName}}</span>
+      <span class="brand-mark" aria-hidden="true">VB</span>
+    </a>
 
     <nav class="primary-nav" aria-label="Primary">
       <a href="{{.Nav.Home}}" class="{{if eq .Active "home"}}active{{end}}">Home</a>
@@ -10,41 +13,24 @@
       <a href="{{.Nav.Consultancy}}" class="{{if eq .Active "consultancy"}}active{{end}}">Consultancy</a>
       <a href="{{.Nav.Articles}}" class="{{if eq .Active "articles"}}active{{end}}">Articles</a>
       <a href="{{.Nav.Contact}}" class="{{if eq .Active "contact"}}active{{end}}">Contact Me</a>
+      {{if .IsLoggedIn}}
+      <a href="{{.Nav.Account}}" class="{{if eq .Active "account"}}active{{end}}">My Account</a>
+      {{end}}
+      {{if .IsAdmin}}
+      <a href="{{.Nav.Admin}}" class="{{if eq .Active "admin"}}active{{end}}">Admin Console</a>
+      {{end}}
     </nav>
 
     <div class="header-actions">
       <button type="button" id="theme-toggle" class="theme-toggle" aria-label="Toggle dark or light theme">
         <span class="theme-toggle-icon" aria-hidden="true">◐</span>
       </button>
-      <button class="nav-toggle" id="nav-toggle" aria-label="Open menu" aria-expanded="false" aria-controls="side-panel">
-        <span></span><span></span><span></span>
-      </button>
+      {{if .IsLoggedIn}}
+      <form method="POST" action="/logout" class="header-logout-form"><button type="submit" class="link-button">Log Out</button></form>
+      {{else}}
+      <a href="{{.Nav.Login}}" class="btn btn-primary btn-sm">Login</a>
+      {{end}}
     </div>
   </div>
 </header>
-
-<div class="side-panel-backdrop" id="side-panel-backdrop" hidden></div>
-<aside class="side-panel" id="side-panel" aria-hidden="true">
-  <button type="button" class="side-panel-close" id="side-panel-close" aria-label="Close menu">&times;</button>
-  <nav class="side-panel-nav" aria-label="Menu">
-    <a href="{{.Nav.Home}}" class="{{if eq .Active "home"}}active{{end}}">Home</a>
-    <a href="{{.Nav.About}}" class="{{if eq .Active "about"}}active{{end}}">About Me</a>
-    <a href="{{.Nav.Courses}}" class="{{if eq .Active "courses"}}active{{end}}">Courses</a>
-    <a href="{{.Nav.Consultancy}}" class="{{if eq .Active "consultancy"}}active{{end}}">Consultancy</a>
-    <a href="{{.Nav.Articles}}" class="{{if eq .Active "articles"}}active{{end}}">Articles</a>
-    <a href="{{.Nav.Contact}}" class="{{if eq .Active "contact"}}active{{end}}">Contact Me</a>
-    <a href="{{.Nav.Search}}" class="{{if eq .Active "search"}}active{{end}}">Search</a>
-    <hr class="side-panel-divider">
-    {{if .IsAdmin}}
-    <a href="{{.Nav.Admin}}" class="{{if eq .Active "admin"}}active{{end}}">Admin Console</a>
-    {{end}}
-    {{if .IsLoggedIn}}
-    <span class="side-panel-user">{{if .UserName}}Signed in as {{.UserName}}{{else}}Signed in{{end}}</span>
-    <form method="POST" action="/logout"><button type="submit" class="side-panel-link-btn">Log Out</button></form>
-    {{else}}
-    <a href="{{.Nav.Login}}" class="side-panel-cta">Login</a>
-    {{end}}
-    {{if .LinkedInURL}}<a href="{{.LinkedInURL}}" target="_blank" rel="noopener">LinkedIn ↗</a>{{end}}
-  </nav>
-</aside>
 {{end}}

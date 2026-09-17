@@ -294,79 +294,42 @@ a, button, .slot-btn, .faq-item summary { cursor: pointer; }
 }
 .nav-toggle:hover { border-color: var(--color-accent); }
 
+/* Brand: full site name on wider screens, a compact monogram once the tab
+   strip needs the room — avoids showing the same name twice in the first
+   screenful on mobile (header brand + hero heading). */
+.brand-mark { display: none; }
+.btn-sm { padding: 8px 16px; font-size: 0.85rem; }
+.header-logout-form { display: inline; }
+
 @media (max-width: 860px) {
-  .primary-nav { display: none; }
+  .brand-full { display: none; }
+  .brand-mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: var(--color-text);
+    color: var(--color-bg);
+    font-family: var(--font-serif);
+    font-weight: 600;
+    font-size: 0.9rem;
+  }
+  .header-inner { gap: 12px; height: auto; flex-wrap: wrap; padding: 12px 0; }
+  .primary-nav { order: 3; flex-basis: 100%; justify-content: flex-start; }
 }
 
-/* Right-hand slide-out menu (the "three bars") — duplicates the primary
-   nav plus Login/Logout, LinkedIn, and Contact, per the requested IA. */
-.side-panel-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(15, 23, 42, 0.5);
-  z-index: 90;
-  opacity: 0;
-  transition: opacity var(--transition-fast);
+/* The tab strip is the only nav on every breakpoint — no separate
+   hamburger/drawer duplicating the same links. On narrow screens it
+   scrolls horizontally instead of collapsing. */
+.primary-nav {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
 }
-.side-panel-backdrop.open { opacity: 1; }
-.side-panel-backdrop[hidden] { display: none; }
-
-.side-panel {
-  position: fixed;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  width: min(320px, 86vw);
-  background: var(--color-surface);
-  border-left: 1px solid var(--color-border);
-  box-shadow: var(--shadow-md);
-  z-index: 95;
-  padding: 24px;
-  transform: translateX(100%);
-  transition: transform 240ms ease;
-  display: flex;
-  flex-direction: column;
-}
-.side-panel.open { transform: translateX(0); }
-.side-panel-close {
-  align-self: flex-end;
-  background: none;
-  border: none;
-  font-size: 1.6rem;
-  line-height: 1;
-  color: var(--color-text-muted);
-  padding: 6px;
-  margin-bottom: 12px;
-}
-.side-panel-close:hover { color: var(--color-text); }
-.side-panel-nav { display: flex; flex-direction: column; gap: 4px; }
-.side-panel-nav a, .side-panel-link-btn {
-  padding: 12px 4px;
-  font-size: 1rem;
-  font-weight: 500;
-  color: var(--color-text);
-  border-bottom: 1px solid var(--color-border);
-  background: none;
-  border-left: none;
-  border-right: none;
-  border-top: none;
-  text-align: left;
-  width: 100%;
-}
-.side-panel-nav a.active { color: var(--color-primary-strong); }
-.side-panel-nav a:hover, .side-panel-link-btn:hover { color: var(--color-accent); }
-.side-panel-divider { border: none; border-top: 1px solid var(--color-border); margin: 8px 0; }
-.side-panel-user { padding: 8px 4px; font-size: 0.85rem; color: var(--color-text-faint); }
-.side-panel-cta {
-  background: var(--color-accent);
-  color: var(--color-accent-ink) !important;
-  border-radius: var(--radius-sm);
-  text-align: center;
-  margin-top: 8px;
-  border-bottom: none !important;
-  font-weight: 700 !important;
-}
-.side-panel-cta:hover { background: var(--color-accent-strong); color: var(--color-accent-ink) !important; }
+.primary-nav::-webkit-scrollbar { display: none; }
+.primary-nav a { flex-shrink: 0; }
 
 /* ---------------------------------------------------------------------
    Footer
@@ -422,7 +385,12 @@ a, button, .slot-btn, .faq-item summary { cursor: pointer; }
    Hero
 --------------------------------------------------------------------- */
 .hero { padding: 96px 0 72px; }
-.hero-simple { padding: 108px 0 80px; }
+.hero-simple { padding: 108px 0 56px; }
+@media (max-width: 860px) {
+  .hero { padding: 40px 0 32px; }
+  .hero-simple { padding: 40px 0 32px; }
+  .section { padding: 40px 0; }
+}
 .hero-inner { max-width: 720px; }
 .hero h1 { font-size: clamp(2.2rem, 5vw, 3.4rem); font-weight: 700; letter-spacing: -0.02em; margin: 4px 0 8px; }
 .hero-title { font-size: 1.15rem; color: var(--color-primary-strong); font-weight: 600; margin-bottom: 18px; }

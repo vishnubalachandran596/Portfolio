@@ -253,6 +253,7 @@ const (
 type Purchase struct {
 	ID                int64
 	CourseID          int64
+	UserID            int64
 	Email             string
 	AmountCents       int
 	Currency          string

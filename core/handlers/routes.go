@@ -29,6 +29,7 @@ func (a *App) Routes() http.Handler {
 	mux.HandleFunc("GET /articles", a.ArticlesPage)
 	mux.HandleFunc("GET /contact", a.ContactPage)
 	mux.HandleFunc("GET /search", a.Search)
+	mux.Handle("GET /account", noindex(a.Auth.RequireUser(http.HandlerFunc(a.AccountPage))))
 
 	// Visitor auth.
 	mux.HandleFunc("GET /login", a.LoginPage)

@@ -61,6 +61,16 @@ func (a *App) CheckoutCreateOrder(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "A valid email is required."})
 		return
 	}
+	// Logged-in buyers get the purchase tied to their account (so it shows
+	// up under /account) and their session email always wins over whatever
+	// was typed in the form, so "my courses" can't drift from who's paying.
+	var userID int64
+	if uid, ok := a.Auth.UserID(r); ok {
+		userID = uid
+		if u, err := a.Users.GetByID(r.Context(), uid); err == nil {
+			email = u.Email
+		}
+	}
 	// Currency and the minimum floor are resolved server-side from the
 	// visitor's own detected region (never from anything the client
 	// sends) — India gets an INR minimum, everyone else the international
@@ -89,6 +99,7 @@ func (a *App) CheckoutCreateOrder(w http.ResponseWriter, r *http.Request) {
 
 	if _, err := a.Purchases.Create(r.Context(), models.Purchase{
 		CourseID:        course.ID,
+		UserID:          userID,
 		Email:           email,
 		AmountCents:     amountCents,
 		Currency:        currency,

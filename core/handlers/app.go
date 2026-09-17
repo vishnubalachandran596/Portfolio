@@ -76,6 +76,7 @@ type NavLinks struct {
 	Articles    string
 	Contact     string
 	Search      string
+	Account     string
 	Admin       string
 	Login       string
 	Logout      string
@@ -147,6 +148,7 @@ func (a *App) base(r *http.Request, title, metaDescription, active string) BaseD
 			Articles:    a.pageURL(r, "/articles"),
 			Contact:     a.pageURL(r, "/contact"),
 			Search:      a.pageURL(r, "/search"),
+			Account:     a.pageURL(r, "/account"),
 			Admin:       a.pageURL(r, "/admin"),
 			Login:       a.pageURL(r, "/login"),
 			Logout:      a.pageURL(r, "/logout"),

@@ -78,6 +78,7 @@ func New() (*Renderer, error) {
 		"templates/pages/booking.html",
 		"templates/pages/articles_list.html",
 		"templates/pages/contact.html",
+		"templates/pages/account.html",
 		"templates/pages/login.html",
 		"templates/pages/search.html",
 		"templates/pages/legal.html",

@@ -1,0 +1,49 @@
+{{define "content"}}
+<section class="section page-hero page-hero-narrow">
+  <div class="container">
+    <p class="eyebrow">Account</p>
+    <h1>My Account</h1>
+    <p class="hero-subtitle">Your consultancy bookings and purchased courses, in one place.</p>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <h2 class="section-title">My Courses</h2>
+    {{if .Courses}}
+    <div class="course-grid">
+      {{range .Courses}}
+      <a class="course-card" href="/courses/{{.CourseSlug}}/learn">
+        <h3>{{.CourseTitle}}</h3>
+        <p>Purchased {{if .PaidAt}}{{.PaidAt}}{{else}}recently{{end}}{{if .Amount}} · {{.Amount}}{{end}}</p>
+        <span class="link-arrow">Continue learning →</span>
+      </a>
+      {{end}}
+    </div>
+    {{else}}
+    <p class="empty-state">No courses yet — <a href="/courses">browse the catalog</a>.</p>
+    {{end}}
+  </div>
+</section>
+
+<section class="section section-alt">
+  <div class="container">
+    <h2 class="section-title">My Bookings</h2>
+    {{if .Bookings}}
+    <table class="admin-table">
+      <thead><tr><th>When</th><th>Status</th></tr></thead>
+      <tbody>
+        {{range .Bookings}}
+        <tr>
+          <td>{{.When}}</td>
+          <td><span class="status-badge status-{{.Status}}">{{.Status}}</span></td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+    {{else}}
+    <p class="empty-state">No bookings yet — <a href="/consultancy">book a session</a>.</p>
+    {{end}}
+  </div>
+</section>
+{{end}}
