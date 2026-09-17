@@ -17,7 +17,7 @@
         {{if .Courses}}
         <h2 class="section-title">Courses</h2>
         <ul class="search-results">
-          {{range .Courses}}<li><a href="/courses/{{.Slug}}">{{.Title}}</a><p>{{.Summary}}</p></li>{{end}}
+          {{range .Courses}}<li><a href="{{$.Nav.Courses}}/{{.Slug}}">{{.Title}}</a><p>{{.Summary}}</p></li>{{end}}
         </ul>
         {{end}}
         {{if .Pages}}

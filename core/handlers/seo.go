@@ -4,16 +4,14 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+
+	"github.com/vishnubalachandran596/portfolio/core/middleware"
 )
 
-// baseURL returns the canonical absolute origin to build URLs against —
-// the configured SITE_URL when set (so sitemap/canonical/OG tags stay
-// stable across preview deployments), otherwise derived from the request
-// itself for local development.
+// baseURL returns the canonical absolute origin for the CURRENT request —
+// derived from its own host, which (once DomainRouter has run) is already
+// the correct subdomain for whatever page is being served.
 func (a *App) baseURL(r *http.Request) string {
-	if a.Cfg.SiteURL != "" {
-		return strings.TrimRight(a.Cfg.SiteURL, "/")
-	}
 	scheme := "http"
 	if r.TLS != nil || r.Header.Get("X-Forwarded-Proto") == "https" {
 		scheme = "https"
@@ -21,8 +19,24 @@ func (a *App) baseURL(r *http.Request) string {
 	return scheme + "://" + r.Host
 }
 
+// pageURL builds the absolute URL for an arbitrary path — unlike
+// baseURL(r), which only knows the current request's own host, this picks
+// the right subdomain for *that path* when a custom domain is configured,
+// for building sitemap entries that span multiple subdomains from one
+// request.
+func (a *App) pageURL(r *http.Request, path string) string {
+	if a.Cfg.Domain == "" {
+		return a.baseURL(r) + path
+	}
+	scheme := "http"
+	if r.TLS != nil || r.Header.Get("X-Forwarded-Proto") == "https" {
+		scheme = "https"
+	}
+	sub := middleware.SubdomainForPath(path)
+	return scheme + "://" + sub + "." + a.Cfg.Domain + path
+}
+
 func (a *App) Sitemap(w http.ResponseWriter, r *http.Request) {
-	base := a.baseURL(r)
 	courses, err := a.Courses.ListPublished(r.Context())
 	if err != nil {
 		a.serverError(w, "load courses for sitemap", err)
@@ -47,11 +61,11 @@ func (a *App) Sitemap(w http.ResponseWriter, r *http.Request) {
 		{"/cookies", "0.2"},
 	}
 	for _, p := range staticPaths {
-		fmt.Fprintf(&b, "  <url><loc>%s%s</loc><priority>%s</priority></url>\n", base, p.path, p.priority)
+		fmt.Fprintf(&b, "  <url><loc>%s</loc><priority>%s</priority></url>\n", a.pageURL(r, p.path), p.priority)
 	}
 	for _, c := range courses {
-		fmt.Fprintf(&b, "  <url><loc>%s/courses/%s</loc><lastmod>%s</lastmod><priority>0.7</priority></url>\n",
-			base, c.Slug, c.UpdatedAt.Format("2006-01-02"))
+		fmt.Fprintf(&b, "  <url><loc>%s</loc><lastmod>%s</lastmod><priority>0.7</priority></url>\n",
+			a.pageURL(r, "/courses/"+c.Slug), c.UpdatedAt.Format("2006-01-02"))
 	}
 	b.WriteString(`</urlset>`)
 
@@ -60,7 +74,10 @@ func (a *App) Sitemap(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *App) Robots(w http.ResponseWriter, r *http.Request) {
-	base := a.baseURL(r)
+	base := a.pageURL(r, "")
+	if a.Cfg.Domain != "" {
+		base = "https://home." + a.Cfg.Domain
+	}
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	fmt.Fprintf(w, "User-agent: *\nAllow: /\nDisallow: /admin/\n\nSitemap: %s/sitemap.xml\n", base)
 }
@@ -121,6 +138,7 @@ func (a *App) Search(w http.ResponseWriter, r *http.Request) {
 
 		for _, p := range staticSearchIndex {
 			if strings.Contains(strings.ToLower(p.Title), lower) || strings.Contains(strings.ToLower(p.Desc), lower) {
+				p.Path = a.pageURL(r, p.Path)
 				pageHits = append(pageHits, p)
 			}
 		}

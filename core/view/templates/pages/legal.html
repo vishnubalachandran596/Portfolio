@@ -20,7 +20,7 @@
       <li><strong>Booking requests:</strong> the name, email address, and optional message you submit on the Booking page, plus the time slot you selected.</li>
       <li><strong>Course purchases:</strong> the email address and amount you enter when unlocking a paid course, and payment status (paid/failed). We never see or store your card details — payment is handled entirely by Razorpay's own checkout, which runs in its own secure window and passes us only a payment confirmation.</li>
       <li><strong>Admin account:</strong> if you're the site administrator, your email and a securely hashed password (we never store your password in plain text).</li>
-      <li><strong>Cookies:</strong> a cookie-consent preference, a per-course access token (only if you've purchased a paid course, so you don't have to re-enter it), and — for the administrator only — a session cookie that keeps you logged into the admin portal. See our <a href="/cookies">Cookie Policy</a> for details.</li>
+      <li><strong>Cookies:</strong> a cookie-consent preference, a per-course access token (only if you've purchased a paid course, so you don't have to re-enter it), and — for the administrator only — a session cookie that keeps you logged into the admin portal. See our <a href="{{.Nav.Cookies}}">Cookie Policy</a> for details.</li>
     </ul>
     <p>Third-party processors we use, and why: <strong>Razorpay</strong> processes course payments (they receive your card/payment details directly; we never do), <strong>Supabase</strong> hosts our database, and <strong>Vercel</strong> hosts the application. We don't use any third-party advertising or analytics trackers.</p>
 
@@ -31,7 +31,7 @@
     <p>Data is stored in a managed PostgreSQL database (hosted by Supabase) and served by an application hosted on Vercel. Both providers process data on our behalf under their own security and privacy commitments.</p>
 
     <h2>Your rights, including data deletion</h2>
-    <p>You can ask us to access, correct, or delete the personal information we hold about you (for example, a booking you submitted) at any time{{if .ContactEmail}} by emailing <a href="mailto:{{.ContactEmail}}">{{.ContactEmail}}</a>{{else}} via the <a href="/booking">booking page</a> or the contact details on the <a href="/about">About page</a>{{end}}. We'll respond and action deletion requests within a reasonable time.</p>
+    <p>You can ask us to access, correct, or delete the personal information we hold about you (for example, a booking you submitted) at any time{{if .ContactEmail}} by emailing <a href="mailto:{{.ContactEmail}}">{{.ContactEmail}}</a>{{else}} via the <a href="{{.Nav.Booking}}">booking page</a> or the contact details on the <a href="{{.Nav.About}}">About page</a>{{end}}. We'll respond and action deletion requests within a reasonable time.</p>
 
     <h2>Children's data</h2>
     <p>This site is not directed at children, and we do not knowingly collect personal information from anyone under 16. If you believe a child has provided us information, contact us and we'll delete it.</p>
@@ -60,7 +60,7 @@
     <p>This site and its content are provided "as is." To the extent permitted by law, {{.ContactName}} is not liable for indirect or consequential damages arising from use of the site.</p>
 
     <h2>Contact</h2>
-    <p>Questions about these terms{{if .ContactEmail}} can be sent to <a href="mailto:{{.ContactEmail}}">{{.ContactEmail}}</a>{{else}} can be sent via the <a href="/booking">booking page</a>{{end}}.</p>
+    <p>Questions about these terms{{if .ContactEmail}} can be sent to <a href="mailto:{{.ContactEmail}}">{{.ContactEmail}}</a>{{else}} can be sent via the <a href="{{.Nav.Booking}}">booking page</a>{{end}}.</p>
     {{end}}
 
     {{if eq .Slug "refund"}}
@@ -72,7 +72,7 @@
     <p>Courses without a listed price are free to access — there's nothing to refund.</p>
 
     <h2>Booking cancellations</h2>
-    <p>Since booked sessions are free, there's no charge to refund. If you need to cancel or reschedule a booked session, please reach out as far in advance as you can{{if .ContactEmail}} at <a href="mailto:{{.ContactEmail}}">{{.ContactEmail}}</a>{{else}} via the <a href="/booking">booking page</a>{{end}} so the slot can be released for someone else.</p>
+    <p>Since booked sessions are free, there's no charge to refund. If you need to cancel or reschedule a booked session, please reach out as far in advance as you can{{if .ContactEmail}} at <a href="mailto:{{.ContactEmail}}">{{.ContactEmail}}</a>{{else}} via the <a href="{{.Nav.Booking}}">booking page</a>{{end}} so the slot can be released for someone else.</p>
     {{end}}
 
     {{if eq .Slug "cookies"}}

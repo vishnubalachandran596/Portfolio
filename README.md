@@ -173,21 +173,34 @@ pays via Razorpay Checkout, and is redirected to `/courses/<slug>/learn`.
   purchase button is hidden until both are set. See `/admin/purchases`
   for a log of every order and its status.
 
-## Domain architecture (marketing site vs. app)
+## Domain architecture (one subdomain per page group)
 
-The site follows a marketing-vs-app domain split: the apex domain serves
-public pages, and an `app.` subdomain serves the booking flow and admin
-portal. Set `DOMAIN=yourdomain.com` (no scheme, no `www`) in production and
-the app redirects automatically:
+Each part of the site lives on its own subdomain. Set `DOMAIN=yourdomain.com`
+(no scheme, no `www`) in production and the app redirects automatically —
+every page group is served *only* from its own subdomain, and any other
+host for that path (the apex, `www`, or another page's subdomain) gets a
+307 redirect to the right one:
 
-- `yourdomain.com/*` (except `/booking`, `/admin/*`) → stays on the apex.
-- `yourdomain.com/booking`, `yourdomain.com/admin/*` → redirected to `app.yourdomain.com`.
-- `app.yourdomain.com/*` (marketing paths) → redirected back to the apex.
-- `www.yourdomain.com/*` → redirected to the apex.
+| Subdomain | Serves |
+|---|---|
+| `home.yourdomain.com` | Home, search, and the legal pages (privacy/terms/refund/cookies) — the landing subdomain and catch-all for anything not listed below |
+| `about.yourdomain.com` | About |
+| `courses.yourdomain.com` | Courses list/detail, checkout, and gated paid-course content |
+| `booking.yourdomain.com` | Book a session |
+| `admin.yourdomain.com` | The admin portal |
+
+The bare apex (`yourdomain.com`) and `www.yourdomain.com` both redirect to
+`home.yourdomain.com` — "landing on the apex" always means landing on
+`home.`. `/static/*`, `/sitemap.xml`, and `/robots.txt` are exempt from
+this and served identically on every subdomain (since pages reference
+`/static/...` with relative paths). Every nav link, canonical tag, OG URL,
+and sitemap entry is generated with the correct subdomain baked in — see
+`core/middleware/domain.go` (the redirect logic) and `core/handlers/seo.go`
+(`pageURL`, used everywhere a link needs to point at a specific page).
 
 Leaving `DOMAIN` unset (e.g. on a raw `*.vercel.app` preview URL) disables
-this entirely — no-op passthrough, so preview deploys keep working before a
-custom domain is attached. See `core/middleware/domain.go`.
+all of this — no-op passthrough, so preview deploys keep working before a
+custom domain is attached.
 
 ## SEO, legal, and UX checklist status
 

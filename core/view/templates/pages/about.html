@@ -15,7 +15,7 @@
         {{if .Profile.LinkedInURL}}<a class="btn btn-secondary" href="{{.Profile.LinkedInURL}}" target="_blank" rel="noopener">LinkedIn</a>{{end}}
         {{if .Profile.ResumeURL}}<a class="btn btn-secondary" href="{{.Profile.ResumeURL}}" target="_blank" rel="noopener">Resume</a>{{end}}
         {{if .Profile.Email}}<button type="button" class="btn btn-secondary copy-btn" data-copy="{{.Profile.Email}}">Copy email</button>{{end}}
-        <a class="btn btn-primary no-print" href="/booking">Book Time</a>
+        <a class="btn btn-primary no-print" href="{{.Nav.Booking}}">Book Time</a>
       </div>
     </div>
     <aside class="about-facts">
@@ -94,7 +94,7 @@
   <div class="container cta-inner">
     <h2>Let's work together</h2>
     <p>Whether it's architecture review, mentoring, or a course — I'd love to help.</p>
-    <a class="btn btn-primary" href="/booking">Book Time With Me</a>
+    <a class="btn btn-primary" href="{{.Nav.Booking}}">Book Time With Me</a>
   </div>
 </section>
 {{end}}

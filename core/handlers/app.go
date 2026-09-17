@@ -47,6 +47,25 @@ type BaseData struct {
 	SiteURL         string
 	CanonicalURL    string
 	OGImageURL      string
+	Nav             NavLinks
+}
+
+// NavLinks holds the absolute URL for each primary nav destination, so
+// header/footer links jump straight to the right subdomain instead of
+// bouncing through a redirect (e.g. clicking "About" from home.domain
+// goes directly to about.domain, not home.domain/about -> redirect).
+// Root-relative when no custom domain is configured.
+type NavLinks struct {
+	Home    string
+	About   string
+	Courses string
+	Booking string
+	Search  string
+	Admin   string
+	Privacy string
+	Terms   string
+	Refund  string
+	Cookies string
 }
 
 func New(cfg *config.Config, db *sql.DB, renderer *view.Renderer) *App {
@@ -84,5 +103,17 @@ func (a *App) base(r *http.Request, title, metaDescription, active string) BaseD
 		SiteURL:         a.Cfg.SiteURL,
 		CanonicalURL:    base + r.URL.Path,
 		OGImageURL:      base + "/static/img/og-image.png",
+		Nav: NavLinks{
+			Home:    a.pageURL(r, "/"),
+			About:   a.pageURL(r, "/about"),
+			Courses: a.pageURL(r, "/courses"),
+			Booking: a.pageURL(r, "/booking"),
+			Search:  a.pageURL(r, "/search"),
+			Admin:   a.pageURL(r, "/admin/login"),
+			Privacy: a.pageURL(r, "/privacy"),
+			Terms:   a.pageURL(r, "/terms"),
+			Refund:  a.pageURL(r, "/refund"),
+			Cookies: a.pageURL(r, "/cookies"),
+		},
 	}
 }

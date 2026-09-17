@@ -2,7 +2,7 @@
 {{define "content"}}
 <section class="section page-hero">
   <div class="container">
-    <p class="eyebrow"><a href="/courses">← All courses</a></p>
+    <p class="eyebrow"><a href="{{.Nav.Courses}}">← All courses</a></p>
     <span class="course-level">{{.Course.Level}}</span>
     <h1>{{.Course.Title}}</h1>
     <p class="hero-subtitle">{{.Course.Summary}}</p>
@@ -36,7 +36,7 @@
       {{end}}
     {{else}}
     <div class="hero-actions">
-      <a class="btn btn-primary" href="/booking">Book Time to Discuss</a>
+      <a class="btn btn-primary" href="{{.Nav.Booking}}">Book Time to Discuss</a>
     </div>
     {{end}}
   </div>
