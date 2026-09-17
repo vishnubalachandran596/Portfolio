@@ -1,0 +1,964 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Kafka, Messaging &amp; Caching: Event Streaming with Redis</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap');
+
+:root{
+  --bg:#F8FAFC; --fg:#0F172A; --card:#FFFFFF; --border:#E2E8F0; --muted:#475569;
+  --primary:#F59E0B; --primary-fg:#0F172A; --accent:#8B5CF6; --accent-fg:#ffffff;
+  --good:#16A34A; --bad:#DC2626;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#0F172A; --fg:#F8FAFC; --card:#222735; --border:#334155; --muted:#94A3B8;
+    --primary:#F59E0B; --primary-fg:#0F172A; --accent:#8B5CF6; --accent-fg:#ffffff;
+    --good:#22C55E; --bad:#F87171;
+  }
+}
+
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0; background:var(--bg); color:var(--fg);
+  font-family:'IBM Plex Sans', system-ui, -apple-system, sans-serif;
+  line-height:1.65; -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:880px; margin:0 auto; padding:0 16px 96px}
+
+header.hero{padding:56px 0 32px; border-bottom:1px solid var(--border)}
+header.hero .kicker{
+  display:inline-block; font-size:.72rem; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--primary); font-weight:600; margin-bottom:14px;
+}
+header.hero h1{
+  font-size:clamp(1.7rem,4.2vw,2.5rem); font-weight:700; margin:0 0 12px; letter-spacing:-0.02em;
+}
+header.hero .subtitle{color:var(--muted); font-size:1.05rem; font-weight:400; max-width:62ch; margin:0 0 18px}
+header.hero .intro p{color:var(--fg); font-size:.96rem; max-width:66ch; margin:0 0 10px}
+header.hero .intro p:last-child{margin-bottom:0}
+
+nav.toc{margin:32px 0 0; padding:20px 0; border-top:1px solid var(--border); border-bottom:1px solid var(--border)}
+nav.toc h2{font-size:.72rem; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); margin:0 0 12px; font-weight:600}
+nav.toc ol{list-style:none; margin:0; padding:0; display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:6px 24px; counter-reset:toc}
+nav.toc li{counter-increment:toc}
+nav.toc a{
+  color:var(--fg); text-decoration:none; font-size:.9rem; display:block; padding:5px 0;
+  border-bottom:1px solid transparent; transition:color .2s, border-color .2s;
+}
+nav.toc a::before{content:counter(toc) ". "; color:var(--primary); font-weight:600}
+nav.toc a:hover{color:var(--primary); border-color:var(--primary)}
+nav.toc a:focus-visible{outline:2px solid var(--accent); outline-offset:3px}
+
+section.course-section{padding:48px 0; border-bottom:1px solid var(--border)}
+section.course-section:last-of-type{border-bottom:none}
+section.course-section h2{font-size:1.5rem; font-weight:700; margin:0 0 6px; color:var(--fg); letter-spacing:-.01em}
+section.course-section h2 .sec-num{color:var(--primary); font-variant-numeric:tabular-nums; margin-right:10px}
+section.course-section .lede{color:var(--muted); margin:0 0 26px; font-size:.95rem; max-width:68ch}
+.course-section h3{font-size:1.05rem; font-weight:600; margin:28px 0 10px; color:var(--fg)}
+.course-section p{margin:0 0 14px; color:var(--fg); font-size:.98rem; max-width:74ch}
+.course-section strong{color:var(--fg); font-weight:600}
+.course-section code{
+  font-family:ui-monospace,'SFMono-Regular',Consolas,monospace; font-size:.86em;
+  background:var(--card); border:1px solid var(--border); padding:.12em .38em; border-radius:4px;
+}
+.course-section ul{margin:0 0 14px; padding-left:1.2rem; color:var(--fg); max-width:74ch}
+.course-section li{margin:4px 0}
+
+.concept-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:10px; margin:18px 0 30px}
+.concept-card{background:var(--card); border:1px solid var(--border); border-radius:10px; padding:0 16px; transition:border-color .2s}
+.concept-card:hover{border-color:var(--primary)}
+.concept-card summary{cursor:pointer; padding:14px 0; font-weight:600; font-size:.88rem; color:var(--fg); list-style:none}
+.concept-card summary::-webkit-details-marker{display:none}
+.concept-card summary::before{content:"+"; color:var(--primary); font-weight:700; margin-right:10px; display:inline-block; width:.8em}
+.concept-card[open] summary::before{content:"\2013"}
+.concept-card summary:focus-visible{outline:2px solid var(--accent); outline-offset:3px; border-radius:4px}
+.concept-card .concept-body{padding:0 0 15px}
+.concept-card .concept-body p{margin:0; color:var(--muted); font-size:.87rem; max-width:none}
+
+.exercise{margin:30px 0 10px; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:22px 24px}
+.exercise h4{margin:0 0 6px; font-size:.7rem; text-transform:uppercase; letter-spacing:.09em; color:var(--primary); font-weight:700}
+.exercise .ex-title{font-size:1.08rem; font-weight:600; margin:0 0 6px; color:var(--fg)}
+.exercise .ex-desc{color:var(--muted); font-size:.87rem; margin:0 0 18px; max-width:70ch}
+.ex-controls{display:flex; flex-wrap:wrap; gap:10px 14px; align-items:center; margin-bottom:16px; font-size:.85rem; color:var(--muted)}
+.ex-controls label{display:inline-flex; align-items:center; gap:6px; cursor:pointer}
+.btn{
+  cursor:pointer; border:none; background:var(--accent); color:var(--accent-fg);
+  padding:9px 16px; border-radius:8px; font-family:inherit; font-weight:600; font-size:.83rem;
+  transition:opacity .2s, transform .15s;
+}
+.btn:hover{opacity:.88}
+.btn:active{transform:scale(.97)}
+.btn.secondary{background:transparent; color:var(--fg); border:1px solid var(--border)}
+.btn.secondary:hover{border-color:var(--accent); color:var(--accent)}
+.btn:disabled{opacity:.45; cursor:not-allowed}
+.btn:focus-visible, input:focus-visible, select:focus-visible, .chip:focus-visible{
+  outline:2px solid var(--accent); outline-offset:2px;
+}
+select, input[type=text], input[type=number], input[type=range]{
+  font-family:inherit; background:var(--bg); color:var(--fg); border:1px solid var(--border);
+  border-radius:8px; padding:7px 10px; font-size:.83rem; cursor:pointer;
+}
+input[type=text]{cursor:text}
+.ex-stage{
+  background:var(--bg); border:1px dashed var(--border); border-radius:10px; padding:16px;
+  min-height:70px; display:flex; flex-wrap:wrap; gap:10px; align-items:flex-start;
+}
+.ex-log{
+  margin-top:14px; font-size:.78rem; font-family:ui-monospace,'SFMono-Regular',Consolas,monospace;
+  color:var(--muted); max-height:150px; overflow:auto; background:var(--bg); border:1px solid var(--border);
+  border-radius:8px; padding:10px 12px;
+}
+.ex-log div{padding:3px 0; border-bottom:1px solid var(--border)}
+.ex-log div:last-child{border-bottom:none}
+.chip{
+  display:inline-flex; align-items:center; gap:6px; background:var(--card); border:1px solid var(--border);
+  border-radius:8px; padding:8px 12px; font-size:.78rem; font-family:ui-monospace,monospace; cursor:pointer;
+  transition:border-color .2s, transform .15s; color:var(--fg);
+}
+.chip:hover{border-color:var(--accent); transform:translateY(-1px)}
+.stat-row{display:flex; gap:16px; flex-wrap:wrap; margin-bottom:12px}
+.stat{background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:10px 14px; font-size:.76rem; color:var(--muted); min-width:120px}
+.stat b{display:block; font-size:1.35rem; color:var(--primary); font-family:ui-monospace,monospace; font-weight:600}
+.bar-track{width:100%; height:14px; background:var(--bg); border:1px solid var(--border); border-radius:7px; overflow:hidden; margin-bottom:14px}
+.bar-fill{height:100%; background:var(--accent); transition:width .35s ease, background .35s ease; width:0}
+.quiz-options{display:grid; gap:8px; margin:14px 0}
+.quiz-options button{text-align:left}
+.quiz-options button.correct{background:var(--good); color:#fff; border-color:var(--good)}
+.quiz-options button.wrong{background:var(--bad); color:#fff; border-color:var(--bad)}
+.quiz-options button.recommended{background:var(--good); color:#fff; border-color:var(--good)}
+.feedback{margin-top:8px; padding:13px 15px; border-radius:8px; font-size:.85rem; background:var(--bg); border:1px solid var(--border); max-width:70ch}
+.feedback.good{border-color:var(--good)}
+.feedback.info{border-color:var(--accent)}
+.q-label{font-weight:600; margin:0 0 10px; font-size:.92rem}
+.muted-note{color:var(--muted); font-size:.78rem; margin-top:10px}
+
+footer.site-footer{padding:44px 0 10px; text-align:center; color:var(--muted); font-size:.8rem}
+
+@media (max-width:600px){
+  header.hero{padding:40px 0 24px}
+  section.course-section{padding:36px 0}
+  .exercise{padding:18px}
+  .stat{min-width:100px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <span class="kicker">Event-Driven Systems</span>
+  <h1>Kafka, Messaging &amp; Caching: Event Streaming with Redis</h1>
+  <p class="subtitle">A mechanism-level guide to designing and operating real streaming, messaging, and caching systems — for backend engineers who need more than buzzword familiarity.</p>
+  <div class="intro">
+    <p>This course is written for engineers who will be on-call for the systems they build. It covers Kafka's core log abstraction, producer/consumer delivery semantics, replication and reliability internals, schema evolution, Kafka Streams, and the architecture patterns (outbox, event sourcing/CQRS, choreographed sagas) that show up repeatedly in event-driven backends. It also covers the actor model and Akka as a genuinely different concurrency paradigm — not a Kafka substitute — and Redis in depth: as a cache, and as a set of deliberate data structures with their own durability trade-offs.</p>
+    <p>Every section pairs precise, no-hand-waving explanation with a working interactive simulator that behaves the way the real system behaves — partition rebalances actually reassign partitions, the LRU/LFU simulator actually evicts the correct key, the idempotent-producer demo actually deduplicates. Six of them in total, scattered through the material where the mechanism is easiest to see in motion.</p>
+  </div>
+
+  <nav class="toc" aria-label="Table of contents">
+    <h2>Contents</h2>
+    <ol>
+      <li><a href="#why-streaming">Why Event Streaming Exists</a></li>
+      <li><a href="#producers-consumers">Producers, Consumers &amp; Delivery Semantics</a></li>
+      <li><a href="#reliability">Kafka Reliability Mechanics</a></li>
+      <li><a href="#schema">Schema Management for Streaming Data</a></li>
+      <li><a href="#streams">Kafka Streams &amp; Stream Processing</a></li>
+      <li><a href="#patterns">Architecture Patterns: Outbox, Event Sourcing, Sagas</a></li>
+      <li><a href="#actors">The Actor Model &amp; Akka</a></li>
+      <li><a href="#redis-cache">Redis as a Cache</a></li>
+      <li><a href="#redis-beyond">Redis Beyond Caching</a></li>
+      <li><a href="#architecture">Putting It Together: A Pricing &amp; Billing Pipeline</a></li>
+    </ol>
+  </nav>
+</header>
+
+<!-- ===================== SECTION 1 ===================== -->
+<section class="course-section" id="why-streaming">
+  <h2><span class="sec-num">01</span>Why Event Streaming Exists</h2>
+  <p class="lede">From synchronous request/response and disposable point-to-point queues to a durable, replayable commit log — and why partitioning is both Kafka's unit of parallelism and its unit of ordering.</p>
+
+  <h3>Why Kafka Replaced Point-to-Point Queues and Request/Response Integration</h3>
+  <p>Kafka is not merely a larger queue; it replaces an architecture of temporary, point-to-point handoffs with a durable, replayable integration substrate. A conventional queue couples sender and receiver to availability, capacity, and consumption rate. Once a consumer acknowledges a message, the broker normally discards it, so another consumer cannot independently recover the same event. Kafka retains records in an ordered <strong>commit log</strong> for a retention policy or until a size quota is met. Consumers track positions independently, so replay, incident recovery, and new downstream use cases do not require republishing or changing producers.</p>
+  <p>Request/response remains appropriate for immediate authorization or a synchronous decision, but it is a poor integration boundary. The caller must know the responder's identity and availability; latency propagates directly; retries create duplicate work; and a shared operation cannot evolve independently. A producer publishes an event once, while each consumer interprets it at its own pace. This provides temporal and operational decoupling, though it shifts contract, schema, and semantic compatibility into the event stream itself.</p>
+
+  <h3>Topics, Partitions, Offsets, and the Commit Log</h3>
+  <p>A <strong>topic</strong> is the logical event category and API namespace. It is physically divided into ordered <strong>partitions</strong>, which are append-only log segments replicated across brokers. A partition leader accepts writes and serves reads; replicas provide fault tolerance, and an elected replica can become leader after failure. Partitioning therefore also distributes storage and network load across the cluster.</p>
+  <p>Each appended record receives a monotonically increasing <strong>offset</strong> within its partition, starting at zero. The offset identifies position, not global event time or production sequence. Consumers store their next desired offset, usually in an internal offset topic. <strong>Committing an offset is metadata, not message acknowledgement</strong>: it records progress but does not delete data. Committed position and application side effects must be coordinated to define delivery semantics — a topic we return to in the next section. The broker's durable commit log is the authoritative append sequence; replication copies it to followers, while consumer offsets are separate, per-group state.</p>
+
+  <h3>Partitioning: Parallelism and Ordering</h3>
+  <p>Partitioning is Kafka's parallelism unit because partitions can be stored, replicated, and consumed independently. Multiple consumers in a group can process different partitions concurrently, subject to the assignment and rebalance protocol. More partitions can increase potential throughput, but only when downstream processing and storage also scale to match.</p>
+  <p>The same boundary is Kafka's ordering unit. Records in one partition have one total order, exposed through offsets. Kafka does not promise one global order across partitions: two records in different partitions may be written concurrently, observed in different orders by consumers, and processed on separate threads or even separate machines. Consequently, all causally related events that require ordered handling must use a stable partition key that maps them to the same partition. Changing the key changes the ordering domain. If an application genuinely needs cross-partition ordering, it must add a sequencer or an application-level reconciliation mechanism — Kafka itself will not provide it.</p>
+
+  <div class="concept-grid">
+    <details class="concept-card"><summary>What exactly is retained?</summary><div class="concept-body"><p>The append-only log records, organized by topic and partition — not consumer state or acknowledgements. Retention is a broker-side policy independent of who has read what.</p></div></details>
+    <details class="concept-card"><summary>What does an offset represent?</summary><div class="concept-body"><p>The record's zero-based position within one partition; it is not a timestamp or a global sequence number across the topic.</p></div></details>
+    <details class="concept-card"><summary>Why can consumers replay data?</summary><div class="concept-body"><p>Consumers retain independent positions while Kafka keeps the underlying records according to the retention policy — rewinding an offset is enough to reprocess history.</p></div></details>
+    <details class="concept-card"><summary>Where is ordering guaranteed?</summary><div class="concept-body"><p>Only among records assigned to the same partition. Cross-partition ordering requires an explicit application-level mechanism — Kafka provides none by default.</p></div></details>
+  </div>
+
+  <div class="exercise" id="ex-partitions">
+    <h4>Hands-on</h4>
+    <p class="ex-title">Partition Assignment &amp; Rebalance Visualizer</p>
+    <p class="ex-desc">A topic has a fixed number of partitions. Add or remove consumers from the group and watch how partition ownership is reassigned round-robin — and, critically, which partitions actually had to move.</p>
+    <div class="ex-controls">
+      <label>Partitions:
+        <select id="pv-partitions">
+          <option>4</option><option selected>6</option><option>8</option><option>12</option>
+        </select>
+      </label>
+      <button class="btn" id="pv-add-consumer">+ Add consumer</button>
+      <button class="btn secondary" id="pv-remove-consumer">&minus; Remove consumer</button>
+      <button class="btn secondary" id="pv-reset">Reset</button>
+    </div>
+    <div class="ex-stage" id="pv-stage"></div>
+    <div class="ex-log" id="pv-log"></div>
+  </div>
+</section>
+
+<!-- ===================== SECTION 2 ===================== -->
+<section class="course-section" id="producers-consumers">
+  <h2><span class="sec-num">02</span>Producers, Consumers &amp; Delivery Semantics</h2>
+  <p class="lede">Partitioning strategy, consumer group rebalancing, and exactly what "at-least-once," "at-most-once," and "exactly-once" actually mean mechanically.</p>
+
+  <h3>Partitioning and Rebalancing</h3>
+  <p>Key-based partitioning applies a stable hash function to a key, then maps the result to a partition: <code>partition = hash(key) mod partitionCount</code>. The same key reaches the same partition while the count is unchanged, preserving per-key order. Round-robin partitioning ignores the key and assigns successive records to successive partitions, spreading volume evenly but breaking key locality entirely. Changing the partition count invalidates the modulo mapping, because the set of possible remainders changes. Most existing keys therefore hash to a different partition going forward; only keys whose remainder happens to stay the same land in the same place. Repartitioning does not relocate old records — it only changes where <em>new</em> records for a key go, which silently breaks per-key ordering across the repartition boundary unless you plan for it.</p>
+  <p>A consumer group is a set of consumers that jointly subscribe to topics and divide the partitions among members. The group coordinator, a broker elected for that group, manages membership, generation numbers, commits, and rebalances. A <strong>rebalance</strong> recomputes partition ownership; it is triggered by consumers joining, leaving, or crashing, by subscription changes, or by session timeouts. Eager rebalancing revokes every partition from every member before assigning the new plan, producing a stop-the-world pause across the whole group. Cooperative-sticky rebalancing revokes only the partitions that actually must move, so consumers keep processing their retained partitions while the transfer completes over one or more incremental rounds.</p>
+
+  <h3>Delivery Semantics, Precisely</h3>
+  <p><strong>At-most-once</strong> means the offset is committed before processing completes. A crash after the commit but before the side effect finishes loses the record — it will never be reprocessed, because the consumer's recorded position already says it's done. <strong>At-least-once</strong> means processing happens before the offset commit. A crash between those two steps causes replay on restart, so duplicates are possible, but data is never silently lost. This is Kafka's common default behavior, not a special mode you opt into.</p>
+  <p><strong>Exactly-once semantics (EOS)</strong> requires more machinery. An idempotent producer is assigned a stable producer ID and maintains a per-partition sequence number; the broker deduplicates retried produce requests that carry an already-seen (producer ID, sequence) pair, so a retry after a lost acknowledgement does not create a duplicate record. Transactions extend this across multiple partitions and topics: a transaction coordinator prepares and then atomically commits or aborts a set of writes, and consumers configured with <code>read_committed</code> isolation never observe records from an aborted transaction. Together, idempotent producers and transactions give exactly-once processing for Kafka-to-Kafka pipelines. They do not, by themselves, make an arbitrary external side effect — a database write, an email, a charge to a payment processor — happen exactly once. That external effect needs its own idempotency key or transactional-outbox discipline, because Kafka's transaction boundary ends at Kafka.</p>
+
+  <div class="concept-grid">
+    <details class="concept-card"><summary>Why does changing partition count break key mapping?</summary><div class="concept-body"><p>The modulo divisor changes, so the remainder used to select a partition changes for most keys going forward. Existing records stay put; only new production is affected — which is exactly what makes the bug subtle.</p></div></details>
+    <details class="concept-card"><summary>What is a consumer group coordinator?</summary><div class="concept-body"><p>The broker responsible for tracking group membership, assigning a generation number, coordinating rebalances, and handling offset commit requests for that specific group.</p></div></details>
+    <details class="concept-card"><summary>Eager vs cooperative-sticky, in one line?</summary><div class="concept-body"><p>Eager revokes everything before reassigning anything. Cooperative-sticky revokes only what has to move, so unaffected partitions never stop processing.</p></div></details>
+    <details class="concept-card"><summary>What does Kafka EOS actually guarantee?</summary><div class="concept-body"><p>Exactly-once behavior for records moving through Kafka, via idempotent producers and transactions with <code>read_committed</code> consumers. External systems need their own idempotency discipline.</p></div></details>
+  </div>
+
+  <div class="exercise" id="ex-lag">
+    <h4>Hands-on</h4>
+    <p class="ex-title">Offset &amp; Consumer Lag Simulator</p>
+    <p class="ex-desc">Producer writes advance the log end offset. The consumer's committed offset only advances as fast as its configured processing rate allows. Produce a burst, throttle the consume rate, and watch lag grow — then recover.</p>
+    <div class="ex-controls">
+      <button class="btn" id="lag-produce">Produce burst (+10)</button>
+      <label>Consume rate: <input type="range" id="lag-rate" min="0" max="20" value="8"> <span id="lag-rate-val">8</span>/tick</label>
+      <button class="btn secondary" id="lag-tick">Tick (consume once)</button>
+      <button class="btn secondary" id="lag-auto">&#9654; Auto-run</button>
+      <button class="btn secondary" id="lag-reset">Reset</button>
+    </div>
+    <div class="stat-row">
+      <div class="stat">Log end offset<b id="lag-produced">0</b></div>
+      <div class="stat">Committed offset<b id="lag-consumed">0</b></div>
+      <div class="stat">Consumer lag<b id="lag-lag">0</b></div>
+    </div>
+    <div class="bar-track"><div class="bar-fill" id="lag-bar"></div></div>
+    <div class="ex-log" id="lag-log"></div>
+  </div>
+
+  <div class="exercise" id="ex-delivery">
+    <h4>Hands-on</h4>
+    <p class="ex-title">At-Least-Once vs Exactly-Once: The Retry Scenario</p>
+    <p class="ex-desc">Every send below simulates the classic failure mode: the broker appends the record, but the acknowledgement is lost on the way back to the producer. The producer, not knowing the write actually succeeded, retries the send. Toggle idempotency to see the broker's actual behavior on that retry.</p>
+    <div class="ex-controls">
+      <label><input type="checkbox" id="dl-idem" checked> Idempotent producer enabled</label>
+      <button class="btn" id="dl-send">Send message (ack lost &rarr; retry)</button>
+      <button class="btn secondary" id="dl-reset">Reset</button>
+    </div>
+    <div class="ex-stage" id="dl-stage"></div>
+    <div class="ex-log" id="dl-log"></div>
+  </div>
+</section>
+
+<!-- ===================== SECTION 3 ===================== -->
+<section class="course-section" id="reliability">
+  <h2><span class="sec-num">03</span>Kafka Reliability Mechanics</h2>
+  <p class="lede">Replication, the in-sync replica set, the real trade-off behind acks, and what actually happens on the wire during a broker failure.</p>
+
+  <p>A Kafka topic is divided into ordered, immutable partitions. Each partition has one leader and zero or more followers on different brokers. The leader serves producer writes and consumer reads; followers replicate its log. The <strong>replication factor</strong> counts all copies, while the <strong>in-sync replica set (ISR)</strong> contains only the replicas caught up within <code>replica.lag.time.max.ms</code>. A follower falls out of the ISR once the leader has not received a timely fetch request from it within that interval, and it can rejoin once it catches back up. A configured replication factor of three therefore does not guarantee three durable copies at any given instant — only current ISR membership does.</p>
+  <p><code>acks=0</code> is a fire-and-forget request: the producer does not wait for a broker response, giving the lowest request latency and highest throughput, but it cannot detect a failed broker, a rejected write, or a lost record. <code>acks=1</code> means the leader appends the record and returns success without waiting for followers — lower latency than waiting on replication, but if that leader fails before the write propagates, the acknowledged record can be lost entirely. <code>acks=all</code> (equivalently <code>-1</code>) requires the leader and every replica currently in the ISR to acknowledge before returning success; its latency includes follower replication and it can stall if the ISR is small. If a follower drops out of the ISR while an <code>acks=all</code> request is pending, the leader may retry until timeout rather than fail immediately — a timed-out request can, in fact, have been committed even though the client is about to retry it, which is exactly why idempotence and transactions matter for exactly-once effects.</p>
+  <p><code>min.insync.replicas</code> is a minimum ISR size required for writes. When the ISR shrinks below it, the leader rejects new writes with <code>NotEnoughReplicas</code> rather than silently accepting data that exists on only one copy. With <code>replication.factor=3</code>, <code>min.insync.replicas=2</code>, and <code>acks=all</code>, the normal case waits for the leader plus one follower. After one broker fails, at least two replicas can remain in the ISR, so writes continue with a quorum-like guarantee of two durable copies. If a second broker fails and only one replica remains, the floor is violated and the leader refuses writes outright, rather than risk accepting data that a single disk failure could erase. This is the standard configuration for surviving one broker failure without silently sacrificing durability.</p>
+  <p>During a broker failure, the controller detects the loss and elects a new leader for each affected partition from the remaining ISR. Producers initially send to the old leader; requests that time out or receive <code>NotLeaderOrFollower</code> trigger a metadata refresh, after which retries go to the new leader. Records already acknowledged under <code>acks=all</code> exist on the old leader and the required ISR replicas, so the new leader retains them. In-flight sends that never received a response are ambiguous: they may have reached the old leader and been durably committed, or may have been lost before replication — the client genuinely cannot tell. Retrying them unconditionally can therefore duplicate records unless the producer has idempotence enabled, which deduplicates retries within a producer session using the mechanism from the previous section.</p>
+
+  <div class="concept-grid">
+    <details class="concept-card"><summary>What does replication factor actually guarantee?</summary><div class="concept-body"><p>The number of replica copies configured — not their current health. Durability at any instant depends on how many replicas are currently in the ISR, not the configured factor.</p></div></details>
+    <details class="concept-card"><summary>Why can acks=1 still lose acknowledged data?</summary><div class="concept-body"><p>The leader can acknowledge before any follower replicates the record. If it then crashes and a follower without that record wins leader election, the acknowledged offset is gone.</p></div></details>
+    <details class="concept-card"><summary>Why does acks=all still need min.insync.replicas?</summary><div class="concept-body"><p>acks=all waits for whatever the current ISR happens to be — which could shrink to just the leader. The floor prevents the cluster from silently accepting single-copy durability.</p></div></details>
+    <details class="concept-card"><summary>What happens to unacknowledged in-flight sends?</summary><div class="concept-body"><p>They time out, the client refreshes metadata and retries against the new leader. The outcome is genuinely ambiguous — the record may already be committed — so retries need idempotence to avoid duplicating it.</p></div></details>
+    <details class="concept-card"><summary>Why is 3 / 2 / all the standard target?</summary><div class="concept-body"><p>Three replicas tolerate one broker loss outright; a minimum of two in-sync replicas preserves a real durability quorum; acks=all ensures every acknowledged write actually reached that quorum.</p></div></details>
+  </div>
+</section>
+
+<!-- ===================== SECTION 4 ===================== -->
+<section class="course-section" id="schema">
+  <h2><span class="sec-num">04</span>Schema Management for Streaming Data</h2>
+  <p class="lede">Why streaming schemas function as a production contract, Avro vs Protobuf vs JSON, and the exact compatibility rules that determine whether a schema change is safe to ship.</p>
+
+  <h3>Why Streaming Schemas Are a Production Contract</h3>
+  <p>Request/response APIs negotiate shape synchronously: a client sends one request, observes the server's response, and can fail immediately if something is wrong. Streaming data has no equivalent handshake. Many independent producers and consumers deploy on separate release cycles, and every consumer may replay months of retained events under newly deployed code. The schema therefore defines compatibility across time as well as across services — it governs on-wire bytes, generated types, validation, and the reader/writer resolution rules used during replay. Without enforced evolution rules, one deployment can corrupt or halt pipelines that process years of retained history, and the failure often surfaces far downstream, long after the change that caused it.</p>
+
+  <h3>Choosing a Serialization Format</h3>
+  <p>Plain JSON is easy to inspect and debug, but it is not a serialization protocol with an enforced schema. A producer can silently emit a string where consumers expect a number, and schema validation, if it exists at all, is a bolt-on control rather than an inherent reader/writer contract. JSON is also verbose, since field names repeat on every record, which adds to network, storage, and deserialization cost. Its readability remains useful for ad hoc inspection, but it's a weak foundation when compatibility needs to be mechanically enforced, not just hoped for.</p>
+  <p>Avro encodes data in a compact binary form, typically alongside a schema registry: producers place only a schema ID in each message, and consumers resolve that ID against the registry to retrieve the writer's schema. Avro resolves fields by name and uses reader-side defaults when the writer omits a field, and the registry can enforce compatibility rules at registration time — before a bad schema ever reaches production. Protobuf also uses a compact binary format and generates strongly typed client and server code, but its evolution model is different: fields are identified by stable numeric tags, old readers ignore unknown numbered fields, and removed numbers must be reserved so they're never reused for something else. Protobuf's wire stability depends on disciplined field-number management; Avro's depends on field names, defaults, and registry-enforced rules.</p>
+
+  <h3>Compatibility, Precisely</h3>
+  <p><strong>Backward compatibility</strong> means new consumers can deserialize data written by old producers — required when you upgrade consumers before producers, or replay old data under new consumer code. Adding a field is backward-compatible only if the new reader has a default for records that predate it. Removing a required field breaks backward compatibility, because an updated reader that still expects the field finds nothing to read. <strong>Forward compatibility</strong> means old consumers can deserialize data written by new producers — required when you upgrade producers before consumers. Adding an optional field is normally forward-compatible, because old readers simply ignore it. Renaming a field is effectively a remove-plus-add: unless the format or registry provides an explicit alias, it breaks both directions at once. <strong>Full compatibility</strong> requires both properties simultaneously, which is the appropriate policy whenever producers, consumers, and historical replays cannot all be upgraded in lockstep.</p>
+  <p>Consider a payments event whose reader schema adds a required <code>settlement_currency</code> field with no default. The producer deployment succeeds, because its own writer schema is internally valid — but an upgraded consumer then receives historical events that never had that field. Deserialization fails record by record, the consumer retries the same failing record, and consumer lag spikes as the backlog grows. The incident isn't caused by malformed bytes; it's caused by an unverified compatibility assumption that a registry policy — reject any required field without a default — would have caught before the change ever reached production.</p>
+
+  <div class="concept-grid">
+    <details class="concept-card"><summary>Why not negotiate at connection time?</summary><div class="concept-body"><p>Streaming has no single request boundary. Producers and consumers join independently, and retained events routinely outlive the specific deployment that created them.</p></div></details>
+    <details class="concept-card"><summary>Where does the schema actually travel?</summary><div class="concept-body"><p>With Avro and a registry, typically only a schema ID rides in the message; the consumer resolves that ID to the full writer schema and applies reader-side rules.</p></div></details>
+    <details class="concept-card"><summary>What makes Protobuf evolution safe?</summary><div class="concept-body"><p>Stable field numbers, unknown-field skipping, and reserving removed numbers so old and new code never assign different meaning to the same numbered slot.</p></div></details>
+    <details class="concept-card"><summary>Why do defaults matter so much?</summary><div class="concept-body"><p>A default gives a new reader a deterministic value for records that predate the field. Without one, a newly added required field makes all historical data unreadable.</p></div></details>
+    <details class="concept-card"><summary>Is a rename ever harmless?</summary><div class="concept-body"><p>Not without an explicit alias. Semantically, a rename is a removal plus an addition — it can break both backward and forward compatibility at once.</p></div></details>
+  </div>
+
+  <div class="exercise" id="ex-schema">
+    <h4>Hands-on</h4>
+    <p class="ex-title">Schema Evolution Compatibility Check</p>
+    <p class="ex-desc">For each schema change, decide what it breaks. Answers follow the standard backward/forward compatibility rules used by schema registries.</p>
+    <div id="sq-question"></div>
+    <div class="quiz-options" id="sq-options"></div>
+    <div class="feedback" id="sq-feedback" style="display:none"></div>
+    <div class="ex-controls" style="margin-top:12px">
+      <button class="btn secondary" id="sq-next" style="display:none">Next question &rarr;</button>
+      <span id="sq-score"></span>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== SECTION 5 ===================== -->
+<section class="course-section" id="streams">
+  <h2><span class="sec-num">05</span>Kafka Streams &amp; Stream Processing</h2>
+  <p class="lede">Stateless vs stateful operators, windowing an unbounded stream, the KTable/KStream duality, and how exactly-once composes from core Kafka primitives.</p>
+
+  <h3>Stateless vs. Stateful Processing</h3>
+  <p>A <strong>stateless</strong> operator computes each output solely from the current input record. <code>map</code> transforms one record into one record, <code>filter</code> decides whether to retain it, and <code>flatMap</code> emits zero or more records — none of them remember prior events, so rebalancing never requires migrating their processing state. A <strong>stateful</strong> operation depends on history: aggregations retain partial values, joins retain records or summaries needed for matching, and windowed operations retain events until their time interval closes. Kafka Streams stores this intermediate state in a local state store, commonly backed by <code>RocksDB</code>, and a compacted changelog topic records every mutation so that, after a failure or restart, the store can be reconstructed from the changelog instead of replaying the entire source history. The changelog, not RocksDB itself, is the durable recovery mechanism.</p>
+
+  <h3>Windowing and Event Time</h3>
+  <p>An unbounded stream has no final record, so a global count or average would never produce a complete result. <strong>Windowing</strong> divides the stream into finite time intervals, making bounded aggregation and periodic output possible. A <strong>tumbling window</strong> uses fixed, non-overlapping intervals, so an event belongs to exactly one window. A <strong>hopping window</strong> also has a fixed size but advances by a smaller step, so one event can contribute to several overlapping windows. A <strong>session window</strong> is activity-driven: records for the same key are grouped while arrivals stay within a configured inactivity gap, and sessions merge when that gap closes.</p>
+  <p>Window assignment is usually based on <strong>event time</strong> — the timestamp carried by the record — rather than the wall-clock time at which a machine happens to process it. Records can still arrive out of order because of network delays, retries, or upstream buffering, so a processor cannot immediately know that no later record will belong to an already-open window. A <strong>grace period</strong> delays finalization long enough to accept expected late arrivals; records arriving after that window closes may be dropped, routed to a side output, or handled under a defined update policy. Larger grace periods improve completeness but increase retained state and delay downstream results — it's a genuine operational trade-off, not a setting with one correct value.</p>
+
+  <h3>The KTable/KStream Duality</h3>
+  <p>A <code>KStream</code> represents a sequence of independent, append-only facts — each record is an event that happened, and multiple records may share a key without one replacing another. A <code>KTable</code> represents a table whose key maps to its latest value: an update for an existing key supersedes the previous one. Internally, every <code>KTable</code> is materialized from a changelog stream, and a stream can be turned into a table by grouping on key and retaining the latest or aggregated value. This duality is what lets one API express both immutable event history and current, evolving state. It determines join semantics directly: a stream-stream join combines facts as they arrive, a stream-table join enriches each incoming fact with the table's current value for its key, and a stream-to-table aggregation continually updates the table as new facts arrive.</p>
+
+  <h3>Exactly-Once Processing Semantics</h3>
+  <p>Kafka Streams' exactly-once processing semantics make a logical consume &rarr; state-update &rarr; produce unit atomic across crashes and restarts. The mechanism composes the idempotent producer, which prevents duplicate records from retries within a session, with transactions, which make output commits all-or-nothing. State-store mutations, output records, and consumer offset advances all participate in the same transaction, and <code>read_committed</code> consumers never observe a partially completed one. If a task fails before commit, its tentative outputs and offset advances are discarded; on recovery it resumes from the last committed position and rebuilds its state store from the changelog. This prevents duplicate side effects from restarts — but external sinks outside the Kafka transaction boundary still need their own idempotency discipline.</p>
+
+  <div class="concept-grid">
+    <details class="concept-card"><summary>Why do joins and aggregations need local state?</summary><div class="concept-body"><p>They must retain prior records or partial results to evaluate each new input. The local store gives low-latency access, while its changelog makes that state reproducible after a crash.</p></div></details>
+    <details class="concept-card"><summary>Tumbling vs hopping windows?</summary><div class="concept-body"><p>Tumbling windows are adjacent and non-overlapping. Hopping windows are fixed-size but advance by a smaller step, so one event can land in several overlapping windows.</p></div></details>
+    <details class="concept-card"><summary>Why do session windows exist?</summary><div class="concept-body"><p>They model bursts of activity without imposing a fixed clock boundary. A session closes only after a configured period of inactivity for that key.</p></div></details>
+    <details class="concept-card"><summary>What does a grace period actually trade off?</summary><div class="concept-body"><p>More grace accepts more late arrivals and improves completeness, but increases retained state and delays when downstream results become final.</p></div></details>
+    <details class="concept-card"><summary>What does Kafka Streams EOS not cover?</summary><div class="concept-body"><p>It guarantees Kafka-side atomicity — consumed input, state, and produced output committing as one unit. A non-Kafka sink outside that boundary still needs its own idempotency.</p></div></details>
+  </div>
+</section>
+
+<!-- ===================== SECTION 6 ===================== -->
+<section class="course-section" id="patterns">
+  <h2><span class="sec-num">06</span>Architecture Patterns: Outbox, Event Sourcing, Sagas</h2>
+  <p class="lede">Reliable publishing from a service with its own database, event sourcing/CQRS at a conceptual level, and choreographed sagas for distributed transactions in fintech-style domains.</p>
+
+  <h3>Transactional Outbox</h3>
+  <p>A banking service should not directly mix a database commit and a Kafka send in one application-level transaction — Kafka cannot atomically commit alongside PostgreSQL, MySQL, or another local database. If the database commits first and Kafka publishing fails, the business change is durable but downstream systems never observe it. If Kafka succeeds first and the database rolls back, consumers may credit an account, release a hold, or update a ledger for a change that never actually existed. The <strong>transactional outbox</strong> pattern removes this dual write. In the same local transaction as the business change, the service writes an immutable outbox row containing the event ID, aggregate ID, event type, payload, and publication state. A relay then publishes that row: with CDC, a Debezium-style connector tails the database transaction log and converts committed outbox inserts into Kafka records; with polling, a publisher claims due rows, sends them, and marks or deletes them afterward. CDC usually gives lower latency and avoids application polling but requires log access and connector operations; polling is simpler to deploy but must use leases or row locks to prevent concurrent relays from double-publishing. Either way, consumers still need to be idempotent, because delivery can be duplicated during retries, rebalances, or ambiguous send outcomes — the outbox solves the dual-write problem, not the at-least-once delivery problem downstream of it.</p>
+
+  <h3>Event Sourcing and CQRS</h3>
+  <p><strong>Event sourcing</strong> stores an aggregate's history as an append-only sequence of domain events rather than treating current-state rows as the primary truth — a payment aggregate might expose events like <code>PaymentInitiated</code>, <code>FundsReserved</code>, and <code>PaymentSettled</code>, and replaying them reconstructs its current state. <strong>CQRS</strong> separates that write model, which validates commands and appends events, from read models optimized for queries; projectors consume events and maintain materialized views such as account balances or transaction timelines. Kafka can serve as a durable broadcast backbone here, and retention or log compaction can support replay for selected event streams — but Kafka is not automatically an event store. It does not provide per-aggregate strong consistency or optimistic concurrency control comparable to a dedicated event store or the aggregate's own database. For high-value financial invariants, most teams keep the append-only write model in a database — where a version check on write gives you real optimistic concurrency — and use Kafka only to broadcast the resulting committed events downstream.</p>
+
+  <h3>Choreographed Sagas</h3>
+  <p>A <strong>choreographed saga</strong> coordinates a distributed business transaction without a central orchestrator: each service reacts to an event, performs its own local work through its own transaction and outbox, then publishes the next event — or a compensating event if its step failed. A payment service might emit <code>PaymentAuthorized</code>; a ledger service reserves funds; a notification service reacts to that reservation. If reservation fails, it emits <code>FundsReservationFailed</code>, prompting previously completed participants to reverse their effects. Compensation is not a rollback — external card calls, notifications, and settled entries may already be visible to the outside world, so every step must be both idempotent and independently compensatable. Because Kafka only orders records within a partition, related saga events need a shared correlation key wherever ordering matters. The real operational cost is visibility: no single process owns the complete workflow, so debugging a choreographed saga requires correlation IDs, causation IDs, structured event metadata, distributed tracing, and saga-specific dashboards — without them, a failed participant can leave a business transaction half-finished with no obvious owner to notice.</p>
+
+  <div class="concept-grid">
+    <details class="concept-card"><summary>What problem does the outbox actually solve?</summary><div class="concept-body"><p>It replaces an unsafe database-plus-Kafka dual write with one local atomic commit, followed by reliable asynchronous publication of the outbox row.</p></div></details>
+    <details class="concept-card"><summary>Who publishes outbox rows?</summary><div class="concept-body"><p>Either a CDC connector tailing the committed database transaction log, or a polling relay that claims rows, publishes them, and marks or deletes them after a successful send.</p></div></details>
+    <details class="concept-card"><summary>Is Kafka itself the event store?</summary><div class="concept-body"><p>Sometimes, when retention and compaction satisfy replay needs — otherwise a database or dedicated event store remains the authoritative append log with real per-aggregate consistency.</p></div></details>
+    <details class="concept-card"><summary>Why combine event sourcing with CQRS?</summary><div class="concept-body"><p>The write side preserves domain history and enforces invariants; separate projectors build query-optimized materialized views without burdening command handling.</p></div></details>
+    <details class="concept-card"><summary>What's genuinely hard about choreographed sagas?</summary><div class="concept-body"><p>There is no central flow record — correlation IDs, distributed tracing, and explicit timeout/retry policies are essential, or a failed step has no obvious owner to notice and fix it.</p></div></details>
+  </div>
+</section>
+
+<!-- ===================== SECTION 7 ===================== -->
+<section class="course-section" id="actors">
+  <h2><span class="sec-num">07</span>The Actor Model &amp; Akka</h2>
+  <p class="lede">A genuinely different concurrency paradigm from Kafka — mailboxes, supervision hierarchies, and "let it crash" as deliberate fault isolation, not carelessness.</p>
+
+  <h3>Actors and Kafka Are Not Equivalents</h3>
+  <p>The actor model is a <strong>concurrency and fault-isolation model</strong>; Kafka is a <strong>distributed log and streaming platform</strong>. An actor is a unit of concurrent computation. Kafka stores ordered, replayable records in partitions and lets multiple consumer groups process them independently. They solve different problems, and they are frequently used together rather than being interchangeable: Akka Streams or Kafka Streams can consume Kafka records and dispatch work to actors for per-entity processing. Kafka Streams is not an actor framework, and Akka is not a durable log — conflating them is a real category error, not a stylistic choice.</p>
+
+  <h3>What a Shared-Nothing Actor Is</h3>
+  <p>An actor owns private mutable state that no other actor can touch directly. The only way to request work from it is to send an asynchronous message. The runtime places that message in the actor's mailbox; it does not grant the sender any access to the receiver's internal fields. The actor processes one mailbox message at a time, which gives each actor a single-threaded illusion — its own state needs no locks, although coordination between separate actors still requires an explicit protocol. Messages are not automatically durable, transactional, or ordered across different actors; those guarantees require external systems or additional application-level protocols layered on top.</p>
+
+  <h3>Supervision and "Let It Crash"</h3>
+  <p>Actors form supervision hierarchies. A parent supervises its children and chooses a failure-handling strategy for each kind of failure. <strong>Resume</strong> keeps the actor's current state and drops only the message whose handler failed. <strong>Restart</strong> resets the actor's internal state to its initial, known-good form, then lets it keep processing new messages. <strong>Stop</strong> terminates the child outright. <strong>Escalate</strong> propagates the failure decision up to the parent's own supervisor, one level further out. "Let it crash" is therefore a deliberate fault-isolation philosophy, not careless error handling: a bad message or a corrupted entity's state is contained to one actor, instead of forcing defensive error handling into every possible code path everywhere in the system.</p>
+
+  <h3>When Actor Concurrency Is the Better Fit</h3>
+  <p>Actors genuinely fit workloads with many independent stateful entities that need per-entity ordering and low contention: one actor per user session, per device connection, per order, or per account. Messages for one entity are naturally ordered by its own mailbox, while the runtime schedules potentially millions of actors across a much smaller pool of threads — no thread-per-entity model and no per-entity lock contention. Actors are usually overkill for a mostly stateless request/response service, simple CRUD, or a small number of genuinely shared resources; there, a connection pool and a plain thread pool are simpler to reason about, operate, and tune, and adding an actor layer just introduces indirection without buying any real isolation benefit.</p>
+
+  <div class="concept-grid">
+    <details class="concept-card"><summary>Is an actor a thread?</summary><div class="concept-body"><p>No. An actor is a stateful concurrency boundary with a mailbox; threads are execution resources. A runtime may run many actors on a small thread pool, and one slow handler can delay that actor's later messages.</p></div></details>
+    <details class="concept-card"><summary>Does restart preserve state?</summary><div class="concept-body"><p>Normally no — a restart creates fresh actor state, which is exactly the point when in-memory state may be corrupt. Durable facts must be recovered from a database, event log, or another external source.</p></div></details>
+    <details class="concept-card"><summary>What does resume actually do?</summary><div class="concept-body"><p>Keeps the actor and its current state alive after the handler fails; the one failed message is dropped, so callers need their own retry or acknowledgment protocol if that loss is unacceptable.</p></div></details>
+    <details class="concept-card"><summary>Where does Kafka fit alongside actors?</summary><div class="concept-body"><p>Kafka supplies the durable, partitioned, replayable log that can feed actors. Kafka's ordering guarantee is per-partition, not automatically per-actor — the two compose but never merge into one abstraction.</p></div></details>
+    <details class="concept-card"><summary>When should actors be avoided?</summary><div class="concept-body"><p>When they'd add indirection without buying isolation — mostly stateless handlers, simple CRUD, or a handful of shared resources, where a conventional pool and explicit transactions are already clear enough.</p></div></details>
+  </div>
+
+  <div class="exercise" id="ex-akka">
+    <h4>Hands-on</h4>
+    <p class="ex-title">Supervision Strategy Decision Exercise</p>
+    <p class="ex-desc">For each scenario, pick a supervision strategy and see the actual consequence of that choice — including why the other three would go wrong.</p>
+    <div id="ak-question"></div>
+    <div class="quiz-options" id="ak-options"></div>
+    <div class="feedback" id="ak-feedback" style="display:none"></div>
+    <div class="ex-controls" style="margin-top:12px">
+      <button class="btn secondary" id="ak-next" style="display:none">Next scenario &rarr;</button>
+      <span id="ak-progress"></span>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== SECTION 8 ===================== -->
+<section class="course-section" id="redis-cache">
+  <h2><span class="sec-num">08</span>Redis as a Cache</h2>
+  <p class="lede">Cache-aside, write-through, and write-behind with real Redis primitives; how expiration and eviction actually work; and precise mitigations for the cache stampede problem.</p>
+
+  <h3>Redis Cache-Write Patterns</h3>
+  <p><strong>Cache-aside</strong> is the most common pattern. On a read, the application runs <code>GET key</code>; a hit returns the value, while a miss reads the database and then runs <code>SET key value EX seconds</code> (or <code>PX milliseconds</code>) to populate Redis. On an update, it writes the database and typically runs <code>DEL key</code>, invalidating the old value rather than trying to update the cached representation in place. This keeps Redis optional and stops a cache-write failure from blocking a database commit, at the cost of a slightly longer read-miss path and a brief window where a stale read is possible.</p>
+  <p><strong>Write-through</strong> treats Redis as the synchronous write entry point: the application writes the cache, and Redis (or the surrounding write path) synchronously propagates that change to the database before acknowledging success. This shrinks the window in which cache and database can disagree, but couples write latency and availability to both systems at once — Redis persistence alone is not a substitute for a real database write-ahead log.</p>
+  <p><strong>Write-behind</strong> (or write-back) acknowledges the cache write first and flushes it to the database asynchronously afterward. This improves write latency and absorbs bursts, but opens a genuine durability gap: if the cache node dies before the pending mutation is flushed, that write is gone. The design needs a durable pending-write queue, retry semantics, and an explicit recovery plan — it is not a drop-in replacement for a synchronous write path.</p>
+
+  <h3>Expiration and Eviction</h3>
+  <p>Redis combines two expiration mechanisms. <strong>Passive expiry</strong> happens on access: a <code>GET</code> checks the key's deadline, and an expired key is treated as absent and lazily deleted. <strong>Active expiry</strong> runs independently of any access — a periodic task samples a small random set of keys that carry a TTL, deletes whichever have already expired, and repeats more aggressively when too many sampled keys turn out to be expired. Expiration is therefore prompt on access, but not guaranteed at the exact deadline in the absence of an access or a sampling pass.</p>
+  <p>When Redis hits its memory limit, its configured eviction policy decides what happens next. <code>noeviction</code> simply rejects new writes. <code>allkeys-lru</code> and <code>allkeys-lfu</code> can evict any key; <code>volatile-lru</code> and <code>volatile-lfu</code> only ever consider keys that carry a TTL. <code>allkeys-random</code> picks any key at random, and <code>volatile-ttl</code> prefers the key with the least remaining time before it would have expired anyway. Critically, Redis's LRU is <em>approximate</em>: rather than maintaining a perfect recency-ordered structure over every key, it samples a bounded random subset and evicts the least-recently-used key <em>within that sample</em> — cheap in CPU and metadata, but a rarely used key can survive if it's never sampled, and a recently used one can be evicted if the sample happens to be unlucky. Redis's LFU is similarly approximate: it uses a probabilistic logarithmic counter rather than an exact access count, with increment probability that decreases as the counter grows (so very hot keys stop incrementing on every single access) and a decay mechanism that reduces counters over time so LFU can adapt as access patterns shift.</p>
+
+  <h3>The Thundering Herd</h3>
+  <p>A <strong>cache stampede</strong> occurs when many concurrent requests miss the same hot key at nearly the same instant — typically right after expiry, or on a cold cache — and every one of them independently performs the same expensive database read or recomputation. The result is a burst of duplicate work that can saturate the database and cascade into broader failures. Three mitigations address it from different angles. <strong>Distributed locking</strong> lets only one requester recompute: <code>SET lock token NX EX seconds</code> atomically creates a short-lived lock, the winner repopulates the cache, and losers wait, retry, or serve a stale value in the meantime; the TTL prevents a crashed lock holder from blocking everyone forever, but a bare <code>SETNX</code> followed by a separate expire command is unsafe if the process dies between the two calls — the atomic <code>SET ... NX EX</code> form avoids that gap. <strong>Jittered TTLs</strong> add a bounded random offset to each key's lifetime, so keys populated together expire across a spread window instead of all at the same instant — this reduces how often a stampede condition arises in the first place, without preventing one on any single hot key. <strong>Request coalescing</strong> deduplicates work within a process, or via a shared promise/future cache: concurrent callers for the same key attach to one in-flight computation and share its result, so a hundred concurrent requests trigger one database query instead of a hundred. Process-local coalescing doesn't coordinate across multiple application instances, though — a distributed lock or shared coordination layer is still needed once you're running more than one instance.</p>
+
+  <div class="concept-grid">
+    <details class="concept-card"><summary>What does Redis do exactly when a key expires?</summary><div class="concept-body"><p>Passive expiry catches it lazily on the next access; active expiry independently samples and sweeps expired keys in the background. Neither guarantees deletion at the exact deadline.</p></div></details>
+    <details class="concept-card"><summary>Is Redis LRU exact?</summary><div class="concept-body"><p>No — it's approximated by sampling a bounded random subset of keys and evicting the least-recently-used one within that sample, not by maintaining a perfect global recency order.</p></div></details>
+    <details class="concept-card"><summary>Is Redis LFU an exact frequency counter?</summary><div class="concept-body"><p>No — it's a probabilistic logarithmic counter with decreasing increment probability as it grows, plus decay over time, rather than an exact per-access count.</p></div></details>
+    <details class="concept-card"><summary>What precisely defines a stampede?</summary><div class="concept-body"><p>Concurrent duplication of expensive work around one key — many requests independently recomputing the same miss at nearly the same instant, not just one slow request.</p></div></details>
+    <details class="concept-card"><summary>Do these mitigations replace each other?</summary><div class="concept-body"><p>No — jitter reduces how often stampedes start, while locking and coalescing limit the damage once concurrent misses do happen. They're usually combined, not chosen between.</p></div></details>
+  </div>
+
+  <div class="exercise" id="ex-redis-evict">
+    <h4>Hands-on</h4>
+    <p class="ex-title">Redis Eviction Policy Simulator: LRU vs LFU</p>
+    <p class="ex-desc">A 4-slot cache. Insert keys and click a cached chip to simulate a <code>GET</code> (access) on it. When the cache is full, the next insert evicts a key according to whichever policy is selected. (Simplified to exact recency/frequency for clarity — production Redis approximates both, as explained above.)</p>
+    <div class="ex-controls">
+      <label><input type="radio" name="rev-policy" value="lru" checked> allkeys-lru</label>
+      <label><input type="radio" name="rev-policy" value="lfu"> allkeys-lfu</label>
+      <input type="text" id="rev-key" placeholder="key name" maxlength="12">
+      <button class="btn" id="rev-insert">Insert / SET</button>
+      <button class="btn secondary" id="rev-reset">Reset</button>
+    </div>
+    <div class="ex-stage" id="rev-stage"></div>
+    <div class="ex-log" id="rev-log"></div>
+  </div>
+</section>
+
+<!-- ===================== SECTION 9 ===================== -->
+<section class="course-section" id="redis-beyond">
+  <h2><span class="sec-num">09</span>Redis Beyond Caching</h2>
+  <p class="lede">Deliberate use of Redis data structures, why pub/sub is not a durable substitute for Kafka, and the actual durability guarantee behind RDB and AOF.</p>
+
+  <p>Redis is most valuable when its data model is chosen deliberately, rather than treating every value as an interchangeable string in a cache. The application should know which structure it owns, which operations are atomic, and what happens at the boundaries. That discipline turns Redis into a real coordination layer for rankings, rate limits, queues, and transient fan-out — not just a key/value cache with a longer feature list.</p>
+
+  <div class="concept-grid">
+    <details class="concept-card" open><summary>How do sorted sets power leaderboards?</summary><div class="concept-body"><p>A sorted set maps a member to a score and keeps members ordered by it. <code>ZADD key score member</code> inserts or updates an entry; <code>ZINCRBY key delta member</code> atomically changes it. <code>ZRANGE key 0 9 WITHSCORES REV</code> returns the top ten. Equal scores need a deterministic tie-breaker, since Redis also orders equal-score members lexically by default.</p></div></details>
+    <details class="concept-card"><summary>How do sorted sets implement rate limiting?</summary><div class="concept-body"><p>For a sliding window: <code>ZADD window timestamp member</code> per request, <code>ZREMRANGEBYSCORE</code> to drop entries older than the window, then <code>ZCARD</code> to count what remains. The check-and-update must run atomically — in one Lua script or transaction — or two concurrent requests can both observe capacity that only one should get.</p></div></details>
+    <details class="concept-card"><summary>How should lists be used as work queues?</summary><div class="concept-body"><p><code>LPUSH queue job</code> plus <code>RPOP queue</code> (or blocking <code>BRPOP</code>) gives simple FIFO behavior without a polling loop. It's not a full job system: a worker that dies right after <code>RPOP</code> has already removed the job, and it's gone unless you build acknowledgment and recovery on top.</p></div></details>
+    <details class="concept-card"><summary>How does pub/sub fan out notifications?</summary><div class="concept-body"><p><code>PUBLISH channel message</code> sends to whatever clients are currently subscribed via <code>SUBSCRIBE channel</code> — no durable routing, no retention. It fits live presence and cache-invalidation hints, where a missed message is genuinely fine.</p></div></details>
+    <details class="concept-card"><summary>Why is Redis pub/sub not Kafka?</summary><div class="concept-body"><p>Pub/sub is fire-and-forget — no persistence, no offsets, no replay, no consumer groups with independently tracked progress. A disconnected subscriber simply misses whatever was published while it was down. Kafka retains a commit log and lets consumers replay or rewind from recorded offsets. Choosing pub/sub for anything that actually needs durability is a real production mistake, not a style preference.</p></div></details>
+  </div>
+
+  <h3>Persistence: What Redis Actually Guarantees</h3>
+  <p><strong>RDB</strong> creates point-in-time binary snapshots at configured intervals. It's compact and fast to load on restart, but a crash loses every write made after the most recent successful snapshot — its guarantee is "recovery to the last snapshot," not zero data loss. <strong>AOF</strong> appends every write command (or resulting mutation) to a log file and replays it on restart. Its durability depends entirely on the fsync policy: <code>appendfsync always</code> gives the strongest durability at the cost of write throughput; <code>everysec</code> risks losing roughly the most recent second of writes on a crash; <code>no</code> delegates flushing to the operating system's own discretion and can lose considerably more. RDB and AOF can run together — RDB providing a compact baseline for fast restarts, AOF supplying finer-grained recovery on top of it. Neither configuration makes Redis a substitute for a replicated, durable log unless the surrounding deployment and failure model are explicitly built to provide that guarantee — Redis persistence protects against a restart; it doesn't, by itself, make Redis a system of record.</p>
+</section>
+
+<!-- ===================== SECTION 10 ===================== -->
+<section class="course-section" id="architecture">
+  <h2><span class="sec-num">10</span>Putting It Together: A Pricing &amp; Billing Pipeline</h2>
+  <p class="lede">A realistic walkthrough of an event-driven pricing/billing pipeline — Kafka as the backbone, Redis on the hot path, and an honest accounting of what this architecture actually costs.</p>
+
+  <p>In systems I build, the pipeline starts inside the database transaction that changes a plan, price, or usage quantity. The owning service writes its business row and an outbox row atomically, so the event can never be committed without the source-of-truth change, or vice versa. A relay then publishes the outbox record to Kafka and marks it published. I include the event ID, tenant, account, subscription, version, effective timestamp, payload, and schema version. If publishing fails, the relay retries against the same event ID; if it crashes after the broker accepts the event but before marking the row, Kafka ends up with a duplicate. Downstream idempotency is what handles that case, not the outbox itself.</p>
+  <p>I partition the topic by tenant, account, or subscription ID, depending on which is the strongest billing boundary. All events for one billing entity hash to the same partition and retain Kafka's per-partition order; I never partition by event ID, since retries and related events would scatter across partitions and lose that ordering. For durability I use replication factor 3, <code>min.insync.replicas</code> of 2, and producer <code>acks=all</code> with idempotent producers enabled — a write is durable only while a quorum of replicas has acknowledged it, and I size retention so teams can replay an incident without treating Kafka as an unlimited archive.</p>
+  <p>A Kafka Streams application, or an equivalent consumer-group worker, consumes the topic and builds a read model. It applies events in version order, rejects stale or conflicting versions, and maintains a compacted KTable-backed materialized view of the current price and plan state. Exactly-once semantics keep a crash from applying the same event twice, since input offsets, intermediate state, and output writes all participate in one transactional processing epoch — but that guarantee stops at Kafka's boundary. It cannot make an arbitrary external charge call atomic after the fact; that still needs its own idempotency key.</p>
+  <p>Redis sits in the hot path for two distinct jobs, and I keep their keys and expiry policies deliberately separate. First, an idempotency-key cache: <code>SET NX</code> with a TTL runs before any charge, credit, or other side effect. Only the caller that wins the atomic set proceeds; a retried event or API call observes that the key already exists and returns the prior result instead of double-applying the effect. The TTL has to outlive the longest plausible retry window, and for high-value effects I still persist the idempotency record durably too — Redis alone is not a ledger. Second, Redis caches the current computed price or plan for low-latency billing API reads, via ordinary cache-aside: the API checks Redis first, and on a miss reads the materialized view, populates Redis, and returns the result. The stream processor invalidates or refreshes the relevant key after committing new state, and I use versioned values so an old cached response can never silently overwrite a newer one.</p>
+  <p>As volume grows, I add partitions and consumer instances together — each partition has exactly one active consumer within a group, so more partitions create more real parallelism, while adding consumers without enough partitions to give them just leaves some idle. During a rebalance, ownership moves and stateful operators may need to restore from their changelog topics, which produces a temporary processing pause. Operationally, I watch consumer lag per partition rather than one aggregate number, since a lag spike on a single partition usually points to one hot account or one slow downstream call, not a systemic problem. I also alert on ISR shrink events, under-replicated partitions, commit failures, and rebalance frequency, and route poison messages that fail repeated processing to a dead-letter topic with the original key, headers, error, and retry count intact for repair and later replay.</p>
+  <p>The honest cost is that this is a distributed system, not just a faster queue. It means versioning schemas in a registry, operating Kafka and a stateful stream processor, maintaining Redis and the read-model store as separate stateful systems, reasoning carefully about rebalance behavior, and exposing eventual consistency explicitly in the API layer rather than pretending it isn't there. A synchronous call path is genuinely simpler when one service owns the entire operation and immediate consistency matters more than fan-out. The event-driven design earns its complexity when multiple independent consumers need the same fact, replay is a real operational requirement, or throughput and isolation exceed what one synchronous service can handle — and it's premature when the workflow has a single caller, low volume, and no meaningful replay or decoupling benefit to show for the added moving parts.</p>
+</section>
+
+</div>
+
+<footer class="site-footer">
+  <p>Kafka, Messaging &amp; Caching: Event Streaming with Redis</p>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ============ Exercise 1: Partition Assignment & Rebalance Visualizer ============ */
+  (function(){
+    var partitionSelect = document.getElementById('pv-partitions');
+    var stage = document.getElementById('pv-stage');
+    var log = document.getElementById('pv-log');
+    if(!stage) return;
+    var colors = ['#F59E0B','#8B5CF6','#10B981','#3B82F6','#EF4444','#EC4899','#14B8A6','#F97316'];
+    var consumers = ['C0','C1'];
+    var nextConsumerId = 2;
+    var prevAssignment = {};
+
+    function computeAssignment(numPartitions, consumerList){
+      var assignment = {};
+      if(consumerList.length === 0) return assignment;
+      for(var p = 0; p < numPartitions; p++){
+        assignment[p] = consumerList[p % consumerList.length];
+      }
+      return assignment;
+    }
+
+    function render(logMsg){
+      var numPartitions = parseInt(partitionSelect.value, 10);
+      var assignment = computeAssignment(numPartitions, consumers);
+      var moved = [];
+      for(var p = 0; p < numPartitions; p++){
+        if(prevAssignment[p] !== undefined && prevAssignment[p] !== assignment[p] && consumers.indexOf(prevAssignment[p]) !== -1){
+          moved.push(p);
+        }
+      }
+      stage.innerHTML = '';
+      for(var i = 0; i < numPartitions; i++){
+        var owner = assignment[i];
+        var idx = owner ? consumers.indexOf(owner) : -1;
+        var box = document.createElement('div');
+        box.className = 'chip';
+        if(idx >= 0){
+          var c = colors[idx % colors.length];
+          box.style.borderColor = c;
+          box.style.background = c + '22';
+        }
+        box.textContent = 'P' + i + ' → ' + (owner || 'unassigned');
+        if(moved.indexOf(i) !== -1){
+          box.style.boxShadow = '0 0 0 2px var(--primary)';
+          box.title = 'Moved in this rebalance';
+        }
+        stage.appendChild(box);
+      }
+      var summary = document.createElement('div');
+      summary.style.width = '100%';
+      summary.style.marginTop = '10px';
+      summary.style.fontSize = '.78rem';
+      summary.style.color = 'var(--muted)';
+      if(consumers.length === 0){
+        summary.textContent = 'No consumers in the group — nothing is being consumed.';
+      } else {
+        var parts = consumers.map(function(c){
+          var n = 0;
+          for(var k in assignment){ if(assignment[k] === c) n++; }
+          return c + ': ' + n + ' partition' + (n === 1 ? '' : 's');
+        });
+        summary.textContent = parts.join('   ·   ');
+      }
+      stage.appendChild(summary);
+
+      if(logMsg){
+        var entry = document.createElement('div');
+        var movedTxt = moved.length ? ('Reassigned: ' + moved.map(function(p){ return 'P' + p; }).join(', ')) : 'No partitions moved.';
+        entry.textContent = logMsg + ' ' + movedTxt;
+        log.insertBefore(entry, log.firstChild);
+      }
+      prevAssignment = assignment;
+    }
+
+    document.getElementById('pv-add-consumer').addEventListener('click', function(){
+      var id = 'C' + (nextConsumerId++);
+      consumers.push(id);
+      render('Rebalance: consumer ' + id + ' joined the group.');
+    });
+    document.getElementById('pv-remove-consumer').addEventListener('click', function(){
+      if(consumers.length === 0) return;
+      var removed = consumers.pop();
+      render('Rebalance: consumer ' + removed + ' left the group.');
+    });
+    document.getElementById('pv-reset').addEventListener('click', function(){
+      consumers = ['C0', 'C1']; nextConsumerId = 2; prevAssignment = {};
+      log.innerHTML = '';
+      render('Group reset to 2 consumers.');
+    });
+    partitionSelect.addEventListener('change', function(){
+      prevAssignment = {};
+      render('Partition count changed to ' + partitionSelect.value + '.');
+    });
+    render(null);
+  })();
+
+  /* ============ Exercise 2: Offset & Consumer Lag Simulator ============ */
+  (function(){
+    var producedEl = document.getElementById('lag-produced');
+    if(!producedEl) return;
+    var consumedEl = document.getElementById('lag-consumed');
+    var lagEl = document.getElementById('lag-lag');
+    var bar = document.getElementById('lag-bar');
+    var log = document.getElementById('lag-log');
+    var rateInput = document.getElementById('lag-rate');
+    var rateVal = document.getElementById('lag-rate-val');
+    var autoBtn = document.getElementById('lag-auto');
+    var produced = 0, consumed = 0, autoTimer = null;
+
+    function addLog(msg){
+      var d = document.createElement('div');
+      d.textContent = msg;
+      log.insertBefore(d, log.firstChild);
+    }
+    function render(){
+      producedEl.textContent = produced;
+      consumedEl.textContent = consumed;
+      var lag = produced - consumed;
+      lagEl.textContent = lag;
+      var pct = produced > 0 ? Math.min(100, (lag / Math.max(produced, 1)) * 100) : 0;
+      bar.style.width = pct + '%';
+      bar.style.background = lag === 0 ? 'var(--good)' : (lag > 30 ? 'var(--bad)' : 'var(--accent)');
+    }
+    document.getElementById('lag-produce').addEventListener('click', function(){
+      produced += 10;
+      addLog('Producer wrote 10 records. Log end offset = ' + produced + '.');
+      render();
+    });
+    document.getElementById('lag-tick').addEventListener('click', function(){
+      var rate = parseInt(rateInput.value, 10);
+      var avail = produced - consumed;
+      var advance = Math.min(rate, avail);
+      consumed += advance;
+      addLog('Consumer processed ' + advance + ' record(s) this tick. Committed offset = ' + consumed + '.');
+      render();
+    });
+    rateInput.addEventListener('input', function(){ rateVal.textContent = rateInput.value; });
+    autoBtn.addEventListener('click', function(){
+      if(autoTimer){
+        clearInterval(autoTimer); autoTimer = null;
+        autoBtn.textContent = '▶ Auto-run';
+        return;
+      }
+      autoBtn.textContent = '⏸ Pause';
+      autoTimer = setInterval(function(){
+        produced += 3;
+        var rate = parseInt(rateInput.value, 10);
+        var avail = produced - consumed;
+        consumed += Math.min(rate, avail);
+        render();
+      }, 600);
+    });
+    document.getElementById('lag-reset').addEventListener('click', function(){
+      produced = 0; consumed = 0;
+      if(autoTimer){ clearInterval(autoTimer); autoTimer = null; autoBtn.textContent = '▶ Auto-run'; }
+      log.innerHTML = '';
+      render();
+    });
+    render();
+  })();
+
+  /* ============ Exercise 3: Delivery Semantics (idempotency toggle) ============ */
+  (function(){
+    var stage = document.getElementById('dl-stage');
+    if(!stage) return;
+    var log = document.getElementById('dl-log');
+    var idem = document.getElementById('dl-idem');
+    var seq = 0;
+    var brokerLog = [];
+
+    function addLog(msg){
+      var d = document.createElement('div');
+      d.textContent = msg;
+      log.insertBefore(d, log.firstChild);
+    }
+    function render(){
+      stage.innerHTML = '';
+      brokerLog.forEach(function(rec){
+        var chip = document.createElement('div');
+        chip.className = 'chip';
+        chip.style.borderColor = rec.dup ? 'var(--bad)' : 'var(--good)';
+        chip.textContent = 'seq=' + rec.seq + (rec.dup ? ' (duplicate)' : '');
+        stage.appendChild(chip);
+      });
+      var total = brokerLog.length;
+      var distinctSeqs = {};
+      brokerLog.forEach(function(r){ distinctSeqs[r.seq] = true; });
+      var distinct = Object.keys(distinctSeqs).length;
+      var dupCount = total - distinct;
+      var summary = document.createElement('div');
+      summary.style.width = '100%';
+      summary.style.marginTop = '10px';
+      summary.style.fontSize = '.85rem';
+      summary.innerHTML = 'Records in broker log: <strong>' + total + '</strong> &middot; Distinct messages: <strong>' + distinct +
+        '</strong> &middot; Duplicates: <strong style="color:' + (dupCount > 0 ? 'var(--bad)' : 'var(--good)') + '">' + dupCount + '</strong>';
+      stage.appendChild(summary);
+    }
+    document.getElementById('dl-send').addEventListener('click', function(){
+      var currentSeq = seq++;
+      brokerLog.push({ seq: currentSeq, dup: false });
+      addLog('Attempt 1: producer sends seq=' + currentSeq + '. Broker appends it, but the ack is lost in flight.');
+      if(idem.checked){
+        addLog('Attempt 2 (retry): broker recognizes producerId+seq=' + currentSeq + ' already appended → deduplicates, re-acks without re-appending.');
+      } else {
+        brokerLog.push({ seq: currentSeq, dup: true });
+        addLog('Attempt 2 (retry): idempotency is OFF — broker has no way to recognize the retry → appends it again as a duplicate.');
+      }
+      render();
+    });
+    document.getElementById('dl-reset').addEventListener('click', function(){
+      seq = 0; brokerLog = []; log.innerHTML = ''; render();
+    });
+    render();
+  })();
+
+  /* ============ Exercise 4: Schema Compatibility Quiz ============ */
+  (function(){
+    var qEl = document.getElementById('sq-question');
+    if(!qEl) return;
+    var oEl = document.getElementById('sq-options');
+    var fEl = document.getElementById('sq-feedback');
+    var nEl = document.getElementById('sq-next');
+    var sEl = document.getElementById('sq-score');
+    var CHOICES = ['Backward compatible only', 'Forward compatible only', 'Fully compatible (both directions)', 'Breaks both directions'];
+    var questions = [
+      { q: 'A producer adds a new optional field to the schema, with a default value.', correct: 2,
+        explain: "New readers use the default for old data missing the field (backward). Old readers ignore the unrecognized new field in new data (forward). Full compatibility — this is why 'add optional field with a default' is the standard safe evolution move." },
+      { q: 'A producer adds a new required field with no default value.', correct: 1,
+        explain: "Old readers can still read new data — they just ignore the extra field (forward-compatible). But new readers can't read old data: it never had that field and there's no default to fall back on, so backward compatibility breaks." },
+      { q: 'A field with a default value is removed from the schema.', correct: 2,
+        explain: 'New readers reading old data ignore the now-removed field (backward). Old readers reading new data fall back to their own default for the missing field (forward). Because the field had a default, removing it is safe both ways.' },
+      { q: 'A required field with no default is removed from the schema.', correct: 0,
+        explain: "New readers reading old data ignore the extra field no longer in their schema (backward-compatible). Old readers reading new data expect that required field and have no default — deserialization fails. Forward compatibility breaks." },
+      { q: 'A field is renamed with no alias configured.', correct: 3,
+        explain: "Without an alias, a rename is indistinguishable from deleting the old field and adding a new required one. Old readers can't find the new name in new data, and new readers can't find their expected name in old data. Both directions break." },
+      { q: "A field's type is changed incompatibly — e.g. from int to string.", correct: 3,
+        explain: "Neither an old reader expecting an int nor a new reader expecting a string can correctly resolve the other's encoding of that field. This is exactly the kind of change a schema registry's compatibility check should reject before it reaches production." }
+    ];
+    var qi = 0, score = 0, answered = false;
+
+    function renderQ(){
+      answered = false;
+      fEl.style.display = 'none';
+      nEl.style.display = 'none';
+      var cur = questions[qi];
+      qEl.innerHTML = '<p class="q-label">Q' + (qi + 1) + ' of ' + questions.length + '. ' + cur.q + '</p>';
+      oEl.innerHTML = '';
+      CHOICES.forEach(function(c, i){
+        var b = document.createElement('button');
+        b.className = 'btn secondary';
+        b.textContent = c;
+        b.addEventListener('click', function(){
+          if(answered) return;
+          answered = true;
+          var buttons = oEl.querySelectorAll('button');
+          buttons.forEach(function(bb, ii){
+            if(ii === cur.correct) bb.classList.add('correct');
+            else if(ii === i) bb.classList.add('wrong');
+          });
+          if(i === cur.correct) score++;
+          fEl.style.display = 'block';
+          fEl.className = 'feedback ' + (i === cur.correct ? 'good' : 'info');
+          fEl.textContent = (i === cur.correct ? 'Correct. ' : 'Not quite — the answer is highlighted above. ') + cur.explain;
+          if(qi < questions.length - 1) nEl.style.display = 'inline-block';
+          sEl.textContent = 'Score: ' + score + '/' + questions.length + (qi === questions.length - 1 ? ' — quiz complete.' : '');
+        });
+        oEl.appendChild(b);
+      });
+    }
+    nEl.addEventListener('click', function(){ qi++; renderQ(); });
+    renderQ();
+  })();
+
+  /* ============ Exercise 5: Akka Supervision Decision Exercise ============ */
+  (function(){
+    var qEl = document.getElementById('ak-question');
+    if(!qEl) return;
+    var oEl = document.getElementById('ak-options');
+    var fEl = document.getElementById('ak-feedback');
+    var nEl = document.getElementById('ak-next');
+    var pEl = document.getElementById('ak-progress');
+    var STRATS = ['Resume', 'Restart', 'Stop', 'Escalate'];
+    var scenarios = [
+      { desc: "A child actor throws an exception while processing one request, because of a single malformed message value. Its internal state is otherwise untouched and fine.",
+        recommended: 'Resume',
+        consequences: {
+          Resume: "The actor keeps its current state and simply drops the failed message. Since the failure was caused by bad input, not corrupted state, this is the cheapest correct fix.",
+          Restart: "The actor's state is reset even though nothing was actually wrong with it — you'd throw away perfectly good in-memory state to fix a problem that was never there.",
+          Stop: "The actor is terminated entirely. Overkill for one bad message — you lose the actor and everything routed to it going forward, not just the failed message.",
+          Escalate: "The decision is pushed up to the parent's own supervisor, adding latency and complexity for a problem this supervisor was already equipped to handle locally."
+        } },
+      { desc: "A child actor's internal state became inconsistent mid-update, after a failed database write partially mutated its fields.",
+        recommended: 'Restart',
+        consequences: {
+          Resume: "The actor keeps processing with state that's now known to be inconsistent. Future messages get handled against corrupted data — this compounds the problem instead of fixing it.",
+          Restart: "The actor's state resets to its initial, known-good form (typically rehydrated from a durable store or event log). This is exactly the case restart exists for: state you can no longer trust.",
+          Stop: "Terminates the actor entirely, even though the entity it represents — an account, a session — presumably still needs a live actor going forward.",
+          Escalate: "This is a local, recoverable state problem. Escalating needlessly involves a supervisor further up the hierarchy that has no additional information to help."
+        } },
+      { desc: "A child actor has completely lost its downstream database connection, and every retry it attempts fails.",
+        recommended: 'Escalate',
+        consequences: {
+          Resume: "Keeps retrying against a dependency that's already confirmed down. The actor fails on every subsequent message — resume doesn't fix a systemic outage.",
+          Restart: "Resetting the actor's own state does nothing about a downstream service that's unreachable — the very next message fails the same way.",
+          Stop: "Stops just this one actor, but the underlying dependency failure very likely affects every sibling actor talking to the same downstream system too.",
+          Escalate: "This is a systemic failure beyond what this actor — or its immediate supervisor — can fix alone. Escalating lets a higher-level supervisor take coordinated action: trip a circuit breaker, restart the whole subsystem, or page on-call."
+        } },
+      { desc: "A child actor represents a one-time payment authorization job. It has exhausted its retries, and the authorization token has now permanently expired.",
+        recommended: 'Stop',
+        consequences: {
+          Resume: "Keeps the actor alive to process further messages for a job that is now permanently, definitively over — there's nothing left for it to correctly do.",
+          Restart: "Resets state for a job whose outcome is already permanently decided as failed. Restart implies meaningful retry work remains — it doesn't here.",
+          Stop: "The job has reached a terminal, permanent failure state. Stopping the actor frees its resources — the correct end of its lifecycle. The failure should be recorded elsewhere, not retried by this actor.",
+          Escalate: "This is an expected, already-handled terminal outcome for a single job, not a systemic problem the parent's supervisor needs to intervene on."
+        } },
+      { desc: "A child actor throws an OutOfMemoryError.",
+        recommended: 'Escalate',
+        consequences: {
+          Resume: "An OutOfMemoryError signals the JVM itself is in a compromised state. Pretending the actor can just continue is unsafe — the failure isn't localized to actor logic.",
+          Restart: "Restarting one actor does nothing to relieve memory pressure at the JVM level; the same condition will likely recur immediately, possibly in a different actor.",
+          Stop: "Stopping one actor doesn't address a resource-exhaustion problem shared by the whole process.",
+          Escalate: "A fatal, JVM-level error should propagate up so a higher-level supervisor can take a coarser action — restart the whole actor system or the process — rather than being handled as an ordinary local failure."
+        } }
+    ];
+    var si = 0, answered = false;
+
+    function renderS(){
+      answered = false;
+      fEl.style.display = 'none';
+      nEl.style.display = 'none';
+      var cur = scenarios[si];
+      qEl.innerHTML = '<p class="q-label">Scenario ' + (si + 1) + ' of ' + scenarios.length + '</p><p style="color:var(--muted);font-size:.9rem;max-width:70ch">' + cur.desc + '</p>';
+      oEl.innerHTML = '';
+      STRATS.forEach(function(s){
+        var b = document.createElement('button');
+        b.className = 'btn secondary';
+        b.textContent = s;
+        b.addEventListener('click', function(){
+          if(answered) return;
+          answered = true;
+          var buttons = oEl.querySelectorAll('button');
+          buttons.forEach(function(bb){
+            if(bb.textContent === cur.recommended) bb.classList.add('recommended');
+          });
+          fEl.style.display = 'block';
+          fEl.className = 'feedback ' + (s === cur.recommended ? 'good' : 'info');
+          var lead = s === cur.recommended ? 'That is the generally recommended call here. ' : ('Recommended strategy here is ' + cur.recommended + '. ');
+          fEl.textContent = lead + 'Consequence of ' + s + ': ' + cur.consequences[s];
+          if(si < scenarios.length - 1) nEl.style.display = 'inline-block';
+          pEl.textContent = si === scenarios.length - 1 ? 'All scenarios complete.' : '';
+        });
+        oEl.appendChild(b);
+      });
+    }
+    nEl.addEventListener('click', function(){ si++; renderS(); });
+    renderS();
+  })();
+
+  /* ============ Exercise 6: Redis Eviction Simulator (LRU vs LFU) ============ */
+  (function(){
+    var stage = document.getElementById('rev-stage');
+    if(!stage) return;
+    var log = document.getElementById('rev-log');
+    var CAPACITY = 4;
+    var cache = [];
+    var clock = 0;
+    var autoKeyCounter = 1;
+
+    function policy(){
+      var r = document.querySelectorAll('input[name="rev-policy"]');
+      for(var i = 0; i < r.length; i++){ if(r[i].checked) return r[i].value; }
+      return 'lru';
+    }
+    function addLog(msg){
+      var d = document.createElement('div');
+      d.textContent = msg;
+      log.insertBefore(d, log.firstChild);
+    }
+    function render(){
+      stage.innerHTML = '';
+      if(cache.length === 0){
+        var empty = document.createElement('div');
+        empty.style.color = 'var(--muted)';
+        empty.style.fontSize = '.85rem';
+        empty.textContent = 'Cache is empty.';
+        stage.appendChild(empty);
+      }
+      var sorted = cache.slice().sort(function(a, b){ return b.lastUsed - a.lastUsed; });
+      sorted.forEach(function(e){
+        var chip = document.createElement('div');
+        chip.className = 'chip';
+        chip.title = 'Click to GET (access) this key';
+        chip.textContent = e.key + '  freq:' + e.freq;
+        chip.addEventListener('click', function(){ access(e.key); });
+        stage.appendChild(chip);
+      });
+      var cap = document.createElement('div');
+      cap.style.width = '100%';
+      cap.style.fontSize = '.78rem';
+      cap.style.color = 'var(--muted)';
+      cap.style.marginTop = '8px';
+      cap.textContent = cache.length + ' / ' + CAPACITY + ' slots used';
+      stage.appendChild(cap);
+    }
+    function access(key){
+      clock++;
+      var entry = null;
+      for(var i = 0; i < cache.length; i++){ if(cache[i].key === key){ entry = cache[i]; break; } }
+      if(entry){
+        entry.freq++; entry.lastUsed = clock;
+        addLog('GET ' + key + ' → hit. freq=' + entry.freq + ', recency updated.');
+      }
+      render();
+    }
+    function insert(key){
+      clock++;
+      if(!key){ key = 'k' + (autoKeyCounter++); }
+      var existing = null;
+      for(var i = 0; i < cache.length; i++){ if(cache[i].key === key){ existing = cache[i]; break; } }
+      if(existing){
+        existing.freq++; existing.lastUsed = clock;
+        addLog('SET ' + key + ' (already cached) → value updated, freq=' + existing.freq + '.');
+        render();
+        return;
+      }
+      if(cache.length >= CAPACITY){
+        var victim;
+        if(policy() === 'lru'){
+          victim = cache[0];
+          for(var j = 1; j < cache.length; j++){ if(cache[j].lastUsed < victim.lastUsed) victim = cache[j]; }
+          addLog('Cache full. Evicting "' + victim.key + '" — least recently used (oldest access at clock=' + victim.lastUsed + ').');
+        } else {
+          victim = cache[0];
+          for(var k = 1; k < cache.length; k++){
+            var c = cache[k];
+            if(c.freq < victim.freq || (c.freq === victim.freq && c.lastUsed < victim.lastUsed)) victim = c;
+          }
+          addLog('Cache full. Evicting "' + victim.key + '" — least frequently used (freq=' + victim.freq + ').');
+        }
+        cache = cache.filter(function(e){ return e !== victim; });
+      }
+      cache.push({ key: key, freq: 1, lastUsed: clock });
+      addLog('SET ' + key + ' → inserted. freq=1.');
+      render();
+    }
+    document.getElementById('rev-insert').addEventListener('click', function(){
+      var input = document.getElementById('rev-key');
+      insert(input.value.trim());
+      input.value = '';
+    });
+    document.getElementById('rev-reset').addEventListener('click', function(){
+      cache = []; clock = 0; autoKeyCounter = 1;
+      log.innerHTML = '';
+      render();
+    });
+    render();
+  })();
+
+})();
+</script>
+</body>
+</html>
