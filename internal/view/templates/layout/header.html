@@ -1,0 +1,16 @@
+{{define "header"}}
+<header class="site-header">
+  <div class="container header-inner">
+    <a class="brand" href="/">{{.SiteName}}</a>
+    <button class="nav-toggle" id="nav-toggle" aria-label="Toggle navigation" aria-expanded="false" aria-controls="primary-nav">
+      <span></span><span></span><span></span>
+    </button>
+    <nav class="primary-nav" id="primary-nav">
+      <a href="/" class="{{if eq .Active "home"}}active{{end}}">Home</a>
+      <a href="/about" class="{{if eq .Active "about"}}active{{end}}">About</a>
+      <a href="/courses" class="{{if eq .Active "courses"}}active{{end}}">Courses</a>
+      <a href="/booking" class="{{if eq .Active "booking"}}active{{end}} cta-link">Book Time</a>
+    </nav>
+  </div>
+</header>
+{{end}}

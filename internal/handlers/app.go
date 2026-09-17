@@ -1,0 +1,77 @@
+// Package handlers wires the repositories, renderer, and auth into HTTP
+// handlers for both the public site and the admin portal.
+package handlers
+
+import (
+	"database/sql"
+	"time"
+
+	"github.com/vishnubalachandran596/portfolio/internal/config"
+	"github.com/vishnubalachandran596/portfolio/internal/middleware"
+	"github.com/vishnubalachandran596/portfolio/internal/repo"
+	"github.com/vishnubalachandran596/portfolio/internal/view"
+)
+
+type App struct {
+	Cfg *config.Config
+	DB  *sql.DB
+
+	View *view.Renderer
+	Auth *middleware.Auth
+
+	Profile      *repo.ProfileRepo
+	Skills       *repo.SkillGroupRepo
+	Experience   *repo.ExperienceRepo
+	Education    *repo.EducationRepo
+	Features     *repo.HomeFeatureRepo
+	Courses      *repo.CourseRepo
+	Bookings     *repo.BookingRepo
+	Availability *repo.AvailabilityRepo
+	Admins       *repo.AdminRepo
+
+	Timezone *time.Location
+}
+
+// BaseData carries the fields every page template needs. Page-specific
+// data structs embed it so templates can reach both the shared chrome and
+// the page's own data through one dot.
+type BaseData struct {
+	SiteName        string
+	Title           string
+	MetaDescription string
+	Active          string
+	SiteURL         string
+}
+
+func New(cfg *config.Config, db *sql.DB, renderer *view.Renderer) *App {
+	loc, err := time.LoadLocation("Asia/Kolkata")
+	if err != nil {
+		loc = time.UTC
+	}
+	return &App{
+		Cfg:          cfg,
+		DB:           db,
+		View:         renderer,
+		Auth:         middleware.NewAuth(cfg.JWTSecret, cfg.SessionTTL, cfg.IsProduction()),
+		Profile:      repo.NewProfileRepo(db),
+		Skills:       repo.NewSkillGroupRepo(db),
+		Experience:   repo.NewExperienceRepo(db),
+		Education:    repo.NewEducationRepo(db),
+		Features:     repo.NewHomeFeatureRepo(db),
+		Courses:      repo.NewCourseRepo(db),
+		Bookings:     repo.NewBookingRepo(db),
+		Availability: repo.NewAvailabilityRepo(db),
+		Admins:       repo.NewAdminRepo(db),
+		Timezone:     loc,
+	}
+}
+
+func (a *App) base(title, metaDescription, active string) BaseData {
+	return BaseData{
+		SiteName:        a.Cfg.SiteName,
+		Title:           title,
+		MetaDescription: metaDescription,
+		Active:          active,
+		SiteURL:         a.Cfg.SiteURL,
+	}
+}

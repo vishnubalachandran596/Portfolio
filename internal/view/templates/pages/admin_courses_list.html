@@ -1,0 +1,34 @@
+{{define "content"}}
+{{template "adminnav" .}}
+<section class="section">
+  <div class="container">
+    <div class="section-header-row">
+      <h1>Courses</h1>
+      <a class="btn btn-primary" href="/admin/courses/new">New Course</a>
+    </div>
+    {{if .Courses}}
+    <table class="admin-table">
+      <thead><tr><th>Title</th><th>Level</th><th>Price</th><th>Published</th><th></th></tr></thead>
+      <tbody>
+        {{range .Courses}}
+        <tr>
+          <td>{{.Title}}</td>
+          <td>{{.Level}}</td>
+          <td>{{.PriceDisplay}}</td>
+          <td>{{if .IsPublished}}Yes{{else}}No{{end}}</td>
+          <td class="admin-table-actions">
+            <a href="/admin/courses/{{.ID}}/edit">Edit</a>
+            <form method="POST" action="/admin/courses/{{.ID}}/delete" onsubmit="return confirm('Delete this course?');">
+              <button type="submit" class="link-button danger">Delete</button>
+            </form>
+          </td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+    {{else}}
+    <p class="empty-state">No courses yet. <a href="/admin/courses/new">Create your first course</a>.</p>
+    {{end}}
+  </div>
+</section>
+{{end}}

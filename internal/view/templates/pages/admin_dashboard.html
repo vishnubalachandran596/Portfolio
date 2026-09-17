@@ -1,0 +1,33 @@
+{{define "content"}}
+{{template "adminnav" .}}
+<section class="section">
+  <div class="container">
+    <h1>Dashboard</h1>
+    <div class="stat-grid">
+      <div class="stat-card"><span class="stat-number">{{.CourseCount}}</span><span class="stat-label">Total courses</span></div>
+      <div class="stat-card"><span class="stat-number">{{.PublishedCourses}}</span><span class="stat-label">Published</span></div>
+      <div class="stat-card"><span class="stat-number">{{.PendingBookings}}</span><span class="stat-label">Pending bookings</span></div>
+    </div>
+
+    <h2 class="section-title">Upcoming bookings</h2>
+    {{if .UpcomingBookings}}
+    <table class="admin-table">
+      <thead><tr><th>When</th><th>Name</th><th>Email</th><th>Status</th></tr></thead>
+      <tbody>
+        {{range .UpcomingBookings}}
+        <tr>
+          <td>{{formatDateTime .SlotStart}}</td>
+          <td>{{.Name}}</td>
+          <td>{{.Email}}</td>
+          <td><span class="status-badge status-{{.Status}}">{{.Status}}</span></td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+    <p><a class="link-arrow" href="/admin/bookings">Manage all bookings →</a></p>
+    {{else}}
+    <p class="empty-state">No upcoming bookings yet.</p>
+    {{end}}
+  </div>
+</section>
+{{end}}

@@ -1,0 +1,59 @@
+{{define "content"}}
+<section class="hero">
+  <div class="container hero-inner">
+    <p class="eyebrow">{{.Profile.Location}}</p>
+    <h1>{{.Profile.Name}}</h1>
+    <p class="hero-title">{{.Profile.Title}}</p>
+    <p class="hero-tagline">{{.Profile.Tagline}}</p>
+    <p class="hero-subtitle">{{.Profile.HeroSubtitle}}</p>
+    <div class="hero-actions">
+      <a class="btn btn-primary" href="/booking">Book a Session</a>
+      <a class="btn btn-secondary" href="/about">About Me</a>
+    </div>
+    <p class="hero-meta">{{.Profile.YearsExperience}}+ years building software · Banking &amp; fintech platforms at scale</p>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <h2 class="section-title">What you'll find here</h2>
+    <div class="feature-grid">
+      {{range .Features}}
+      <div class="feature-card">
+        <h3>{{.Title}}</h3>
+        <p>{{.Description}}</p>
+      </div>
+      {{end}}
+    </div>
+  </div>
+</section>
+
+{{if .Courses}}
+<section class="section section-alt">
+  <div class="container">
+    <div class="section-header-row">
+      <h2 class="section-title">Featured courses</h2>
+      <a class="link-arrow" href="/courses">View all courses →</a>
+    </div>
+    <div class="course-grid">
+      {{range .Courses}}
+      <a class="course-card" href="/courses/{{.Slug}}">
+        <span class="course-level">{{.Level}}</span>
+        <h3>{{.Title}}</h3>
+        <p>{{.Summary}}</p>
+        <span class="course-price">{{.PriceDisplay}}{{if not .IsFree}} <span class="course-duration">· {{.Duration}}</span>{{end}}</span>
+      </a>
+      {{end}}
+    </div>
+  </div>
+</section>
+{{end}}
+
+<section class="section cta-section">
+  <div class="container cta-inner">
+    <h2>Have a project, a team, or a career question?</h2>
+    <p>Book a focused 1:1 session and let's talk architecture, delivery, or engineering leadership.</p>
+    <a class="btn btn-primary" href="/booking">Book Time With Me</a>
+  </div>
+</section>
+{{end}}

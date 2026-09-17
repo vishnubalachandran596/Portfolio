@@ -1,0 +1,17 @@
+{{define "adminnav"}}
+<nav class="admin-nav">
+  <div class="container admin-nav-inner">
+    <a href="/admin" class="admin-nav-brand">Admin</a>
+    <div class="admin-nav-links">
+      <a href="/admin">Dashboard</a>
+      <a href="/admin/courses">Courses</a>
+      <a href="/admin/bookings">Bookings</a>
+      <a href="/admin/availability">Availability</a>
+      <a href="/admin/profile">Profile</a>
+      <form method="POST" action="/admin/logout" class="admin-logout-form">
+        <button type="submit" class="link-button">Log out</button>
+      </form>
+    </div>
+  </div>
+</nav>
+{{end}}

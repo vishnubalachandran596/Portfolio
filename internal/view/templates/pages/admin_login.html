@@ -1,0 +1,17 @@
+{{define "content"}}
+<section class="section auth-section">
+  <div class="container auth-container">
+    <h1>Admin Login</h1>
+    {{if .Error}}<div class="alert alert-error">{{.Error}}</div>{{end}}
+    <form method="POST" action="/admin/login" class="auth-form">
+      <label>Email
+        <input type="email" name="email" required autofocus>
+      </label>
+      <label>Password
+        <input type="password" name="password" required>
+      </label>
+      <button type="submit" class="btn btn-primary">Log in</button>
+    </form>
+  </div>
+</section>
+{{end}}
