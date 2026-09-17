@@ -20,6 +20,8 @@ var contentFiles = map[string]string{
 	"system-design-deployment":      "courses/system-design-deployment.html",
 	"kafka-messaging-caching":       "courses/kafka-messaging-caching.html",
 	"resilient-scalable-systems":    "courses/resilient-scalable-systems.html",
+	"go-portfolio-from-scratch":     "courses/go-portfolio-from-scratch.html",
+	"payment-integration-razorpay":  "courses/payment-integration-razorpay.html",
 }
 
 // Get returns the raw HTML for a course's content_key, or ok=false if no
