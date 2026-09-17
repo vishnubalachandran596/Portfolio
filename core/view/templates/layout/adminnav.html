@@ -1,19 +1,39 @@
 {{define "adminnav"}}
-<nav class="admin-nav">
-  <div class="container admin-nav-inner">
-    <a href="/admin" class="admin-nav-brand">Admin</a>
-    <div class="admin-nav-links">
-      <a href="/admin">Dashboard</a>
-      <a href="/admin/courses">Courses</a>
-      <a href="/admin/bookings">Bookings</a>
-      <a href="/admin/purchases">Purchases</a>
-      <a href="/admin/articles">Articles</a>
-      <a href="/admin/availability">Availability</a>
-      <a href="/admin/profile">Profile</a>
-      <form method="POST" action="/admin/logout" class="admin-logout-form">
-        <button type="submit" class="link-button">Log out</button>
-      </form>
-    </div>
-  </div>
-</nav>
+<div class="admin-sidebar-backdrop" id="admin-sidebar-backdrop" hidden></div>
+<aside class="admin-sidebar" id="admin-sidebar">
+  <a href="/admin" class="admin-sidebar-brand">{{.SiteName}}<span>Admin</span></a>
+  <nav class="admin-sidebar-nav" aria-label="Admin">
+    <a href="/admin" data-admin-path="/admin">
+      <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M3 10.5 10 4l7 6.5M5 9v7h10V9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Dashboard
+    </a>
+    <a href="/admin/courses" data-admin-path="/admin/courses">
+      <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M3 5.5A1.5 1.5 0 0 1 4.5 4H9v12H4.5A1.5 1.5 0 0 1 3 14.5v-9ZM17 5.5A1.5 1.5 0 0 0 15.5 4H11v12h4.5a1.5 1.5 0 0 0 1.5-1.5v-9Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+      Courses
+    </a>
+    <a href="/admin/bookings" data-admin-path="/admin/bookings">
+      <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><rect x="3" y="4" width="14" height="13" rx="1.5" stroke="currentColor" stroke-width="1.5"/><path d="M3 8h14M7 2.5v3M13 2.5v3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      Bookings
+    </a>
+    <a href="/admin/purchases" data-admin-path="/admin/purchases">
+      <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M4 4h12l-1 9H5L4 4Zm0 0L3.5 2H2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="7.5" cy="16.5" r="1" fill="currentColor"/><circle cx="13.5" cy="16.5" r="1" fill="currentColor"/></svg>
+      Purchases
+    </a>
+    <a href="/admin/articles" data-admin-path="/admin/articles">
+      <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><rect x="3.5" y="2.5" width="13" height="15" rx="1" stroke="currentColor" stroke-width="1.5"/><path d="M6.5 6.5h7M6.5 9.5h7M6.5 12.5h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      Articles
+    </a>
+    <a href="/admin/availability" data-admin-path="/admin/availability">
+      <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="10" cy="10" r="7" stroke="currentColor" stroke-width="1.5"/><path d="M10 6v4l3 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Availability
+    </a>
+    <a href="/admin/profile" data-admin-path="/admin/profile">
+      <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="10" cy="6.5" r="3" stroke="currentColor" stroke-width="1.5"/><path d="M3.5 17c1-3.5 4-5 6.5-5s5.5 1.5 6.5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      Profile
+    </a>
+  </nav>
+  <form method="POST" action="/admin/logout" class="admin-sidebar-logout">
+    <button type="submit">Log out</button>
+  </form>
+</aside>
 {{end}}

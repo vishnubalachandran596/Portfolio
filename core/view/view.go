@@ -46,21 +46,30 @@ var funcs = template.FuncMap{
 	},
 }
 
-type Renderer struct {
-	pages map[string]*template.Template
+type renderEntry struct {
+	tmpl *template.Template
+	base string // the layout entrypoint to execute: "base.html" or "admin_base.html"
 }
 
-// New parses every page template in web/templates against the shared base
-// layout and partials, failing fast if any template is broken.
+type Renderer struct {
+	pages map[string]renderEntry
+}
+
+// New parses every page template in web/templates against its layout
+// (the public site's chrome, or the admin console's own vertical-nav
+// shell) and partials, failing fast if any template is broken.
 func New() (*Renderer, error) {
-	base := []string{
+	publicLayout := []string{
 		"templates/layout/base.html",
 		"templates/layout/header.html",
 		"templates/layout/footer.html",
+	}
+	adminLayout := []string{
+		"templates/layout/admin_base.html",
 		"templates/layout/adminnav.html",
 	}
 
-	pageFiles := []string{
+	publicPages := []string{
 		"templates/pages/home.html",
 		"templates/pages/about.html",
 		"templates/pages/courses_list.html",
@@ -74,6 +83,8 @@ func New() (*Renderer, error) {
 		"templates/pages/legal.html",
 		"templates/pages/not_found.html",
 		"templates/pages/admin_login.html",
+	}
+	adminPages := []string{
 		"templates/pages/admin_dashboard.html",
 		"templates/pages/admin_courses_list.html",
 		"templates/pages/admin_course_form.html",
@@ -85,28 +96,36 @@ func New() (*Renderer, error) {
 		"templates/pages/admin_article_form.html",
 	}
 
-	r := &Renderer{pages: map[string]*template.Template{}}
-	for _, page := range pageFiles {
-		files := append(append([]string{}, base...), page)
+	r := &Renderer{pages: map[string]renderEntry{}}
+	for _, page := range publicPages {
+		files := append(append([]string{}, publicLayout...), page)
 		t, err := template.New("base.html").Funcs(funcs).ParseFS(templateFS, files...)
 		if err != nil {
 			return nil, fmt.Errorf("parse %s: %w", page, err)
 		}
-		r.pages[page] = t
+		r.pages[page] = renderEntry{tmpl: t, base: "base.html"}
+	}
+	for _, page := range adminPages {
+		files := append(append([]string{}, adminLayout...), page)
+		t, err := template.New("admin_base.html").Funcs(funcs).ParseFS(templateFS, files...)
+		if err != nil {
+			return nil, fmt.Errorf("parse %s: %w", page, err)
+		}
+		r.pages[page] = renderEntry{tmpl: t, base: "admin_base.html"}
 	}
 	return r, nil
 }
 
 // Render writes the named page (e.g. "home") with the given data.
 func (r *Renderer) Render(w http.ResponseWriter, status int, page string, data any) {
-	t, ok := r.pages["templates/pages/"+page+".html"]
+	entry, ok := r.pages["templates/pages/"+page+".html"]
 	if !ok {
 		http.Error(w, "template not found: "+page, http.StatusInternalServerError)
 		return
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(status)
-	if err := t.ExecuteTemplate(w, "base.html", data); err != nil {
+	if err := entry.tmpl.ExecuteTemplate(w, entry.base, data); err != nil {
 		// Headers are already sent at this point; log-and-continue is the
 		// best we can do for a mid-render template error.
 		fmt.Fprintf(w, "\n<!-- render error: %v -->", err)

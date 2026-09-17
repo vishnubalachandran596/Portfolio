@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{.Title}}</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="/static/img/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body data-active="{{.Active}}" class="admin-body">
+<div class="admin-shell">
+  {{template "adminnav" .}}
+  <div class="admin-main">
+    <header class="admin-topbar">
+      <button type="button" class="admin-sidebar-toggle" id="admin-sidebar-toggle" aria-label="Toggle menu" aria-expanded="false" aria-controls="admin-sidebar">
+        <span></span><span></span><span></span>
+      </button>
+      <span class="admin-topbar-title">{{.Title}}</span>
+      <a class="admin-topbar-view-site" href="{{.Nav.Home}}" target="_blank" rel="noopener">View site ↗</a>
+    </header>
+    <main id="main-content" class="admin-content">
+    {{block "content" .}}{{end}}
+    </main>
+  </div>
+</div>
+<script src="/static/js/admin.js" defer></script>
+</body>
+</html>
