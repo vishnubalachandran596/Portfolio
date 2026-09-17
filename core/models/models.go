@@ -4,6 +4,7 @@ package models
 import (
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -213,14 +214,23 @@ type User struct {
 // not scraped/re-hosted content.
 type Article struct {
 	ID            int64
+	Slug          string
 	Title         string
 	Summary       string
 	SourceURL     string
 	SourceName    string
+	Tags          []string
+	ThumbsUpCount int
 	PublishedDate *time.Time
 	IsPublished   bool
 	SortOrder     int
 	CreatedAt     time.Time
+}
+
+// TagsDisplay renders an article's tags as a comma-separated string, for
+// the admin edit form's text input.
+func (a Article) TagsDisplay() string {
+	return strings.Join(a.Tags, ", ")
 }
 
 type AvailabilityRule struct {

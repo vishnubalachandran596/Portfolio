@@ -22,6 +22,12 @@
           <input type="date" name="published_date" value="{{if .Article.PublishedDate}}{{.Article.PublishedDate.Format "2006-01-02"}}{{end}}">
         </label>
       </div>
+      <label>Tags <span class="optional">comma-separated, e.g. "AI, System Design"</span>
+        <input type="text" name="tags" value="{{.Article.TagsDisplay}}" placeholder="AI, System Design">
+      </label>
+      <label>URL slug <span class="optional">(leave blank to generate from the title)</span>
+        <input type="text" name="slug" value="{{.Article.Slug}}" placeholder="auto-generated">
+      </label>
       <label>Sort order
         <input type="number" name="sort_order" value="{{.Article.SortOrder}}">
       </label>

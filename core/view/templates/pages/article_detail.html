@@ -1,0 +1,47 @@
+{{define "content"}}
+<section class="section page-hero page-hero-narrow">
+  <div class="container">
+    <p class="eyebrow">Articles</p>
+    <h1>{{.Article.Title}}</h1>
+    <div class="article-row-meta">
+      {{if .Article.PublishedDate}}<span>{{formatDateOptional .Article.PublishedDate}}</span>{{end}}
+      {{if .Article.SourceName}}<span>{{.Article.SourceName}}</span>{{end}}
+      {{range .Article.Tags}}<a class="tag-chip" href="/articles?tag={{.}}">{{.}}</a>{{end}}
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container course-description">
+    <p>{{.Article.Summary}}</p>
+
+    <div class="article-detail-actions">
+      <a class="btn btn-primary" href="{{.Article.SourceURL}}" target="_blank" rel="noopener noreferrer">Read the full article ↗</a>
+      <button type="button" class="btn btn-secondary" id="thumbs-up-btn" data-slug="{{.Article.Slug}}" {{if .Voted}}disabled{{end}}>
+        👍 <span id="thumbs-up-count">{{.Article.ThumbsUpCount}}</span>{{if .Voted}} · Thanks!{{end}}
+      </button>
+    </div>
+
+    <p class="hero-meta"><a href="/articles">← Back to all articles</a></p>
+  </div>
+</section>
+
+<script>
+(function () {
+  var btn = document.getElementById("thumbs-up-btn");
+  if (!btn) return;
+  btn.addEventListener("click", function () {
+    if (btn.disabled) return;
+    btn.disabled = true;
+    fetch("/articles/" + btn.dataset.slug + "/thumbs-up", { method: "POST" })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (typeof data.thumbs_up_count === "number") {
+          document.getElementById("thumbs-up-count").textContent = data.thumbs_up_count;
+        }
+      })
+      .catch(function () { btn.disabled = false; });
+  });
+})();
+</script>
+{{end}}

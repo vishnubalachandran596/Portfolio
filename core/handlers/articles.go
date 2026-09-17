@@ -10,24 +10,148 @@ import (
 	"github.com/vishnubalachandran596/portfolio/core/repo"
 )
 
+const articlesPageSize = 5
+
 type ArticlesData struct {
 	BaseData
-	Articles []models.Article
+	Articles   []models.Article
+	Tags       []string
+	Query      string
+	ActiveTag  string
+	Sort       string
+	Page       int
+	TotalPages int
+	Total      int
+	HasPrev    bool
+	HasNext    bool
+	PrevPage   int
+	NextPage   int
 }
 
 // ArticlesPage lists curated articles — a link to the original plus a
 // short in-house summary. Nothing here is re-hosted or scraped content;
-// every entry credits and links its real source.
+// every entry credits and links its real source. Supports search, a tag
+// filter, sort by publish date or thumbs-up count, and pagination at 5
+// per page.
 func (a *App) ArticlesPage(w http.ResponseWriter, r *http.Request) {
-	articles, err := a.Articles.ListPublished(r.Context())
+	ctx := r.Context()
+	q := r.URL.Query()
+
+	page, _ := strconv.Atoi(q.Get("page"))
+	if page < 1 {
+		page = 1
+	}
+	sort := q.Get("sort")
+	if sort != "date_asc" && sort != "thumbs_desc" {
+		sort = "date_desc"
+	}
+
+	opt := repo.ArticleListOptions{
+		Query:    strings.TrimSpace(q.Get("q")),
+		Tag:      strings.TrimSpace(q.Get("tag")),
+		Sort:     sort,
+		Page:     page,
+		PageSize: articlesPageSize,
+	}
+	result, err := a.Articles.ListPublishedFiltered(ctx, opt)
 	if err != nil {
 		a.serverError(w, "load articles", err)
 		return
 	}
+	tags, err := a.Articles.ListAllTags(ctx)
+	if err != nil {
+		a.serverError(w, "load article tags", err)
+		return
+	}
+
+	totalPages := (result.Total + articlesPageSize - 1) / articlesPageSize
+	if totalPages < 1 {
+		totalPages = 1
+	}
+
 	a.View.Render(w, http.StatusOK, "articles_list", ArticlesData{
-		BaseData: a.base(r, "Articles — "+a.Cfg.SiteName, "Curated reading on architecture, AI, and engineering careers, with a short take and a link to the original.", "articles"),
-		Articles: articles,
+		BaseData:   a.base(r, "Articles — "+a.Cfg.SiteName, "Curated reading on architecture, AI, system design, and engineering careers, with a short take and a link to the original.", "articles"),
+		Articles:   result.Articles,
+		Tags:       tags,
+		Query:      opt.Query,
+		ActiveTag:  opt.Tag,
+		Sort:       sort,
+		Page:       page,
+		TotalPages: totalPages,
+		Total:      result.Total,
+		HasPrev:    page > 1,
+		HasNext:    page < totalPages,
+		PrevPage:   page - 1,
+		NextPage:   page + 1,
 	})
+}
+
+type ArticleDetailData struct {
+	BaseData
+	Article models.Article
+	Voted   bool
+}
+
+// ArticleDetailPage is the article's own internal page — summary, tags,
+// publish date, and thumbs-up count, plus a link out to the real source.
+// Having a real page per article (rather than only an outbound card) is
+// what lets articles appear in the sitemap and actually get indexed.
+func (a *App) ArticleDetailPage(w http.ResponseWriter, r *http.Request) {
+	slug := r.PathValue("slug")
+	article, err := a.Articles.GetBySlug(r.Context(), slug)
+	if err != nil {
+		if err == repo.ErrNotFound {
+			a.NotFound(w, r)
+			return
+		}
+		a.serverError(w, "load article", err)
+		return
+	}
+
+	_, err = r.Cookie(articleVoteCookie(slug))
+	alreadyVoted := err == nil
+	base := a.base(r, article.Title+" — "+a.Cfg.SiteName, article.Summary, "articles")
+	a.View.Render(w, http.StatusOK, "article_detail", ArticleDetailData{
+		BaseData: base,
+		Article:  article,
+		Voted:    alreadyVoted,
+	})
+}
+
+func articleVoteCookie(slug string) string { return "au_" + slug }
+
+// ArticleThumbsUp records one thumbs-up per visitor per article, guarded
+// by a long-lived cookie rather than a login — good enough to stop
+// trivial repeat-clicking on a personal site without putting a login
+// wall in front of a lightweight reaction.
+func (a *App) ArticleThumbsUp(w http.ResponseWriter, r *http.Request) {
+	slug := r.PathValue("slug")
+	if _, err := a.Articles.GetBySlug(r.Context(), slug); err != nil {
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "Article not found."})
+		return
+	}
+
+	cookieName := articleVoteCookie(slug)
+	if _, err := r.Cookie(cookieName); err == nil {
+		writeJSON(w, http.StatusOK, map[string]any{"already_voted": true})
+		return
+	}
+
+	count, err := a.Articles.IncrementThumbsUp(r.Context(), slug)
+	if err != nil {
+		a.serverError(w, "increment thumbs up", err)
+		return
+	}
+	http.SetCookie(w, &http.Cookie{
+		Name:     cookieName,
+		Value:    "1",
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   a.Cfg.IsProduction(),
+		SameSite: http.SameSiteLaxMode,
+		Expires:  time.Now().AddDate(5, 0, 0),
+	})
+	writeJSON(w, http.StatusOK, map[string]any{"thumbs_up_count": count})
 }
 
 // --- Admin -----------------------------------------------------------
@@ -106,12 +230,17 @@ func (a *App) AdminArticleSave(w http.ResponseWriter, r *http.Request) {
 	sortOrder, _ := strconv.Atoi(r.FormValue("sort_order"))
 	article := models.Article{
 		ID:          id,
+		Slug:        slugify(r.FormValue("slug")),
 		Title:       strings.TrimSpace(r.FormValue("title")),
 		Summary:     strings.TrimSpace(r.FormValue("summary")),
 		SourceURL:   strings.TrimSpace(r.FormValue("source_url")),
 		SourceName:  strings.TrimSpace(r.FormValue("source_name")),
+		Tags:        parseTags(r.FormValue("tags")),
 		IsPublished: r.FormValue("is_published") == "on",
 		SortOrder:   sortOrder,
+	}
+	if article.Slug == "" {
+		article.Slug = slugify(article.Title)
 	}
 	if dateStr := strings.TrimSpace(r.FormValue("published_date")); dateStr != "" {
 		if d, err := time.Parse("2006-01-02", dateStr); err == nil {
@@ -141,11 +270,30 @@ func (a *App) AdminArticleSave(w http.ResponseWriter, r *http.Request) {
 		err = a.Articles.Update(ctx, article)
 	}
 	if err != nil {
-		a.serverError(w, "save article", err)
+		formData := AdminArticleFormData{
+			BaseData: a.base(r, "Article — Admin", "", "admin"),
+			Article:  article,
+			IsNew:    id == 0,
+			Error:    "Could not save article — the URL slug may already be in use.",
+		}
+		a.View.Render(w, http.StatusUnprocessableEntity, "admin_article_form", formData)
 		return
 	}
 
 	http.Redirect(w, r, "/admin/articles", http.StatusSeeOther)
+}
+
+// parseTags splits a comma-separated tags input into a trimmed, non-empty
+// slice, e.g. "AI, System Design" -> ["AI", "System Design"].
+func parseTags(raw string) []string {
+	var out []string
+	for _, t := range strings.Split(raw, ",") {
+		t = strings.TrimSpace(t)
+		if t != "" {
+			out = append(out, t)
+		}
+	}
+	return out
 }
 
 func (a *App) AdminArticleDelete(w http.ResponseWriter, r *http.Request) {

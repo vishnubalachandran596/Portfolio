@@ -3,28 +3,60 @@
   <div class="container">
     <p class="eyebrow">Articles</p>
     <h1>Worth reading</h1>
-    <p class="hero-subtitle">A short take on pieces worth your time — architecture, AI, and engineering careers — each one linked back to its original source.</p>
+    <p class="hero-subtitle">A short take on pieces worth your time — architecture, AI, system design, and engineering careers — each one linked back to its original source.</p>
   </div>
 </section>
 
 <section class="section">
   <div class="container">
+    <form method="GET" action="/articles" class="article-filters">
+      <input type="search" name="q" value="{{.Query}}" placeholder="Search articles…" class="article-search">
+      <select name="tag" class="article-select">
+        <option value="">All tags</option>
+        {{$active := .ActiveTag}}
+        {{range .Tags}}
+        <option value="{{.}}" {{if eq . $active}}selected{{end}}>{{.}}</option>
+        {{end}}
+      </select>
+      <select name="sort" class="article-select">
+        <option value="date_desc" {{if eq .Sort "date_desc"}}selected{{end}}>Newest first</option>
+        <option value="date_asc" {{if eq .Sort "date_asc"}}selected{{end}}>Oldest first</option>
+        <option value="thumbs_desc" {{if eq .Sort "thumbs_desc"}}selected{{end}}>Most thumbs up</option>
+      </select>
+      <button type="submit" class="btn btn-secondary">Apply</button>
+      {{if or .Query .ActiveTag}}<a class="link-button" href="/articles">Clear</a>{{end}}
+    </form>
+
     {{if .Articles}}
-    <div class="article-grid">
+    <p class="article-result-count">{{.Total}} article{{if ne .Total 1}}s{{end}}</p>
+    <div class="article-list">
       {{range .Articles}}
-      <a class="article-card" href="{{.SourceURL}}" target="_blank" rel="noopener noreferrer">
-        <div class="article-card-body">
+      <a class="article-row" href="/articles/{{.Slug}}">
+        <div class="article-row-body">
           <h3>{{.Title}}</h3>
           <p>{{.Summary}}</p>
+          <div class="article-row-meta">
+            {{if .PublishedDate}}<span>{{formatDateOptional .PublishedDate}}</span>{{end}}
+            {{if .SourceName}}<span>{{.SourceName}}</span>{{end}}
+            {{range .Tags}}<span class="tag-chip">{{.}}</span>{{end}}
+          </div>
         </div>
-        <div class="article-card-meta">
-          <span>{{if .SourceName}}{{.SourceName}}{{else}}Read the original{{end}} ↗</span>
+        <div class="article-row-votes">
+          <span class="thumbs-count">👍 {{.ThumbsUpCount}}</span>
         </div>
       </a>
       {{end}}
     </div>
+
+    {{if gt .TotalPages 1}}
+    <nav class="pagination" aria-label="Articles pagination">
+      {{if .HasPrev}}<a href="/articles?page={{.PrevPage}}&q={{.Query}}&tag={{.ActiveTag}}&sort={{.Sort}}">← Newer</a>{{else}}<span class="pagination-disabled">← Newer</span>{{end}}
+      <span class="pagination-status">Page {{.Page}} of {{.TotalPages}}</span>
+      {{if .HasNext}}<a href="/articles?page={{.NextPage}}&q={{.Query}}&tag={{.ActiveTag}}&sort={{.Sort}}">Older →</a>{{else}}<span class="pagination-disabled">Older →</span>{{end}}
+    </nav>
+    {{end}}
     {{else}}
-    <p class="empty-state">No articles yet — check back soon.</p>
+    <p class="empty-state">No articles match — try a different search or clear the filters.</p>
     {{end}}
   </div>
 </section>

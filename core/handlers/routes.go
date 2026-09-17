@@ -27,6 +27,8 @@ func (a *App) Routes() http.Handler {
 	mux.HandleFunc("POST /booking/checkout/order", a.BookingCheckoutOrder)
 	mux.HandleFunc("POST /booking/checkout/verify", a.BookingCheckoutVerify)
 	mux.HandleFunc("GET /articles", a.ArticlesPage)
+	mux.HandleFunc("GET /articles/{slug}", a.ArticleDetailPage)
+	mux.HandleFunc("POST /articles/{slug}/thumbs-up", a.ArticleThumbsUp)
 	mux.HandleFunc("GET /contact", a.ContactPage)
 	mux.HandleFunc("GET /search", a.Search)
 	mux.Handle("GET /account", noindex(a.Auth.RequireUser(http.HandlerFunc(a.AccountPage))))

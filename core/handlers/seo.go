@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/vishnubalachandran596/portfolio/core/middleware"
+	"github.com/vishnubalachandran596/portfolio/core/repo"
 )
 
 // baseURL returns the canonical absolute origin for the CURRENT request —
@@ -42,6 +43,12 @@ func (a *App) Sitemap(w http.ResponseWriter, r *http.Request) {
 		a.serverError(w, "load courses for sitemap", err)
 		return
 	}
+	articlesResult, err := a.Articles.ListPublishedFiltered(r.Context(), repo.ArticleListOptions{PageSize: 10000})
+	if err != nil {
+		a.serverError(w, "load articles for sitemap", err)
+		return
+	}
+	articles := articlesResult.Articles
 
 	var b strings.Builder
 	b.WriteString(`<?xml version="1.0" encoding="UTF-8"?>` + "\n")
@@ -68,6 +75,10 @@ func (a *App) Sitemap(w http.ResponseWriter, r *http.Request) {
 	for _, c := range courses {
 		fmt.Fprintf(&b, "  <url><loc>%s</loc><lastmod>%s</lastmod><priority>0.7</priority></url>\n",
 			a.pageURL(r, "/courses/"+c.Slug), c.UpdatedAt.Format("2006-01-02"))
+	}
+	for _, art := range articles {
+		fmt.Fprintf(&b, "  <url><loc>%s</loc><lastmod>%s</lastmod><priority>0.6</priority></url>\n",
+			a.pageURL(r, "/articles/"+art.Slug), art.CreatedAt.Format("2006-01-02"))
 	}
 	b.WriteString(`</urlset>`)
 

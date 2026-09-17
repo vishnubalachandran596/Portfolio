@@ -24,13 +24,10 @@ func (a *App) Home(w http.ResponseWriter, r *http.Request) {
 		a.serverError(w, "load profile", err)
 		return
 	}
-	articles, err := a.Articles.ListPublished(ctx)
+	articles, err := a.Articles.ListPublished(ctx, 3)
 	if err != nil {
 		a.serverError(w, "load articles", err)
 		return
-	}
-	if len(articles) > 3 {
-		articles = articles[:3]
 	}
 
 	// A concise, keyword-first <title> for search results — the full

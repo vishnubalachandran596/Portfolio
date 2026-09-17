@@ -50,13 +50,13 @@
     </div>
     <div class="article-grid">
       {{range .Articles}}
-      <a class="article-card" href="{{.SourceURL}}" target="_blank" rel="noopener noreferrer">
+      <a class="article-card" href="/articles/{{.Slug}}">
         <div class="article-card-body">
           <h3>{{.Title}}</h3>
           <p>{{.Summary}}</p>
         </div>
         <div class="article-card-meta">
-          <span>{{if .SourceName}}{{.SourceName}}{{else}}Read the original{{end}} ↗</span>
+          <span>{{if .SourceName}}{{.SourceName}}{{else}}Read the take{{end}} →</span>
         </div>
       </a>
       {{end}}
