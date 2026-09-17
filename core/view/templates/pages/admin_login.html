@@ -8,9 +8,12 @@
         <input type="email" name="email" required autofocus>
       </label>
       <label>Password
-        <input type="password" name="password" required>
+        <span class="password-field">
+          <input type="password" name="password" id="admin-password" required>
+          <button type="button" class="password-toggle" data-target="admin-password" aria-label="Show password">Show</button>
+        </span>
       </label>
-      <button type="submit" class="btn btn-primary">Log in</button>
+      <button type="submit" class="btn btn-primary" data-loading-text="Logging in…">Log in</button>
     </form>
   </div>
 </section>

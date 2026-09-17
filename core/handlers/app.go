@@ -4,6 +4,7 @@ package handlers
 
 import (
 	"database/sql"
+	"net/http"
 	"time"
 
 	"github.com/vishnubalachandran596/portfolio/core/config"
@@ -41,6 +42,8 @@ type BaseData struct {
 	MetaDescription string
 	Active          string
 	SiteURL         string
+	CanonicalURL    string
+	OGImageURL      string
 }
 
 func New(cfg *config.Config, db *sql.DB, renderer *view.Renderer) *App {
@@ -66,12 +69,15 @@ func New(cfg *config.Config, db *sql.DB, renderer *view.Renderer) *App {
 	}
 }
 
-func (a *App) base(title, metaDescription, active string) BaseData {
+func (a *App) base(r *http.Request, title, metaDescription, active string) BaseData {
+	base := a.baseURL(r)
 	return BaseData{
 		SiteName:        a.Cfg.SiteName,
 		Title:           title,
 		MetaDescription: metaDescription,
 		Active:          active,
 		SiteURL:         a.Cfg.SiteURL,
+		CanonicalURL:    base + r.URL.Path,
+		OGImageURL:      base + "/static/img/og-image.png",
 	}
 }

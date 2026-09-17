@@ -53,6 +53,8 @@ func New() (*Renderer, error) {
 		"templates/pages/courses_list.html",
 		"templates/pages/course_detail.html",
 		"templates/pages/booking.html",
+		"templates/pages/search.html",
+		"templates/pages/legal.html",
 		"templates/pages/not_found.html",
 		"templates/pages/admin_login.html",
 		"templates/pages/admin_dashboard.html",

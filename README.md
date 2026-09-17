@@ -21,21 +21,26 @@ availability, and profile/about content — all backed by Postgres
 ## Project layout
 
 ```
-cmd/server/         Local dev entrypoint (long-lived HTTP server)
-api/index.go         Vercel serverless entrypoint (wraps the same app)
-internal/app/        Shared bootstrap: config, DB connect+migrate, wiring
-internal/config/      Env var loading
-internal/db/          Postgres connection + embedded SQL migrations
-internal/models/      Domain types
-internal/repo/        Database queries per entity
-internal/middleware/  Admin session auth (JWT cookie) + logging
-internal/authutil/    Password hashing
-internal/scheduler/   Turns weekly availability rules into bookable slots
-internal/handlers/    HTTP handlers (public site + admin portal) + routing
-internal/view/        html/template renderer + all page templates
-web/                  Embedded static assets (CSS/JS/SVG) served at /static
-vercel.json           Vercel rewrite (all routes → api/index) + function config
+cmd/server/       Local dev entrypoint (long-lived HTTP server)
+api/index.go      Vercel serverless entrypoint (wraps the same app)
+core/app/         Shared bootstrap: config, DB connect+migrate, wiring
+core/config/      Env var loading
+core/db/          Postgres connection + embedded SQL migrations
+core/models/      Domain types
+core/repo/        Database queries per entity
+core/middleware/  Admin session auth (JWT cookie), domain routing, logging
+core/authutil/    Password hashing
+core/scheduler/   Turns weekly availability rules into bookable slots
+core/handlers/    HTTP handlers (public site + admin portal) + routing + SEO
+core/view/        html/template renderer + all page templates
+web/              Embedded static assets (CSS/JS/SVG/OG image) served at /static
+vercel.json       Vercel rewrite (all routes → api/index) + function config
 ```
+
+(Package names avoid Go's `internal/` convention on purpose — Vercel's Go
+builder compiles `api/index.go` as a standalone file outside the normal
+module package graph, which trips Go's internal-package visibility rule
+even for code inside the same module.)
 
 ## Local development
 
@@ -111,7 +116,7 @@ Docker, etc.), pointed at any Postgres database (Supabase or otherwise).
 ## Content model & the admin portal
 
 All site content lives in Postgres and ships pre-seeded with Vishnu's real
-profile, skills, experience, and education (`internal/db/migrations/002_seed.sql`).
+profile, skills, experience, and education (`core/db/migrations/002_seed.sql`).
 Everything below is editable from `/admin` after logging in:
 
 - **Profile** (`/admin/profile`) — name, title, hero tagline/subtitle,
@@ -127,9 +132,59 @@ Everything below is editable from `/admin` after logging in:
   start time, so two visitors can never double-book the same slot.
 
 Skills, experience, and education are currently seed-managed (edit
-`internal/db/migrations/*.sql` or the rows directly); they weren't wired
+`core/db/migrations/*.sql` or the rows directly); they weren't wired
 into the admin UI to keep the CRUD surface focused on the three things
 explicitly asked for (courses, bookings, profile).
+
+## Domain architecture (marketing site vs. app)
+
+The site follows a marketing-vs-app domain split: the apex domain serves
+public pages, and an `app.` subdomain serves the booking flow and admin
+portal. Set `DOMAIN=yourdomain.com` (no scheme, no `www`) in production and
+the app redirects automatically:
+
+- `yourdomain.com/*` (except `/booking`, `/admin/*`) → stays on the apex.
+- `yourdomain.com/booking`, `yourdomain.com/admin/*` → redirected to `app.yourdomain.com`.
+- `app.yourdomain.com/*` (marketing paths) → redirected back to the apex.
+- `www.yourdomain.com/*` → redirected to the apex.
+
+Leaving `DOMAIN` unset (e.g. on a raw `*.vercel.app` preview URL) disables
+this entirely — no-op passthrough, so preview deploys keep working before a
+custom domain is attached. See `core/middleware/domain.go`.
+
+## SEO, legal, and UX checklist status
+
+Implemented:
+- **SEO:** `/sitemap.xml`, `/robots.txt`, per-page canonical tags,
+  Open Graph + Twitter Card meta (including a generated `og-image.png`),
+  JSON-LD (`Person`/`WebSite` on the home page, `Course` on course pages),
+  `X-Robots-Tag: noindex` on the entire admin portal, single `<h1>` per
+  page, clean URL slugs, mobile-responsive layout, no third-party scripts
+  to slow down Core Web Vitals.
+- **Legal/compliance:** `/privacy`, `/terms`, `/refund`, `/cookies` with
+  real content (data collected, retention, deletion requests, children's
+  data, no dark patterns/hidden fees), footer links, a minimal cookie
+  consent banner.
+- **UX:** dark/light theme toggle (persisted), full-site search (`/search`),
+  expandable FAQ, password-visibility toggle on admin login, loading state
+  on form submit, copy-to-clipboard (email), print stylesheet, scroll
+  progress bar, back-to-top button, floating "Book time" CTA, sticky
+  header, mobile menu, skip-to-content link, confirmation dialogs on
+  destructive admin actions.
+
+Explicitly **not** implemented (each needs an infrastructure/account
+decision this repo can't make on its own):
+- **Newsletter signup** — needs an email service (Resend, etc.) and a
+  double opt-in/unsubscribe flow for compliance; no email provider is
+  wired up yet.
+- **UTM tracking** — added when you share links externally, not something
+  to bake into internal navigation.
+- **Google Search Console verification / sitemap submission** — a manual
+  step in Google's dashboard once the site is live on a real domain.
+- **Backlink strategy** — an ongoing external activity, not a code change.
+- **SPF/DKIM/DMARC, `mail.`/`news.` email subdomains** — no transactional
+  or marketing email is sent by the app yet, so there's nothing to
+  authenticate; revisit if/when booking confirmation emails are added.
 
 ## Notes on scope
 

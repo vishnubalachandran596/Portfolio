@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"html/template"
 	"log"
 	"net/http"
 	"strings"
@@ -16,6 +17,7 @@ type HomeData struct {
 	Profile  models.Profile
 	Features []models.HomeFeature
 	Courses  []models.Course
+	JSONLD   template.JS
 }
 
 func (a *App) Home(w http.ResponseWriter, r *http.Request) {
@@ -39,11 +41,21 @@ func (a *App) Home(w http.ResponseWriter, r *http.Request) {
 		courses = courses[:3]
 	}
 
+	base := a.base(r, profile.Name+" — "+profile.Title, profile.HeroSubtitle, "home")
+	var sameAs []string
+	if profile.LinkedInURL != "" {
+		sameAs = append(sameAs, profile.LinkedInURL)
+	}
+	if profile.GitHubURL != "" {
+		sameAs = append(sameAs, profile.GitHubURL)
+	}
+
 	a.View.Render(w, http.StatusOK, "home", HomeData{
-		BaseData: a.base(profile.Name+" — "+profile.Title, profile.HeroSubtitle, "home"),
+		BaseData: base,
 		Profile:  profile,
 		Features: features,
 		Courses:  courses,
+		JSONLD:   personAndWebsiteJSONLD(profile.Name, profile.Title, base.CanonicalURL, profile.Location, sameAs),
 	})
 }
 
@@ -79,7 +91,7 @@ func (a *App) About(w http.ResponseWriter, r *http.Request) {
 	}
 
 	a.View.Render(w, http.StatusOK, "about", AboutData{
-		BaseData:   a.base("About — "+profile.Name, profile.Summary, "about"),
+		BaseData:   a.base(r, "About — "+profile.Name, profile.Summary, "about"),
 		Profile:    profile,
 		Skills:     skills,
 		Experience: exp,
@@ -99,7 +111,7 @@ func (a *App) CoursesList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	a.View.Render(w, http.StatusOK, "courses_list", CoursesListData{
-		BaseData: a.base("Courses — "+a.Cfg.SiteName, "Practical courses on architecture, backend engineering, and technical leadership.", "courses"),
+		BaseData: a.base(r, "Courses — "+a.Cfg.SiteName, "Practical courses on architecture, backend engineering, and technical leadership.", "courses"),
 		Courses:  courses,
 	})
 }
@@ -107,6 +119,7 @@ func (a *App) CoursesList(w http.ResponseWriter, r *http.Request) {
 type CourseDetailData struct {
 	BaseData
 	Course models.Course
+	JSONLD template.JS
 }
 
 func (a *App) CourseDetail(w http.ResponseWriter, r *http.Request) {
@@ -125,9 +138,11 @@ func (a *App) CourseDetail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	base := a.base(r, course.Title+" — "+a.Cfg.SiteName, course.Summary, "courses")
 	a.View.Render(w, http.StatusOK, "course_detail", CourseDetailData{
-		BaseData: a.base(course.Title+" — "+a.Cfg.SiteName, course.Summary, "courses"),
+		BaseData: base,
 		Course:   course,
+		JSONLD:   courseJSONLD(course.Title, course.Summary, base.CanonicalURL, a.Cfg.SiteName),
 	})
 }
 
@@ -157,7 +172,7 @@ func (a *App) BookingPage(w http.ResponseWriter, r *http.Request) {
 	days := scheduler.ComputeDays(rules, taken, a.Timezone, 14)
 
 	a.View.Render(w, http.StatusOK, "booking", BookingData{
-		BaseData: a.base("Book Time — "+a.Cfg.SiteName, "Book a 1:1 session directly on my calendar.", "booking"),
+		BaseData: a.base(r, "Book Time — "+a.Cfg.SiteName, "Book a 1:1 session directly on my calendar.", "booking"),
 		Days:     days,
 		Success:  r.URL.Query().Get("booked") == "1",
 		Error:    r.URL.Query().Get("error"),
@@ -259,7 +274,7 @@ func (a *App) slotIsOffered(rules []models.AvailabilityRule, slotStart time.Time
 }
 
 func (a *App) NotFound(w http.ResponseWriter, r *http.Request) {
-	a.View.Render(w, http.StatusNotFound, "not_found", a.base("Page not found — "+a.Cfg.SiteName, "", ""))
+	a.View.Render(w, http.StatusNotFound, "not_found", a.base(r, "Page not found — "+a.Cfg.SiteName, "", ""))
 }
 
 func (a *App) serverError(w http.ResponseWriter, action string, err error) {

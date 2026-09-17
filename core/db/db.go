@@ -64,7 +64,7 @@ func stripUnrecognizedParams(databaseURL string) string {
 	return u.String()
 }
 
-// Migrate applies every *.sql file under internal/db/migrations that hasn't
+// Migrate applies every *.sql file under core/db/migrations that hasn't
 // already been recorded in schema_migrations, in filename order.
 func Migrate(ctx context.Context, conn *sql.DB) error {
 	if _, err := conn.ExecContext(ctx, `

@@ -16,6 +16,7 @@ type Config struct {
 	AdminPassword string
 	SiteName      string
 	SiteURL       string
+	Domain        string
 	Environment   string
 }
 
@@ -54,6 +55,7 @@ func Load() (*Config, error) {
 		AdminPassword: os.Getenv("ADMIN_BOOTSTRAP_PASSWORD"),
 		SiteName:      siteName,
 		SiteURL:       os.Getenv("SITE_URL"),
+		Domain:        os.Getenv("DOMAIN"),
 		Environment:   env,
 	}, nil
 }

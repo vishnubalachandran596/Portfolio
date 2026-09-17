@@ -23,7 +23,7 @@ func (a *App) AdminLoginPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	a.View.Render(w, http.StatusOK, "admin_login", AdminLoginData{
-		BaseData: a.base("Admin Login", "", ""),
+		BaseData: a.base(r, "Admin Login", "", ""),
 		Error:    r.URL.Query().Get("error"),
 	})
 }
@@ -89,7 +89,7 @@ func (a *App) AdminDashboard(w http.ResponseWriter, r *http.Request) {
 	}
 
 	a.View.Render(w, http.StatusOK, "admin_dashboard", AdminDashboardData{
-		BaseData:         a.base("Admin Dashboard", "", "admin"),
+		BaseData:         a.base(r, "Admin Dashboard", "", "admin"),
 		CourseCount:      len(courses),
 		PublishedCourses: published,
 		UpcomingBookings: bookings,
@@ -111,7 +111,7 @@ func (a *App) AdminCoursesList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	a.View.Render(w, http.StatusOK, "admin_courses_list", AdminCoursesListData{
-		BaseData: a.base("Courses — Admin", "", "admin"),
+		BaseData: a.base(r, "Courses — Admin", "", "admin"),
 		Courses:  courses,
 	})
 }
@@ -125,7 +125,7 @@ type AdminCourseFormData struct {
 
 func (a *App) AdminCourseNewPage(w http.ResponseWriter, r *http.Request) {
 	a.View.Render(w, http.StatusOK, "admin_course_form", AdminCourseFormData{
-		BaseData: a.base("New Course — Admin", "", "admin"),
+		BaseData: a.base(r, "New Course — Admin", "", "admin"),
 		IsNew:    true,
 	})
 }
@@ -146,7 +146,7 @@ func (a *App) AdminCourseEditPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	a.View.Render(w, http.StatusOK, "admin_course_form", AdminCourseFormData{
-		BaseData: a.base("Edit Course — Admin", "", "admin"),
+		BaseData: a.base(r, "Edit Course — Admin", "", "admin"),
 		Course:   course,
 	})
 }
@@ -189,7 +189,7 @@ func (a *App) AdminCourseSave(w http.ResponseWriter, r *http.Request) {
 	}
 	if course.Title == "" || course.Slug == "" {
 		formData := AdminCourseFormData{
-			BaseData: a.base("Course — Admin", "", "admin"),
+			BaseData: a.base(r, "Course — Admin", "", "admin"),
 			Course:   course,
 			IsNew:    id == 0,
 			Error:    "Title is required.",
@@ -208,7 +208,7 @@ func (a *App) AdminCourseSave(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Printf("save course: %v", err)
 		formData := AdminCourseFormData{
-			BaseData: a.base("Course — Admin", "", "admin"),
+			BaseData: a.base(r, "Course — Admin", "", "admin"),
 			Course:   course,
 			IsNew:    id == 0,
 			Error:    "Could not save course — the slug may already be in use.",
@@ -247,7 +247,7 @@ func (a *App) AdminBookingsList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	a.View.Render(w, http.StatusOK, "admin_bookings", AdminBookingsData{
-		BaseData: a.base("Bookings — Admin", "", "admin"),
+		BaseData: a.base(r, "Bookings — Admin", "", "admin"),
 		Bookings: bookings,
 	})
 }
@@ -286,7 +286,7 @@ func (a *App) AdminAvailabilityList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	a.View.Render(w, http.StatusOK, "admin_availability", AdminAvailabilityData{
-		BaseData: a.base("Availability — Admin", "", "admin"),
+		BaseData: a.base(r, "Availability — Admin", "", "admin"),
 		Rules:    rules,
 	})
 }
@@ -357,7 +357,7 @@ func (a *App) AdminProfilePage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	a.View.Render(w, http.StatusOK, "admin_profile", AdminProfileData{
-		BaseData: a.base("Profile — Admin", "", "admin"),
+		BaseData: a.base(r, "Profile — Admin", "", "admin"),
 		Profile:  profile,
 		Saved:    r.URL.Query().Get("saved") == "1",
 	})

@@ -9,6 +9,10 @@
       <a href="/" class="{{if eq .Active "home"}}active{{end}}">Home</a>
       <a href="/about" class="{{if eq .Active "about"}}active{{end}}">About</a>
       <a href="/courses" class="{{if eq .Active "courses"}}active{{end}}">Courses</a>
+      <a href="/search" class="{{if eq .Active "search"}}active{{end}}" aria-label="Search">Search</a>
+      <button type="button" id="theme-toggle" class="theme-toggle" aria-label="Toggle dark or light theme">
+        <span class="theme-toggle-icon" aria-hidden="true">◐</span>
+      </button>
       <a href="/booking" class="{{if eq .Active "booking"}}active{{end}} cta-link">Book Time</a>
     </nav>
   </div>

@@ -14,7 +14,8 @@
       <div class="about-links">
         {{if .Profile.LinkedInURL}}<a class="btn btn-secondary" href="{{.Profile.LinkedInURL}}" target="_blank" rel="noopener">LinkedIn</a>{{end}}
         {{if .Profile.ResumeURL}}<a class="btn btn-secondary" href="{{.Profile.ResumeURL}}" target="_blank" rel="noopener">Resume</a>{{end}}
-        <a class="btn btn-primary" href="/booking">Book Time</a>
+        {{if .Profile.Email}}<button type="button" class="btn btn-secondary copy-btn" data-copy="{{.Profile.Email}}">Copy email</button>{{end}}
+        <a class="btn btn-primary no-print" href="/booking">Book Time</a>
       </div>
     </div>
     <aside class="about-facts">
