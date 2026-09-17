@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Resiliency &amp; High-Scale Application Design</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap');
+
+:root{
+  --bg:#F8FAFC; --fg:#0F172A; --card:#FFFFFF; --border:#E2E8F0; --muted:#475569;
+  --primary:#F59E0B; --primary-fg:#0F172A; --accent:#8B5CF6; --accent-fg:#ffffff;
+  --ok:#16A34A; --danger:#DC2626;
+  --font:'IBM Plex Sans', -apple-system, Segoe UI, sans-serif;
+  --mono:ui-monospace, 'SF Mono', 'IBM Plex Mono', Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#0F172A; --fg:#F8FAFC; --card:#222735; --border:#334155; --muted:#94A3B8;
+    --primary:#F59E0B; --primary-fg:#0F172A; --accent:#8B5CF6; --accent-fg:#ffffff;
+    --ok:#4ADE80; --danger:#F87171;
+  }
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0; background:var(--bg); color:var(--fg); font-family:var(--font);
+  -webkit-font-smoothing:antialiased; line-height:1.5;
+}
+a{color:var(--accent)}
+.wrap{max-width:960px; margin:0 auto; padding:0 1.25rem 6rem}
+
+/* ---------- Header / hero ---------- */
+.masthead{padding:3rem 0 2rem; border-bottom:1px solid var(--border)}
+.tier-badge{
+  display:inline-block; font-size:.7rem; letter-spacing:.12em; text-transform:uppercase;
+  font-weight:700; color:var(--primary-fg); background:var(--primary); padding:.3rem .65rem;
+  border-radius:6px; margin-bottom:1rem;
+}
+h1{font-size:2.1rem; line-height:1.2; margin:0 0 .6rem; font-weight:700; letter-spacing:-.01em}
+.subtitle{color:var(--muted); font-size:1.08rem; max-width:62ch; margin:0 0 1.5rem; line-height:1.55}
+.meta-row{display:flex; flex-wrap:wrap; gap:.5rem 1.25rem; font-size:.82rem; color:var(--muted)}
+.meta-row strong{color:var(--fg); font-weight:600}
+
+/* ---------- TOC ---------- */
+.toc-nav{
+  margin-top:1.75rem; padding-top:1.25rem; border-top:1px dashed var(--border);
+}
+.toc-nav p{margin:0 0 .6rem; font-size:.72rem; text-transform:uppercase; letter-spacing:.1em; color:var(--muted)}
+.toc-list{display:flex; flex-wrap:wrap; gap:.45rem; padding:0; margin:0; list-style:none}
+.toc-list a{
+  display:inline-block; font-size:.8rem; padding:.4rem .7rem; border-radius:999px;
+  border:1px solid var(--border); color:var(--fg); text-decoration:none; background:var(--card);
+  transition:border-color .2s, color .2s;
+}
+.toc-list a:hover{border-color:var(--accent); color:var(--accent)}
+
+/* ---------- Sections ---------- */
+.section{padding:3.25rem 0; border-bottom:1px solid var(--border)}
+.section:last-of-type{border-bottom:none}
+.section-num{
+  font-family:var(--mono); font-size:.78rem; letter-spacing:.08em; text-transform:uppercase;
+  color:var(--primary); font-weight:600;
+}
+.section h2{font-size:1.55rem; margin:.35rem 0 .4rem; font-weight:700; letter-spacing:-.01em}
+.section .dek{color:var(--muted); font-size:.98rem; max-width:68ch; margin:0 0 1.6rem}
+
+.prose p{margin:0 0 1.05rem; font-size:.99rem; line-height:1.75; max-width:74ch; color:var(--fg)}
+.prose p:last-child{margin-bottom:0}
+
+.callout{
+  border-left:3px solid var(--primary); background:var(--card); border:1px solid var(--border);
+  border-left-width:3px; border-left-color:var(--primary); border-radius:8px;
+  padding:.95rem 1.15rem; margin:1.5rem 0; max-width:74ch;
+}
+.callout p{margin:0; font-size:.93rem; line-height:1.6; color:var(--fg)}
+.callout strong{color:var(--primary)}
+
+code{
+  font-family:var(--mono); font-size:.87em; background:var(--border); color:var(--fg);
+  padding:.08em .38em; border-radius:4px;
+}
+.prose code, .concept-body code, .callout code{background:var(--border)}
+
+/* ---------- Concept cards ---------- */
+.concept-grid{
+  display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:.7rem; margin-top:1.4rem;
+}
+.concept-card{
+  background:var(--card); border:1px solid var(--border); border-radius:10px; padding:0 1rem;
+  transition:border-color .2s;
+}
+.concept-card[open]{border-color:var(--accent)}
+.concept-card summary{
+  cursor:pointer; list-style:none; font-weight:600; font-size:.92rem; padding:.85rem 1.4rem .85rem 0;
+  position:relative; color:var(--fg);
+}
+.concept-card summary::-webkit-details-marker{display:none}
+.concept-card summary::after{
+  content:'+'; position:absolute; right:0; top:.78rem; color:var(--accent); font-weight:700; font-size:1rem;
+}
+.concept-card[open] summary::after{content:'\2212'}
+.concept-body{padding:0 0 1rem; color:var(--muted); font-size:.88rem; line-height:1.62}
+.concept-body p{margin:0 0 .5rem}
+.concept-body p:last-child{margin:0}
+
+/* ---------- Interactive labs ---------- */
+.lab{
+  background:var(--card); border:1px solid var(--border); border-radius:14px;
+  padding:1.4rem 1.4rem 1.6rem; margin:2rem 0 0;
+}
+.lab-label{
+  font-size:.7rem; letter-spacing:.1em; text-transform:uppercase; font-weight:700; color:var(--accent); margin:0 0 .35rem;
+}
+.lab h3{margin:0 0 .4rem; font-size:1.15rem; font-weight:700}
+.lab-hint{color:var(--muted); font-size:.87rem; margin:0 0 1.15rem; max-width:70ch; line-height:1.55}
+.lab-controls{display:flex; flex-wrap:wrap; gap:.6rem 1.1rem; align-items:flex-end; margin-bottom:1.1rem}
+.field{display:flex; flex-direction:column; gap:.3rem; font-size:.76rem; color:var(--muted)}
+.field input[type=range]{width:150px; accent-color:var(--accent); cursor:pointer}
+.field input[type=number], .field select{
+  padding:.4rem .55rem; border:1px solid var(--border); border-radius:6px; background:var(--bg);
+  color:var(--fg); font-family:inherit; font-size:.82rem; cursor:pointer;
+}
+.btn{
+  cursor:pointer; border:1px solid var(--border); background:var(--bg); color:var(--fg);
+  padding:.5rem .95rem; border-radius:8px; font-family:inherit; font-size:.83rem; font-weight:600;
+  transition:border-color .2s, color .2s, background .2s, opacity .2s;
+}
+.btn:hover{border-color:var(--accent); color:var(--accent)}
+.btn.primary{background:var(--accent); color:var(--accent-fg); border-color:var(--accent)}
+.btn.primary:hover{opacity:.88; color:var(--accent-fg)}
+.btn[aria-pressed="true"]{background:var(--primary); border-color:var(--primary); color:var(--primary-fg)}
+.btn:focus-visible, a:focus-visible, summary:focus-visible, input:focus-visible, select:focus-visible{
+  outline:2px solid var(--accent); outline-offset:2px;
+}
+.lab-stage{
+  background:var(--bg); border:1px solid var(--border); border-radius:10px; padding:.9rem; margin-top:.2rem;
+}
+canvas{width:100%; height:210px; display:block}
+.stat-row{display:flex; flex-wrap:wrap; gap:.6rem; margin-top:1rem}
+.stat{background:var(--bg); border:1px solid var(--border); border-radius:10px; padding:.55rem .9rem; min-width:104px}
+.stat .k{font-size:.66rem; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); display:block; margin-bottom:.15rem}
+.stat .v{font-size:1.25rem; font-weight:700; color:var(--fg); font-variant-numeric:tabular-nums}
+.stat .v.accent{color:var(--accent)}
+.stat .v.warn{color:var(--primary)}
+.stat .v.danger{color:var(--danger)}
+.stat .v.ok{color:var(--ok)}
+.lab-log{
+  font-family:var(--mono); font-size:.76rem; line-height:1.55; background:var(--bg); border:1px solid var(--border);
+  border-radius:8px; padding:.65rem .8rem; max-height:190px; overflow:auto; color:var(--muted); margin-top:.9rem;
+}
+.lab-log .ln{display:block}
+.lab-log .fail{color:var(--danger)}
+.lab-log .comp{color:var(--primary)}
+.lab-log .ok{color:var(--ok)}
+.lab-note{color:var(--muted); font-size:.8rem; margin:.75rem 0 0; line-height:1.55}
+.legend{display:flex; flex-wrap:wrap; gap:1rem; font-size:.76rem; color:var(--muted); margin-top:.6rem}
+.legend span{display:inline-flex; align-items:center; gap:.35rem}
+.swatch{width:.7rem; height:.7rem; border-radius:3px; display:inline-block}
+
+/* saga steps */
+.saga-steps{display:flex; flex-direction:column; gap:.4rem}
+.saga-step{
+  display:flex; align-items:center; gap:.7rem; padding:.55rem .75rem; border-radius:8px;
+  border:1px solid var(--border); background:var(--bg); font-size:.85rem; transition:border-color .2s, background .2s;
+}
+.saga-step .dot{width:.6rem; height:.6rem; border-radius:50%; background:var(--border); flex-shrink:0}
+.saga-step .name{flex:1}
+.saga-step .state{font-size:.72rem; color:var(--muted); font-family:var(--mono); text-transform:uppercase; letter-spacing:.04em}
+.saga-step.active{border-color:var(--accent)}
+.saga-step.active .dot{background:var(--accent)}
+.saga-step.done .dot{background:var(--ok)}
+.saga-step.failed{border-color:var(--danger)}
+.saga-step.failed .dot{background:var(--danger)}
+.saga-step.compensating .dot{background:var(--primary)}
+.saga-step.compensated{opacity:.65}
+.saga-step.compensated .dot{background:var(--primary)}
+
+/* bulkhead pools */
+.pool-pair{display:grid; grid-template-columns:1fr 1fr; gap:1rem}
+@media (max-width:640px){.pool-pair{grid-template-columns:1fr}}
+.pool{border:1px solid var(--border); border-radius:10px; padding:.8rem}
+.pool h4{margin:0 0 .5rem; font-size:.8rem; text-transform:uppercase; letter-spacing:.05em; color:var(--muted)}
+.slots{display:flex; flex-wrap:wrap; gap:.3rem; min-height:2.2rem}
+.slot{
+  width:1.65rem; height:1.65rem; border-radius:5px; border:1px solid var(--border); background:var(--card);
+  transition:background .25s, border-color .25s;
+}
+.slot.busy-p{background:var(--accent); border-color:var(--accent)}
+.slot.busy-r{background:var(--primary); border-color:var(--primary)}
+.pool-result{margin-top:.55rem; font-size:.78rem; color:var(--muted)}
+.pool-result b{color:var(--fg)}
+
+/* hot partition */
+.shard-bars{display:flex; gap:.5rem; align-items:flex-end; height:170px; padding:.5rem 0}
+.shard-col{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; gap:.4rem; height:100%}
+.shard-bar{width:100%; max-width:2.6rem; background:var(--accent); border-radius:4px 4px 0 0; transition:height .35s ease}
+.shard-bar.hot{background:var(--danger)}
+.shard-label{font-size:.7rem; color:var(--muted); font-family:var(--mono)}
+
+footer.course-footer{padding-top:2.5rem; color:var(--muted); font-size:.82rem}
+
+@media (max-width:640px){
+  h1{font-size:1.65rem}
+  .section h2{font-size:1.3rem}
+  .lab{padding:1.1rem}
+}
+@media (max-width:375px){
+  .wrap{padding:0 .9rem 4rem}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <span class="tier-badge">Advanced &middot; Capstone</span>
+    <h1>Resiliency &amp; High-Scale Application Design</h1>
+    <p class="subtitle">Designing distributed systems that survive real-world failure at scale &mdash; failure modes, resilience patterns, consensus, data consistency, capacity planning, and the operational discipline that keeps all of it running.</p>
+    <div class="meta-row">
+      <span><strong>Level:</strong> Senior / Staff / Principal</span>
+      <span><strong>Prerequisites:</strong> System design fundamentals, Kafka, Redis, distributed data basics</span>
+      <span><strong>Format:</strong> Deep-dive reading + 6 interactive simulators + worked case study</span>
+    </div>
+    <nav class="toc-nav">
+      <p>On this page</p>
+      <ul class="toc-list">
+        <li><a href="#sec-1">1. What resiliency means</a></li>
+        <li><a href="#sec-2">2. Failure modes</a></li>
+        <li><a href="#sec-3">3. Designing for failure</a></li>
+        <li><a href="#sec-4">4. Resilience patterns</a></li>
+        <li><a href="#sec-5">5. Consensus &amp; coordination</a></li>
+        <li><a href="#sec-6">6. Data consistency trade-offs</a></li>
+        <li><a href="#sec-7">7. Scaling stateful systems</a></li>
+        <li><a href="#sec-8">8. Capacity planning &amp; load testing</a></li>
+        <li><a href="#sec-9">9. Operating resilient systems</a></li>
+        <li><a href="#sec-10">10. Case study: a ledger service</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <section class="section" id="sec-intro">
+    <div class="prose">
+      <p>Most system design material stops at the point where the architecture diagram is drawn: services, a database, a cache, a queue, arrows between them. This course starts where that material ends. Every one of those arrows is a network call that can hang, a dependency that can degrade without dying, a peer that can disagree about what time it is. The difference between a system that is merely <em>architected</em> and one that is <em>resilient</em> is not the boxes on the diagram &mdash; it is everything this course covers: what happens in the first 500 milliseconds after a downstream dependency starts timing out, how a retry policy behaves when ten thousand clients hit it simultaneously, whether a partition reshard can happen without a maintenance window, and whether the on-call engineer holding the pager at 3 a.m. has a runbook or a Slack scrollback.</p>
+      <p>This is written for engineers who already know the vocabulary &mdash; load balancers, sharding, eventual consistency, Kafka partitions, Redis eviction policies &mdash; and want to go past the vocabulary into the mechanics: the actual state machine of a circuit breaker, the actual formula behind jittered backoff, the actual arithmetic of an error budget, the actual trade-offs a funds-transfer saga has to make when step three of five fails. The six labs embedded below are not decorative animations; they are small, mechanically correct simulations you can perturb &mdash; toggle jitter on and off and watch synchronized retry storms actually form, fail a saga step and watch compensations actually fire in reverse order, skew a partition key and watch one shard actually absorb the load the others don't.</p>
+    </div>
+  </section>
+
+  <section class="section" id="sec-1">
+    <span class="section-num">01 &middot; Foundations</span>
+    <h2>What resiliency actually means</h2>
+    <p class="dek">Three words that get used interchangeably in casual conversation and mean three different, precisely measurable things once you're the one on the hook for an SLA.</p>
+
+    <div class="prose">
+      <p><strong>Availability</strong> measures whether a system responds to a request at all, within an acceptable time, right now. It is a point-in-time property, usually expressed as the fraction of requests (or time) served successfully out of the total attempted &mdash; <code>uptime / (uptime + downtime)</code>. <strong>Reliability</strong> measures whether a system keeps behaving correctly over a duration, under the conditions it was designed for &mdash; it is closer to "does it keep working the way it's supposed to for as long as it's supposed to" than "is it up right now." <strong>Durability</strong> is narrower still: it measures whether data, once acknowledged as written, survives failures &mdash; disk death, node loss, region loss &mdash; independent of whether the system serving that data is currently reachable. These are orthogonal. A single-node in-memory cache can be extremely available (sub-millisecond responses, no network hop, no dependency to fail) while being completely non-durable (a process restart erases everything it holds). An object store with synchronous multi-region replication can be extremely durable (eleven nines of data survival is a real, published class of guarantee from major cloud object stores) while occasionally being unavailable during a control-plane incident, without losing a single byte of already-committed data. Conflating these three is not a pedantic nitpick: it produces designs where a team ships aggressive caching to "improve reliability" and discovers, during an incident, that they've actually improved availability while quietly weakening durability, because the cache now masks writes that never made it to the durable store.</p>
+      <p>The <strong>error budget</strong> exists to turn availability from a moral aspiration ("we should be reliable") into an engineering constraint with arithmetic behind it. You start from a Service Level Objective &mdash; a target such as 99.9% availability, measured over a rolling window, usually 28 or 30 days. Everything below that line, for that window, is budget: time (or request volume) the system is permitted to be unavailable without anyone owing an apology. At 99.9% over a 30-day month, the arithmetic is direct: <code>(1 - 0.999) &times; 30 &times; 24 &times; 60 = 43.2</code> minutes. That's the entire allowance, for everything &mdash; deploys that go wrong, a dependency having a bad day, a bad config push, a datacenter blip. The moment you can state that number, you can use it as a governance lever instead of a vibe: if the budget is nearly exhausted, velocity slows &mdash; freeze risky deploys, prioritize the reliability backlog. If the budget is barely touched, the team has earned room to ship faster and take on more risk, because the SLO has slack. This is the mechanism Google's SRE discipline formalized, and it is the single most useful idea in this entire course for turning "reliability" from a subjective argument between engineering and product into a number both sides can look at.</p>
+      <p>The instinct to chase "the system must never fail" is understandable and, for any distributed system built from more than a handful of independent components, mathematically doomed. If a system depends on <code>N</code> independent components each with uptime <code>p</code>, and all of them must be up for the system to be up, the system's own availability is <code>p^N</code> &mdash; and it degrades fast. Ten components each individually at a very respectable 99.9% combine, in a naive series dependency, to roughly 99.0% &mdash; an order of magnitude worse than any single piece. This is not a hypothetical: it is the default outcome of wiring services together without deliberately engineering around it, and it is why large systems with dozens or hundreds of services in their critical path cannot simply inherit reliability from their parts being individually reliable. Redundancy (parallel, independent paths where only one of several needs to succeed) fights this multiplication; naive chaining makes it worse.</p>
+      <p>The correct design goal, given that failure at scale is a statistical certainty rather than an edge case, is not "never fail" but <strong>fail safely, fail small, and recover fast</strong>. Fail safely means a failure degrades behavior in a bounded, predictable, non-destructive way rather than corrupting state or cascading. Fail small means the blast radius of any one failure is contained to the smallest possible slice of users, requests, or data &mdash; a concept you should treat as a first-class design variable, not an afterthought, the same way you'd size a database index. Recover fast means the system is built so that once a failure is detected, restoring healthy behavior takes seconds, not hours &mdash; through automated failover, fast-failing dependencies, and operational readiness, rather than through heroics. A system optimized this way will still fail regularly; it will simply fail in ways that are cheap, contained, and short, which is the actual, achievable version of "reliable" at scale.</p>
+      <p>None of this is abstract for a payments or ledger system specifically. A funds-transfer service that is briefly unavailable but never loses or double-applies a transaction is in a defensible, recoverable state. A funds-transfer service that stays available by skipping durability guarantees under load is not &mdash; it has traded a visible, bounded failure (an error response, a retry) for an invisible, unbounded one (an incorrect balance). Every design decision in the sections that follow is, at bottom, a decision about which axis &mdash; availability, reliability, or durability &mdash; you are willing to spend budget on, and which one you are not.</p>
+    </div>
+
+    <div class="concept-grid">
+      <details class="concept-card"><summary>Availability vs reliability vs durability</summary><div class="concept-body"><p>Availability: can you get a response right now. Reliability: does the system keep behaving correctly over time, under design conditions. Durability: does committed data survive failures, independent of whether the system is currently reachable. A system can score high on one and low on another &mdash; they are not substitutes for each other.</p></div></details>
+      <details class="concept-card"><summary>Error budget arithmetic</summary><div class="concept-body"><p><code>budget = (1 &minus; SLO) &times; window</code>. At a 99.9% SLO over a 30-day month, the allowed downtime is <code>0.001 &times; 43200 min = 43.2 min</code>. At 99.99% it drops to <code>4.32 min</code>. Every incident, bad deploy, and dependency blip is debited against this number until it resets with the next window.</p></div></details>
+      <details class="concept-card"><summary>MTBF vs MTTR</summary><div class="concept-body"><p><code>MTBF</code> (mean time between failures) measures how often things break; <code>MTTR</code> (mean time to recovery) measures how fast you fix them once they do. At scale, <code>MTTR</code> is the more controllable, higher-leverage number &mdash; you cannot engineer failure to zero, but you can engineer detection and recovery to be very fast.</p></div></details>
+      <details class="concept-card"><summary>Why 100% uptime is the wrong target</summary><div class="concept-body"><p>For <code>N</code> independent components each with uptime <code>p</code> chained in series, naive composed availability is <code>p^N</code>, which falls quickly as <code>N</code> grows. Chasing zero failures ignores this arithmetic and this statistical reality; the achievable target is bounding how failures manifest and how fast they're undone, not preventing them outright.</p></div></details>
+      <details class="concept-card"><summary>Blast radius as a design variable</summary><div class="concept-body"><p>Blast radius is the maximum scope &mdash; users, requests, tenants, regions &mdash; that a single failure can affect. It should be sized deliberately through sharding, cell-based isolation, canary rollouts, and bulkheads, the same way you'd deliberately size a cache TTL or an index. An undersized blast radius turns a single bad deploy into a full outage.</p></div></details>
+    </div>
+
+    <div class="callout">
+      <p><strong>Operational reality:</strong> teams that treat their SLO as a target to hit rather than a budget to spend tend to either over-invest in reliability work nobody asked for, or discover their real risk tolerance only during an incident. Publish the budget, and let it govern the deploy-freeze decision instead of a Slack argument.</p>
+    </div>
+
+    <div class="lab" id="lab-error-budget">
+      <p class="lab-label">Interactive &middot; Lab 1 of 6</p>
+      <h3>Error-budget burn-rate calculator</h3>
+      <p class="lab-hint">Pick an SLO and an observed error rate and see exactly how fast the monthly budget burns &mdash; and how many days remain before it's exhausted. A burn rate above <code>1.0&times;</code> means the budget runs out before the window resets.</p>
+      <div class="lab-controls">
+        <label class="field">SLO target
+          <select id="eb-slo">
+            <option value="0.995">99.5%</option>
+            <option value="0.999" selected>99.9%</option>
+            <option value="0.9995">99.95%</option>
+            <option value="0.9999">99.99%</option>
+          </select>
+        </label>
+        <label class="field">Observed error rate: <span id="eb-error-val">0.20%</span>
+          <input type="range" id="eb-error" min="0" max="500" value="20" step="1"/>
+        </label>
+        <label class="field">Window (days)
+          <input type="number" id="eb-window" min="1" max="90" value="30" step="1"/>
+        </label>
+      </div>
+      <div class="lab-stage">
+        <canvas id="eb-canvas" height="90"></canvas>
+        <div class="legend">
+          <span><i class="swatch" style="background:var(--accent)"></i>Budget consumed so far this window (projected)</span>
+          <span><i class="swatch" style="background:var(--border)"></i>Remaining budget</span>
+        </div>
+      </div>
+      <div class="stat-row">
+        <div class="stat"><span class="k">Allowed downtime</span><span class="v" id="eb-budget-min">&mdash;</span></div>
+        <div class="stat"><span class="k">Burn rate</span><span class="v accent" id="eb-burn-rate">&mdash;</span></div>
+        <div class="stat"><span class="k">Time to exhaustion</span><span class="v warn" id="eb-ttx">&mdash;</span></div>
+        <div class="stat"><span class="k">Status</span><span class="v" id="eb-status">&mdash;</span></div>
+      </div>
+      <p class="lab-note">Burn rate is <code>observed_error_rate &divide; (1 &minus; SLO)</code>: a burn rate of <code>6&times;</code> means the team is spending the monthly budget six times faster than the SLO allows, and will exhaust it in <code>window &divide; burn_rate</code> days.</p>
+    </div>
+  </section>
+
+  <section class="section" id="sec-2">
+    <span class="section-num">02 &middot; Failure modes</span>
+    <h2>Failure modes in distributed systems</h2>
+    <p class="dek">The properties that make distributed systems hard are not incidental complexity you can architect away &mdash; they are the defining subject matter.</p>
+
+    <div class="prose">
+      <p>A single process either runs or it has crashed; there is no third state a caller has to reason about. A distributed system does not get that simplicity. Leslie Lamport's framing is the sharpest available: a distributed system is one in which the failure of a machine you've never heard of can cause your own program to fail. Failure is <strong>partial</strong> by default &mdash; three of five replicas can be healthy while two are not; a request can succeed at the network layer but fail at the application layer; a write can be durably committed on the primary and never make it to a follower before the primary dies. Every remote call therefore has three possible outcomes, not two: it succeeded, it failed, or you don't know &mdash; and that third outcome, the ambiguous one, is the case most naively-written client code doesn't handle, because single-process programming never produces it.</p>
+      <p><strong>Cascading failure</strong> is what happens when a system's own failure-handling machinery amplifies a small, local problem into a large, global one. The mechanics are almost always the same three ingredients: a dependency slows down (not fails outright &mdash; slows), calling threads or connections block waiting on it and accumulate in a pool, and the pool exhausts. Once the pool is exhausted, requests that have nothing to do with the slow dependency start queueing or timing out too, because they're competing for the same thread or connection budget. Add naive retries on top &mdash; every client re-issuing the same request that just timed out &mdash; and you've multiplied the load on an already-struggling dependency, which slows it down further, which produces more timeouts, which produces more retries. This is why cascading failures are frequently misdiagnosed in the moment as capacity problems ("we need more instances") when they are actually feedback-loop problems: adding capacity to a system whose retry behavior is amplifying load can make the incident worse, because the new capacity just generates more retries into the same choke point.</p>
+      <p>The most dangerous failure mode in production is not the clean, total kind &mdash; it's the <strong>grey failure</strong>: a component that is technically up, is passing its health check, and is still serving some traffic, but is measurably degraded. Elevated p99 latency without elevated p50. A disk that's returning I/O errors on 2% of reads. A replica whose replication lag has quietly grown to minutes. Health checks are usually cheap, shallow probes (can I open a TCP connection, does <code>/healthz</code> return 200) precisely because they need to run frequently and can't afford to be expensive &mdash; and that shallowness is exactly what a grey failure exploits. A load balancer keeps routing traffic to a node that is technically alive and failing its users anyway, because nothing in the health-check path measured the thing that's actually broken. Detecting grey failure requires looking at the same signal from more than one vantage point &mdash; comparing what a node reports about itself against what its peers or its clients observe about it &mdash; because a component's self-report during a grey failure is often the least trustworthy signal in the system.</p>
+      <p>A <strong>network partition</strong> is not an exotic edge case reserved for CAP-theorem homework; it is any situation where messages between two parts of a system are delayed, dropped, or reordered beyond what the application expects &mdash; which, in a system spanning multiple hosts, racks, availability zones, or regions, happens continuously at small scale and occasionally at large scale. The right design question is never "will a partition happen," it is "what does each side of a partition do while it's happening." If both sides keep accepting writes to the same logical record without coordination, you get a split-brain condition and the two sides will need to be reconciled &mdash; possibly with conflicting, unreconcilable data &mdash; once the partition heals. Designing for partitions means deciding, in advance and per data type, which side (if either) keeps serving writes, and what the reconciliation story is, rather than discovering the answer during an incident.</p>
+      <p><strong>Clock skew</strong> closes out the list, and it is the one engineers most consistently get wrong because it's the least visible in normal operation. Every machine's wall clock drifts independently; NTP keeps drift bounded, typically to single-digit milliseconds under normal conditions, but "bounded" is not "zero," and under network issues or VM pauses it can be far worse. That means two events on two different machines, timestamped with their local wall clocks, cannot be reliably ordered by comparing those timestamps &mdash; event B's timestamp being later than event A's does not prove B happened after A. Systems that need a real, trustworthy ordering of events across machines use logical mechanisms instead of wall-clock comparison: a single authoritative sequencer or source of monotonic ordering, Lamport/vector clocks that capture causal relationships rather than wall-clock time, or a consensus-backed log (the same primitive covered in the next section) that assigns a single, agreed-upon order regardless of what each machine's local clock says. Using <code>System.currentTimeMillis()</code> comparisons from two different hosts to decide "which write happened last" is a specific, well-known class of bug, and it shows up in production far more often than clock-skew's low profile in day-to-day operation would suggest.</p>
+    </div>
+
+    <div class="concept-grid">
+      <details class="concept-card"><summary>Partial failure vs total failure</summary><div class="concept-body"><p>Total failure (a crashed process) is easy to detect and handle: it's binary. Partial failure &mdash; some replicas up, some down; a call that times out with unknown server-side effect &mdash; forces every caller to handle a third outcome besides success and failure: <em>unknown</em>. Most production incidents live in that third state.</p></div></details>
+      <details class="concept-card"><summary>Retry storms and cascading failure</summary><div class="concept-body"><p>A slowdown fills connection/thread pools &rarr; unrelated requests queue behind the same pool &rarr; timeouts fire &rarr; naive retries re-issue the same load into an already-struggling dependency. The failure looks like a capacity shortage but is actually a feedback loop; adding capacity without fixing the retry behavior can worsen it.</p></div></details>
+      <details class="concept-card"><summary>Grey failure examples</summary><div class="concept-body"><p>Elevated tail latency with normal median, intermittent I/O errors on a subset of operations, replication lag creeping upward, a node returning stale-but-plausible data. All pass shallow health checks. Detection requires cross-checking a component's self-report against what its peers or callers observe.</p></div></details>
+      <details class="concept-card"><summary>Split-brain during partitions</summary><div class="concept-body"><p>If both sides of a partition keep accepting writes for the same logical record without coordination, each believes itself authoritative. Reconciliation after the partition heals may require discarding data, merging conflicting writes, or exposing the conflict to the application &mdash; decide the policy at design time, per data type.</p></div></details>
+      <details class="concept-card"><summary>Why NTP doesn't solve ordering</summary><div class="concept-body"><p>NTP bounds clock drift; it does not eliminate it, and the bound can widen under network issues or scheduling jitter. Comparing wall-clock timestamps from different hosts to infer "what happened first" is unsound. Use a single sequencing authority, causal/vector clocks, or a consensus-backed log when true ordering matters.</p></div></details>
+      <details class="concept-card"><summary>Timeout vs failure detection</summary><div class="concept-body"><p>A timeout is a local policy decision ("I will stop waiting after X ms"); it is not proof the remote operation failed &mdash; it may have succeeded after the timeout fired. This ambiguity is exactly why idempotency (covered in Section 6) is load-bearing for any retried operation.</p></div></details>
+    </div>
+
+    <div class="callout">
+      <p><strong>Operational reality:</strong> when an incident review keeps circling back to "the health check said it was fine," that's usually a sign the health check is testing liveness, not correctness &mdash; and the fix is a deeper, synthetic check, not a shorter check interval.</p>
+    </div>
+  </section>
+
+  <section class="section" id="sec-3">
+    <span class="section-num">03 &middot; Design principles</span>
+    <h2>Designing for failure</h2>
+    <p class="dek">Redundancy that isn't isolated is decoration. Degradation that isn't deliberate is an outage waiting for a label.</p>
+
+    <div class="prose">
+      <p>Redundancy is often treated as a checkbox &mdash; "we run two instances" &mdash; without asking the question that actually determines whether it does anything: two instances of <em>what</em>, sharing <em>which</em> failure domain? Two application instances behind a single load balancer are not redundant against a load-balancer failure. Two database replicas in the same availability zone are not redundant against a power or network event that takes the AZ down. Two services that both depend on the same shared credentials store, the same DNS resolver, or the same message broker are not redundant against a failure of that shared dependency, no matter how many copies of the services themselves exist. Real redundancy requires that the copies fail <strong>independently</strong> &mdash; which means identifying every shared resource in the path (power, network, control plane, a shared library with a bug, a shared config value) and either eliminating the sharing or explicitly accepting it as a residual single point of failure. This is why cloud providers structure regions into multiple availability zones with independent power and networking, and why serious HA designs place redundant components across AZs, not just across hosts within one.</p>
+      <p>The <strong>bulkhead pattern</strong>, named for the watertight compartments in a ship's hull, takes the same idea inward: it isolates failure domains <em>within</em> a single service so that one overloaded or misbehaving dependency cannot exhaust resources shared by unrelated request paths. The classic manifestation is per-dependency thread pools or connection pools: instead of one shared pool of, say, 50 worker threads serving every outbound call a service makes, you allocate dedicated, capped pools per downstream &mdash; 30 threads for the payments provider, 10 for the recommendations service, 10 for everything else. If the recommendations service starts hanging, it can exhaust its own 10-thread allocation and start failing recommendation requests, but the 30 threads reserved for payments are structurally untouchable by that failure. Without the bulkhead, a hang in a non-critical dependency can silently consume the entire shared pool and take down checkout, which has nothing to do with recommendations, purely because they happened to share a resource. The same isolation applies to rate limits, circuit breakers (scoped per dependency, not globally), and even separate deployable services for genuinely independent failure domains.</p>
+      <p><strong>Graceful degradation</strong> is the deliberate design of what a system does when it <em>cannot</em> do everything it normally does &mdash; as opposed to the default, which is an unhandled exception that takes down more than it needs to. Serving stale or cached data when the live source is unavailable is the most common form: a product page that can't reach the live pricing service can serve the last known price with a short staleness window rather than failing the entire page render. Disabling non-critical features under load is the next lever &mdash; turning off personalization, recommendation widgets, or "customers also viewed" sections when the system is under pressure, so the capacity they'd consume goes to the transaction path instead. Returning partial results rather than failing an entire request is a third form: an aggregation endpoint that queries five backends can return the four that answered in time along with a flag noting one was omitted, rather than failing the whole response because of one slow dependency. Feature flags operationalize all of this &mdash; they let a human (or an automated controller watching load) pull a degradation lever in seconds, without a deploy.</p>
+      <p>The concept that ties this together is <strong>static stability</strong>: a system's ability to keep functioning, in a degraded-but-safe mode, using only the state and configuration it already has locally, even when it has lost contact with the control systems that normally manage it. A service that caches its routing table, its feature-flag values, and its rate-limit config locally, and continues operating on the last-known-good values if the control plane that distributes those values becomes unreachable, is statically stable. A service that blocks or crashes the moment it can't reach its config service is not &mdash; and that dependency, often introduced for entirely reasonable operational convenience, has quietly become a single point of failure for everything that depends on it, which defeats redundancy work done everywhere else in the stack.</p>
+    </div>
+
+    <div class="concept-grid">
+      <details class="concept-card"><summary>Bulkhead pattern mechanics</summary><div class="concept-body"><p>Allocate separate, capped resource pools (threads, connections, in-flight request slots) per downstream dependency instead of one shared pool. A hang or overload in one dependency can only exhaust its own allocation, structurally protecting unrelated request paths from resource starvation.</p></div></details>
+      <details class="concept-card"><summary>Thread pool vs connection pool isolation</summary><div class="concept-body"><p>Thread-pool isolation bounds how many concurrent calls to a dependency can be in flight; connection-pool isolation bounds how many sockets are held open to it. Both matter &mdash; a service can exhaust its DB connection pool waiting on slow queries even if application threads are otherwise free.</p></div></details>
+      <details class="concept-card"><summary>Fault domains and blast radius</summary><div class="concept-body"><p>A fault domain is any boundary within which a single failure can spread &mdash; a host, an AZ, a shared connection pool, a shared config value. Deliberately sizing fault domains (cell-based architecture, per-tenant shards, per-dependency bulkheads) is how blast radius is engineered rather than left to chance.</p></div></details>
+      <details class="concept-card"><summary>Stale-but-available vs consistent-but-down</summary><div class="concept-body"><p>Serving a cached, slightly stale value keeps the system available at the cost of correctness freshness; refusing to answer until the live source responds keeps correctness at the cost of availability. Neither is universally right &mdash; the choice belongs per data type, driven by what an incorrect stale read actually costs.</p></div></details>
+      <details class="concept-card"><summary>Static stability</summary><div class="concept-body"><p>A system is statically stable if it keeps working correctly (in a degraded mode if necessary) using only locally cached state, even if it loses contact with the control plane that normally updates that state. It is one of the highest-leverage properties for avoiding control-plane outages becoming data-plane outages.</p></div></details>
+      <details class="concept-card"><summary>Shedding load by priority tier</summary><div class="concept-body"><p>When capacity is insufficient for all incoming work, reject or defer lower-priority classes first (background jobs, non-authenticated traffic, analytics writes) so the capacity budget is spent on the highest-value requests &mdash; requires requests to be classified by priority before load shedding, not during it.</p></div></details>
+    </div>
+
+    <div class="callout">
+      <p><strong>Operational reality:</strong> the most common bulkhead failure in real systems isn't "we forgot to isolate pools" &mdash; it's a shared library, shared connection pool, or shared cache client instantiated once at startup and silently reused across every downstream call site, quietly reintroducing the coupling the architecture diagram claims doesn't exist.</p>
+    </div>
+
+    <div class="lab" id="lab-bulkhead">
+      <p class="lab-label">Interactive &middot; Lab 2 of 6</p>
+      <h3>Bulkhead isolation visualizer</h3>
+      <p class="lab-hint">A checkout service calls two downstreams: Payments (critical) and Recommendations (non-critical). Trigger an outage in Recommendations and watch what happens to Payments with and without bulkheads &mdash; toggle isolation on or off, then run the outage.</p>
+      <div class="lab-controls">
+        <button class="btn" id="bh-toggle" type="button" aria-pressed="true">Bulkheads: ON</button>
+        <button class="btn primary" id="bh-run" type="button">Trigger recommendations outage</button>
+        <button class="btn" id="bh-reset" type="button">Reset</button>
+      </div>
+      <div class="lab-stage">
+        <div class="pool-pair">
+          <div class="pool">
+            <h4>Payments pool <span id="bh-p-size">(15 workers)</span></h4>
+            <div class="slots" id="bh-slots-p"></div>
+            <p class="pool-result">Success rate: <b id="bh-p-rate">&mdash;</b></p>
+          </div>
+          <div class="pool">
+            <h4>Recommendations pool <span id="bh-r-size">(5 workers, shared with Payments when OFF)</span></h4>
+            <div class="slots" id="bh-slots-r"></div>
+            <p class="pool-result">Success rate: <b id="bh-r-rate">&mdash;</b></p>
+          </div>
+        </div>
+        <div class="legend">
+          <span><i class="swatch" style="background:var(--accent)"></i>Payments request occupying a slot</span>
+          <span><i class="swatch" style="background:var(--primary)"></i>Recommendations request hung (outage)</span>
+        </div>
+      </div>
+      <p class="lab-note" id="bh-explain">With bulkheads on, Recommendations has its own capped pool &mdash; its outage cannot touch Payments' dedicated slots. Turn bulkheads off to share one pool across both call types and watch Payments success rate collapse during the same outage.</p>
+    </div>
+  </section>
+
+  <section class="section" id="sec-4">
+    <span class="section-num">04 &middot; Resilience patterns</span>
+    <h2>Resilience patterns in depth</h2>
+    <p class="dek">Five mechanisms that show up, by name, in almost every postmortem where they were missing.</p>
+
+    <div class="prose">
+      <p>A <strong>circuit breaker</strong> is a state machine, not a retry policy, and the distinction matters. In the <code>Closed</code> state, calls pass through normally while the breaker counts outcomes over a rolling window &mdash; typically error rate over the last N requests or the last T seconds, not a naive "last K consecutive failures," because consecutive-failure counting is trivially defeated by a dependency that fails every other request. When the error rate crosses a threshold, the breaker trips to <code>Open</code>: calls fail immediately, without attempting the network hop at all, which is the entire point &mdash; a struggling dependency gets relief from load instead of more of it, and callers get a fast, cheap failure instead of waiting out a timeout. After a cooldown period, the breaker moves to <code>Half-Open</code> and admits a small, deliberately limited fraction of traffic as probes; if those probes succeed, the breaker closes and normal traffic resumes, and if they fail, it reopens and the cooldown restarts. The Half-Open state has to admit only a trickle, not full traffic, because flipping straight back to 100% the instant a dependency looks recovered is how you re-trip the breaker on the first sign of remaining fragility and get a breaker that oscillates instead of stabilizing.</p>
+      <p><strong>Retries with exponential backoff and jitter</strong> are the standard response to transient failure, and the naive version of this pattern is actively harmful. Fixed-interval retries, or even bare exponential backoff without randomization &mdash; <code>delay = base &times; 2^attempt</code>, deterministically &mdash; cause every client that failed at the same moment to retry at the same moment again, and again, producing synchronized waves of load against the dependency that is already struggling: a retry storm, structurally identical to thundering-herd. The fix, popularized in AWS's architecture blog on the subject, is <strong>full jitter</strong>: compute the capped exponential delay as normal, <code>capped = min(cap, base &times; 2^attempt)</code>, but then draw the actual delay as a uniform random value across the entire range, <code>delay = random(0, capped)</code> &mdash; not a small jitter added on top of the exponential value, but the exponential value used purely as an upper bound for a full random draw. This spreads a cohort of simultaneously-failing clients' retries across the whole window instead of bunching them at fixed offsets, which is precisely what the interactive simulator below demonstrates: watch request volume per tick with jitter off, then on.</p>
+      <p><strong>Timeouts at every network boundary</strong> are the single highest-leverage, most frequently skipped line item in this entire course. A call with no timeout, or an accidentally enormous default timeout (many HTTP client libraries default to "wait forever" unless explicitly configured otherwise), holds whatever thread or connection made it for as long as the remote side takes to respond &mdash; which, during an incident, can be indefinitely. That held resource is exactly the mechanism cascading failure runs on, from Section 2. The fix is not merely "set a timeout," it's setting timeouts that <strong>compose</strong> across a call chain: if a client-facing request has a 2-second deadline, and that request fans out to three sequential downstream calls, each downstream call cannot independently be allowed a 2-second timeout, because three sequential 2-second timeouts sum to up to 6 seconds against a 2-second budget. The deadline needs to be propagated and divided across the chain &mdash; explicitly, via a deadline passed along with the request (gRPC's deadline propagation is a production-grade example of this done correctly) &mdash; so that a slow hop three levels deep fails fast enough to still leave the caller time to respond within its own budget.</p>
+      <p><strong>Load shedding and backpressure</strong> are two different directions of the same idea: protecting a system from more work than it can currently do. Load shedding is proactive and local &mdash; a service measures its own saturation (queue depth, CPU, in-flight request count) and starts rejecting excess requests outright, typically with a <code>503</code> or <code>429</code> and a <code>Retry-After</code> hint, before it degrades to the point of failing everything, including the requests it could have served. Backpressure is the propagation of that signal <em>backward</em> through a pipeline so producers slow down instead of a consumer silently falling behind and either dropping data or building an unbounded queue &mdash; the same principle as TCP flow control, applied at the application layer via bounded queues, reactive-streams-style demand signaling, or a Kafka consumer intentionally pausing partition fetches when its downstream processing can't keep up. A system with unbounded queues anywhere in its path doesn't have backpressure; it has deferred, delayed failure, and the queue itself becomes the next cascading-failure trigger once it's finally drained under pressure.</p>
+      <p><strong>Rate limiting</strong> is usually introduced as protection against external abuse, but its more consequential role in a resilient architecture is protecting your own downstream dependencies from <em>you</em>. The same token-bucket or leaky-bucket mechanism that throttles an abusive external client can, and should, throttle your own service's outbound call rate to a dependency that has a known capacity ceiling &mdash; a third-party payments provider with a contractual rate limit, an internal service that hasn't been load-tested past a certain QPS. A token bucket allows bursts up to the bucket size while enforcing a steady average rate as tokens refill; a leaky bucket smooths bursts into a constant output rate regardless of arrival pattern. Applied to outbound calls, either turns "we might occasionally send a spike that knocks over a dependency" into a deliberate, bounded ceiling &mdash; self-protection that happens to also protect everyone downstream of you.</p>
+    </div>
+
+    <div class="concept-grid">
+      <details class="concept-card"><summary>Circuit breaker state machine</summary><div class="concept-body"><p><code>Closed</code> (traffic flows, errors counted over a rolling window) &rarr; trips to <code>Open</code> (calls fail fast, no network attempt) on crossing an error-rate threshold &rarr; after a cooldown, <code>Half-Open</code> admits a small probe fraction &rarr; success closes the breaker, failure reopens it.</p></div></details>
+      <details class="concept-card"><summary>Full jitter backoff formula</summary><div class="concept-body"><p><code>capped = min(cap, base &times; 2^attempt)</code>, then <code>delay = random(0, capped)</code>. The random draw spans the entire range up to the capped exponential value, which is what decorrelates simultaneously-failing clients from each other and prevents synchronized retry waves.</p></div></details>
+      <details class="concept-card"><summary>Timeout budget composition</summary><div class="concept-body"><p>A request's total deadline must be allocated across its call chain, not repeated at each hop. Propagate the remaining deadline (or an absolute expiry timestamp) downstream so a deep hop fails fast enough to leave the caller time to respond within its own budget.</p></div></details>
+      <details class="concept-card"><summary>Load shedding vs backpressure</summary><div class="concept-body"><p>Load shedding is a local, proactive rejection of excess work at the point of saturation. Backpressure is a signal propagated backward through a pipeline so upstream producers slow down. Unbounded queues provide neither &mdash; they just delay the failure and often make it worse when it finally arrives.</p></div></details>
+      <details class="concept-card"><summary>Token bucket vs leaky bucket</summary><div class="concept-body"><p>Token bucket permits bursts up to the bucket capacity while enforcing a steady refill rate on average. Leaky bucket smooths any arrival pattern into a constant output rate. Both can rate-limit outbound calls to protect a downstream dependency, not just inbound calls to protect yourself.</p></div></details>
+      <details class="concept-card"><summary>Retry amplification math</summary><div class="concept-body"><p>If every hop in an <code>N</code>-hop call chain independently retries up to <code>R</code> times on failure, worst-case request amplification against the deepest dependency approaches <code>R^N</code>. Retry budgets should be enforced at the edge, not compounded independently at every layer.</p></div></details>
+    </div>
+
+    <div class="lab" id="lab-retry-storm">
+      <p class="lab-label">Interactive &middot; Lab 3 of 6</p>
+      <h3>Retry-storm simulator</h3>
+      <p class="lab-hint">500 clients call a dependency that goes down for the first 12 simulated ticks. Each failed call retries with exponential backoff, capped at 8 seconds, for up to 5 attempts. Toggle full jitter and watch what happens to request volume hitting the dependency over time.</p>
+      <div class="lab-controls">
+        <button class="btn" id="rs-jitter" type="button" aria-pressed="true">Full jitter: ON</button>
+        <button class="btn primary" id="rs-run" type="button">Run simulation</button>
+        <label class="field">Clients
+          <input type="number" id="rs-clients" min="50" max="2000" step="50" value="500"/>
+        </label>
+      </div>
+      <div class="lab-stage">
+        <canvas id="rs-canvas" height="90"></canvas>
+        <div class="legend">
+          <span><i class="swatch" style="background:var(--accent)"></i>Requests per tick</span>
+          <span><i class="swatch" style="background:var(--danger)"></i>Above dependency's recovery capacity</span>
+        </div>
+      </div>
+      <div class="stat-row">
+        <div class="stat"><span class="k">Peak requests/tick</span><span class="v danger" id="rs-peak">&mdash;</span></div>
+        <div class="stat"><span class="k">Ticks over capacity</span><span class="v warn" id="rs-over">&mdash;</span></div>
+        <div class="stat"><span class="k">Total retries issued</span><span class="v accent" id="rs-total">&mdash;</span></div>
+      </div>
+      <p class="lab-note">Without jitter, every client that fails on attempt <code>k</code> retries at exactly the same future tick, so the retry volume arrives in sharp synchronized spikes &mdash; often taller than the traffic that caused the original outage. With full jitter, the same total retry volume spreads across the backoff window instead of concentrating at fixed offsets.</p>
+    </div>
+  </section>
+
+  <section class="section" id="sec-5">
+    <span class="section-num">05 &middot; Consensus</span>
+    <h2>Consensus &amp; coordination at a conceptual level</h2>
+    <p class="dek">Why agreeing on one fact, across unreliable machines and networks, is one of the hardest problems in the field &mdash; and why most services should never try to solve it themselves.</p>
+
+    <div class="prose">
+      <p>Distributed consensus asks a deceptively small question: can a set of independent machines, communicating over an unreliable network, agree on a single value or a single ordering of events, even if some of them crash or the network partitions? It is hard for a precise reason, not a vague one: the FLP impossibility result (Fischer, Lynch, Paterson, 1985) proves that in a fully asynchronous system &mdash; one with no bound on message delay &mdash; no deterministic consensus algorithm can guarantee both safety and termination if even one node can fail. Real consensus systems sidestep this not by defeating the theorem but by adding practical, if imperfect, assumptions: timeouts that behave like bounded delays in practice, leader election that makes progress under normal conditions and only stalls (safely) during genuinely adversarial network behavior. This is why every production consensus system leans on timeouts and randomization for liveness while keeping strict rules for safety &mdash; it will occasionally pause rather than occasionally produce a wrong answer, and that asymmetry is deliberate.</p>
+      <p>Raft, which is the algorithm most engineers will actually touch (via etcd, Consul, or CockroachDB's use of it), was explicitly designed to be understandable, and its plain-language shape is worth internalizing even without the full proof. A cluster of nodes elects a single <strong>leader</strong> via randomized election timeouts &mdash; each follower waits a random amount of time for a heartbeat from a leader before starting its own election, and the randomization is what prevents every node from trying to become leader simultaneously and splitting the vote forever. Once elected, the leader is the only node that accepts writes; it appends each write to its local log and replicates that log entry to followers, and only considers the entry <strong>committed</strong> &mdash; safe to acknowledge to the client and safe to apply &mdash; once a majority of nodes have durably stored it. This majority requirement is precisely what tolerates minority-side failures without losing committed data: any two majorities in a cluster must overlap by at least one node, so a newly elected leader is guaranteed to have seen every previously committed entry. Paxos solves the identical underlying problem with a different, more general (and famously harder-to-explain) formulation; the two are solving the same job, and for engineering purposes, understanding what problem they solve &mdash; leader election and replicated, ordered log commitment with majority acknowledgment &mdash; is what transfers to system design, not memorizing either proof.</p>
+      <p>The practical question that matters far more than algorithm internals is: where should <em>you</em> actually depend on a consensus system, versus build one? The honest answer is almost never build one. Reimplementing Raft or Paxos correctly, including the genuinely difficult edge cases around log compaction, membership changes, and network partition recovery, is a multi-year effort that battle-tested systems have already done. The right move is to depend on an existing consensus-backed coordination service &mdash; etcd or ZooKeeper are the two production-proven choices most engineers will encounter &mdash; for the narrow set of problems that genuinely need it: leader election among a set of peer processes, distributed locks with correctness guarantees, storing small amounts of strongly-consistent configuration that many nodes must agree on identically (cluster membership, sharding assignments, feature-flag state that must never be observed differently by two nodes at the same instant). These systems are deliberately small-scale and low-throughput by design &mdash; etcd is not meant to store your application's business data, and treating it as a general-purpose database is a well-known anti-pattern that shows up as a self-inflicted availability problem, because you've made your application's uptime depend on a quorum-based system with much lower throughput ceilings than a normal database.</p>
+      <p>The over-engineering trap runs in both directions. Reaching for a consensus-backed coordinator to solve a problem that doesn't need cluster-wide agreement &mdash; using a distributed lock where a database row-level lock or an idempotency key would do, or standing up a ZooKeeper ensemble to hold configuration that changes twice a year and could live in a config file pushed through normal deployment &mdash; adds operational surface area, a new class of outage, and a new dependency in your critical path for no corresponding benefit. The discipline is to ask, for every candidate use case, whether the problem is actually "multiple nodes must agree on one fact, right now, even under failure" &mdash; if yes, that's consensus's job and you should use an existing implementation rather than inventing one; if the real need is just durable storage, a lock scoped to a single database, or configuration that tolerates brief staleness, a consensus system is the wrong, expensive tool.</p>
+    </div>
+
+    <div class="concept-grid">
+      <details class="concept-card"><summary>Why distributed consensus is hard</summary><div class="concept-body"><p>The FLP impossibility result proves no deterministic algorithm can guarantee both safety and termination in a fully asynchronous system if even one node can fail. Production systems work around this with timeouts and randomized election, trading occasional safe pauses for a working system rather than defeating the theorem outright.</p></div></details>
+      <details class="concept-card"><summary>What Raft actually solves</summary><div class="concept-body"><p>Leader election via randomized timeouts (preventing perpetual split votes) and replicated log commitment: a leader appends writes to its log and only acknowledges them once a majority of nodes has durably stored the entry, guaranteeing any newly elected leader has seen every prior committed write.</p></div></details>
+      <details class="concept-card"><summary>Raft vs Paxos</summary><div class="concept-body"><p>Both solve the same underlying problem &mdash; agreement on a single, ordered, replicated log under partial failure. Raft was explicitly designed for understandability with a clearer leader/log model; Paxos is more general and historically harder to reason about. For system design purposes, what they solve matters more than their internal proofs.</p></div></details>
+      <details class="concept-card"><summary>When to use etcd/ZooKeeper</summary><div class="concept-body"><p>Leader election among peers, distributed locks with real correctness guarantees, and small amounts of strongly-consistent shared configuration (cluster membership, shard assignments). These systems are deliberately low-throughput and should never hold general application business data.</p></div></details>
+      <details class="concept-card"><summary>Over-engineering with consensus</summary><div class="concept-body"><p>Standing up a consensus-backed coordinator for a problem that doesn't require cluster-wide agreement under failure &mdash; a lock that could be a DB row lock, config that could tolerate brief staleness &mdash; adds a new outage class and critical-path dependency for no corresponding correctness benefit.</p></div></details>
+    </div>
+
+    <div class="callout">
+      <p><strong>Operational reality:</strong> the majority-quorum requirement that makes consensus systems correct is the same property that makes them fragile at scale &mdash; losing a majority of nodes (not just one) halts writes entirely, by design, rather than risking a split-brain. Size and place your quorum nodes across independent failure domains accordingly.</p>
+    </div>
+  </section>
+
+  <section class="section" id="sec-6">
+    <span class="section-num">06 &middot; Data consistency</span>
+    <h2>Data consistency trade-offs at scale</h2>
+    <p class="dek">Strong consistency is not free, eventual consistency is not lazy, and idempotency is the single tool that makes the whole trade-off survivable.</p>
+
+    <div class="prose">
+      <p><strong>Strong consistency</strong> guarantees that once a write is acknowledged, every subsequent read, from any node, sees that write (or a later one) &mdash; the system behaves, from the caller's perspective, as if there were only one copy of the data. Achieving this across replicas requires coordination on the write path (synchronous replication, consensus-backed commits) that costs latency and, per CAP/PACELC reasoning, availability during a partition. <strong>Eventual consistency</strong> relaxes the guarantee: writes propagate asynchronously, and reads may observe stale data for some bounded or unbounded window before all replicas converge. This is not a lesser, sloppier choice &mdash; it is the correct choice for data where a brief staleness window costs nothing (a "likes" counter, a product view count, a cache) and the wrong choice for data where it costs real money or violates an invariant a business actually cares about (an account balance, an inventory count that must never go negative, a funds transfer). The engineering discipline is choosing the consistency model <em>per data type</em>, deliberately, rather than picking one database and one consistency setting for an entire system and hoping it fits everything stored in it.</p>
+      <p><strong>Idempotency</strong> is the practical mechanism that makes the ambiguity from Section 2 &mdash; "did that request succeed, fail, or do we not know" &mdash; survivable under retries. An idempotent operation produces the same end state no matter how many times it's applied with the same input, which means a client facing an ambiguous timeout can safely retry without risking a double-charge, a double-debit, or a duplicate order. The standard mechanism is an <strong>idempotency key</strong>: the client generates a unique key per logical operation (not per HTTP attempt) and sends it with every retry of that operation; the server persists, in the same transaction as the operation's effect, a record of that key and its result, and on seeing a repeated key, returns the stored result instead of re-executing the operation. This is what turns "at-least-once delivery" &mdash; the only delivery guarantee that's actually achievable without unbounded coordination cost, because "exactly-once" at the network layer is not a real guarantee, only exactly-once <em>effect</em> via idempotency is achievable &mdash; from a correctness liability into a safe, boring default.</p>
+      <p><strong>Distributed transactions</strong> in the classic two-phase-commit sense &mdash; a coordinator asks every participant to prepare, then, only if all agree, tells them all to commit &mdash; provide atomicity across multiple services, but at a structural cost that makes them a poor fit for most microservice architectures: participants hold locks and are blocked from the moment they vote "prepared" until the coordinator's final decision arrives, which means a slow or crashed coordinator blocks every participant indefinitely, and the coordinator itself is a single point of failure and a latency bottleneck sitting in the critical path of every distributed write. The <strong>saga pattern</strong> is the alternative that most production systems actually use: instead of one atomic cross-service transaction, a saga is a sequence of local transactions, each committed independently in its own service, where every step that can fail has a corresponding <strong>compensating action</strong> that semantically undoes its effect if a later step in the sequence fails. Sagas trade atomicity for availability and throughput &mdash; there is a window where the system is in an intermediate, not-yet-fully-committed-or-compensated state, visible to anyone who reads it during that window &mdash; and the design work is precisely in deciding whether that intermediate visibility is acceptable for each specific business process, and in designing compensations that are actually safe to run (a compensation is not always a perfect mathematical inverse; refunding a payment is not identical to the payment never having happened, and that gap has to be handled explicitly, e.g. via a distinct refund record rather than deleting the charge).</p>
+      <p>Sagas come in two coordination styles. <strong>Orchestrated sagas</strong> use a central orchestrator that explicitly calls each step in sequence and explicitly triggers compensations in reverse order when a step fails &mdash; easier to reason about and to observe (the orchestrator's state <em>is</em> the saga's state), at the cost of a component that needs to be highly available itself, though notably it does not need to hold locks across the whole flow the way a 2PC coordinator does. <strong>Choreographed sagas</strong> have no central coordinator; each service reacts to events published by the previous step and, on failure, publishes a compensation event that the earlier steps react to &mdash; more decoupled, with no single component to keep available, at the cost of the saga's overall state living implicitly across the event stream, which makes it genuinely harder to answer "where is transfer #48213 right now" without dedicated tracing or a read-model built specifically to reconstruct saga state from the event history.</p>
+      <p>A concrete worked example grounds this: a funds transfer between two accounts, structured as an orchestrated saga with five steps &mdash; (1) place a hold on the source account for the transfer amount, (2) debit the source account and release the hold, (3) credit the destination account, (4) record the transfer as settled, (5) send a notification. Each step has a compensating action: step 1's hold is released by a cancel-hold action if anything downstream fails before the debit; step 2's debit is compensated by crediting the amount back to the source account; step 3's credit is compensated by debiting the destination account back out; steps 4 and 5 are typically not compensated at all &mdash; the record can simply be marked failed, and if a notification already went out for a transfer that later had to roll back, the correct compensation is a second, corrective notification, not an attempt to un-send the first one. If the failure happens at step 3 (destination credit fails, for instance because the destination account was closed in the interim), the orchestrator runs compensations for steps 2 and 1, in reverse order: credit the source account back, and only then is anything left to clean up at step 1's hold (already released by step 2's compensation, so effectively a no-op) &mdash; the source account ends the saga with its original balance intact, and no money is ever lost or duplicated, even though the transfer failed midway through a five-step, multi-service process.</p>
+    </div>
+
+    <div class="concept-grid">
+      <details class="concept-card"><summary>Strong vs eventual consistency in practice</summary><div class="concept-body"><p>Strong consistency costs write-path latency and availability during partitions in exchange for every read seeing the latest write. Eventual consistency accepts a staleness window in exchange for lower latency and higher availability. The choice belongs per data type based on what a stale read actually costs the business.</p></div></details>
+      <details class="concept-card"><summary>Idempotency keys</summary><div class="concept-body"><p>A client-generated key per logical operation, persisted server-side alongside the operation's result in the same transaction. A repeated key returns the stored result instead of re-executing &mdash; this is what makes at-least-once delivery, the only realistically achievable delivery guarantee, safe to retry.</p></div></details>
+      <details class="concept-card"><summary>Distributed transactions (2PC) and why they're avoided</summary><div class="concept-body"><p>Two-phase commit provides cross-service atomicity but holds participant locks from the prepare vote until the coordinator's final decision, making a slow or crashed coordinator a blocking single point of failure across every participant. Most microservice architectures avoid it for this reason.</p></div></details>
+      <details class="concept-card"><summary>Saga: orchestrated vs choreographed</summary><div class="concept-body"><p>Orchestrated: a central coordinator explicitly drives steps and compensations, easier to observe, needs to be highly available itself. Choreographed: services react to events with no central coordinator, more decoupled, harder to answer "what state is this saga in" without dedicated tracing.</p></div></details>
+      <details class="concept-card"><summary>Compensating actions aren't perfect inverses</summary><div class="concept-body"><p>A refund is not identical to a payment never having happened &mdash; it's a distinct, recorded, auditable action. Design compensations as real business operations with their own record trail, not as silent deletes of the original action, especially in any domain with audit or regulatory requirements.</p></div></details>
+    </div>
+
+    <div class="callout">
+      <p><strong>Operational reality:</strong> a saga without idempotent steps is not actually safe &mdash; if the orchestrator itself crashes mid-saga and resumes, or retries a step after an ambiguous timeout, every step and every compensation needs to tolerate being invoked more than once with the same effect as being invoked exactly once.</p>
+    </div>
+
+    <div class="lab" id="lab-saga">
+      <p class="lab-label">Interactive &middot; Lab 4 of 6</p>
+      <h3>Funds-transfer saga simulator</h3>
+      <p class="lab-hint">Five-step orchestrated saga for a funds transfer. Choose a step to fail at and run it &mdash; watch the saga execute forward, then unwind with compensations firing in reverse order for every step already completed.</p>
+      <div class="lab-controls">
+        <label class="field">Fail at step
+          <select id="sg-fail-step">
+            <option value="0">Never (all succeed)</option>
+            <option value="1">1. Place hold on source</option>
+            <option value="2">2. Debit source account</option>
+            <option value="3" selected>3. Credit destination account</option>
+            <option value="4">4. Record settlement</option>
+            <option value="5">5. Send notification</option>
+          </select>
+        </label>
+        <button class="btn primary" id="sg-run" type="button">Run saga</button>
+        <button class="btn" id="sg-reset" type="button">Reset</button>
+      </div>
+      <div class="lab-stage">
+        <div class="saga-steps" id="sg-steps"></div>
+        <div class="lab-log" id="sg-log"></div>
+      </div>
+      <p class="lab-note">Compensations only run for steps that had already committed &mdash; and they run in strict reverse order, so the saga always unwinds to a consistent state: the source account never ends up short, and the destination is never credited without a matching, committed debit.</p>
+    </div>
+  </section>
+
+  <!--SECTION-7-->
+
+  <!--SECTION-8-->
+
+  <!--SECTION-9-->
+
+  <!--SECTION-10-->
+
+  <footer class="course-footer">
+    <p>Resiliency &amp; High-Scale Application Design &mdash; written and maintained by Vishnu Balachandran. The simulations above model the mechanics of each pattern; production numbers will differ by workload, and every illustrative figure in this course is labeled as such rather than presented as a measured result.</p>
+  </footer>
+
+</div>
+
+<script>
+<!--SCRIPT-->
+</script>
+</body>
+</html>
