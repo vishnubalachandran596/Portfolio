@@ -666,7 +666,577 @@ footer.course-footer{padding-top:2.5rem; color:var(--muted); font-size:.82rem}
 </div>
 
 <script>
-<!--SCRIPT-->
+(function(){
+'use strict';
+
+function cssVar(name){
+  try{ return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || '#888'; }
+  catch(e){ return '#888'; }
+}
+function sizeCanvas(cv){
+  var rect = cv.getBoundingClientRect();
+  var w = Math.max(280, Math.round(rect.width || cv.parentElement.clientWidth || 600));
+  var h = 200;
+  if(cv.width !== w) cv.width = w;
+  if(cv.height !== h) cv.height = h;
+  return {w:w, h:h};
+}
+function fmtMs(v){ return (v>=1000 ? (v/1000).toFixed(2)+' s' : Math.round(v)+' ms'); }
+
+/* ============================================================
+   LAB 1 — Error-budget burn-rate calculator
+   ============================================================ */
+(function(){
+  var slo = document.getElementById('eb-slo');
+  var err = document.getElementById('eb-error');
+  var errVal = document.getElementById('eb-error-val');
+  var win = document.getElementById('eb-window');
+  var elBudget = document.getElementById('eb-budget-min');
+  var elBurn = document.getElementById('eb-burn-rate');
+  var elTtx = document.getElementById('eb-ttx');
+  var elStatus = document.getElementById('eb-status');
+  var canvas = document.getElementById('eb-canvas');
+  if(!slo || !canvas) return;
+
+  function compute(){
+    var sloFrac = parseFloat(slo.value);
+    var errPct = parseInt(err.value, 10) / 100; // display percent, e.g. 0.20
+    errVal.textContent = errPct.toFixed(2) + '%';
+    var errFrac = errPct / 100;
+    var windowDays = Math.max(1, parseFloat(win.value) || 30);
+    var budgetFrac = 1 - sloFrac;
+    var allowedMin = budgetFrac * windowDays * 24 * 60;
+    var burnRate = budgetFrac > 0 ? (errFrac / budgetFrac) : 0;
+
+    elBudget.textContent = allowedMin < 60 ? allowedMin.toFixed(1) + ' min' : (allowedMin/60).toFixed(1) + ' hr';
+    elBurn.textContent = burnRate.toFixed(2) + '×';
+
+    if(burnRate <= 0){
+      elTtx.textContent = 'never (no errors)';
+      elStatus.textContent = 'Sustainable';
+      elStatus.className = 'v ok';
+    } else if(burnRate <= 1){
+      elTtx.textContent = 'budget lasts full window';
+      elStatus.textContent = 'Sustainable';
+      elStatus.className = 'v ok';
+    } else {
+      var ttxDays = windowDays / burnRate;
+      elTtx.textContent = ttxDays < 1 ? (ttxDays*24).toFixed(1) + ' hr' : ttxDays.toFixed(1) + ' days';
+      elStatus.textContent = 'Over budget';
+      elStatus.className = 'v danger';
+    }
+
+    // draw consumption bar
+    var dim = sizeCanvas(canvas);
+    var ctx = canvas.getContext('2d');
+    ctx.clearRect(0,0,dim.w,dim.h);
+    var barY = dim.h/2 - 22, barH = 44;
+    var consumedFrac = Math.min(1, burnRate);
+    ctx.fillStyle = cssVar('--border');
+    ctx.fillRect(20, barY, dim.w-40, barH);
+    ctx.fillStyle = burnRate > 1 ? cssVar('--danger') : cssVar('--accent');
+    ctx.fillRect(20, barY, (dim.w-40)*consumedFrac, barH);
+    ctx.strokeStyle = cssVar('--fg');
+    ctx.lineWidth = 1;
+    ctx.strokeRect(20, barY, dim.w-40, barH);
+    ctx.fillStyle = cssVar('--muted');
+    ctx.font = '11px sans-serif';
+    ctx.fillText('0% of budget', 20, barY+barH+16);
+    ctx.textAlign = 'right';
+    ctx.fillText(burnRate>1 ? '100% (exhausted before window ends)' : '100% of budget', dim.w-20, barY+barH+16);
+    ctx.textAlign = 'left';
+  }
+
+  [slo, err, win].forEach(function(el){ el.addEventListener('input', compute); el.addEventListener('change', compute); });
+  window.addEventListener('resize', compute);
+  compute();
+})();
+
+/* ============================================================
+   LAB 2 — Bulkhead isolation visualizer
+   ============================================================ */
+(function(){
+  var toggleBtn = document.getElementById('bh-toggle');
+  var runBtn = document.getElementById('bh-run');
+  var resetBtn = document.getElementById('bh-reset');
+  var pSizeEl = document.getElementById('bh-p-size');
+  var rSizeEl = document.getElementById('bh-r-size');
+  var slotsP = document.getElementById('bh-slots-p');
+  var slotsR = document.getElementById('bh-slots-r');
+  var pRateEl = document.getElementById('bh-p-rate');
+  var rRateEl = document.getElementById('bh-r-rate');
+  var explainEl = document.getElementById('bh-explain');
+  if(!toggleBtn || !slotsP) return;
+
+  var bulkheadOn = true;
+  var running = false;
+  var TICKS = 12, P_ARR = 10, R_ARR = 6, CAP_ON_P = 15, CAP_ON_R = 5, CAP_OFF = 20;
+
+  var ON_EXPLAIN = 'With bulkheads on, Recommendations has its own capped pool — its outage cannot touch Payments’ dedicated slots.';
+  var OFF_EXPLAIN = 'With bulkheads off, both call types draw from one shared pool — the hung Recommendations calls accumulate and starve Payments of capacity it needs.';
+
+  function labelPools(){
+    pSizeEl.textContent = bulkheadOn ? '(15 workers, dedicated)' : '(20 workers, shared with Recommendations)';
+    rSizeEl.textContent = bulkheadOn ? '(5 workers, dedicated)' : '(20 workers, shared with Payments)';
+    explainEl.textContent = bulkheadOn ? ON_EXPLAIN : OFF_EXPLAIN;
+  }
+
+  function makeSlots(container, cap){
+    container.innerHTML = '';
+    var arr = [];
+    for(var i=0;i<cap;i++){
+      var d = document.createElement('div');
+      d.className = 'slot';
+      container.appendChild(d);
+      arr.push({el:d, busy:false, type:null, ticksLeft:0});
+    }
+    return arr;
+  }
+
+  var poolP, poolR;
+  function resetVisual(){
+    var capP = bulkheadOn ? CAP_ON_P : CAP_OFF;
+    var capR = bulkheadOn ? CAP_ON_R : CAP_OFF;
+    poolP = makeSlots(slotsP, capP);
+    // In shared mode, poolR's DOM slots exist as a second visual column, but the run()
+    // loop treats poolP as the single logical pool and mirrors its state into poolR.
+    poolR = makeSlots(slotsR, capR);
+    pRateEl.textContent = '—';
+    rRateEl.textContent = '—';
+    labelPools();
+  }
+
+  function findFree(pool){
+    for(var i=0;i<pool.length;i++){ if(!pool[i].busy) return pool[i]; }
+    return null;
+  }
+  function renderSlot(slot, cls){
+    slot.el.className = 'slot' + (cls ? ' '+cls : '');
+  }
+
+  function run(){
+    if(running) return;
+    running = true;
+    runBtn.disabled = true;
+    resetVisual();
+
+    var pSuccess=0, pFail=0, rAccepted=0, rRejected=0;
+    var tick = 0;
+    var sharedMode = !bulkheadOn;
+
+    function step(){
+      // In shared mode, poolP and poolR are separate DOM slot sets but must represent ONE
+      // logical pool. We track logical occupancy in poolP and mirror visuals into poolR each tick.
+      var logical = sharedMode ? poolP : null;
+
+      // Recommendations arrivals (hang forever once accepted — outage in progress)
+      for(var i=0;i<R_ARR;i++){
+        var target = sharedMode ? logical : poolR;
+        var slot = findFree(target);
+        if(slot){ slot.busy = true; slot.type = 'r'; slot.ticksLeft = Infinity; rAccepted++; }
+        else { rRejected++; }
+      }
+      // Payments arrivals (fast, healthy — occupy 1 tick then free)
+      for(var j=0;j<P_ARR;j++){
+        var target2 = sharedMode ? logical : poolP;
+        var slot2 = findFree(target2);
+        if(slot2){ slot2.busy = true; slot2.type = 'p'; slot2.ticksLeft = 1; pSuccess++; }
+        else { pFail++; }
+      }
+      // decay payments occupancy
+      var pool = sharedMode ? logical : poolP;
+      pool.forEach(function(s){
+        if(s.busy && s.type==='p'){ s.ticksLeft--; if(s.ticksLeft<=0){ s.busy=false; s.type=null; } }
+      });
+
+      // render
+      if(sharedMode){
+        logical.forEach(function(s, idx){
+          var cls = s.busy ? (s.type==='p' ? 'busy-p' : 'busy-r') : '';
+          renderSlot(s, cls);
+          renderSlot(poolR[idx], cls);
+        });
+      } else {
+        poolP.forEach(function(s){ renderSlot(s, s.busy ? 'busy-'+s.type : ''); });
+        poolR.forEach(function(s){ renderSlot(s, s.busy ? 'busy-'+s.type : ''); });
+      }
+
+      var pTotal = pSuccess+pFail, rTotal = rAccepted+rRejected;
+      pRateEl.textContent = pTotal ? Math.round(100*pSuccess/pTotal) + '%' : '—';
+      rRateEl.textContent = rTotal ? Math.round(100*rAccepted/rTotal) + '%' : '—';
+
+      tick++;
+      if(tick < TICKS){ setTimeout(step, 300); }
+      else { running = false; runBtn.disabled = false; }
+    }
+    step();
+  }
+
+  toggleBtn.addEventListener('click', function(){
+    bulkheadOn = !bulkheadOn;
+    toggleBtn.setAttribute('aria-pressed', String(bulkheadOn));
+    toggleBtn.textContent = 'Bulkheads: ' + (bulkheadOn ? 'ON' : 'OFF');
+    resetVisual();
+  });
+  runBtn.addEventListener('click', run);
+  resetBtn.addEventListener('click', resetVisual);
+  resetVisual();
+})();
+
+/* ============================================================
+   LAB 3 — Retry-storm simulator
+   ============================================================ */
+(function(){
+  var jitterBtn = document.getElementById('rs-jitter');
+  var runBtn = document.getElementById('rs-run');
+  var clientsInput = document.getElementById('rs-clients');
+  var canvas = document.getElementById('rs-canvas');
+  var peakEl = document.getElementById('rs-peak');
+  var overEl = document.getElementById('rs-over');
+  var totalEl = document.getElementById('rs-total');
+  if(!canvas) return;
+
+  var jitterOn = true;
+  var BASE = 1, CAP = 8, MAX_ATTEMPTS = 5, DOWN_UNTIL = 12, HORIZON = 40;
+
+  jitterBtn.addEventListener('click', function(){
+    jitterOn = !jitterOn;
+    jitterBtn.setAttribute('aria-pressed', String(jitterOn));
+    jitterBtn.textContent = 'Full jitter: ' + (jitterOn ? 'ON' : 'OFF');
+  });
+
+  function simulate(){
+    var clients = Math.max(10, Math.min(5000, parseInt(clientsInput.value,10) || 500));
+    var counts = new Array(HORIZON).fill(0);
+
+    for(var c=0;c<clients;c++){
+      var t = 0, attempt = 0;
+      while(true){
+        if(t >= HORIZON) break;
+        counts[t]++;
+        if(t >= DOWN_UNTIL){ break; } // dependency healthy: succeeds
+        attempt++;
+        if(attempt > MAX_ATTEMPTS) break; // gives up
+        var capped = Math.min(CAP, BASE * Math.pow(2, attempt-1));
+        var delay = jitterOn ? (1 + Math.floor(Math.random()*capped)) : Math.max(1, Math.round(capped));
+        t = t + delay;
+      }
+    }
+
+    var peak = Math.max.apply(null, counts);
+    var capacity = Math.round(clients * 0.5); // illustrative recovery-capacity line
+    var over = counts.filter(function(v){ return v > capacity; }).length;
+    var total = counts.reduce(function(a,b){return a+b;},0) - clients; // retries only
+
+    peakEl.textContent = peak.toLocaleString();
+    overEl.textContent = over + ' / ' + HORIZON;
+    totalEl.textContent = Math.max(0,total).toLocaleString();
+
+    var dim = sizeCanvas(canvas);
+    var ctx = canvas.getContext('2d');
+    ctx.clearRect(0,0,dim.w,dim.h);
+    var padL = 6, padB = 18, padT = 8;
+    var chartW = dim.w - padL - 6, chartH = dim.h - padB - padT;
+    var barW = chartW / HORIZON;
+    var maxV = Math.max(peak, capacity, 1);
+
+    // capacity line
+    var capY = padT + chartH - (capacity/maxV)*chartH;
+    ctx.strokeStyle = cssVar('--muted');
+    ctx.setLineDash([4,3]);
+    ctx.beginPath(); ctx.moveTo(padL, capY); ctx.lineTo(padL+chartW, capY); ctx.stroke();
+    ctx.setLineDash([]);
+
+    for(var i=0;i<HORIZON;i++){
+      var v = counts[i];
+      var h = (v/maxV) * chartH;
+      var x = padL + i*barW;
+      var y = padT + chartH - h;
+      ctx.fillStyle = v > capacity ? cssVar('--danger') : cssVar('--accent');
+      ctx.fillRect(x+1, y, Math.max(1,barW-2), h);
+    }
+    ctx.fillStyle = cssVar('--muted');
+    ctx.font = '10px sans-serif';
+    ctx.fillText('tick 0', padL, dim.h-4);
+    ctx.textAlign = 'right';
+    ctx.fillText('tick ' + HORIZON, padL+chartW, dim.h-4);
+    ctx.textAlign = 'left';
+  }
+
+  runBtn.addEventListener('click', simulate);
+  window.addEventListener('resize', function(){ /* redraw on demand only */ });
+  simulate();
+})();
+
+/* ============================================================
+   LAB 4 — Funds-transfer saga simulator
+   ============================================================ */
+(function(){
+  var select = document.getElementById('sg-fail-step');
+  var runBtn = document.getElementById('sg-run');
+  var resetBtn = document.getElementById('sg-reset');
+  var stepsContainer = document.getElementById('sg-steps');
+  var logEl = document.getElementById('sg-log');
+  if(!select || !stepsContainer) return;
+
+  var STEPS = [
+    {name:'Place hold on source account', comp:'Release hold on source account'},
+    {name:'Debit source account', comp:'Credit source account (reverse debit)'},
+    {name:'Credit destination account', comp:'Debit destination account (reverse credit)'},
+    {name:'Record settlement', comp:null},
+    {name:'Send notification', comp:null}
+  ];
+
+  STEPS.forEach(function(s, i){
+    var row = document.createElement('div');
+    row.className = 'saga-step';
+    row.id = 'sg-step-' + (i+1);
+    row.innerHTML = '<span class="dot"></span><span class="name">'+(i+1)+'. '+s.name+'</span><span class="state">pending</span>';
+    stepsContainer.appendChild(row);
+  });
+
+  var runToken = 0;
+  function sleep(ms, token){
+    return new Promise(function(resolve){
+      setTimeout(function(){ resolve(token === runToken); }, ms);
+    });
+  }
+  function setState(i, cls, label){
+    var row = document.getElementById('sg-step-'+i);
+    row.className = 'saga-step ' + cls;
+    row.querySelector('.state').textContent = label;
+  }
+  function log(text, cls){
+    var ln = document.createElement('span');
+    ln.className = 'ln' + (cls ? ' '+cls : '');
+    ln.textContent = text;
+    logEl.appendChild(ln);
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+  function resetAll(){
+    runToken++;
+    STEPS.forEach(function(s,i){ setState(i+1, '', 'pending'); });
+    logEl.innerHTML = '';
+    runBtn.disabled = false;
+  }
+
+  async function run(){
+    resetAll();
+    var token = ++runToken;
+    var failAt = parseInt(select.value, 10);
+    runBtn.disabled = true;
+    log('Starting saga: transfer request received.');
+    var failedAt = 0;
+
+    for(var i=1;i<=5;i++){
+      setState(i, 'active', 'running');
+      log('Step '+i+': '+STEPS[i-1].name+' — running…');
+      var ok = await sleep(500, token);
+      if(!ok) return;
+      if(failAt === i){
+        setState(i, 'failed', 'failed');
+        log('Step '+i+': '+STEPS[i-1].name+' — FAILED', 'fail');
+        failedAt = i;
+        break;
+      } else {
+        setState(i, 'done', 'committed');
+        log('Step '+i+': '+STEPS[i-1].name+' — committed', 'ok');
+      }
+    }
+
+    if(failedAt){
+      log('Beginning compensation, in reverse order…');
+      for(var j=failedAt-1; j>=1; j--){
+        if(!STEPS[j-1].comp) continue;
+        setState(j, 'compensating', 'compensating');
+        log('Compensating step '+j+': '+STEPS[j-1].comp+' — running…');
+        var ok2 = await sleep(450, token);
+        if(!ok2) return;
+        setState(j, 'compensated', 'compensated');
+        log('Compensating step '+j+': '+STEPS[j-1].comp+' — done', 'comp');
+      }
+      log('Saga rolled back. Source account balance is unchanged.', 'fail');
+    } else {
+      log('Saga complete. All five steps committed.', 'ok');
+    }
+    if(token === runToken) runBtn.disabled = false;
+  }
+
+  runBtn.addEventListener('click', run);
+  resetBtn.addEventListener('click', resetAll);
+})();
+
+/* ============================================================
+   LAB 5 — Hot-partition visualizer
+   ============================================================ */
+(function(){
+  var keyBtn = document.getElementById('hp-key');
+  var runBtn = document.getElementById('hp-run');
+  var barsEl = document.getElementById('hp-bars');
+  var hotEl = document.getElementById('hp-hot');
+  var coldEl = document.getElementById('hp-cold');
+  var ratioEl = document.getElementById('hp-ratio');
+  if(!keyBtn || !barsEl) return;
+
+  var NUM_SHARDS = 8, NUM_REQUESTS = 2000, NUM_TENANTS = 49, SALT_BUCKETS = 8;
+  var salted = false;
+
+  function djb2(str){
+    var h = 5381;
+    for(var i=0;i<str.length;i++){ h = ((h*33) ^ str.charCodeAt(i)) >>> 0; }
+    return h;
+  }
+  function shardFor(key){ return djb2(key) % NUM_SHARDS; }
+
+  // deterministic request set: one dominant tenant T0 gets 55% of traffic
+  var requests = [];
+  (function build(){
+    var bigCount = Math.round(NUM_REQUESTS * 0.55);
+    for(var i=0;i<bigCount;i++) requests.push('T0');
+    var rest = NUM_REQUESTS - bigCount;
+    for(var j=0;j<rest;j++) requests.push('T' + (1 + (j % NUM_TENANTS)));
+  })();
+
+  function distribute(){
+    var counts = new Array(NUM_SHARDS).fill(0);
+    requests.forEach(function(tenantId, idx){
+      var key = salted ? (tenantId + '#' + (idx % SALT_BUCKETS)) : tenantId;
+      counts[shardFor(key)]++;
+    });
+    return counts;
+  }
+
+  function render(){
+    var counts = distribute();
+    var maxV = Math.max.apply(null, counts);
+    var minV = Math.min.apply(null, counts);
+    var total = counts.reduce(function(a,b){return a+b;},0);
+    var avg = total / NUM_SHARDS;
+    var maxIdx = counts.indexOf(maxV);
+    var minIdx = counts.indexOf(minV);
+
+    barsEl.innerHTML = '';
+    counts.forEach(function(c, i){
+      var col = document.createElement('div');
+      col.className = 'shard-col';
+      var bar = document.createElement('div');
+      bar.className = 'shard-bar' + (c === maxV && maxV > avg*1.5 ? ' hot' : '');
+      bar.style.height = Math.max(3, Math.round((c/maxV)*100)) + '%';
+      var label = document.createElement('div');
+      label.className = 'shard-label';
+      label.textContent = 'S'+i+' ('+c+')';
+      col.appendChild(bar);
+      col.appendChild(label);
+      barsEl.appendChild(col);
+    });
+
+    hotEl.textContent = 'S'+maxIdx+' — '+maxV+' req';
+    coldEl.textContent = 'S'+minIdx+' — '+minV+' req';
+    ratioEl.textContent = (maxV/avg).toFixed(2) + '×';
+  }
+
+  keyBtn.addEventListener('click', function(){
+    salted = !salted;
+    keyBtn.setAttribute('aria-pressed', String(salted));
+    keyBtn.textContent = salted ? 'Key: tenant_id + salt (spread)' : 'Key: tenant_id (skewed)';
+    render();
+  });
+  runBtn.addEventListener('click', render);
+  render();
+})();
+
+/* ============================================================
+   LAB 6 — p50 / p95 / p99 calculator
+   ============================================================ */
+(function(){
+  var spikeRange = document.getElementById('pc-spike');
+  var spikeVal = document.getElementById('pc-spike-val');
+  var spikeMs = document.getElementById('pc-spike-ms');
+  var canvas = document.getElementById('pc-canvas');
+  var avgEl = document.getElementById('pc-avg');
+  var p50El = document.getElementById('pc-p50');
+  var p95El = document.getElementById('pc-p95');
+  var p99El = document.getElementById('pc-p99');
+  if(!spikeRange || !canvas) return;
+
+  function genBaseline(n){
+    var arr = [];
+    for(var i=0;i<n;i++){
+      if(Math.random() < 0.03){ arr.push(180 + Math.random()*220); }
+      else { arr.push(65 + Math.random()*45); }
+    }
+    return arr;
+  }
+  var baseline = genBaseline(300);
+
+  function percentile(sorted, p){
+    var n = sorted.length;
+    var idx = Math.min(n-1, Math.max(0, Math.ceil(p*n) - 1));
+    return sorted[idx];
+  }
+
+  function compute(){
+    var spikeN = parseInt(spikeRange.value, 10);
+    spikeVal.textContent = String(spikeN);
+    var spikeLatency = Math.max(100, parseInt(spikeMs.value,10) || 3000);
+
+    var sample = baseline.slice();
+    for(var i=0;i<spikeN;i++){ sample.push(spikeLatency + (Math.random()*200 - 100)); }
+
+    var sorted = sample.slice().sort(function(a,b){return a-b;});
+    var n = sorted.length;
+    var avg = sample.reduce(function(a,b){return a+b;},0) / n;
+    var p50 = percentile(sorted, 0.50);
+    var p95 = percentile(sorted, 0.95);
+    var p99 = percentile(sorted, 0.99);
+
+    avgEl.textContent = fmtMs(avg);
+    p50El.textContent = fmtMs(p50);
+    p95El.textContent = fmtMs(p95);
+    p99El.textContent = fmtMs(p99);
+
+    var dim = sizeCanvas(canvas);
+    var ctx = canvas.getContext('2d');
+    ctx.clearRect(0,0,dim.w,dim.h);
+    var padT=8, padB=18;
+    var chartH = dim.h - padT - padB;
+    var maxVal = sorted[n-1];
+    var buckets = 34;
+    var bw = maxVal / buckets;
+    var hist = new Array(buckets).fill(0);
+    sample.forEach(function(v){
+      var b = Math.min(buckets-1, Math.floor(v/bw));
+      hist[b]++;
+    });
+    var maxCount = Math.max.apply(null, hist);
+    var barW = dim.w / buckets;
+    ctx.fillStyle = cssVar('--accent');
+    for(var i=0;i<buckets;i++){
+      var h = (hist[i]/maxCount) * chartH;
+      ctx.fillRect(i*barW+1, padT+chartH-h, Math.max(1,barW-2), h);
+    }
+
+    function marker(val, color, label){
+      var x = Math.min(dim.w-2, (val/maxVal) * dim.w);
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(x, padT); ctx.lineTo(x, padT+chartH); ctx.stroke();
+      ctx.fillStyle = color;
+      ctx.font = '10px sans-serif';
+      ctx.fillText(label, Math.min(dim.w-28, Math.max(2,x-8)), 9);
+    }
+    marker(p50, cssVar('--ok'), 'p50');
+    marker(p95, cssVar('--primary'), 'p95');
+    marker(p99, cssVar('--danger'), 'p99');
+  }
+
+  spikeRange.addEventListener('input', compute);
+  spikeMs.addEventListener('input', compute);
+  spikeMs.addEventListener('change', compute);
+  compute();
+})();
+
+})();
 </script>
 </body>
 </html>
