@@ -7,6 +7,7 @@
 <meta name="robots" content="noindex, nofollow">
 <link rel="icon" href="/static/img/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/static/css/style.css">
+<script src="/static/js/theme.js"></script>
 </head>
 <body data-active="{{.Active}}" class="admin-body">
 <div class="admin-shell">
@@ -17,6 +18,9 @@
         <span></span><span></span><span></span>
       </button>
       <span class="admin-topbar-title">{{.Title}}</span>
+      <button type="button" id="theme-toggle" class="theme-toggle" aria-label="Toggle dark or light theme">
+        <span class="theme-toggle-icon" aria-hidden="true">◐</span>
+      </button>
       <a class="admin-topbar-view-site" href="{{.Nav.Home}}" target="_blank" rel="noopener">View site ↗</a>
     </header>
     <main id="main-content" class="admin-content">
