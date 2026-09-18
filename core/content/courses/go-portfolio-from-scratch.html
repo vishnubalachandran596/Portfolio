@@ -683,6 +683,46 @@ toggleButton.addEventListener("click", function () {
   localStorage.setItem("theme", next);
 });</code></pre>
   <p>The CSS attribute selector always wins over the media query once it's present, so a visitor who explicitly picks light or dark stays on that choice across visits (persisted in <code class="inline">localStorage</code>), while a first-time visitor with no stored preference still gets a theme that matches their OS out of the box.</p>
+
+  <h3>A real bug: a class and the <code class="inline">hidden</code> attribute, tied on specificity</h3>
+  <p>This site's header has two dropdown panels (notifications, account menu) toggled by a button click — hidden by default via the plain HTML <code class="inline">hidden</code> attribute, shown by JS clearing it. One day both panels rendered <em>open on every page load</em>, with no click involved. The JS was fine; the bug was in the CSS:</p>
+  <pre class="code"><code>/* the panel's "shown" styling */
+.header-dropdown {
+  display: flex;
+  flex-direction: column;
+  /* ... */
+}</code></pre>
+  <p>Every browser ships a default (user-agent) stylesheet rule, <code class="inline">[hidden] { display: none; }</code>, which is exactly how the <code class="inline">hidden</code> attribute normally works with zero CSS of your own. The problem: <code class="inline">.header-dropdown</code> (one class) and <code class="inline">[hidden]</code> (one attribute) have <em>identical specificity</em> — both are a single, one-level selector. When two rules tie on specificity, the one that appears later in the cascade wins, and an author stylesheet always loads after the browser's built-in one. So <code class="inline">.header-dropdown { display: flex }</code> silently beat the browser's own <code class="inline">[hidden] { display: none }</code>, and toggling the <code class="inline">hidden</code> attribute in JS had no visible effect at all — the element was "hidden" in the accessibility tree but flexed open on screen regardless. The fix is one line, and it's a pattern worth knowing by heart any time a class sets <code class="inline">display</code> on something also toggled via <code class="inline">hidden</code>:</p>
+  <pre class="code"><code>.header-dropdown[hidden] { display: none; }</code></pre>
+  <p>Combining the class and the attribute into one compound selector bumps its specificity above the plain class alone, so it reliably beats it regardless of source order. The lesson generalizes: whenever you toggle visibility with the <code class="inline">hidden</code> attribute, check whether anything else in your stylesheet sets <code class="inline">display</code> on that same element with equal or lower specificity — if so, it needs its own <code class="inline">[hidden]</code> override, or the attribute becomes a no-op the moment that other rule is present.</p>
+
+  <h3>A visually-hidden anti-pattern: don't push content off-screen with a huge negative offset</h3>
+  <p>Accessibility "skip to content" links are meant to be invisible until a keyboard user tabs to them, then visible on focus. A common older technique is to push the element off-screen with an extreme negative offset:</p>
+  <pre class="code"><code>/* avoid this */
+.skip-link {
+  position: absolute;
+  left: -9999px;
+}
+.skip-link:focus {
+  left: 1rem;
+}</code></pre>
+  <p>This looks harmless, but a <code class="inline">position: absolute</code> element sitting thousands of pixels to the left is still part of the page's layout box in some browsers, and can silently extend the page's horizontal scrollable area — a visitor on a narrow viewport can end up able to scroll sideways into empty space, or see a wider-than-expected scrollbar, for a reason that has nothing to do with any content they can actually see. The modern, safer technique clips the element to a 1&times;1 pixel box instead of moving it, which can't affect scroll bounds:</p>
+  <pre class="code"><code>.skip-link {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.skip-link:focus {
+  width: auto;
+  height: auto;
+  overflow: visible;
+  clip-path: none;
+  white-space: normal;
+}</code></pre>
+  <p>Same behavior for sighted keyboard users and screen readers, none of the off-screen side effect. If you have an existing <code class="inline">left: -9999px</code>-style rule anywhere in a codebase, it's worth grepping for and replacing — it's a pattern that was copy-pasted around the web for over a decade before browsers' handling of large offsets made it worth retiring.</p>
 </section>
 
 <!-- =========================================================
@@ -915,6 +955,50 @@ func (a *App) userNotifications(ctx context.Context, userID int64) []Notificatio
     return items
 }</code></pre>
   <p>Each source table already has the field that answers "is this still unseen" — a booking's own <code class="inline">reschedule_acknowledged</code> flag, a message's own <code class="inline">is_read</code> flag — so there's nothing separate to keep in sync. The bookings table already knows if a reschedule hasn't been acknowledged; the messages table already knows if a message hasn't been read. A notification is just a read-time projection of state that already exists, not a new fact the system has to remember to record. The trade-off is real: this doesn't scale to millions of historical notifications the way an indexed, purpose-built table would, and it can only surface things you've already modeled as queryable state. For a personal site's visitor count, deriving the list on every page load is cheap, and "one less table to keep consistent" is worth more than the query savings a dedicated table would buy.</p>
+
+  <h3>The shared "base data" function is where sequential queries hurt most</h3>
+  <p>Every page on this site calls one function to build the header/footer chrome — site name, nav links, the visitor's login state, their name, their unread notifications, the LinkedIn URL in the footer. It's easy to write that function the obvious way: one query, then the next, then the next, each waiting on the last:</p>
+  <pre class="code"><code>// Don't do this — every page pays for three round-trips, one after another
+func (a *App) base(r *http.Request, title, desc, active string) BaseData {
+    var userName, linkedIn string
+    var notifications []NotificationItem
+    if uid, ok := a.Auth.UserID(r); ok {
+        if u, err := a.Users.GetByID(ctx, uid); err == nil {
+            userName = u.Name
+        }
+        notifications = a.userNotifications(ctx, uid)
+    }
+    if profile, err := a.Profile.Get(ctx); err == nil {
+        linkedIn = profile.LinkedInURL
+    }
+    // ...
+}</code></pre>
+  <p>The bug here isn't a crash or a wrong answer — it's that this function runs on <em>every single page view</em>, including anonymous visitors who never trigger the user-name or notifications lookups but still pay for the profile fetch. Three sequential round-trips at, say, 20&nbsp;ms each is only 60&nbsp;ms, but it's 60&nbsp;ms added to the slowest part of every page load on the site, logged-in or not — exactly the kind of cost that's invisible in a code review and obvious in a "why does every page feel a beat slower than it should" complaint. Because the three queries don't depend on each other's results, they can run concurrently with <code class="inline">sync.WaitGroup</code>:</p>
+  <pre class="code"><code>var wg sync.WaitGroup
+var userName, linkedIn string
+var notifications []NotificationItem
+if uid, ok := a.Auth.UserID(r); ok {
+    wg.Add(2)
+    go func() {
+        defer wg.Done()
+        if u, err := a.Users.GetByID(ctx, uid); err == nil {
+            userName = u.Name
+        }
+    }()
+    go func() {
+        defer wg.Done()
+        notifications = a.userNotifications(ctx, uid)
+    }()
+}
+wg.Add(1)
+go func() {
+    defer wg.Done()
+    if profile, err := a.Profile.Get(ctx); err == nil {
+        linkedIn = profile.LinkedInURL
+    }
+}()
+wg.Wait()</code></pre>
+  <p>This project already used <code class="inline">golang.org/x/sync/errgroup</code> elsewhere, for page handlers where a failed query should turn into a 500. Here, a plain <code class="inline">sync.WaitGroup</code> is the better fit instead: the existing code deliberately swallows each lookup's error and degrades to an empty name or empty notification list rather than failing the whole page, and <code class="inline">errgroup</code>'s job is specifically to <em>stop</em> swallowing errors and propagate the first one. Reach for the tool that matches the error-handling behavior you actually want, not the one you used last — three independent goroutines joined by one <code class="inline">wg.Wait()</code> is enough when "best effort, degrade quietly" is the correct behavior.</p>
 </section>
 
 <!-- =========================================================
