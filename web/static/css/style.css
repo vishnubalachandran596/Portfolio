@@ -224,6 +224,19 @@ a, button, .slot-btn, .faq-item summary { cursor: pointer; }
 /* ---------------------------------------------------------------------
    Header
 --------------------------------------------------------------------- */
+.preview-banner {
+  background: var(--color-accent);
+  color: var(--color-accent-ink);
+  text-align: center;
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 8px 16px;
+  position: sticky;
+  top: 0;
+  z-index: 51;
+}
+.preview-banner a { color: var(--color-accent-ink); text-decoration: underline; margin-left: 8px; }
+
 .site-header {
   position: sticky;
   top: 0;
@@ -858,7 +871,9 @@ input:focus, textarea:focus, select:focus {
   z-index: 5;
 }
 .admin-topbar-title { font-weight: 600; font-size: 0.95rem; color: var(--color-text); }
-.admin-topbar-view-site { margin-left: auto; font-size: 0.85rem; color: var(--color-text-muted); }
+.admin-topbar-preview { margin-left: auto; font-size: 0.85rem; color: var(--color-text-muted); }
+.admin-topbar-preview:hover { color: var(--color-accent); }
+.admin-topbar-view-site { font-size: 0.85rem; color: var(--color-text-muted); }
 .admin-topbar-view-site:hover { color: var(--color-accent); }
 .admin-sidebar-toggle { display: none; flex-direction: column; gap: 4px; background: none; border: none; padding: 4px; cursor: pointer; }
 .admin-sidebar-toggle span { width: 20px; height: 2px; background: var(--color-text); border-radius: 2px; }

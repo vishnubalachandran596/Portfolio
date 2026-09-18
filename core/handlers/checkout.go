@@ -187,7 +187,7 @@ func (a *App) CheckoutVerify(w http.ResponseWriter, r *http.Request) {
 // again). watermark identifies who's viewing, for the copy-deterrent
 // watermark on the served content.
 func (a *App) courseAccess(w http.ResponseWriter, r *http.Request, course models.Course) (ok bool, watermark string) {
-	if a.Auth.IsAuthenticated(r) {
+	if a.Auth.IsAuthenticated(r) && !a.isPreviewingAsVisitor(r) {
 		return true, "Admin preview"
 	}
 

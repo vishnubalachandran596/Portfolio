@@ -47,19 +47,20 @@ type App struct {
 // data structs embed it so templates can reach both the shared chrome and
 // the page's own data through one dot.
 type BaseData struct {
-	SiteName        string
-	Title           string
-	MetaDescription string
-	Active          string
-	SiteURL         string
-	CanonicalURL    string
-	OGImageURL      string
-	Nav             NavLinks
-	Country         string
-	IsLoggedIn      bool
-	IsAdmin         bool
-	UserName        string
-	LinkedInURL     string
+	SiteName            string
+	Title               string
+	MetaDescription     string
+	Active              string
+	SiteURL             string
+	CanonicalURL        string
+	OGImageURL          string
+	Nav                 NavLinks
+	Country             string
+	IsLoggedIn          bool
+	IsAdmin             bool
+	PreviewingAsVisitor bool
+	UserName            string
+	LinkedInURL         string
 }
 
 // NavLinks holds the absolute URL for each primary nav destination, so
@@ -115,9 +116,22 @@ func New(cfg *config.Config, db *sql.DB, renderer *view.Renderer) *App {
 	}
 }
 
+// previewVisitorCookie, when present, makes an authenticated admin see the
+// site exactly as a normal visitor would — no Admin Console tab, no
+// automatic admin-preview access to gated course content — without
+// actually clearing their admin session. See AdminPreviewAsVisitor /
+// ExitVisitorPreview.
+const previewVisitorCookie = "preview_visitor"
+
+func (a *App) isPreviewingAsVisitor(r *http.Request) bool {
+	c, err := r.Cookie(previewVisitorCookie)
+	return err == nil && c.Value == "1"
+}
+
 func (a *App) base(r *http.Request, title, metaDescription, active string) BaseData {
 	base := a.baseURL(r)
-	isAdmin := a.Auth.IsAuthenticated(r)
+	previewing := a.isPreviewingAsVisitor(r)
+	isAdmin := a.Auth.IsAuthenticated(r) && !previewing
 	isUser := a.Auth.IsUserAuthenticated(r)
 	userName := ""
 	if isUser {
@@ -157,10 +171,11 @@ func (a *App) base(r *http.Request, title, metaDescription, active string) BaseD
 			Refund:      a.pageURL(r, "/refund"),
 			Cookies:     a.pageURL(r, "/cookies"),
 		},
-		Country:     geo.CountryFromRequest(r),
-		IsLoggedIn:  isUser || isAdmin,
-		IsAdmin:     isAdmin,
-		UserName:    userName,
-		LinkedInURL: linkedIn,
+		Country:             geo.CountryFromRequest(r),
+		IsLoggedIn:          isUser || isAdmin,
+		IsAdmin:             isAdmin,
+		PreviewingAsVisitor: previewing && a.Auth.IsAuthenticated(r),
+		UserName:            userName,
+		LinkedInURL:         linkedIn,
 	}
 }

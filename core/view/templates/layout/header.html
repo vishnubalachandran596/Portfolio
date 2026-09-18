@@ -1,4 +1,10 @@
 {{define "header"}}
+{{if .PreviewingAsVisitor}}
+<div class="preview-banner">
+  Previewing as a visitor — admin-only links and content access are hidden.
+  <a href="/exit-preview">Exit preview →</a>
+</div>
+{{end}}
 <header class="site-header">
   <div class="container header-inner">
     <a class="brand" href="{{.Nav.Home}}">
@@ -8,6 +14,9 @@
 
     <nav class="primary-nav" aria-label="Primary">
       <a href="{{.Nav.Home}}" class="{{if eq .Active "home"}}active{{end}}">Home</a>
+      {{if .IsAdmin}}
+      <a href="{{.Nav.Admin}}" class="{{if eq .Active "admin"}}active{{end}}">Admin Console</a>
+      {{end}}
       <a href="{{.Nav.About}}" class="{{if eq .Active "about"}}active{{end}}">About Me</a>
       <a href="{{.Nav.Courses}}" class="{{if eq .Active "courses"}}active{{end}}">Courses</a>
       <a href="{{.Nav.Consultancy}}" class="{{if eq .Active "consultancy"}}active{{end}}">Consultancy</a>
@@ -15,9 +24,6 @@
       <a href="{{.Nav.Contact}}" class="{{if eq .Active "contact"}}active{{end}}">Contact Me</a>
       {{if .IsLoggedIn}}
       <a href="{{.Nav.Account}}" class="{{if eq .Active "account"}}active{{end}}">My Account</a>
-      {{end}}
-      {{if .IsAdmin}}
-      <a href="{{.Nav.Admin}}" class="{{if eq .Active "admin"}}active{{end}}">Admin Console</a>
       {{end}}
     </nav>
 

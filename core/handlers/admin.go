@@ -52,10 +52,39 @@ func (a *App) AdminLogout(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/admin/login", http.StatusSeeOther)
 }
 
+// AdminPreviewAsVisitor sets a cookie that makes the site behave as if
+// the admin were a normal visitor (no Admin Console tab, no automatic
+// gated-content access) without touching the actual admin session, so
+// they can check what a real visitor sees and come straight back.
+func (a *App) AdminPreviewAsVisitor(w http.ResponseWriter, r *http.Request) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     previewVisitorCookie,
+		Value:    "1",
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   a.Cfg.IsProduction(),
+		SameSite: http.SameSiteLaxMode,
+		Expires:  time.Now().Add(24 * time.Hour),
+	})
+	http.Redirect(w, r, "/", http.StatusSeeOther)
+}
+
+// ExitVisitorPreview clears the preview cookie, restoring the admin's
+// normal view. Doesn't require re-authentication since the real admin
+// session cookie was never touched.
+func (a *App) ExitVisitorPreview(w http.ResponseWriter, r *http.Request) {
+	http.SetCookie(w, &http.Cookie{
+		Name: previewVisitorCookie, Value: "", Path: "/", MaxAge: -1, Expires: time.Unix(0, 0),
+	})
+	http.Redirect(w, r, "/admin", http.StatusSeeOther)
+}
+
 type AdminDashboardData struct {
 	BaseData
 	CourseCount       int
 	PublishedCourses  int
+	ArticleCount      int
+	PublishedArticles int
 	UpcomingBookings  []models.Booking
 	PendingBookings   int
 	ConfirmedBookings int
@@ -109,10 +138,24 @@ func (a *App) AdminDashboard(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	articles, err := a.Articles.ListAll(ctx)
+	if err != nil {
+		a.serverError(w, "load articles", err)
+		return
+	}
+	publishedArticles := 0
+	for _, art := range articles {
+		if art.IsPublished {
+			publishedArticles++
+		}
+	}
+
 	a.View.Render(w, http.StatusOK, "admin_dashboard", AdminDashboardData{
 		BaseData:          a.base(r, "Admin Dashboard", "", "admin"),
 		CourseCount:       len(courses),
 		PublishedCourses:  published,
+		ArticleCount:      len(articles),
+		PublishedArticles: publishedArticles,
 		UpcomingBookings:  upcoming,
 		PendingBookings:   pending,
 		ConfirmedBookings: confirmed,

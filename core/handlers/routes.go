@@ -34,6 +34,7 @@ func (a *App) Routes() http.Handler {
 	mux.Handle("GET /account", noindex(a.Auth.RequireUser(http.HandlerFunc(a.AccountPage))))
 
 	// Visitor auth.
+	mux.HandleFunc("GET /exit-preview", a.ExitVisitorPreview)
 	mux.HandleFunc("GET /login", a.LoginPage)
 	mux.HandleFunc("GET /login/google", a.GoogleLoginStart)
 	mux.HandleFunc("GET /login/google/callback", a.GoogleLoginCallback)
@@ -79,6 +80,7 @@ func (a *App) Routes() http.Handler {
 	protected.HandleFunc("POST /admin/availability/{id}/toggle", a.AdminAvailabilityToggle)
 	protected.HandleFunc("GET /admin/profile", a.AdminProfilePage)
 	protected.HandleFunc("POST /admin/profile", a.AdminProfileSave)
+	protected.HandleFunc("GET /admin/preview-visitor", a.AdminPreviewAsVisitor)
 	adminMux.Handle("/admin/", a.Auth.RequireAdmin(protected))
 
 	mux.Handle("/admin/", noindex(adminMux))
