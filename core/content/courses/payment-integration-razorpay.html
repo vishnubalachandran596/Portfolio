@@ -825,6 +825,32 @@ if amountCents &lt; minCents {
     </div>
     <div id="floor-out"></div>
   </div>
+
+  <h3>Discount codes: floor first, cap second, redeem only after a verified payment</h3>
+  <p>A promo code sits on top of everything above, and it inherits the same rule: the server recomputes the discount, never the client. The request can carry a code like <code class="inline">LAUNCH20</code>; it must never carry the resulting price. Look the code up server-side, apply its discount to the <em>already-floored</em> amount, and floor the result a second time &mdash; a percentage-off code should never be able to push the price under the regional minimum you just finished enforcing:</p>
+
+  <pre class="code"><code>amountCents, _ := strconv.Atoi(r.FormValue("amount_cents"))
+if amountCents &lt; minCents {
+    amountCents = minCents // re-floor #1: the pay-what-you-want floor
+}
+
+if code := r.FormValue("promo_code"); code != "" {
+    promo, err := a.Promos.GetActiveByCode(ctx, code)
+    if err == nil {
+        discount := amountCents * promo.PercentOff / 100
+        if discount &gt; amountCents {
+            discount = amountCents // never let a discount go negative
+        }
+        amountCents -= discount
+        if amountCents &lt; minCents {
+            amountCents = minCents // re-floor #2: after the discount too
+        }
+    }
+    // an unknown or expired code is silently ignored, not rejected —
+    // a typo in a promo field shouldn't block an otherwise-valid purchase
+}</code></pre>
+
+  <p>The other easy mistake is <em>when</em> a redemption gets counted. If a promo code has a usage cap — "first 50 people only" — incrementing its redemption count at order-creation time overcounts it: plenty of orders get created and then abandoned, whether because the buyer closed the widget or the payment simply failed. Increment the count only inside the verify handler, at the exact moment a payment is confirmed paid — the same handler, and ideally the same transaction, that flips the purchase row from <code class="inline">pending</code> to <code class="inline">paid</code>. That way a promo code's redemption count always reflects real, completed purchases, and an abandoned checkout never quietly eats into a limited-run code's cap.</p>
 </section>
 
 <!-- =========================================================
@@ -863,6 +889,37 @@ if amountCents &lt; minCents {
       <button class="btn secondary" id="idem-fire-twice">Simulate the verify call arriving twice</button>
     </div>
     <div class="sim-log" id="idem-log">Row status: <strong id="idem-status">pending</strong></div>
+  </div>
+
+  <h3>A real production bug: <code class="inline">ParseForm</code> vs. <code class="inline">ParseMultipartForm</code></h3>
+  <p>Here's a failure mode specific enough that it's worth knowing by name — it shipped invisibly in a real checkout flow until a live test payment surfaced it. The symptom: a logged-in buyer fills in a perfectly valid email, clicks pay, and the server rejects the request with <em>"A valid email is required"</em> — even though the field was filled in correctly and was clearly visible in the submitted form.</p>
+  <p>The cause is a mismatch between what the browser actually sends and what the handler actually parses. A <code class="inline">fetch()</code> call that builds its body with <code class="inline">new FormData()</code> always sends <code class="inline">multipart/form-data</code> — even when every field is plain text and nothing is a file. But <code class="inline">r.ParseForm()</code> only parses an <code class="inline">application/x-www-form-urlencoded</code> body. Called on a multipart request, it doesn't error — it just leaves <code class="inline">r.Form</code> populated from the URL's own query string alone (empty, if there is none) and returns successfully. That's the trap: a handler usually calls <code class="inline">r.FormValue("email")</code> directly, relying on its documented behavior of lazily parsing the body on first access — including, for a multipart body, falling back to <code class="inline">r.ParseMultipartForm</code> automatically. But if <em>anything</em> earlier in the same handler already called <code class="inline">r.ParseForm()</code> for some other reason, <code class="inline">r.Form</code> is now already non-nil, and that lazy fallback never fires. Every subsequent <code class="inline">r.FormValue(...)</code> call quietly returns an empty string for every field — no panic, no error, just wrong data with a plausible-looking validation message on top of it.</p>
+  <pre class="code"><code>// Looks completely reasonable. Breaks silently on a multipart/form-data body.
+func (a *App) CheckoutCreateOrder(w http.ResponseWriter, r *http.Request) {
+    if err := r.ParseForm(); err != nil {
+        http.Error(w, "invalid form", http.StatusBadRequest)
+        return
+    }
+    email := r.FormValue("email") // "" — the multipart body was never parsed
+    if email == "" {
+        http.Error(w, "a valid email is required", http.StatusBadRequest)
+        return
+    }
+    // ...
+}</code></pre>
+  <p>The fix is to parse the body the way the browser actually sent it:</p>
+  <pre class="code"><code>func (a *App) CheckoutCreateOrder(w http.ResponseWriter, r *http.Request) {
+    if err := r.ParseMultipartForm(1 &lt;&lt; 20); err != nil &amp;&amp; err != http.ErrNotMultipart {
+        http.Error(w, "invalid form", http.StatusBadRequest)
+        return
+    }
+    email := r.FormValue("email") // populated correctly either way
+    // ...
+}</code></pre>
+  <p><code class="inline">ParseMultipartForm</code> calls <code class="inline">ParseForm</code> internally first, so a urlencoded body still works exactly as before — and for a request that isn't multipart at all, it returns <code class="inline">http.ErrNotMultipart</code>, which is informational, not fatal, so it's safe to ignore rather than reject the request over.</p>
+  <div class="callout warn">
+    <span class="callout-label">Why this is easy to miss</span>
+    <p>Everything upstream of the bug looks fine: the request reaches the handler, no error is returned, the response is a normal 400 with a normal-looking message. Nothing points at form parsing. It's also easy to test around by accident — an API-level check with <code class="inline">curl --data-urlencode</code> or a JSON-body test sails through, because neither one reproduces the multipart encoding a real browser <code class="inline">fetch(url, &#123; body: new FormData(form) &#125;)</code> call actually sends. The only test that catches it is submitting the real form in a real browser, all the way through to a real response.</p>
   </div>
 </section>
 
@@ -978,8 +1035,9 @@ if amountCents &lt; minCents {
 
   <ul class="list">
     <li><strong>Swap keys in environment variables only.</strong> Replace the <code class="inline">rzp_test_</code> pair with the <code class="inline">rzp_live_</code> pair in your host's secret settings. Never hardcode either value in source. Confirm your production environment is actually loading the new values &mdash; don't assume a staging variable propagated.</li>
-    <li><strong>Do one real end-to-end test payment yourself</strong>, for a small real amount, before announcing anything is live. Walk the entire buyer journey &mdash; product page, order creation, Checkout.js, your success handler, your verify endpoint, your confirmation screen.</li>
+    <li><strong>Do one real end-to-end test payment yourself, in a real browser</strong>, for a small real amount, before announcing anything is live. Walk the entire buyer journey &mdash; product page, order creation, Checkout.js, your success handler, your verify endpoint, your confirmation screen. A <code class="inline">curl</code> request against your API endpoints proves the contract works; it does not prove the actual HTML form and actual browser <code class="inline">fetch()</code> call work, and those are two different code paths that can diverge exactly the way the <code class="inline">ParseForm</code>/<code class="inline">ParseMultipartForm</code> bug in the previous section did &mdash; invisibly, and only in the real path.</li>
     <li><strong>Watch it land in both places.</strong> Confirm the payment appears correctly in the Razorpay dashboard, and confirm a matching confirmed row exists in your own database with the right amount, currency, and payment id. If it reaches Razorpay but your app doesn't record it correctly, you're not actually live yet.</li>
+    <li><strong>If a logged-in buyer's identity comes from their session, don't also ask for it in the form &mdash; and resolve it before you validate.</strong> A returning, authenticated buyer already has a known email on file; making them retype it is friction with no payoff, and it opens exactly the class of bug above: a hidden or removed field plus a validation check that still runs against it. Pull identity from the session first, fall back to a submitted field only for a guest checkout, and run "is this valid" only after that resolution &mdash; never before it.</li>
     <li><strong>Set up basic monitoring.</strong> It doesn't need to be elaborate &mdash; an admin list page built directly on the same purchases/bookings schema, showing recent rows and their status (pending/paid/failed), is enough to make a stuck or failed payment visible instead of silent.</li>
     <li><strong>Write your refund policy down before you need it.</strong> Razorpay supports issuing refunds through its dashboard or API &mdash; that's the mechanism. What you'll actually refund, under what conditions, and within what time window is a business decision, not a technical one. Decide it and show it to buyers before they pay, not after the first refund request arrives.</li>
   </ul>

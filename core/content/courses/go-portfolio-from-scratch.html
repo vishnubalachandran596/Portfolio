@@ -510,6 +510,30 @@ handler := Logging(mux)</code></pre>
     <span class="callout-label">Why this is enough</span>
     <p>No router version to track, no framework release notes to read before upgrading, no third-party dependency between your code and the actual TCP connection. The entire HTTP layer is something you can read the source of — literally, <code class="inline">go doc net/http</code> or the Go source tree — in a few minutes, and every piece of it composes with plain functions and interfaces you already understand from Section 2.</p>
   </div>
+
+  <h3>Two cookies, one visitor: separating admin auth from user auth</h3>
+  <p>Once a site has both an admin portal and visitor accounts, one login session isn't enough — you need to answer two independent questions on every request: <em>is this request from the site owner?</em> and, separately, <em>is this request from a logged-in customer?</em> Both can be true of the exact same person: the owner might also be logged in as a regular visitor to check their own bookings. Collapsing the two into a single "is authenticated" flag makes that combination impossible to represent correctly, so the cleaner design is two entirely separate sessions, each with its own cookie:</p>
+  <pre class="code"><code>const (
+    adminCookieName = "portfolio_admin_session"
+    userCookieName  = "portfolio_session"
+)
+
+func (a *Auth) AdminID(r *http.Request) (int64, bool) {
+    return a.idFromCookie(r, adminCookieName)
+}
+
+func (a *Auth) UserID(r *http.Request) (int64, bool) {
+    return a.idFromCookie(r, userCookieName)
+}</code></pre>
+  <p>Each cookie carries its own signed JWT, checked by its own small piece of middleware — <code class="inline">RequireAdmin</code> guards everything under <code class="inline">/admin/</code>, <code class="inline">RequireUser</code> guards visitor-only pages like <code class="inline">/account</code>. A handler that needs to know both — the site header, for instance, which shows an "Admin Console" link only to an admin and a "My Bookings" link only to a logged-in visitor — simply checks each cookie independently rather than asking one flag two different questions:</p>
+  <pre class="code"><code>func (a *App) base(r *http.Request, title string) BaseData {
+    _, isAdmin := a.Auth.AdminID(r)
+    uid, isUser := a.Auth.UserID(r)
+    // isAdmin and isUser can both be true for the same visitor —
+    // that's the whole point of keeping them as two separate checks.
+    return BaseData{Title: title, IsAdmin: isAdmin, IsUser: isUser}
+}</code></pre>
+  <p>The payoff shows up the first time you need "promote this visitor to admin" as a real feature: because the two sessions are independent, promoting a user just means creating a row in the admin table keyed by the same email — their existing visitor cookie keeps working exactly as before, and the next time <code class="inline">AdminID</code> is checked against their (still-unrelated) admin cookie, it now also succeeds. Nothing about the visitor session has to change for the admin session to come into existence.</p>
 </section>
 
 <!-- =========================================================
@@ -858,6 +882,39 @@ func (r *ProfileRepo) Get(ctx context.Context) (Profile, error) {
     return p, nil
 }</code></pre>
   <p><code class="inline">Scan</code> takes pointers to each destination field, in the same order as the columns selected — the database driver reads the row and writes each column's value directly into the Go variable behind that pointer. Wrapping it in a small <code class="inline">ProfileRepo</code> type (the "repository pattern") keeps every SQL string in one place per table, gives handlers a typed method to call instead of raw SQL scattered through the codebase, and is the kind of narrow interface boundary Section 2 mentioned you'd see again.</p>
+
+  <h3>Worked example: aggregating notifications without a notifications table</h3>
+  <p>Not every feature needs a new table. A visitor-facing notification bell — "your booking was rescheduled," "you have a new message" — feels like it needs its own <code class="inline">notifications</code> row per event, but that means remembering to insert one at every single place in the codebase that could produce one, and keeping it in sync with whatever it's describing forever after. A simpler, equally correct design: derive the notification list at request time, by querying the tables that already hold the real information.</p>
+  <pre class="code"><code>type NotificationItem struct {
+    Text   string
+    URL    string
+    Unread bool
+}
+
+func (a *App) userNotifications(ctx context.Context, userID int64) []NotificationItem {
+    var items []NotificationItem
+
+    if bookings, err := a.Bookings.ListByUserID(ctx, userID); err == nil {
+        for _, b := range bookings {
+            if !b.RescheduleAcknowledged && b.PreviousSlotStart != nil {
+                items = append(items, NotificationItem{
+                    Text:   "Your booking was rescheduled to " + b.SlotStart.Format("Mon, Jan 2 · 3:04 PM"),
+                    URL:    "/account#bookings",
+                    Unread: true,
+                })
+            }
+        }
+    }
+    if messages, err := a.AdminMessages.ListByUserID(ctx, userID); err == nil {
+        for _, m := range messages {
+            if !m.IsRead {
+                items = append(items, NotificationItem{Text: "New message: " + m.Body, URL: "/account#messages", Unread: true})
+            }
+        }
+    }
+    return items
+}</code></pre>
+  <p>Each source table already has the field that answers "is this still unseen" — a booking's own <code class="inline">reschedule_acknowledged</code> flag, a message's own <code class="inline">is_read</code> flag — so there's nothing separate to keep in sync. The bookings table already knows if a reschedule hasn't been acknowledged; the messages table already knows if a message hasn't been read. A notification is just a read-time projection of state that already exists, not a new fact the system has to remember to record. The trade-off is real: this doesn't scale to millions of historical notifications the way an indexed, purpose-built table would, and it can only surface things you've already modeled as queryable state. For a personal site's visitor count, deriving the list on every page load is cheap, and "one less table to keep consistent" is worth more than the query savings a dedicated table would buy.</p>
 </section>
 
 <!-- =========================================================
@@ -998,6 +1055,10 @@ func Handler(w http.ResponseWriter, r *http.Request) {
       <summary>Deployment logs &amp; rollback</summary>
       <div class="body"><p>Every deployment is kept, with its build and runtime logs. If a deploy breaks something, you can instantly roll back to a previous, known-good deployment from the dashboard — no re-running a build, no git revert required to recover.</p></div>
     </details>
+    <details class="concept-card">
+      <summary>Generating a file (a PDF, an image) means a pure-Go library, not shelling out</summary>
+      <div class="body"><p>A serverless function is a short-lived, sandboxed process — it can't shell out to a headless Chrome install to render a PDF, or invoke a CLI tool that isn't already on the machine, the way a full server you control might. If a feature needs to produce a file server-side — this course's own site generates a completion certificate as a PDF — reach for a pure-Go library that does the whole job in-process instead, such as <code class="inline">github.com/go-pdf/fpdf</code>. No external process, no binary to install alongside the deployment, and it behaves identically locally and once deployed.</p></div>
+    </details>
   </div>
 
   <h3>Supabase, beyond what this course uses</h3>
@@ -1103,10 +1164,12 @@ func Handler(w http.ResponseWriter, r *http.Request) {
     <li class="check-item"><label style="display:flex;gap:.65rem;align-items:flex-start;width:100%;cursor:pointer;"><input type="checkbox" data-weight="1"><span>Your custom domain is added in Vercel's Domains settings and DNS is pointed at it (A/CNAME or nameserver delegation)</span></label></li>
     <li class="check-item"><label style="display:flex;gap:.65rem;align-items:flex-start;width:100%;cursor:pointer;"><input type="checkbox" data-weight="1"><span>HTTPS shows as active (not pending) for the custom domain</span></label></li>
     <li class="check-item"><label style="display:flex;gap:.65rem;align-items:flex-start;width:100%;cursor:pointer;"><input type="checkbox" data-weight="1"><span>Any bootstrap/default admin password has been rotated after first login</span></label></li>
+    <li class="check-item"><label style="display:flex;gap:.65rem;align-items:flex-start;width:100%;cursor:pointer;"><input type="checkbox" data-weight="1"><span>Every form that submits with <code class="inline">fetch()</code> has been submitted for real, in a real browser — not just exercised with a urlencoded <code class="inline">curl</code> request that can't reproduce a <code class="inline">multipart/form-data</code> body</span></label></li>
+    <li class="check-item"><label style="display:flex;gap:.65rem;align-items:flex-start;width:100%;cursor:pointer;"><input type="checkbox" data-weight="1"><span>Layout spacing uses fluid values (<code class="inline">clamp()</code>, percentages, <code class="inline">flex-wrap</code>) rather than fixed pixel breakpoints, and has been checked at an actual narrow phone width, not just a resized desktop window</span></label></li>
   </ul>
   <div class="score-bar-wrap">
     <div class="score-bar"><i id="checklist-fill"></i></div>
-    <div class="score-readout"><span>Readiness</span><strong id="checklist-score">0 / 6</strong></div>
+    <div class="score-readout"><span>Readiness</span><strong id="checklist-score">0 / 8</strong></div>
   </div>
   <div class="score-verdict" id="checklist-verdict">Check off items above to see your readiness score.</div>
 </div>
