@@ -9,10 +9,19 @@ import (
 	"github.com/vishnubalachandran596/portfolio/core/repo"
 )
 
-// baseURL returns the canonical absolute origin for the CURRENT request —
-// derived from its own host, which (once DomainRouter has run) is already
-// the correct subdomain for whatever page is being served.
+// baseURL returns the canonical absolute origin used for canonical tags,
+// Open Graph URLs, and the sitemap. When SITE_URL is configured, every
+// page uses that single fixed host regardless of which host actually
+// served the request (apex, www, or home.) — otherwise the same content
+// would advertise a different "canonical" URL depending on how a visitor
+// or crawler happened to arrive, splitting ranking signals across
+// multiple hosts instead of consolidating them onto one. Falls back to
+// the request's own host (dynamic) only when SITE_URL isn't set, e.g.
+// local dev or a preview deployment before a domain is configured.
 func (a *App) baseURL(r *http.Request) string {
+	if a.Cfg.SiteURL != "" {
+		return strings.TrimSuffix(a.Cfg.SiteURL, "/")
+	}
 	scheme := "http"
 	if r.TLS != nil || r.Header.Get("X-Forwarded-Proto") == "https" {
 		scheme = "https"
