@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/vishnubalachandran596/portfolio/core/models"
 	"github.com/vishnubalachandran596/portfolio/core/receipt"
@@ -32,12 +33,25 @@ type AccountMessage struct {
 	Body string
 }
 
+// AccountTestimonial reflects the logged-in visitor's own submitted
+// testimonial, if any — "none" (no submission yet, show the form),
+// "pending" (submitted, awaiting admin approval), or "published" (live on
+// the About page).
+type AccountTestimonial struct {
+	Status      string
+	AuthorName  string
+	AuthorTitle string
+	Body        string
+}
+
 type AccountData struct {
 	BaseData
-	Bookings []AccountBooking
-	Courses  []AccountCourse
-	Payments []AccountPayment
-	Messages []AccountMessage
+	Bookings    []AccountBooking
+	Courses     []AccountCourse
+	Payments    []AccountPayment
+	Messages    []AccountMessage
+	Testimonial AccountTestimonial
+	Error       string
 }
 
 type AccountBooking struct {
@@ -83,7 +97,8 @@ func (a *App) AccountPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := AccountData{
-		BaseData: a.base(r, "My Account — "+a.Cfg.SiteName, "Your consultancy bookings and purchased courses.", "account"),
+		BaseData:    a.base(r, "My Account — "+a.Cfg.SiteName, "Your consultancy bookings and purchased courses.", "account"),
+		Testimonial: a.accountTestimonial(ctx, uid),
 	}
 	for _, b := range bookings {
 		row := AccountBooking{
@@ -251,4 +266,67 @@ func (a *App) AccountPurchaseReceipt(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/pdf")
 	w.Header().Set("Content-Disposition", `attachment; filename="receipt-`+receipt.ReceiptNoForPurchase(p.ID)+`.pdf"`)
 	w.Write(pdfBytes)
+}
+
+// accountTestimonial loads the status of a visitor's own testimonial
+// submission, if any, for the /account page's "Share your experience"
+// section. Defaults AuthorName to the account's own name so the form
+// isn't blank the first time.
+func (a *App) accountTestimonial(ctx context.Context, uid int64) AccountTestimonial {
+	t, err := a.Testimonials.GetByUserID(ctx, uid)
+	if err == nil {
+		status := "pending"
+		if t.IsPublished {
+			status = "published"
+		}
+		return AccountTestimonial{Status: status, AuthorName: t.AuthorName, AuthorTitle: t.AuthorTitle, Body: t.Body}
+	}
+
+	name := ""
+	if u, err := a.Users.GetByID(ctx, uid); err == nil {
+		name = u.Name
+	}
+	return AccountTestimonial{Status: "none", AuthorName: name}
+}
+
+// AccountTestimonialSubmit lets a logged-in visitor submit their own
+// testimonial. It always starts unpublished, regardless of anything
+// submitted — visible only once an admin approves it — and only accepts
+// one submission per account (resubmitting isn't offered; edits go
+// through the admin, same as anything else on this page).
+func (a *App) AccountTestimonialSubmit(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	uid, ok := a.Auth.UserID(r)
+	if !ok {
+		http.Redirect(w, r, "/login?next=/account", http.StatusSeeOther)
+		return
+	}
+
+	if _, err := a.Testimonials.GetByUserID(ctx, uid); err == nil {
+		http.Redirect(w, r, "/account#testimonial", http.StatusSeeOther)
+		return
+	}
+
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "invalid form", http.StatusBadRequest)
+		return
+	}
+	authorName := strings.TrimSpace(r.FormValue("author_name"))
+	authorTitle := strings.TrimSpace(r.FormValue("author_title"))
+	body := strings.TrimSpace(r.FormValue("body"))
+	if authorName == "" || body == "" {
+		data := AccountData{
+			BaseData:    a.base(r, "My Account — "+a.Cfg.SiteName, "Your consultancy bookings and purchased courses.", "account"),
+			Testimonial: AccountTestimonial{Status: "none", AuthorName: authorName, AuthorTitle: authorTitle, Body: body},
+			Error:       "Name and testimonial text are both required.",
+		}
+		a.View.Render(w, http.StatusUnprocessableEntity, "account", data)
+		return
+	}
+
+	if _, err := a.Testimonials.CreateFromUser(ctx, uid, authorName, authorTitle, body); err != nil {
+		a.serverError(w, "submit testimonial", err)
+		return
+	}
+	http.Redirect(w, r, "/account#testimonial", http.StatusSeeOther)
 }

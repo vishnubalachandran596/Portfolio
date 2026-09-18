@@ -65,6 +65,7 @@ type Education struct {
 
 type Testimonial struct {
 	ID          int64
+	UserID      int64 // 0 if admin-authored rather than submitted by a visitor
 	AuthorName  string
 	AuthorTitle string
 	Body        string

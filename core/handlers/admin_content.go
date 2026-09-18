@@ -350,6 +350,21 @@ func (a *App) AdminTestimonialSave(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/admin/testimonials", http.StatusSeeOther)
 }
 
+// AdminTestimonialApprove publishes a visitor-submitted testimonial with a
+// single click, without needing to open the full edit form.
+func (a *App) AdminTestimonialApprove(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	if err != nil {
+		a.NotFound(w, r)
+		return
+	}
+	if err := a.Testimonials.Approve(r.Context(), id); err != nil {
+		a.serverError(w, "approve testimonial", err)
+		return
+	}
+	http.Redirect(w, r, "/admin/testimonials", http.StatusSeeOther)
+}
+
 func (a *App) AdminTestimonialDelete(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
 	if err != nil {
