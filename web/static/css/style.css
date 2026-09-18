@@ -311,7 +311,6 @@ a, button, .slot-btn, .faq-item summary { cursor: pointer; }
   letter-spacing: -0.01em;
   white-space: nowrap;
   flex-shrink: 0;
-  margin-right: clamp(1rem, 6vw, 3rem);
 }
 .brand.active .brand-mark {
   box-shadow: 0 0 0 0.125rem var(--color-bg), 0 0 0 0.25rem var(--color-primary);
@@ -480,7 +479,7 @@ a, button, .slot-btn, .faq-item summary { cursor: pointer; }
   flex-shrink: 0;
   width: 2.5rem;
   height: 2.5rem;
-  margin-left: 0.25rem;
+  margin-left: 0.625rem;
   border-radius: 50%;
   background: var(--color-text);
   color: var(--color-bg);
