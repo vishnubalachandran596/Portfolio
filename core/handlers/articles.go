@@ -236,6 +236,7 @@ func (a *App) AdminArticleSave(w http.ResponseWriter, r *http.Request) {
 		Slug:        slugify(r.FormValue("slug")),
 		Title:       strings.TrimSpace(r.FormValue("title")),
 		Summary:     strings.TrimSpace(r.FormValue("summary")),
+		Body:        strings.TrimSpace(r.FormValue("body")),
 		SourceURL:   strings.TrimSpace(r.FormValue("source_url")),
 		SourceName:  strings.TrimSpace(r.FormValue("source_name")),
 		Tags:        parseTags(r.FormValue("tags")),
@@ -251,17 +252,19 @@ func (a *App) AdminArticleSave(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if article.Title == "" || article.SourceURL == "" || article.Summary == "" {
+	// A curated link roundup needs a source to point at; an original piece
+	// (has its own body) doesn't — one or the other is required, not both.
+	if article.Title == "" || article.Summary == "" || (article.SourceURL == "" && article.Body == "") {
 		formData := AdminArticleFormData{
 			BaseData: a.base(r, "Article — Admin", "", "admin"),
 			Article:  article,
 			IsNew:    id == 0,
-			Error:    "Title, source link, and summary are all required.",
+			Error:    "Title and summary are required, plus either a source link (curated) or a body (original writing).",
 		}
 		a.View.Render(w, http.StatusUnprocessableEntity, "admin_article_form", formData)
 		return
 	}
-	if !strings.HasPrefix(article.SourceURL, "http://") && !strings.HasPrefix(article.SourceURL, "https://") {
+	if article.SourceURL != "" && !strings.HasPrefix(article.SourceURL, "http://") && !strings.HasPrefix(article.SourceURL, "https://") {
 		article.SourceURL = "https://" + article.SourceURL
 	}
 

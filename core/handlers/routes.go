@@ -17,6 +17,7 @@ func (a *App) Routes() http.Handler {
 	// Public site.
 	mux.HandleFunc("GET /{$}", a.Home)
 	mux.HandleFunc("GET /about", a.About)
+	mux.HandleFunc("GET /resume.pdf", a.Resume)
 	mux.HandleFunc("GET /courses", a.CoursesList)
 	mux.HandleFunc("GET /courses/{slug}", a.CourseDetail)
 	mux.HandleFunc("POST /courses/{slug}/checkout/order", a.CheckoutCreateOrder)
@@ -35,6 +36,8 @@ func (a *App) Routes() http.Handler {
 	mux.HandleFunc("GET /contact", a.ContactPage)
 	mux.HandleFunc("GET /search", a.Search)
 	mux.Handle("GET /account", noindex(a.Auth.RequireUser(http.HandlerFunc(a.AccountPage))))
+	mux.Handle("GET /account/bookings/{id}/receipt.pdf", a.Auth.RequireUser(http.HandlerFunc(a.AccountBookingReceipt)))
+	mux.Handle("GET /account/purchases/{id}/receipt.pdf", a.Auth.RequireUser(http.HandlerFunc(a.AccountPurchaseReceipt)))
 	mux.Handle("POST /account/bookings/{id}/acknowledge", a.Auth.RequireUser(http.HandlerFunc(a.AccountAcknowledgeReschedule)))
 	mux.Handle("GET /account/bookings/{id}/reschedule", noindex(a.Auth.RequireUser(http.HandlerFunc(a.AccountReschedulePage))))
 	mux.Handle("POST /account/bookings/{id}/reschedule", a.Auth.RequireUser(http.HandlerFunc(a.AccountRescheduleSubmit)))
@@ -94,6 +97,12 @@ func (a *App) Routes() http.Handler {
 	protected.HandleFunc("GET /admin/skills/{id}/edit", a.AdminSkillEditPage)
 	protected.HandleFunc("POST /admin/skills/{id}/edit", a.AdminSkillSave)
 	protected.HandleFunc("POST /admin/skills/{id}/delete", a.AdminSkillDelete)
+	protected.HandleFunc("GET /admin/testimonials", a.AdminTestimonialsList)
+	protected.HandleFunc("GET /admin/testimonials/new", a.AdminTestimonialNewPage)
+	protected.HandleFunc("POST /admin/testimonials/new", a.AdminTestimonialSave)
+	protected.HandleFunc("GET /admin/testimonials/{id}/edit", a.AdminTestimonialEditPage)
+	protected.HandleFunc("POST /admin/testimonials/{id}/edit", a.AdminTestimonialSave)
+	protected.HandleFunc("POST /admin/testimonials/{id}/delete", a.AdminTestimonialDelete)
 	protected.HandleFunc("GET /admin/experience", a.AdminExperienceList)
 	protected.HandleFunc("GET /admin/experience/new", a.AdminExperienceNewPage)
 	protected.HandleFunc("POST /admin/experience/new", a.AdminExperienceSave)
@@ -125,7 +134,7 @@ func (a *App) Routes() http.Handler {
 
 	mux.HandleFunc("/", a.NotFound)
 
-	return middleware.Logging(middleware.DomainRouter(a.Cfg.Domain)(mux))
+	return middleware.Logging(middleware.SecurityHeaders(middleware.DomainRouter(a.Cfg.Domain)(mux)))
 }
 
 // noindex tags every response under a handler as non-indexable — used for

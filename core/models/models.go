@@ -63,6 +63,16 @@ type Education struct {
 	SortOrder   int
 }
 
+type Testimonial struct {
+	ID          int64
+	AuthorName  string
+	AuthorTitle string
+	Body        string
+	IsPublished bool
+	SortOrder   int
+	CreatedAt   time.Time
+}
+
 type HomeFeature struct {
 	ID          int64
 	Title       string
@@ -224,6 +234,7 @@ type Article struct {
 	Slug          string
 	Title         string
 	Summary       string
+	Body          string
 	SourceURL     string
 	SourceName    string
 	Tags          []string
@@ -233,6 +244,10 @@ type Article struct {
 	SortOrder     int
 	CreatedAt     time.Time
 }
+
+// IsOriginal reports whether an article is Vishnu's own original writing
+// (has a body) rather than a curated link out to someone else's post.
+func (a Article) IsOriginal() bool { return a.Body != "" }
 
 // TagsDisplay renders an article's tags as a comma-separated string, for
 // the admin edit form's text input.

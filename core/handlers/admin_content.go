@@ -249,3 +249,116 @@ func (a *App) AdminExperienceDelete(w http.ResponseWriter, r *http.Request) {
 	}
 	http.Redirect(w, r, "/admin/experience", http.StatusSeeOther)
 }
+
+type AdminTestimonialsListData struct {
+	BaseData
+	Testimonials []models.Testimonial
+}
+
+func (a *App) AdminTestimonialsList(w http.ResponseWriter, r *http.Request) {
+	list, err := a.Testimonials.ListAll(r.Context())
+	if err != nil {
+		a.serverError(w, "load testimonials", err)
+		return
+	}
+	a.View.Render(w, http.StatusOK, "admin_testimonials_list", AdminTestimonialsListData{
+		BaseData:     a.base(r, "Testimonials — Admin", "", "admin"),
+		Testimonials: list,
+	})
+}
+
+type AdminTestimonialFormData struct {
+	BaseData
+	Testimonial models.Testimonial
+	IsNew       bool
+	Error       string
+}
+
+func (a *App) AdminTestimonialNewPage(w http.ResponseWriter, r *http.Request) {
+	a.View.Render(w, http.StatusOK, "admin_testimonial_form", AdminTestimonialFormData{
+		BaseData:    a.base(r, "New Testimonial — Admin", "", "admin"),
+		IsNew:       true,
+		Testimonial: models.Testimonial{IsPublished: true},
+	})
+}
+
+func (a *App) AdminTestimonialEditPage(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	if err != nil {
+		a.NotFound(w, r)
+		return
+	}
+	t, err := a.Testimonials.GetByID(r.Context(), id)
+	if err != nil {
+		if err == repo.ErrNotFound {
+			a.NotFound(w, r)
+			return
+		}
+		a.serverError(w, "load testimonial", err)
+		return
+	}
+	a.View.Render(w, http.StatusOK, "admin_testimonial_form", AdminTestimonialFormData{
+		BaseData:    a.base(r, "Edit Testimonial — Admin", "", "admin"),
+		Testimonial: t,
+	})
+}
+
+func (a *App) AdminTestimonialSave(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "invalid form", http.StatusBadRequest)
+		return
+	}
+	var id int64
+	if idStr := r.PathValue("id"); idStr != "" {
+		var err error
+		id, err = strconv.ParseInt(idStr, 10, 64)
+		if err != nil {
+			a.NotFound(w, r)
+			return
+		}
+	}
+	sortOrder, _ := strconv.Atoi(r.FormValue("sort_order"))
+	t := models.Testimonial{
+		ID:          id,
+		AuthorName:  strings.TrimSpace(r.FormValue("author_name")),
+		AuthorTitle: strings.TrimSpace(r.FormValue("author_title")),
+		Body:        strings.TrimSpace(r.FormValue("body")),
+		IsPublished: r.FormValue("is_published") == "on",
+		SortOrder:   sortOrder,
+	}
+	if t.AuthorName == "" || t.Body == "" {
+		a.View.Render(w, http.StatusUnprocessableEntity, "admin_testimonial_form", AdminTestimonialFormData{
+			BaseData:    a.base(r, "Testimonial — Admin", "", "admin"),
+			Testimonial: t,
+			IsNew:       id == 0,
+			Error:       "Name and quote are required.",
+		})
+		return
+	}
+
+	ctx := r.Context()
+	var err error
+	if id == 0 {
+		_, err = a.Testimonials.Create(ctx, t)
+	} else {
+		err = a.Testimonials.Update(ctx, t)
+	}
+	if err != nil {
+		a.serverError(w, "save testimonial", err)
+		return
+	}
+	http.Redirect(w, r, "/admin/testimonials", http.StatusSeeOther)
+}
+
+func (a *App) AdminTestimonialDelete(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	if err != nil {
+		a.NotFound(w, r)
+		return
+	}
+	if err := a.Testimonials.Delete(r.Context(), id); err != nil {
+		a.serverError(w, "delete testimonial", err)
+		return
+	}
+	http.Redirect(w, r, "/admin/testimonials", http.StatusSeeOther)
+}

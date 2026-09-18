@@ -6,7 +6,7 @@
     <h1>{{.Article.Title}}</h1>
     <div class="article-row-meta">
       {{if .Article.PublishedDate}}<span>{{formatDateOptional .Article.PublishedDate}}</span>{{end}}
-      {{if .Article.SourceName}}<span>{{.Article.SourceName}}</span>{{end}}
+      {{if .Article.IsOriginal}}<span>By {{.SiteName}}</span>{{else if .Article.SourceName}}<span>{{.Article.SourceName}}</span>{{end}}
       {{range .Article.Tags}}<a class="tag-chip" href="/articles?tag={{.}}">{{.}}</a>{{end}}
     </div>
   </div>
@@ -14,10 +14,17 @@
 
 <section class="section">
   <div class="container course-description">
+    {{if .Article.IsOriginal}}
+    <p><strong>{{.Article.Summary}}</strong></p>
+    <div class="article-body">
+      {{range $p := splitLines .Article.Body}}<p>{{$p}}</p>{{end}}
+    </div>
+    {{else}}
     <p>{{.Article.Summary}}</p>
+    {{end}}
 
     <div class="article-detail-actions">
-      <a class="btn btn-primary" href="{{.Article.SourceURL}}" target="_blank" rel="noopener noreferrer">Read the full article ↗</a>
+      {{if .Article.SourceURL}}<a class="btn btn-primary" href="{{.Article.SourceURL}}" target="_blank" rel="noopener noreferrer">Read the full article ↗</a>{{end}}
       <button type="button" class="btn btn-secondary" id="thumbs-up-btn" data-slug="{{.Article.Slug}}" {{if .Voted}}disabled{{end}}>
         👍 <span id="thumbs-up-count">{{.Article.ThumbsUpCount}}</span>{{if .Voted}} · Thanks!{{end}}
       </button>

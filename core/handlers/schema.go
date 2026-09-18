@@ -28,6 +28,7 @@ type personSchema struct {
 	Description string   `json:"description,omitempty"`
 	URL         string   `json:"url"`
 	Email       string   `json:"email,omitempty"`
+	Image       string   `json:"image,omitempty"`
 	SameAs      []string `json:"sameAs,omitempty"`
 	KnowsAbout  []string `json:"knowsAbout,omitempty"`
 	Address     *struct {
@@ -87,7 +88,7 @@ type courseSchema struct {
 	} `json:"provider"`
 }
 
-func personAndWebsiteJSONLD(profile models.Profile, homeURL string, sameAs []string) template.JS {
+func personAndWebsiteJSONLD(profile models.Profile, homeURL, imageURL string, sameAs []string) template.JS {
 	person := personSchema{
 		Context:     "https://schema.org",
 		Type:        "Person",
@@ -96,6 +97,7 @@ func personAndWebsiteJSONLD(profile models.Profile, homeURL string, sameAs []str
 		Description: profile.HeroSubtitle,
 		URL:         homeURL,
 		Email:       profile.Email,
+		Image:       imageURL,
 		SameAs:      sameAs,
 		KnowsAbout:  knownSkills,
 	}

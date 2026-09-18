@@ -66,13 +66,14 @@
     <h2 class="section-title">Payments</h2>
     {{if .Payments}}
     <table class="admin-table">
-      <thead><tr><th>When</th><th>Description</th><th>Amount</th></tr></thead>
+      <thead><tr><th>When</th><th>Description</th><th>Amount</th><th></th></tr></thead>
       <tbody>
         {{range .Payments}}
         <tr>
           <td>{{.When}}</td>
           <td>{{.Description}}</td>
           <td>{{.Amount}}</td>
+          <td class="admin-table-actions">{{if .ReceiptURL}}<a class="link-button" href="{{.ReceiptURL}}">Receipt</a>{{end}}</td>
         </tr>
         {{end}}
       </tbody>

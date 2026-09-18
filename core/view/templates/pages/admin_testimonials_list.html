@@ -1,0 +1,33 @@
+{{define "content"}}
+<section class="section">
+  <div class="container">
+    <div class="section-header-row">
+      <h1>Testimonials</h1>
+      <a class="btn btn-primary" href="/admin/testimonials/new">Add Testimonial</a>
+    </div>
+    {{if .Testimonials}}
+    <table class="admin-table">
+      <thead><tr><th>Author</th><th>Quote</th><th>Published</th><th>Sort</th><th></th></tr></thead>
+      <tbody>
+        {{range .Testimonials}}
+        <tr>
+          <td>{{.AuthorName}}{{if .AuthorTitle}}<br><span class="admin-table-subtext">{{.AuthorTitle}}</span>{{end}}</td>
+          <td>{{.Body}}</td>
+          <td><span class="status-badge status-{{if .IsPublished}}confirmed{{else}}pending{{end}}">{{if .IsPublished}}Published{{else}}Hidden{{end}}</span></td>
+          <td>{{.SortOrder}}</td>
+          <td class="admin-table-actions">
+            <a class="link-button" href="/admin/testimonials/{{.ID}}/edit">Edit</a>
+            <form method="POST" action="/admin/testimonials/{{.ID}}/delete" onsubmit="return confirm('Delete this testimonial?');">
+              <button type="submit" class="link-button danger">Delete</button>
+            </form>
+          </td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+    {{else}}
+    <p class="empty-state">No testimonials yet — they only show on the About page once added here, and only real ones from real clients or colleagues.</p>
+    {{end}}
+  </div>
+</section>
+{{end}}

@@ -6,8 +6,11 @@ import (
 	"net/http"
 	"time"
 
+	"golang.org/x/sync/errgroup"
+
 	"github.com/vishnubalachandran596/portfolio/core/models"
 	"github.com/vishnubalachandran596/portfolio/core/repo"
+	"github.com/vishnubalachandran596/portfolio/core/resume"
 )
 
 type HomeData struct {
@@ -20,19 +23,18 @@ type HomeData struct {
 
 func (a *App) Home(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	profile, err := a.Profile.Get(ctx)
-	if err != nil {
-		a.serverError(w, "load profile", err)
-		return
-	}
-	skills, err := a.Skills.List(ctx)
-	if err != nil {
-		a.serverError(w, "load skills", err)
-		return
-	}
-	articles, err := a.Articles.ListPublished(ctx, 3)
-	if err != nil {
-		a.serverError(w, "load articles", err)
+
+	var (
+		profile  models.Profile
+		skills   []models.SkillGroup
+		articles []models.Article
+	)
+	g, gctx := errgroup.WithContext(ctx)
+	g.Go(func() (err error) { profile, err = a.Profile.Get(gctx); return })
+	g.Go(func() (err error) { skills, err = a.Skills.List(gctx); return })
+	g.Go(func() (err error) { articles, err = a.Articles.ListPublished(gctx, 3); return })
+	if err := g.Wait(); err != nil {
+		a.serverError(w, "load home page data", err)
 		return
 	}
 
@@ -50,54 +52,98 @@ func (a *App) Home(w http.ResponseWriter, r *http.Request) {
 	if profile.GitHubURL != "" {
 		sameAs = append(sameAs, profile.GitHubURL)
 	}
+	imageURL := ""
+	if profile.PhotoURL != "" {
+		imageURL = base.SiteURL + profile.PhotoURL
+	}
 
 	a.View.Render(w, http.StatusOK, "home", HomeData{
 		BaseData: base,
 		Profile:  profile,
 		Skills:   skills,
 		Articles: articles,
-		JSONLD:   personAndWebsiteJSONLD(profile, base.CanonicalURL, sameAs),
+		JSONLD:   personAndWebsiteJSONLD(profile, base.CanonicalURL, imageURL, sameAs),
 	})
 }
 
 type AboutData struct {
 	BaseData
-	Profile    models.Profile
-	Skills     []models.SkillGroup
-	Experience []models.Experience
-	Education  []models.Education
+	Profile      models.Profile
+	Skills       []models.SkillGroup
+	Experience   []models.Experience
+	Education    []models.Education
+	Testimonials []models.Testimonial
 }
 
 func (a *App) About(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	profile, err := a.Profile.Get(ctx)
-	if err != nil {
-		a.serverError(w, "load profile", err)
-		return
-	}
-	skills, err := a.Skills.List(ctx)
-	if err != nil {
-		a.serverError(w, "load skills", err)
-		return
-	}
-	exp, err := a.Experience.List(ctx)
-	if err != nil {
-		a.serverError(w, "load experience", err)
-		return
-	}
-	edu, err := a.Education.List(ctx)
-	if err != nil {
-		a.serverError(w, "load education", err)
+
+	var (
+		profile      models.Profile
+		skills       []models.SkillGroup
+		exp          []models.Experience
+		edu          []models.Education
+		testimonials []models.Testimonial
+	)
+	g, gctx := errgroup.WithContext(ctx)
+	g.Go(func() (err error) { profile, err = a.Profile.Get(gctx); return })
+	g.Go(func() (err error) { skills, err = a.Skills.List(gctx); return })
+	g.Go(func() (err error) { exp, err = a.Experience.List(gctx); return })
+	g.Go(func() (err error) { edu, err = a.Education.List(gctx); return })
+	g.Go(func() (err error) { testimonials, err = a.Testimonials.ListPublished(gctx); return })
+	if err := g.Wait(); err != nil {
+		a.serverError(w, "load about page data", err)
 		return
 	}
 
+	description := "Vishnu Balachandran's full background: skills, work history, and education — 8+ years architecting banking and fintech platforms, available for technical consulting."
 	a.View.Render(w, http.StatusOK, "about", AboutData{
-		BaseData:   a.base(r, profile.Name+" — Technical Consultant, Java Expert & Software Architect", profile.HeroSubtitle, "about"),
+		BaseData:     a.base(r, profile.Name+" — Technical Consultant, Java Expert & Software Architect", description, "about"),
+		Profile:      profile,
+		Skills:       skills,
+		Experience:   exp,
+		Education:    edu,
+		Testimonials: testimonials,
+	})
+}
+
+// Resume renders a PDF resume generated in-process from the same profile,
+// skills, experience, and education data shown on the About page — always
+// in sync with the live site, no separate file to keep updated by hand.
+func (a *App) Resume(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	var (
+		profile models.Profile
+		skills  []models.SkillGroup
+		exp     []models.Experience
+		edu     []models.Education
+	)
+	g, gctx := errgroup.WithContext(ctx)
+	g.Go(func() (err error) { profile, err = a.Profile.Get(gctx); return })
+	g.Go(func() (err error) { skills, err = a.Skills.List(gctx); return })
+	g.Go(func() (err error) { exp, err = a.Experience.List(gctx); return })
+	g.Go(func() (err error) { edu, err = a.Education.List(gctx); return })
+	if err := g.Wait(); err != nil {
+		a.serverError(w, "load resume data", err)
+		return
+	}
+
+	pdfBytes, err := resume.Generate(resume.Data{
 		Profile:    profile,
 		Skills:     skills,
 		Experience: exp,
 		Education:  edu,
 	})
+	if err != nil {
+		a.serverError(w, "generate resume", err)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/pdf")
+	w.Header().Set("Content-Disposition", `inline; filename="vishnu-balachandran-resume.pdf"`)
+	w.Header().Set("Cache-Control", "public, max-age=3600")
+	w.Write(pdfBytes)
 }
 
 type CoursesListData struct {
