@@ -394,3 +394,14 @@ type QuizAttempt struct {
 	CertificateCode string
 	CreatedAt       time.Time
 }
+
+// AdminMessage is a note the admin sent a specific visitor account,
+// surfaced on their /account page and in the header's notification menu
+// until read.
+type AdminMessage struct {
+	ID        int64
+	UserID    int64
+	Body      string
+	IsRead    bool
+	CreatedAt time.Time
+}

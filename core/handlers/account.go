@@ -16,10 +16,23 @@ type AccountCourse struct {
 	Amount      string
 }
 
+type AccountPayment struct {
+	When        string
+	Description string
+	Amount      string
+}
+
+type AccountMessage struct {
+	When string
+	Body string
+}
+
 type AccountData struct {
 	BaseData
 	Bookings []AccountBooking
 	Courses  []AccountCourse
+	Payments []AccountPayment
+	Messages []AccountMessage
 }
 
 type AccountBooking struct {
@@ -31,9 +44,11 @@ type AccountBooking struct {
 }
 
 // AccountPage requires a logged-in visitor (see RequireUser in routes.go)
-// and lists every booking and paid course purchase tied to their account,
-// so they can find them again at any time rather than only right after
-// checkout.
+// and lists every booking, paid course purchase, payment, and admin
+// message tied to their account, so they can find any of it again at any
+// time rather than only right after checkout. Opening this page also
+// marks any unread admin messages as read, the same way opening an inbox
+// does.
 func (a *App) AccountPage(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	uid, ok := a.Auth.UserID(r)
@@ -52,6 +67,15 @@ func (a *App) AccountPage(w http.ResponseWriter, r *http.Request) {
 		a.serverError(w, "load purchases", err)
 		return
 	}
+	messages, err := a.AdminMessages.ListByUserID(ctx, uid)
+	if err != nil {
+		a.serverError(w, "load messages", err)
+		return
+	}
+	if err := a.AdminMessages.MarkAllReadByUserID(ctx, uid); err != nil {
+		a.serverError(w, "mark messages read", err)
+		return
+	}
 
 	data := AccountData{
 		BaseData: a.base(r, "My Account — "+a.Cfg.SiteName, "Your consultancy bookings and purchased courses.", "account"),
@@ -67,6 +91,13 @@ func (a *App) AccountPage(w http.ResponseWriter, r *http.Request) {
 			row.PreviousWhen = b.PreviousSlotStart.In(a.Timezone).Format("Mon, Jan 2 2006 · 3:04 PM")
 		}
 		data.Bookings = append(data.Bookings, row)
+		if b.Status == models.BookingStatusConfirmed && b.AmountCents > 0 {
+			data.Payments = append(data.Payments, AccountPayment{
+				When:        b.SlotStart.In(a.Timezone).Format("Jan 2, 2006"),
+				Description: "1:1 consultancy session",
+				Amount:      models.FormatMoney(b.AmountCents, b.Currency),
+			})
+		}
 	}
 	for _, p := range purchases {
 		course, err := a.Courses.GetByID(ctx, p.CourseID)
@@ -82,6 +113,17 @@ func (a *App) AccountPage(w http.ResponseWriter, r *http.Request) {
 			CourseSlug:  course.Slug,
 			PaidAt:      paidAt,
 			Amount:      models.FormatMoney(p.AmountCents, p.Currency),
+		})
+		data.Payments = append(data.Payments, AccountPayment{
+			When:        paidAt,
+			Description: "Course: " + course.Title,
+			Amount:      models.FormatMoney(p.AmountCents, p.Currency),
+		})
+	}
+	for _, m := range messages {
+		data.Messages = append(data.Messages, AccountMessage{
+			When: m.CreatedAt.In(a.Timezone).Format("Mon, Jan 2 2006 · 3:04 PM"),
+			Body: m.Body,
 		})
 	}
 

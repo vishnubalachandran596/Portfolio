@@ -3,6 +3,7 @@
 package handlers
 
 import (
+	"context"
 	"database/sql"
 	"net/http"
 	"time"
@@ -39,6 +40,7 @@ type App struct {
 	PromoCodes    *repo.PromoCodeRepo
 	QuizQuestions *repo.QuizQuestionRepo
 	QuizAttempts  *repo.QuizAttemptRepo
+	AdminMessages *repo.AdminMessageRepo
 
 	Razorpay *payments.Razorpay
 	Telegram *notify.Telegram
@@ -61,9 +63,22 @@ type BaseData struct {
 	Country             string
 	IsLoggedIn          bool
 	IsAdmin             bool
+	IsUser              bool
 	PreviewingAsVisitor bool
 	UserName            string
 	LinkedInURL         string
+	Notifications       []NotificationItem
+	UnreadNotifCount    int
+}
+
+// NotificationItem is one entry in the header's notification menu —
+// aggregated at request time from a couple of concrete sources (a
+// pending booking-reschedule notice, an unread admin message) rather
+// than a dedicated notifications table.
+type NotificationItem struct {
+	Text   string
+	URL    string
+	Unread bool
 }
 
 // NavLinks holds the absolute URL for each primary nav destination, so
@@ -115,6 +130,7 @@ func New(cfg *config.Config, db *sql.DB, renderer *view.Renderer) *App {
 		PromoCodes:    repo.NewPromoCodeRepo(db),
 		QuizQuestions: repo.NewQuizQuestionRepo(db),
 		QuizAttempts:  repo.NewQuizAttemptRepo(db),
+		AdminMessages: repo.NewAdminMessageRepo(db),
 		Razorpay:      payments.NewRazorpay(cfg.RazorpayKeyID, cfg.RazorpayKeySecret),
 		Telegram:      notify.NewTelegram(cfg.TelegramBotToken, cfg.TelegramChatID),
 		Google:        oauth.NewGoogle(cfg.GoogleClientID, cfg.GoogleClientSecret, cfg.GoogleRedirectURL),
@@ -140,11 +156,19 @@ func (a *App) base(r *http.Request, title, metaDescription, active string) BaseD
 	isAdmin := a.Auth.IsAuthenticated(r) && !previewing
 	isUser := a.Auth.IsUserAuthenticated(r)
 	userName := ""
+	var notifications []NotificationItem
 	if isUser {
 		if uid, ok := a.Auth.UserID(r); ok {
 			if u, err := a.Users.GetByID(r.Context(), uid); err == nil {
 				userName = u.Name
 			}
+			notifications = a.userNotifications(r.Context(), uid)
+		}
+	}
+	unreadCount := 0
+	for _, n := range notifications {
+		if n.Unread {
+			unreadCount++
 		}
 	}
 	linkedIn := ""
@@ -180,8 +204,53 @@ func (a *App) base(r *http.Request, title, metaDescription, active string) BaseD
 		Country:             geo.CountryFromRequest(r),
 		IsLoggedIn:          isUser || isAdmin,
 		IsAdmin:             isAdmin,
+		IsUser:              isUser,
 		PreviewingAsVisitor: previewing && a.Auth.IsAuthenticated(r),
 		UserName:            userName,
 		LinkedInURL:         linkedIn,
+		Notifications:       notifications,
+		UnreadNotifCount:    unreadCount,
 	}
+}
+
+// userNotifications aggregates a visitor's pending notices — a booking
+// reschedule they haven't acknowledged, and any unread message from the
+// admin — into one list for the header's notification menu. Errors are
+// swallowed (an empty notification list is a fine degrade for a page
+// that isn't about bookings or messages in the first place).
+func (a *App) userNotifications(ctx context.Context, userID int64) []NotificationItem {
+	var items []NotificationItem
+
+	if bookings, err := a.Bookings.ListByUserID(ctx, userID); err == nil {
+		for _, b := range bookings {
+			if !b.RescheduleAcknowledged && b.PreviousSlotStart != nil {
+				items = append(items, NotificationItem{
+					Text:   "Your booking was rescheduled to " + b.SlotStart.In(a.Timezone).Format("Mon, Jan 2 · 3:04 PM"),
+					URL:    "/account#bookings",
+					Unread: true,
+				})
+			}
+		}
+	}
+
+	if messages, err := a.AdminMessages.ListByUserID(ctx, userID); err == nil {
+		for _, m := range messages {
+			if !m.IsRead {
+				items = append(items, NotificationItem{
+					Text:   "New message: " + truncate(m.Body, 60),
+					URL:    "/account#messages",
+					Unread: true,
+				})
+			}
+		}
+	}
+
+	return items
+}
+
+func truncate(s string, n int) string {
+	if len(s) <= n {
+		return s
+	}
+	return s[:n] + "…"
 }

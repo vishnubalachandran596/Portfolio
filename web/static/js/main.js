@@ -60,6 +60,40 @@
     if (loaderTimer) clearTimeout(loaderTimer);
   });
 
+  // --- Header dropdown menus (notifications, account) -------------------
+  var headerDropdowns = document.querySelectorAll(".header-dropdown");
+  function closeHeaderDropdowns(except) {
+    headerDropdowns.forEach(function (panel) {
+      if (panel !== except) {
+        panel.hidden = true;
+        var toggle = document.getElementById(panel.id.replace("-panel", "-toggle"));
+        if (toggle) toggle.setAttribute("aria-expanded", "false");
+      }
+    });
+  }
+  function setupHeaderMenu(toggleId, panelId) {
+    var toggle = document.getElementById(toggleId);
+    var panel = document.getElementById(panelId);
+    if (!toggle || !panel) return;
+    toggle.addEventListener("click", function (e) {
+      e.stopPropagation();
+      var willOpen = panel.hidden;
+      closeHeaderDropdowns(willOpen ? panel : null);
+      panel.hidden = !willOpen;
+      toggle.setAttribute("aria-expanded", String(willOpen));
+    });
+  }
+  setupHeaderMenu("notif-toggle", "notif-panel");
+  setupHeaderMenu("profile-toggle", "profile-panel");
+  if (headerDropdowns.length) {
+    document.addEventListener("click", function (e) {
+      if (!e.target.closest(".header-menu")) closeHeaderDropdowns(null);
+    });
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape") closeHeaderDropdowns(null);
+    });
+  }
+
   // --- Theme toggle (persisted, defaults to OS preference) -----------
   var themeToggle = document.getElementById("theme-toggle");
   function currentTheme() {

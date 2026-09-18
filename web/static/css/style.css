@@ -286,20 +286,23 @@ a, button, .slot-btn, .faq-item summary { cursor: pointer; }
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 24px;
-  height: 68px;
+  gap: clamp(10px, 3vw, 24px);
+  min-height: 64px;
+  padding: 10px 0;
 }
 .brand {
   font-weight: 700;
   font-size: 1.05rem;
   letter-spacing: -0.01em;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 .primary-nav {
   display: flex;
   align-items: center;
-  gap: 26px;
-  flex: 1;
+  gap: clamp(12px, 2.5vw, 26px);
+  flex: 1 1 auto;
+  min-width: 0;
   justify-content: center;
 }
 .primary-nav a {
@@ -316,8 +319,96 @@ a, button, .slot-btn, .faq-item summary { cursor: pointer; }
   border-bottom-color: var(--color-primary);
 }
 
-.header-actions { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.header-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
 .header-actions .link-button { font-size: 0.9rem; line-height: 1; white-space: nowrap; }
+
+/* Icon buttons (theme, notifications, account) and their dropdown panels.
+   Kept as one row on every breakpoint — the nav strip scrolls
+   horizontally instead of wrapping to a second row. */
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-2);
+  color: var(--color-text);
+}
+.icon-btn:hover { border-color: var(--color-accent); }
+.icon-btn svg { width: 18px; height: 18px; }
+
+.header-menu { position: relative; }
+.header-dropdown {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  min-width: 220px;
+  max-width: min(88vw, 300px);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-md);
+  padding: 8px;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.header-dropdown-item {
+  display: block;
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--color-text);
+  text-align: left;
+  background: none;
+  border: none;
+  font-family: inherit;
+}
+.header-dropdown-item:hover { background: var(--color-bg-alt); }
+.header-dropdown-item.unread { font-weight: 700; }
+.header-dropdown-item-accent { color: var(--color-primary); font-weight: 700; }
+.header-dropdown-button { cursor: pointer; }
+.header-dropdown-divider { height: 1px; background: var(--color-border); margin: 6px 4px; }
+.header-dropdown-empty { padding: 10px 12px; margin: 0; font-size: 0.85rem; color: var(--color-text-faint); }
+
+.menu-badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--color-accent);
+  color: var(--color-accent-ink);
+  font-size: 0.65rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+.badge-inline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--color-accent);
+  color: var(--color-accent-ink);
+  font-size: 0.65rem;
+  font-weight: 700;
+  vertical-align: middle;
+}
 
 .nav-toggle {
   display: inline-flex;
@@ -362,16 +453,7 @@ a, button, .slot-btn, .faq-item summary { cursor: pointer; }
     font-weight: 600;
     font-size: 1rem;
   }
-  .header-inner { height: auto; flex-wrap: wrap; row-gap: 0; column-gap: 16px; padding: 18px 0 0; }
-  .primary-nav {
-    order: 3;
-    flex-basis: 100%;
-    justify-content: flex-start;
-    gap: 20px;
-    margin-top: 12px;
-    padding: 10px 0 12px;
-    border-top: 1px solid var(--color-border);
-  }
+  .primary-nav { justify-content: flex-start; gap: 16px; }
 }
 
 /* The tab strip is the only nav on every breakpoint — no separate
@@ -856,6 +938,16 @@ input:focus, textarea:focus, select:focus {
 }
 .reschedule-notice p { margin: 0 0 12px; }
 .reschedule-notice-actions { display: flex; gap: 12px; flex-wrap: wrap; }
+
+.message-list { display: flex; flex-direction: column; gap: 14px; }
+.message-card {
+  padding: 16px 20px;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+}
+.message-when { font-size: 0.8rem; color: var(--color-text-faint); margin: 0 0 8px; }
+.message-body { margin: 0; white-space: pre-wrap; line-height: 1.6; }
 
 /* ---------------------------------------------------------------------
    Admin console — vertical sidebar shell

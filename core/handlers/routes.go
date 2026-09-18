@@ -87,6 +87,7 @@ func (a *App) Routes() http.Handler {
 	protected.HandleFunc("GET /admin/users/{id}", a.AdminUserDetail)
 	protected.HandleFunc("POST /admin/users/{id}/promote", a.AdminUserPromote)
 	protected.HandleFunc("POST /admin/users/{id}/demote", a.AdminUserDemote)
+	protected.HandleFunc("POST /admin/users/{id}/messages", a.AdminUserMessageSend)
 	protected.HandleFunc("GET /admin/skills", a.AdminSkillsList)
 	protected.HandleFunc("GET /admin/skills/new", a.AdminSkillNewPage)
 	protected.HandleFunc("POST /admin/skills/new", a.AdminSkillSave)

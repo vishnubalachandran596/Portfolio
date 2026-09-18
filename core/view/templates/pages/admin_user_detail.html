@@ -51,6 +51,30 @@
     {{else}}
     <p class="empty-state">No course purchases yet.</p>
     {{end}}
+
+    <h2>Send a message</h2>
+    <form method="POST" action="/admin/users/{{.User.ID}}/messages" class="admin-form">
+      <label>Message <span class="optional">a signature pointing them to your email is added automatically</span>
+        <textarea name="body" rows="4" required></textarea>
+      </label>
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary" data-loading-text="Sending…">Send Message</button>
+      </div>
+    </form>
+
+    <h2>Sent messages</h2>
+    {{if .Messages}}
+    <div class="message-list">
+      {{range .Messages}}
+      <div class="message-card">
+        <p class="message-when">{{.When}}</p>
+        <p class="message-body">{{.Body}}</p>
+      </div>
+      {{end}}
+    </div>
+    {{else}}
+    <p class="empty-state">No messages sent yet.</p>
+    {{end}}
   </div>
 </section>
 {{end}}

@@ -3,11 +3,11 @@
   <div class="container">
     <p class="eyebrow">Account</p>
     <h1>My Account</h1>
-    <p class="hero-subtitle">Your consultancy bookings and purchased courses, in one place.</p>
+    <p class="hero-subtitle">Your consultancy bookings, purchased courses, payments, and messages, in one place.</p>
   </div>
 </section>
 
-<section class="section">
+<section id="courses" class="section">
   <div class="container">
     <h2 class="section-title">My Courses</h2>
     {{if .Courses}}
@@ -26,7 +26,7 @@
   </div>
 </section>
 
-<section class="section section-alt">
+<section id="bookings" class="section section-alt">
   <div class="container">
     <h2 class="section-title">My Bookings</h2>
     {{if .Bookings}}
@@ -57,6 +57,46 @@
     </table>
     {{else}}
     <p class="empty-state">No bookings yet — <a href="/consultancy">book a session</a>.</p>
+    {{end}}
+  </div>
+</section>
+
+<section id="payments" class="section">
+  <div class="container">
+    <h2 class="section-title">Payments</h2>
+    {{if .Payments}}
+    <table class="admin-table">
+      <thead><tr><th>When</th><th>Description</th><th>Amount</th></tr></thead>
+      <tbody>
+        {{range .Payments}}
+        <tr>
+          <td>{{.When}}</td>
+          <td>{{.Description}}</td>
+          <td>{{.Amount}}</td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+    {{else}}
+    <p class="empty-state">No payments yet.</p>
+    {{end}}
+  </div>
+</section>
+
+<section id="messages" class="section section-alt">
+  <div class="container">
+    <h2 class="section-title">Messages</h2>
+    {{if .Messages}}
+    <div class="message-list">
+      {{range .Messages}}
+      <div class="message-card">
+        <p class="message-when">{{.When}}</p>
+        <p class="message-body">{{.Body}}</p>
+      </div>
+      {{end}}
+    </div>
+    {{else}}
+    <p class="empty-state">No messages yet.</p>
     {{end}}
   </div>
 </section>

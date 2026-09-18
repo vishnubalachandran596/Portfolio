@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/vishnubalachandran596/portfolio/core/authutil"
 	"github.com/vishnubalachandran596/portfolio/core/models"
@@ -63,6 +64,11 @@ type adminUserPurchase struct {
 	When        string
 }
 
+type adminUserMessage struct {
+	When string
+	Body string
+}
+
 type AdminUserDetailData struct {
 	BaseData
 	User      models.User
@@ -70,6 +76,7 @@ type AdminUserDetailData struct {
 	CanDemote bool
 	Bookings  []adminUserBooking
 	Purchases []adminUserPurchase
+	Messages  []adminUserMessage
 }
 
 // AdminUserDetail shows one visitor's bookings and course purchases, plus
@@ -111,6 +118,11 @@ func (a *App) AdminUserDetail(w http.ResponseWriter, r *http.Request) {
 		a.serverError(w, "load purchases", err)
 		return
 	}
+	messages, err := a.AdminMessages.ListByUserID(ctx, id)
+	if err != nil {
+		a.serverError(w, "load messages", err)
+		return
+	}
 
 	data := AdminUserDetailData{
 		BaseData:  a.base(r, user.Name+" — Admin", "", "admin"),
@@ -141,8 +153,53 @@ func (a *App) AdminUserDetail(w http.ResponseWriter, r *http.Request) {
 			When:        when,
 		})
 	}
+	for _, m := range messages {
+		data.Messages = append(data.Messages, adminUserMessage{
+			When: m.CreatedAt.In(a.Timezone).Format("Mon, Jan 2 2006 · 3:04 PM"),
+			Body: m.Body,
+		})
+	}
 
 	a.View.Render(w, http.StatusOK, "admin_user_detail", data)
+}
+
+// AdminUserMessageSend sends a message to a visitor's account, always
+// closing with a fixed signature pointing them at the admin's own email
+// — never editable per-message, so every message reads consistently.
+func (a *App) AdminUserMessageSend(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	if err != nil {
+		a.NotFound(w, r)
+		return
+	}
+	if _, err := a.Users.GetByID(ctx, id); err != nil {
+		if err == repo.ErrNotFound {
+			a.NotFound(w, r)
+			return
+		}
+		a.serverError(w, "load user", err)
+		return
+	}
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "invalid form", http.StatusBadRequest)
+		return
+	}
+	body := strings.TrimSpace(r.FormValue("body"))
+	if body == "" {
+		http.Redirect(w, r, "/admin/users/"+strconv.FormatInt(id, 10), http.StatusSeeOther)
+		return
+	}
+
+	if profile, err := a.Profile.Get(ctx); err == nil && profile.Email != "" {
+		body += "\n\nFeel free to reach out to me at " + profile.Email
+	}
+
+	if _, err := a.AdminMessages.Create(ctx, id, body); err != nil {
+		a.serverError(w, "send message", err)
+		return
+	}
+	http.Redirect(w, r, "/admin/users/"+strconv.FormatInt(id, 10), http.StatusSeeOther)
 }
 
 // AdminUserPromote makes a visitor account an admin too. Since they may
