@@ -307,16 +307,17 @@ a, button, .slot-btn, .faq-item summary { cursor: pointer; }
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 34px;
-    height: 34px;
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
     border-radius: 50%;
     background: var(--color-text);
     color: var(--color-bg);
     font-family: var(--font-serif);
     font-weight: 600;
-    font-size: 0.9rem;
+    font-size: 1rem;
   }
-  .header-inner { height: auto; flex-wrap: wrap; row-gap: 0; column-gap: 12px; padding: 14px 0 0; }
+  .header-inner { height: auto; flex-wrap: wrap; row-gap: 0; column-gap: 16px; padding: 18px 0 0; }
   .primary-nav {
     order: 3;
     flex-basis: 100%;
