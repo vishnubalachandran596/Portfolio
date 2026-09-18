@@ -23,8 +23,11 @@ type AccountData struct {
 }
 
 type AccountBooking struct {
-	When   string
-	Status string
+	ID             int64
+	When           string
+	Status         string
+	WasRescheduled bool
+	PreviousWhen   string
 }
 
 // AccountPage requires a logged-in visitor (see RequireUser in routes.go)
@@ -54,10 +57,16 @@ func (a *App) AccountPage(w http.ResponseWriter, r *http.Request) {
 		BaseData: a.base(r, "My Account — "+a.Cfg.SiteName, "Your consultancy bookings and purchased courses.", "account"),
 	}
 	for _, b := range bookings {
-		data.Bookings = append(data.Bookings, AccountBooking{
+		row := AccountBooking{
+			ID:     b.ID,
 			When:   b.SlotStart.In(a.Timezone).Format("Mon, Jan 2 2006 · 3:04 PM"),
 			Status: b.Status,
-		})
+		}
+		if !b.RescheduleAcknowledged && b.PreviousSlotStart != nil {
+			row.WasRescheduled = true
+			row.PreviousWhen = b.PreviousSlotStart.In(a.Timezone).Format("Mon, Jan 2 2006 · 3:04 PM")
+		}
+		data.Bookings = append(data.Bookings, row)
 	}
 	for _, p := range purchases {
 		course, err := a.Courses.GetByID(ctx, p.CourseID)

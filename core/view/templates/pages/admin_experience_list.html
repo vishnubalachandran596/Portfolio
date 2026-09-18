@@ -1,0 +1,33 @@
+{{define "content"}}
+<section class="section">
+  <div class="container">
+    <div class="section-header-row">
+      <h1>Experience</h1>
+      <a class="btn btn-primary" href="/admin/experience/new">Add Experience</a>
+    </div>
+    {{if .Experience}}
+    <table class="admin-table">
+      <thead><tr><th>Company</th><th>Role</th><th>Dates</th><th>Sort</th><th></th></tr></thead>
+      <tbody>
+        {{range .Experience}}
+        <tr>
+          <td>{{.Company}}</td>
+          <td>{{.Role}}</td>
+          <td>{{.StartDate}} — {{if .EndDate}}{{.EndDate}}{{else}}Present{{end}}</td>
+          <td>{{.SortOrder}}</td>
+          <td class="admin-table-actions">
+            <a class="link-button" href="/admin/experience/{{.ID}}/edit">Edit</a>
+            <form method="POST" action="/admin/experience/{{.ID}}/delete" onsubmit="return confirm('Delete this experience entry?');">
+              <button type="submit" class="link-button danger">Delete</button>
+            </form>
+          </td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+    {{else}}
+    <p class="empty-state">No experience entries yet.</p>
+    {{end}}
+  </div>
+</section>
+{{end}}

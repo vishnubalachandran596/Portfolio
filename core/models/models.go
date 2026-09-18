@@ -163,19 +163,22 @@ const (
 )
 
 type Booking struct {
-	ID                int64
-	UserID            int64
-	Name              string
-	Email             string
-	Message           string
-	SlotStart         time.Time
-	SlotEnd           time.Time
-	Status            string
-	AmountCents       int
-	Currency          string
-	RazorpayOrderID   string
-	RazorpayPaymentID string
-	CreatedAt         time.Time
+	ID                     int64
+	UserID                 int64
+	Name                   string
+	Email                  string
+	Message                string
+	SlotStart              time.Time
+	SlotEnd                time.Time
+	Status                 string
+	AmountCents            int
+	Currency               string
+	RazorpayOrderID        string
+	RazorpayPaymentID      string
+	PreviousSlotStart      *time.Time
+	RescheduledAt          *time.Time
+	RescheduleAcknowledged bool
+	CreatedAt              time.Time
 }
 
 // Consultancy is a single paid 1:1 offering (not stored per-row like a

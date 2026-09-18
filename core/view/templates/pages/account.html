@@ -30,13 +30,27 @@
   <div class="container">
     <h2 class="section-title">My Bookings</h2>
     {{if .Bookings}}
+    {{range .Bookings}}
+    {{if .WasRescheduled}}
+    <div class="reschedule-notice">
+      <p><strong>Your booking was rescheduled.</strong> Was {{.PreviousWhen}} — now <strong>{{.When}}</strong>.</p>
+      <div class="reschedule-notice-actions">
+        <form method="POST" action="/account/bookings/{{.ID}}/acknowledge">
+          <button type="submit" class="btn btn-secondary btn-sm">That works for me</button>
+        </form>
+        <a class="btn btn-primary btn-sm" href="/account/bookings/{{.ID}}/reschedule">Pick a different time</a>
+      </div>
+    </div>
+    {{end}}
+    {{end}}
     <table class="admin-table">
-      <thead><tr><th>When</th><th>Status</th></tr></thead>
+      <thead><tr><th>When</th><th>Status</th><th></th></tr></thead>
       <tbody>
         {{range .Bookings}}
         <tr>
           <td>{{.When}}</td>
           <td><span class="status-badge status-{{.Status}}">{{.Status}}</span></td>
+          <td>{{if eq .Status "confirmed"}}<a class="link-button" href="/account/bookings/{{.ID}}/reschedule">Reschedule</a>{{end}}</td>
         </tr>
         {{end}}
       </tbody>

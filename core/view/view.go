@@ -80,6 +80,7 @@ func New() (*Renderer, error) {
 		"templates/pages/article_detail.html",
 		"templates/pages/contact.html",
 		"templates/pages/account.html",
+		"templates/pages/account_reschedule.html",
 		"templates/pages/login.html",
 		"templates/pages/search.html",
 		"templates/pages/legal.html",
@@ -91,11 +92,19 @@ func New() (*Renderer, error) {
 		"templates/pages/admin_courses_list.html",
 		"templates/pages/admin_course_form.html",
 		"templates/pages/admin_bookings.html",
+		"templates/pages/admin_booking_reschedule.html",
 		"templates/pages/admin_purchases.html",
+		"templates/pages/admin_payments_list.html",
 		"templates/pages/admin_availability.html",
 		"templates/pages/admin_profile.html",
 		"templates/pages/admin_articles_list.html",
 		"templates/pages/admin_article_form.html",
+		"templates/pages/admin_users_list.html",
+		"templates/pages/admin_user_detail.html",
+		"templates/pages/admin_skills_list.html",
+		"templates/pages/admin_skill_form.html",
+		"templates/pages/admin_experience_list.html",
+		"templates/pages/admin_experience_form.html",
 	}
 
 	r := &Renderer{pages: map[string]renderEntry{}}

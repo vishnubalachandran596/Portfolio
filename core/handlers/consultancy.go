@@ -46,21 +46,12 @@ type BookingData struct {
 // and shows the consultancy price up front before any slot is picked.
 func (a *App) BookingPage(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	rules, err := a.Availability.ListActive(ctx)
+	days, err := a.availableDays(r)
 	if err != nil {
 		a.serverError(w, "load availability", err)
 		return
 	}
 
-	from := time.Now().In(a.Timezone)
-	to := from.AddDate(0, 0, 15)
-	taken, err := a.Bookings.BookedSlots(ctx, from, to)
-	if err != nil {
-		a.serverError(w, "load bookings", err)
-		return
-	}
-
-	days := scheduler.ComputeDays(rules, taken, a.Timezone, 14)
 	base := a.base(r, "Book Consultancy — "+a.Cfg.SiteName, "Book a 1:1 consultancy session.", "consultancy")
 	currency, cents := models.ConsultancyRegionalPrice(base.Country)
 

@@ -101,6 +101,26 @@ func (r *PurchaseRepo) MarkPaid(ctx context.Context, orderID, paymentID string) 
 	return nil
 }
 
+// ListByUserID returns every purchase (any status) made by a given
+// account, newest first — for the admin's per-user detail view.
+func (r *PurchaseRepo) ListByUserID(ctx context.Context, userID int64) ([]models.Purchase, error) {
+	rows, err := r.db.QueryContext(ctx, `SELECT `+purchaseColumns+` FROM purchases WHERE user_id = $1 ORDER BY created_at DESC`, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var out []models.Purchase
+	for rows.Next() {
+		p, err := scanPurchase(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, p)
+	}
+	return out, rows.Err()
+}
+
 func (r *PurchaseRepo) ListAll(ctx context.Context) ([]models.Purchase, error) {
 	rows, err := r.db.QueryContext(ctx, `SELECT `+purchaseColumns+` FROM purchases ORDER BY created_at DESC`)
 	if err != nil {

@@ -1,0 +1,29 @@
+{{define "content"}}
+<section class="section">
+  <div class="container">
+    <div class="section-header-row">
+      <h1>Payments</h1>
+      <p class="hero-subtitle">Total received: <strong>{{.Total}}</strong></p>
+    </div>
+    {{if .Payments}}
+    <table class="admin-table">
+      <thead><tr><th>When</th><th>Type</th><th>Description</th><th>Email</th><th>Amount</th><th>Payment ID</th></tr></thead>
+      <tbody>
+        {{range .Payments}}
+        <tr>
+          <td>{{.When}}</td>
+          <td>{{.Type}}</td>
+          <td>{{.Description}}</td>
+          <td>{{.Email}}</td>
+          <td>{{.Amount}}</td>
+          <td>{{.PaymentID}}</td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+    {{else}}
+    <p class="empty-state">No payments received yet.</p>
+    {{end}}
+  </div>
+</section>
+{{end}}

@@ -1,0 +1,56 @@
+{{define "content"}}
+<section class="section">
+  <div class="container">
+    <p class="eyebrow"><a href="/admin/users">← Users</a></p>
+    <div class="section-header-row">
+      <h1>{{.User.Name}}</h1>
+      {{if .IsAdmin}}
+      <form method="POST" action="/admin/users/{{.User.ID}}/demote" onsubmit="return confirm('Remove admin access for this user?');">
+        <button type="submit" class="btn btn-secondary" {{if not .CanDemote}}disabled title="Can't remove the last admin"{{end}}>Remove admin access</button>
+      </form>
+      {{else}}
+      <form method="POST" action="/admin/users/{{.User.ID}}/promote">
+        <button type="submit" class="btn btn-primary">Make admin</button>
+      </form>
+      {{end}}
+    </div>
+    <p class="hero-subtitle">{{.User.Email}} · Joined {{formatDate .User.CreatedAt}}{{if .IsAdmin}} · <span class="status-badge status-confirmed">Admin</span>{{end}}</p>
+
+    <h2>Bookings</h2>
+    {{if .Bookings}}
+    <table class="admin-table">
+      <thead><tr><th>When</th><th>Status</th></tr></thead>
+      <tbody>
+        {{range .Bookings}}
+        <tr>
+          <td>{{.When}}</td>
+          <td><span class="status-badge status-{{.Status}}">{{.Status}}</span></td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+    {{else}}
+    <p class="empty-state">No bookings yet.</p>
+    {{end}}
+
+    <h2>Course purchases</h2>
+    {{if .Purchases}}
+    <table class="admin-table">
+      <thead><tr><th>Course</th><th>Amount</th><th>Status</th><th>When</th></tr></thead>
+      <tbody>
+        {{range .Purchases}}
+        <tr>
+          <td>{{.CourseTitle}}</td>
+          <td>{{.Amount}}</td>
+          <td><span class="status-badge status-{{if eq .Status "paid"}}confirmed{{else if eq .Status "failed"}}cancelled{{else}}pending{{end}}">{{.Status}}</span></td>
+          <td>{{.When}}</td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+    {{else}}
+    <p class="empty-state">No course purchases yet.</p>
+    {{end}}
+  </div>
+</section>
+{{end}}

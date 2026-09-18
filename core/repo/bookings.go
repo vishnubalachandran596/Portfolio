@@ -14,14 +14,22 @@ type BookingRepo struct{ db *sql.DB }
 
 func NewBookingRepo(db *sql.DB) *BookingRepo { return &BookingRepo{db: db} }
 
-const bookingColumns = `id, user_id, name, email, message, slot_start, slot_end, status, amount_cents, currency, razorpay_order_id, razorpay_payment_id, created_at`
+const bookingColumns = `id, user_id, name, email, message, slot_start, slot_end, status, amount_cents, currency, razorpay_order_id, razorpay_payment_id, previous_slot_start, rescheduled_at, reschedule_acknowledged, created_at`
 
 func scanBooking(row interface{ Scan(...any) error }) (models.Booking, error) {
 	var b models.Booking
 	var userID sql.NullInt64
+	var prevSlot, rescheduledAt sql.NullTime
 	err := row.Scan(&b.ID, &userID, &b.Name, &b.Email, &b.Message, &b.SlotStart, &b.SlotEnd, &b.Status,
-		&b.AmountCents, &b.Currency, &b.RazorpayOrderID, &b.RazorpayPaymentID, &b.CreatedAt)
+		&b.AmountCents, &b.Currency, &b.RazorpayOrderID, &b.RazorpayPaymentID,
+		&prevSlot, &rescheduledAt, &b.RescheduleAcknowledged, &b.CreatedAt)
 	b.UserID = userID.Int64
+	if prevSlot.Valid {
+		b.PreviousSlotStart = &prevSlot.Time
+	}
+	if rescheduledAt.Valid {
+		b.RescheduledAt = &rescheduledAt.Time
+	}
 	return b, err
 }
 
@@ -103,6 +111,76 @@ func (r *BookingRepo) ListAll(ctx context.Context) ([]models.Booking, error) {
 	}
 	defer rows.Close()
 	return scanBookings(rows)
+}
+
+func (r *BookingRepo) GetByID(ctx context.Context, id int64) (models.Booking, error) {
+	b, err := scanBooking(r.db.QueryRowContext(ctx, `SELECT `+bookingColumns+` FROM bookings WHERE id = $1`, id))
+	if errors.Is(err, sql.ErrNoRows) {
+		return models.Booking{}, ErrNotFound
+	}
+	return b, err
+}
+
+// Reschedule moves a confirmed booking to a new slot, admin-initiated:
+// records the old slot and marks the change unacknowledged so /account can
+// surface a notice until the visitor sees it and either accepts it or
+// picks a different time themselves. ErrSlotTaken if the new slot is
+// already claimed by another booking.
+func (r *BookingRepo) Reschedule(ctx context.Context, id int64, newStart, newEnd time.Time) error {
+	res, err := r.db.ExecContext(ctx, `
+		UPDATE bookings
+		SET previous_slot_start = slot_start, slot_start = $1, slot_end = $2,
+		    rescheduled_at = now(), reschedule_acknowledged = FALSE
+		WHERE id = $3`,
+		newStart, newEnd, id)
+	if err != nil {
+		if isUniqueViolation(err) {
+			return ErrSlotTaken
+		}
+		return err
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if n == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
+// SelfReschedule lets the booking's own account move it to a different
+// available slot — e.g. after an admin-initiated reschedule doesn't work
+// for them — scoped to user_id so they can't touch someone else's
+// booking. Clears any pending reschedule notice since this is now their
+// own deliberate choice.
+func (r *BookingRepo) SelfReschedule(ctx context.Context, id, userID int64, newStart, newEnd time.Time) error {
+	res, err := r.db.ExecContext(ctx, `
+		UPDATE bookings
+		SET slot_start = $1, slot_end = $2, reschedule_acknowledged = TRUE
+		WHERE id = $3 AND user_id = $4`,
+		newStart, newEnd, id, userID)
+	if err != nil {
+		if isUniqueViolation(err) {
+			return ErrSlotTaken
+		}
+		return err
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if n == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
+// AcknowledgeReschedule dismisses the reschedule notice on the visitor's
+// own booking without changing the slot.
+func (r *BookingRepo) AcknowledgeReschedule(ctx context.Context, id, userID int64) error {
+	_, err := r.db.ExecContext(ctx, `UPDATE bookings SET reschedule_acknowledged = TRUE WHERE id = $1 AND user_id = $2`, id, userID)
+	return err
 }
 
 func scanBookings(rows *sql.Rows) ([]models.Booking, error) {

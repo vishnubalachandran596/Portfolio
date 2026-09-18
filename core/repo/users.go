@@ -35,6 +35,26 @@ func (r *UserRepo) GetByID(ctx context.Context, id int64) (models.User, error) {
 	return u, err
 }
 
+// ListAll returns every registered visitor account, newest first — for
+// the admin Users list.
+func (r *UserRepo) ListAll(ctx context.Context) ([]models.User, error) {
+	rows, err := r.db.QueryContext(ctx, `SELECT id, email, password_hash, name, created_at FROM users ORDER BY created_at DESC`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var out []models.User
+	for rows.Next() {
+		u, err := scanUser(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, u)
+	}
+	return out, rows.Err()
+}
+
 // ErrEmailTaken is returned by Create when the email is already registered.
 var ErrEmailTaken = errors.New("email already registered")
 

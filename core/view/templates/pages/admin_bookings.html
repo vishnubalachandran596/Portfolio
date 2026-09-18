@@ -22,6 +22,7 @@
                 <option value="cancelled" {{if eq .Status "cancelled"}}selected{{end}}>Cancelled</option>
               </select>
             </form>
+            {{if eq .Status "confirmed"}}<a class="link-button" href="/admin/bookings/{{.ID}}/reschedule">Reschedule</a>{{end}}
           </td>
         </tr>
         {{end}}

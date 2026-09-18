@@ -3,6 +3,7 @@ package repo
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"strings"
 
 	"github.com/vishnubalachandran596/portfolio/core/models"
@@ -66,6 +67,41 @@ func (r *SkillGroupRepo) List(ctx context.Context) ([]models.SkillGroup, error) 
 	return out, rows.Err()
 }
 
+func (r *SkillGroupRepo) GetByID(ctx context.Context, id int64) (models.SkillGroup, error) {
+	var g models.SkillGroup
+	var items string
+	err := r.db.QueryRowContext(ctx, `SELECT id, category, level, achievement, items, sort_order FROM skill_groups WHERE id = $1`, id).
+		Scan(&g.ID, &g.Category, &g.Level, &g.Achievement, &items, &g.SortOrder)
+	if errors.Is(err, sql.ErrNoRows) {
+		return models.SkillGroup{}, ErrNotFound
+	}
+	g.Items = splitNonEmpty(items, ",")
+	return g, err
+}
+
+func (r *SkillGroupRepo) Create(ctx context.Context, g models.SkillGroup) (int64, error) {
+	var id int64
+	err := r.db.QueryRowContext(ctx, `
+		INSERT INTO skill_groups (category, level, achievement, items, sort_order)
+		VALUES ($1,$2,$3,$4,$5) RETURNING id`,
+		g.Category, g.Level, g.Achievement, strings.Join(g.Items, ","), g.SortOrder,
+	).Scan(&id)
+	return id, err
+}
+
+func (r *SkillGroupRepo) Update(ctx context.Context, g models.SkillGroup) error {
+	_, err := r.db.ExecContext(ctx, `
+		UPDATE skill_groups SET category=$1, level=$2, achievement=$3, items=$4, sort_order=$5 WHERE id=$6`,
+		g.Category, g.Level, g.Achievement, strings.Join(g.Items, ","), g.SortOrder, g.ID,
+	)
+	return err
+}
+
+func (r *SkillGroupRepo) Delete(ctx context.Context, id int64) error {
+	_, err := r.db.ExecContext(ctx, `DELETE FROM skill_groups WHERE id = $1`, id)
+	return err
+}
+
 type ExperienceRepo struct{ db *sql.DB }
 
 func NewExperienceRepo(db *sql.DB) *ExperienceRepo { return &ExperienceRepo{db: db} }
@@ -90,6 +126,41 @@ func (r *ExperienceRepo) List(ctx context.Context) ([]models.Experience, error) 
 		out = append(out, e)
 	}
 	return out, rows.Err()
+}
+
+func (r *ExperienceRepo) GetByID(ctx context.Context, id int64) (models.Experience, error) {
+	var e models.Experience
+	var bullets string
+	err := r.db.QueryRowContext(ctx, `SELECT id, company, role, location, start_date, end_date, bullets, sort_order FROM experiences WHERE id = $1`, id).
+		Scan(&e.ID, &e.Company, &e.Role, &e.Location, &e.StartDate, &e.EndDate, &bullets, &e.SortOrder)
+	if errors.Is(err, sql.ErrNoRows) {
+		return models.Experience{}, ErrNotFound
+	}
+	e.Bullets = splitNonEmpty(bullets, "\n")
+	return e, err
+}
+
+func (r *ExperienceRepo) Create(ctx context.Context, e models.Experience) (int64, error) {
+	var id int64
+	err := r.db.QueryRowContext(ctx, `
+		INSERT INTO experiences (company, role, location, start_date, end_date, bullets, sort_order)
+		VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id`,
+		e.Company, e.Role, e.Location, e.StartDate, e.EndDate, strings.Join(e.Bullets, "\n"), e.SortOrder,
+	).Scan(&id)
+	return id, err
+}
+
+func (r *ExperienceRepo) Update(ctx context.Context, e models.Experience) error {
+	_, err := r.db.ExecContext(ctx, `
+		UPDATE experiences SET company=$1, role=$2, location=$3, start_date=$4, end_date=$5, bullets=$6, sort_order=$7 WHERE id=$8`,
+		e.Company, e.Role, e.Location, e.StartDate, e.EndDate, strings.Join(e.Bullets, "\n"), e.SortOrder, e.ID,
+	)
+	return err
+}
+
+func (r *ExperienceRepo) Delete(ctx context.Context, id int64) error {
+	_, err := r.db.ExecContext(ctx, `DELETE FROM experiences WHERE id = $1`, id)
+	return err
 }
 
 type EducationRepo struct{ db *sql.DB }

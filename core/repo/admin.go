@@ -41,3 +41,31 @@ func (r *AdminRepo) UpdatePassword(ctx context.Context, id int64, passwordHash s
 	_, err := r.db.ExecContext(ctx, `UPDATE admins SET password_hash = $1 WHERE id = $2`, passwordHash, id)
 	return err
 }
+
+// ListAll returns every admin account — used to check whether a given
+// visitor email is already an admin, and to guard against demoting the
+// last one.
+func (r *AdminRepo) ListAll(ctx context.Context) ([]models.Admin, error) {
+	rows, err := r.db.QueryContext(ctx, `SELECT id, email, password_hash, name, created_at FROM admins ORDER BY created_at`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var out []models.Admin
+	for rows.Next() {
+		var a models.Admin
+		if err := rows.Scan(&a.ID, &a.Email, &a.PasswordHash, &a.Name, &a.CreatedAt); err != nil {
+			return nil, err
+		}
+		out = append(out, a)
+	}
+	return out, rows.Err()
+}
+
+// Delete removes an admin account (demote). Callers should never let the
+// last remaining admin be removed.
+func (r *AdminRepo) Delete(ctx context.Context, id int64) error {
+	_, err := r.db.ExecContext(ctx, `DELETE FROM admins WHERE id = $1`, id)
+	return err
+}
