@@ -129,6 +129,7 @@ type CourseDetailData struct {
 	ResolvedMinCents   int
 	ResolvedMinWhole   int
 	ResolvedMinDisplay string
+	UserEmail          string
 }
 
 func (a *App) CourseDetail(w http.ResponseWriter, r *http.Request) {
@@ -156,6 +157,13 @@ func (a *App) CourseDetail(w http.ResponseWriter, r *http.Request) {
 
 	currency, minCents := course.RegionalPrice(base.Country)
 
+	userEmail := ""
+	if uid, ok := a.Auth.UserID(r); ok {
+		if u, err := a.Users.GetByID(r.Context(), uid); err == nil {
+			userEmail = u.Email
+		}
+	}
+
 	a.View.Render(w, http.StatusOK, "course_detail", CourseDetailData{
 		BaseData:           base,
 		Course:             course,
@@ -168,6 +176,7 @@ func (a *App) CourseDetail(w http.ResponseWriter, r *http.Request) {
 		ResolvedMinCents:   minCents,
 		ResolvedMinWhole:   minCents / 100,
 		ResolvedMinDisplay: models.FormatMoney(minCents, currency),
+		UserEmail:          userEmail,
 	})
 }
 

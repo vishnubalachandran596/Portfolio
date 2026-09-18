@@ -206,7 +206,7 @@
       }
 
       var email = emailInput ? emailInput.value.trim() : "";
-      if (!email || email.indexOf("@") === -1) {
+      if (emailInput && (!email || email.indexOf("@") === -1)) {
         showError("Please enter a valid email.");
         return;
       }

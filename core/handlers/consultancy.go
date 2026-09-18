@@ -97,7 +97,10 @@ func (a *App) BookingCheckoutOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := r.ParseForm(); err != nil {
+	// See the matching comment in checkout.go's CheckoutCreateOrder: this
+	// form is submitted via fetch() with a FormData body (multipart), so
+	// ParseMultipartForm is required — plain ParseForm never reads it.
+	if err := r.ParseMultipartForm(1 << 20); err != nil && err != http.ErrNotMultipart {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Invalid form submission."})
 		return
 	}

@@ -22,9 +22,13 @@
         <p class="purchase-box-title">Unlock this course</p>
         <p class="purchase-box-sub">Pay-what-you-want — {{.ResolvedMinDisplay}} minimum{{if eq .Country "IN"}} (India pricing){{end}}.</p>
         <div id="purchase-error" class="alert alert-error" hidden></div>
+        {{if .UserEmail}}
+        <p class="purchase-box-sub">Access will be sent to <strong>{{.UserEmail}}</strong>.</p>
+        {{else}}
         <label>Your email <span class="optional">(access is sent here)</span>
           <input type="email" id="purchase-email" required>
         </label>
+        {{end}}
         <label>Contribution ({{.ResolvedCurrency}})
           <input type="number" id="purchase-amount" min="{{.ResolvedMinWhole}}" step="1" value="{{.ResolvedMinWhole}}">
         </label>

@@ -52,24 +52,33 @@ func (a *App) CheckoutCreateOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := r.ParseForm(); err != nil {
+	// The purchase widget submits via fetch() with a FormData body, which
+	// the browser always sends as multipart/form-data — ParseForm alone
+	// never reads that (it only parses application/x-www-form-urlencoded),
+	// so ParseMultipartForm is required here. ErrNotMultipart just means a
+	// urlencoded body came in instead, which ParseMultipartForm already
+	// parsed via its own internal ParseForm call.
+	if err := r.ParseMultipartForm(1 << 20); err != nil && err != http.ErrNotMultipart {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Invalid form submission."})
 		return
 	}
 	email := strings.TrimSpace(r.FormValue("email"))
-	if email == "" || !strings.Contains(email, "@") {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "A valid email is required."})
-		return
-	}
 	// Logged-in buyers get the purchase tied to their account (so it shows
 	// up under /account) and their session email always wins over whatever
 	// was typed in the form, so "my courses" can't drift from who's paying.
+	// The widget doesn't even ask a logged-in visitor for their email (see
+	// course_detail.html), so the submitted email is only required — and
+	// only trusted — for a guest checkout.
 	var userID int64
 	if uid, ok := a.Auth.UserID(r); ok {
 		userID = uid
 		if u, err := a.Users.GetByID(r.Context(), uid); err == nil {
 			email = u.Email
 		}
+	}
+	if email == "" || !strings.Contains(email, "@") {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "A valid email is required."})
+		return
 	}
 	// Currency and the minimum floor are resolved server-side from the
 	// visitor's own detected region (never from anything the client
