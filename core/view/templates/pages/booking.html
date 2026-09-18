@@ -40,6 +40,9 @@
       <label>Anything you'd like to cover? <span class="optional">(optional)</span>
         <textarea id="booking-message" rows="3" maxlength="1000"></textarea>
       </label>
+      <label>Promo code <span class="optional">(optional)</span>
+        <input type="text" id="booking-promo-code" autocapitalize="characters">
+      </label>
       <div id="booking-error" class="alert alert-error" hidden></div>
       <button type="button" class="btn btn-primary" id="booking-pay-btn"
         data-amount-cents="{{.AmountCents}}" data-currency="{{.Currency}}" data-key-id="{{.KeyID}}"

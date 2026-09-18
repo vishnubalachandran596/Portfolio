@@ -105,6 +105,8 @@ func New() (*Renderer, error) {
 		"templates/pages/admin_skill_form.html",
 		"templates/pages/admin_experience_list.html",
 		"templates/pages/admin_experience_form.html",
+		"templates/pages/admin_promo_list.html",
+		"templates/pages/admin_promo_form.html",
 	}
 
 	r := &Renderer{pages: map[string]renderEntry{}}

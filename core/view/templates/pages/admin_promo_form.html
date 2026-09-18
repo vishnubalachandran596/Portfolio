@@ -1,0 +1,67 @@
+{{define "content"}}
+<section class="section">
+  <div class="container">
+    <h1>{{if .IsNew}}Add Promo Code{{else}}Edit Promo Code{{end}}</h1>
+    {{if .Error}}<div class="alert alert-error">{{.Error}}</div>{{end}}
+    <form method="POST" action="{{if .IsNew}}/admin/promo-codes/new{{else}}/admin/promo-codes/{{.Promo.ID}}/edit{{end}}" class="admin-form">
+      <label>Code
+        <input type="text" name="code" value="{{.Promo.Code}}" placeholder="e.g. LAUNCH25" required>
+      </label>
+      <label>Description <span class="optional">optional, for your own reference</span>
+        <input type="text" name="description" value="{{.Promo.Description}}">
+      </label>
+
+      <fieldset class="form-fieldset">
+        <legend>Applies to</legend>
+        <label class="checkbox-label">
+          <input type="radio" name="product" value="course" {{if ne .Promo.Product "consultancy"}}checked{{end}}>
+          Courses
+        </label>
+        <label class="checkbox-label">
+          <input type="radio" name="product" value="consultancy" {{if eq .Promo.Product "consultancy"}}checked{{end}}>
+          Consultancy bookings
+        </label>
+      </fieldset>
+
+      <fieldset class="form-fieldset">
+        <legend>Course scope <span class="optional">(only used when "Courses" is selected above)</span></legend>
+        <label class="checkbox-label">
+          <input type="checkbox" name="applies_to_all_courses" {{if .Promo.AppliesToAllCourses}}checked{{end}}>
+          Applies to all courses
+        </label>
+        {{if .Courses}}
+        <div class="promo-course-list">
+          {{range .Courses}}
+          <label class="checkbox-label">
+            <input type="checkbox" name="course_ids" value="{{.ID}}" {{if $.Promo.HasCourse .ID}}checked{{end}}>
+            {{.Title}}
+          </label>
+          {{end}}
+        </div>
+        {{end}}
+      </fieldset>
+
+      <div class="form-row">
+        <label>Discount (%)
+          <input type="number" name="discount_percent" value="{{.Promo.DiscountPercent}}" min="1" max="100" required>
+        </label>
+        <label>Max redemptions <span class="optional">0 = unlimited</span>
+          <input type="number" name="max_redemptions" value="{{.Promo.MaxRedemptions}}" min="0">
+        </label>
+      </div>
+      <label>Expires <span class="optional">required</span>
+        <input type="datetime-local" name="expires_at" value="{{.ExpiresAtValue}}" required>
+      </label>
+      <label class="checkbox-label">
+        <input type="checkbox" name="is_active" {{if or .IsNew .Promo.IsActive}}checked{{end}}>
+        Active
+      </label>
+
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary" data-loading-text="Saving…">Save Promo Code</button>
+        <a class="btn btn-secondary" href="/admin/promo-codes">Cancel</a>
+      </div>
+    </form>
+  </div>
+</section>
+{{end}}

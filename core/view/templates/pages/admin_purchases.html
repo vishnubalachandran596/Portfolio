@@ -4,7 +4,7 @@
     <h1>Purchases</h1>
     {{if .Purchases}}
     <table class="admin-table">
-      <thead><tr><th>When</th><th>Course</th><th>Email</th><th>Amount</th><th>Status</th></tr></thead>
+      <thead><tr><th>When</th><th>Course</th><th>Email</th><th>Amount</th><th>Promo</th><th>Status</th></tr></thead>
       <tbody>
         {{range .Purchases}}
         <tr>
@@ -12,6 +12,7 @@
           <td>{{with index $.Courses .CourseID}}{{.Title}}{{else}}—{{end}}</td>
           <td>{{.Email}}</td>
           <td>{{money .AmountCents .Currency}}</td>
+          <td>{{if .PromoCode}}{{.PromoCode}} (-{{money .DiscountCents .Currency}}){{else}}—{{end}}</td>
           <td><span class="status-badge status-{{if eq .Status "paid"}}confirmed{{else if eq .Status "failed"}}cancelled{{else}}pending{{end}}">{{.Status}}</span></td>
         </tr>
         {{end}}

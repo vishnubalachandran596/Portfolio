@@ -128,6 +128,13 @@ func (a *App) BookingCheckoutOrder(w http.ResponseWriter, r *http.Request) {
 
 	currency, cents := models.ConsultancyRegionalPrice(geo.CountryFromRequest(r))
 
+	discountCents, promo, perr := a.resolvePromoCode(ctx, r.FormValue("promo_code"), models.PromoProductConsultancy, 0, cents)
+	if perr != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "That promo code isn't valid."})
+		return
+	}
+	cents -= discountCents
+
 	receipt := fmt.Sprintf("booking-%d-%d", uid, time.Now().UnixNano())
 	orderID, err := a.Razorpay.CreateOrder(cents, currency, receipt)
 	if err != nil {
@@ -136,7 +143,7 @@ func (a *App) BookingCheckoutOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = a.Bookings.CreatePending(ctx, models.Booking{
+	booking := models.Booking{
 		UserID:          uid,
 		Name:            user.Name,
 		Email:           user.Email,
@@ -146,7 +153,13 @@ func (a *App) BookingCheckoutOrder(w http.ResponseWriter, r *http.Request) {
 		AmountCents:     cents,
 		Currency:        currency,
 		RazorpayOrderID: orderID,
-	})
+		DiscountCents:   discountCents,
+	}
+	if promo != nil {
+		booking.PromoCodeID = &promo.ID
+		booking.PromoCode = promo.Code
+	}
+	_, err = a.Bookings.CreatePending(ctx, booking)
 	if err != nil {
 		if err == repo.ErrSlotTaken {
 			writeJSON(w, http.StatusConflict, map[string]string{"error": "That time was just booked by someone else, please pick another."})
@@ -190,9 +203,18 @@ func (a *App) BookingCheckoutVerify(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if booking, berr := a.Bookings.GetByRazorpayOrderID(r.Context(), body.OrderID); berr == nil {
-		a.Telegram.Send(fmt.Sprintf("📅 Consultancy booking\nName: %s\nEmail: %s\nWhen: %s\nAmount: %s",
+		if booking.PromoCodeID != nil {
+			if err := a.PromoCodes.IncrementRedemption(r.Context(), *booking.PromoCodeID); err != nil {
+				log.Printf("increment promo redemption: %v", err)
+			}
+		}
+		promoLine := ""
+		if booking.PromoCode != "" {
+			promoLine = fmt.Sprintf("\nPromo: %s (-%s)", booking.PromoCode, models.FormatMoney(booking.DiscountCents, booking.Currency))
+		}
+		a.Telegram.Send(fmt.Sprintf("📅 Consultancy booking\nName: %s\nEmail: %s\nWhen: %s\nAmount: %s%s",
 			booking.Name, booking.Email, booking.SlotStart.In(a.Timezone).Format("Mon, Jan 2 · 3:04 PM MST"),
-			models.FormatMoney(booking.AmountCents, booking.Currency)))
+			models.FormatMoney(booking.AmountCents, booking.Currency), promoLine))
 	}
 
 	writeJSON(w, http.StatusOK, map[string]string{"redirect": "/booking?booked=1"})

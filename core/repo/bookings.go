@@ -14,21 +14,25 @@ type BookingRepo struct{ db *sql.DB }
 
 func NewBookingRepo(db *sql.DB) *BookingRepo { return &BookingRepo{db: db} }
 
-const bookingColumns = `id, user_id, name, email, message, slot_start, slot_end, status, amount_cents, currency, razorpay_order_id, razorpay_payment_id, previous_slot_start, rescheduled_at, reschedule_acknowledged, created_at`
+const bookingColumns = `id, user_id, name, email, message, slot_start, slot_end, status, amount_cents, currency, razorpay_order_id, razorpay_payment_id, previous_slot_start, rescheduled_at, reschedule_acknowledged, promo_code_id, promo_code, discount_cents, created_at`
 
 func scanBooking(row interface{ Scan(...any) error }) (models.Booking, error) {
 	var b models.Booking
 	var userID sql.NullInt64
 	var prevSlot, rescheduledAt sql.NullTime
+	var promoCodeID sql.NullInt64
 	err := row.Scan(&b.ID, &userID, &b.Name, &b.Email, &b.Message, &b.SlotStart, &b.SlotEnd, &b.Status,
 		&b.AmountCents, &b.Currency, &b.RazorpayOrderID, &b.RazorpayPaymentID,
-		&prevSlot, &rescheduledAt, &b.RescheduleAcknowledged, &b.CreatedAt)
+		&prevSlot, &rescheduledAt, &b.RescheduleAcknowledged, &promoCodeID, &b.PromoCode, &b.DiscountCents, &b.CreatedAt)
 	b.UserID = userID.Int64
 	if prevSlot.Valid {
 		b.PreviousSlotStart = &prevSlot.Time
 	}
 	if rescheduledAt.Valid {
 		b.RescheduledAt = &rescheduledAt.Time
+	}
+	if promoCodeID.Valid {
+		b.PromoCodeID = &promoCodeID.Int64
 	}
 	return b, err
 }
@@ -42,11 +46,15 @@ var ErrSlotTaken = errors.New("slot already booked")
 // the UNIQUE(slot_start) constraint rejects a racing second buyer.
 func (r *BookingRepo) CreatePending(ctx context.Context, b models.Booking) (int64, error) {
 	var id int64
+	var promoCodeID any
+	if b.PromoCodeID != nil {
+		promoCodeID = *b.PromoCodeID
+	}
 	err := r.db.QueryRowContext(ctx, `
-		INSERT INTO bookings (user_id, name, email, message, slot_start, slot_end, status, amount_cents, currency, razorpay_order_id)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id`,
+		INSERT INTO bookings (user_id, name, email, message, slot_start, slot_end, status, amount_cents, currency, razorpay_order_id, promo_code_id, promo_code, discount_cents)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING id`,
 		b.UserID, b.Name, b.Email, b.Message, b.SlotStart, b.SlotEnd, models.BookingStatusPendingPayment,
-		b.AmountCents, b.Currency, b.RazorpayOrderID,
+		b.AmountCents, b.Currency, b.RazorpayOrderID, promoCodeID, b.PromoCode, b.DiscountCents,
 	).Scan(&id)
 	if err != nil && isUniqueViolation(err) {
 		return 0, ErrSlotTaken

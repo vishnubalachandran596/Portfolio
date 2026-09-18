@@ -766,6 +766,24 @@ input:focus, textarea:focus, select:focus {
 .form-actions { display: flex; gap: 12px; }
 @media (max-width: 560px) { .form-row { grid-template-columns: 1fr; } }
 
+.form-fieldset {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.form-fieldset legend { padding: 0 6px; font-size: 0.9rem; font-weight: 600; color: var(--color-text-muted); }
+.promo-course-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 220px;
+  overflow-y: auto;
+  padding-top: 4px;
+}
+
 /* Login / signup */
 .auth-container { max-width: 420px; }
 .btn-google {

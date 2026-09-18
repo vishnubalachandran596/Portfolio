@@ -7,7 +7,7 @@
     </div>
     {{if .Payments}}
     <table class="admin-table">
-      <thead><tr><th>When</th><th>Type</th><th>Description</th><th>Email</th><th>Amount</th><th>Payment ID</th></tr></thead>
+      <thead><tr><th>When</th><th>Type</th><th>Description</th><th>Email</th><th>Amount</th><th>Promo</th><th>Payment ID</th></tr></thead>
       <tbody>
         {{range .Payments}}
         <tr>
@@ -16,6 +16,7 @@
           <td>{{.Description}}</td>
           <td>{{.Email}}</td>
           <td>{{.Amount}}</td>
+          <td>{{if .PromoCode}}{{.PromoCode}} (-{{.Discount}}){{else}}—{{end}}</td>
           <td>{{.PaymentID}}</td>
         </tr>
         {{end}}

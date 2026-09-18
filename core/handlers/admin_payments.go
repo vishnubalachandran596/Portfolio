@@ -15,6 +15,8 @@ type adminPaymentRow struct {
 	Email       string
 	Amount      string
 	PaymentID   string
+	PromoCode   string
+	Discount    string
 }
 
 type AdminPaymentsListData struct {
@@ -53,7 +55,7 @@ func (a *App) AdminPaymentsList(w http.ResponseWriter, r *http.Request) {
 		if cerr == nil {
 			title = course.Title
 		}
-		rows = append(rows, adminPaymentRow{
+		row := adminPaymentRow{
 			When:        p.PaidAt.In(a.Timezone).Format("Jan 2, 2006 · 3:04 PM"),
 			whenSort:    p.PaidAt.Unix(),
 			Type:        "Course",
@@ -61,14 +63,19 @@ func (a *App) AdminPaymentsList(w http.ResponseWriter, r *http.Request) {
 			Email:       p.Email,
 			Amount:      models.FormatMoney(p.AmountCents, p.Currency),
 			PaymentID:   p.RazorpayPaymentID,
-		})
+			PromoCode:   p.PromoCode,
+		}
+		if p.PromoCode != "" {
+			row.Discount = models.FormatMoney(p.DiscountCents, p.Currency)
+		}
+		rows = append(rows, row)
 		totalCents[p.Currency] += p.AmountCents
 	}
 	for _, b := range bookings {
 		if b.Status != models.BookingStatusConfirmed || b.RazorpayPaymentID == "" {
 			continue
 		}
-		rows = append(rows, adminPaymentRow{
+		row := adminPaymentRow{
 			When:        b.SlotStart.In(a.Timezone).Format("Jan 2, 2006 · 3:04 PM"),
 			whenSort:    b.CreatedAt.Unix(),
 			Type:        "Consultancy",
@@ -76,7 +83,12 @@ func (a *App) AdminPaymentsList(w http.ResponseWriter, r *http.Request) {
 			Email:       b.Email,
 			Amount:      models.FormatMoney(b.AmountCents, b.Currency),
 			PaymentID:   b.RazorpayPaymentID,
-		})
+			PromoCode:   b.PromoCode,
+		}
+		if b.PromoCode != "" {
+			row.Discount = models.FormatMoney(b.DiscountCents, b.Currency)
+		}
+		rows = append(rows, row)
 		totalCents[b.Currency] += b.AmountCents
 	}
 

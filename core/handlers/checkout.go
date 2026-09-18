@@ -83,6 +83,13 @@ func (a *App) CheckoutCreateOrder(w http.ResponseWriter, r *http.Request) {
 		amountCents = minCents
 	}
 
+	discountCents, promo, perr := a.resolvePromoCode(r.Context(), r.FormValue("promo_code"), models.PromoProductCourse, course.ID, amountCents)
+	if perr != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "That promo code isn't valid."})
+		return
+	}
+	amountCents -= discountCents
+
 	token, err := generateAccessToken()
 	if err != nil {
 		a.serverError(w, "generate access token", err)
@@ -97,7 +104,7 @@ func (a *App) CheckoutCreateOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if _, err := a.Purchases.Create(r.Context(), models.Purchase{
+	purchase := models.Purchase{
 		CourseID:        course.ID,
 		UserID:          userID,
 		Email:           email,
@@ -105,7 +112,13 @@ func (a *App) CheckoutCreateOrder(w http.ResponseWriter, r *http.Request) {
 		Currency:        currency,
 		RazorpayOrderID: orderID,
 		AccessToken:     token,
-	}); err != nil {
+		DiscountCents:   discountCents,
+	}
+	if promo != nil {
+		purchase.PromoCodeID = &promo.ID
+		purchase.PromoCode = promo.Code
+	}
+	if _, err := a.Purchases.Create(r.Context(), purchase); err != nil {
 		a.serverError(w, "record purchase", err)
 		return
 	}
@@ -163,9 +176,18 @@ func (a *App) CheckoutVerify(w http.ResponseWriter, r *http.Request) {
 		a.serverError(w, "mark purchase paid", err)
 		return
 	}
+	if purchase.PromoCodeID != nil {
+		if err := a.PromoCodes.IncrementRedemption(ctx, *purchase.PromoCodeID); err != nil {
+			log.Printf("increment promo redemption: %v", err)
+		}
+	}
 
-	a.Telegram.Send(fmt.Sprintf("💰 Course purchase\nCourse: %s\nEmail: %s\nAmount: %s",
-		course.Title, purchase.Email, models.FormatMoney(purchase.AmountCents, purchase.Currency)))
+	promoLine := ""
+	if purchase.PromoCode != "" {
+		promoLine = fmt.Sprintf("\nPromo: %s (-%s)", purchase.PromoCode, models.FormatMoney(purchase.DiscountCents, purchase.Currency))
+	}
+	a.Telegram.Send(fmt.Sprintf("💰 Course purchase\nCourse: %s\nEmail: %s\nAmount: %s%s",
+		course.Title, purchase.Email, models.FormatMoney(purchase.AmountCents, purchase.Currency), promoLine))
 
 	http.SetCookie(w, &http.Cookie{
 		Name:     accessCookieName(course.ID),

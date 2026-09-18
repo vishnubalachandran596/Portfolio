@@ -28,6 +28,9 @@
         <label>Contribution ({{.ResolvedCurrency}})
           <input type="number" id="purchase-amount" min="{{.ResolvedMinWhole}}" step="1" value="{{.ResolvedMinWhole}}">
         </label>
+        <label>Promo code <span class="optional">(optional)</span>
+          <input type="text" id="purchase-promo-code" autocapitalize="characters">
+        </label>
         <button type="button" class="btn btn-primary" id="purchase-btn" data-slug="{{.Course.Slug}}" data-min-cents="{{.ResolvedMinCents}}">Pay &amp; Unlock</button>
       </div>
       <script src="https://checkout.razorpay.com/v1/checkout.js"></script>

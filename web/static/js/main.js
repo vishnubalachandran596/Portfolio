@@ -195,6 +195,7 @@
       var minCents = parseInt(purchaseBtn.getAttribute("data-min-cents"), 10) || 0;
       var emailInput = document.getElementById("purchase-email");
       var amountInput = document.getElementById("purchase-amount");
+      var promoInput = document.getElementById("purchase-promo-code");
       var errorBox = document.getElementById("purchase-error");
 
       function showError(msg) {
@@ -219,6 +220,7 @@
       var form = new FormData();
       form.append("email", email);
       form.append("amount_cents", String(amount));
+      form.append("promo_code", promoInput ? promoInput.value.trim() : "");
 
       fetch("/courses/" + slug + "/checkout/order", { method: "POST", body: form })
         .then(function (res) {
@@ -302,6 +304,7 @@
     payBtn.addEventListener("click", function () {
       var errorBox = document.getElementById("booking-error");
       var messageInput = document.getElementById("booking-message");
+      var promoInput = document.getElementById("booking-promo-code");
       function showError(msg) {
         if (errorBox) {
           errorBox.textContent = msg;
@@ -320,6 +323,7 @@
       var form = new FormData();
       form.append("slot", selectedSlot);
       form.append("message", messageInput ? messageInput.value : "");
+      form.append("promo_code", promoInput ? promoInput.value.trim() : "");
 
       fetch("/booking/checkout/order", { method: "POST", body: form })
         .then(function (res) {

@@ -178,6 +178,9 @@ type Booking struct {
 	PreviousSlotStart      *time.Time
 	RescheduledAt          *time.Time
 	RescheduleAcknowledged bool
+	PromoCodeID            *int64
+	PromoCode              string
+	DiscountCents          int
 	CreatedAt              time.Time
 }
 
@@ -275,6 +278,66 @@ type Purchase struct {
 	RazorpayOrderID   string
 	RazorpayPaymentID string
 	AccessToken       string
+	PromoCodeID       *int64
+	PromoCode         string
+	DiscountCents     int
 	CreatedAt         time.Time
 	PaidAt            *time.Time
+}
+
+const (
+	PromoProductCourse      = "course"
+	PromoProductConsultancy = "consultancy"
+)
+
+// PromoCode is a discount code an admin creates in the admin console and a
+// visitor redeems at checkout. It applies to exactly one product line —
+// courses (optionally scoped to specific courses, or all of them) or the
+// single consultancy offering — never both.
+type PromoCode struct {
+	ID                  int64
+	Code                string
+	Description         string
+	Product             string // PromoProductCourse | PromoProductConsultancy
+	DiscountPercent     int
+	AppliesToAllCourses bool
+	CourseIDs           []int64
+	MaxRedemptions      int // 0 means unlimited
+	RedemptionCount     int
+	ExpiresAt           time.Time
+	IsActive            bool
+	CreatedAt           time.Time
+}
+
+// HasCourse reports whether a course-scoped promo code applies to the
+// given course. Irrelevant when AppliesToAllCourses is true.
+func (p PromoCode) HasCourse(id int64) bool {
+	for _, cid := range p.CourseIDs {
+		if cid == id {
+			return true
+		}
+	}
+	return false
+}
+
+func (p PromoCode) IsExpired() bool { return time.Now().After(p.ExpiresAt) }
+
+// IsExhausted reports whether the code has hit its total redemption cap;
+// a cap of 0 means unlimited.
+func (p PromoCode) IsExhausted() bool {
+	return p.MaxRedemptions > 0 && p.RedemptionCount >= p.MaxRedemptions
+}
+
+// Usable reports whether the code can still be redeemed right now.
+func (p PromoCode) Usable() bool {
+	return p.IsActive && !p.IsExpired() && !p.IsExhausted()
+}
+
+// RedemptionsDisplay renders e.g. "3 / 50" or "3 / unlimited" for the
+// admin promo list.
+func (p PromoCode) RedemptionsDisplay() string {
+	if p.MaxRedemptions == 0 {
+		return strconv.Itoa(p.RedemptionCount) + " / unlimited"
+	}
+	return strconv.Itoa(p.RedemptionCount) + " / " + strconv.Itoa(p.MaxRedemptions)
 }

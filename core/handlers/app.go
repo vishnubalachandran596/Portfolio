@@ -36,6 +36,7 @@ type App struct {
 	Purchases    *repo.PurchaseRepo
 	Users        *repo.UserRepo
 	Articles     *repo.ArticleRepo
+	PromoCodes   *repo.PromoCodeRepo
 
 	Razorpay *payments.Razorpay
 	Telegram *notify.Telegram
@@ -109,6 +110,7 @@ func New(cfg *config.Config, db *sql.DB, renderer *view.Renderer) *App {
 		Purchases:    repo.NewPurchaseRepo(db),
 		Users:        repo.NewUserRepo(db),
 		Articles:     repo.NewArticleRepo(db),
+		PromoCodes:   repo.NewPromoCodeRepo(db),
 		Razorpay:     payments.NewRazorpay(cfg.RazorpayKeyID, cfg.RazorpayKeySecret),
 		Telegram:     notify.NewTelegram(cfg.TelegramBotToken, cfg.TelegramChatID),
 		Google:       oauth.NewGoogle(cfg.GoogleClientID, cfg.GoogleClientSecret, cfg.GoogleRedirectURL),
