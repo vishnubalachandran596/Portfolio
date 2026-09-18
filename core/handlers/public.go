@@ -13,6 +13,7 @@ import (
 type HomeData struct {
 	BaseData
 	Profile  models.Profile
+	Skills   []models.SkillGroup
 	Articles []models.Article
 	JSONLD   template.JS
 }
@@ -22,6 +23,11 @@ func (a *App) Home(w http.ResponseWriter, r *http.Request) {
 	profile, err := a.Profile.Get(ctx)
 	if err != nil {
 		a.serverError(w, "load profile", err)
+		return
+	}
+	skills, err := a.Skills.List(ctx)
+	if err != nil {
+		a.serverError(w, "load skills", err)
 		return
 	}
 	articles, err := a.Articles.ListPublished(ctx, 3)
@@ -48,6 +54,7 @@ func (a *App) Home(w http.ResponseWriter, r *http.Request) {
 	a.View.Render(w, http.StatusOK, "home", HomeData{
 		BaseData: base,
 		Profile:  profile,
+		Skills:   skills,
 		Articles: articles,
 		JSONLD:   personAndWebsiteJSONLD(profile, base.CanonicalURL, sameAs),
 	})

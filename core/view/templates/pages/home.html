@@ -14,21 +14,29 @@
   </div>
 </section>
 
+{{if .Skills}}
 <section class="section">
-  <div class="container about-grid">
-    <div class="about-summary">
-      {{range $p := splitLines .Profile.Summary}}<p>{{$p}}</p>{{end}}
+  <div class="container">
+    <div class="section-header-row">
+      <h2 class="section-title">What I bring</h2>
+      <a class="link-arrow" href="{{.Nav.About}}">Full background →</a>
     </div>
-    <aside class="about-facts">
-      <dl>
-        <dt>Location</dt><dd>{{.Profile.Location}}</dd>
-        <dt>Experience</dt><dd>{{.Profile.YearsExperience}}+ years</dd>
-        <dt>Focus</dt><dd>Banking &amp; fintech platforms</dd>
-      </dl>
-      <a class="btn btn-secondary" href="{{.Nav.About}}">Full background →</a>
-    </aside>
+    <div class="skills-grid">
+      {{range .Skills}}
+      <div class="skill-card">
+        <div class="skill-card-head">
+          <h3>{{.Category}}</h3>
+          {{if .Level}}<span class="skill-level skill-level-{{.Level}}">{{.Level}}</span>{{end}}
+        </div>
+        <ul class="skill-tags">
+          {{range .Items}}<li>{{.}}</li>{{end}}
+        </ul>
+      </div>
+      {{end}}
+    </div>
   </div>
 </section>
+{{end}}
 
 <section class="section section-alt">
   <div class="container cta-inner">
