@@ -359,6 +359,12 @@ a, button, .slot-btn, .faq-item summary { cursor: pointer; }
   flex-direction: column;
   gap: 0.125rem;
 }
+/* The [hidden] attribute and this class have equal specificity, and an
+   author rule wins that tie over the browser's default `[hidden] {
+   display: none}` — without this, `display: flex` above always won and
+   the panel never actually hid, regardless of the hidden attribute the
+   dropdown toggle JS sets. */
+.header-dropdown[hidden] { display: none; }
 .header-dropdown::before {
   content: "";
   position: absolute;
