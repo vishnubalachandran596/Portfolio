@@ -47,7 +47,7 @@ type SkillGroupRepo struct{ db *sql.DB }
 func NewSkillGroupRepo(db *sql.DB) *SkillGroupRepo { return &SkillGroupRepo{db: db} }
 
 func (r *SkillGroupRepo) List(ctx context.Context) ([]models.SkillGroup, error) {
-	rows, err := r.db.QueryContext(ctx, `SELECT id, category, level, items, sort_order FROM skill_groups ORDER BY sort_order, id`)
+	rows, err := r.db.QueryContext(ctx, `SELECT id, category, level, achievement, items, sort_order FROM skill_groups ORDER BY sort_order, id`)
 	if err != nil {
 		return nil, err
 	}
@@ -57,7 +57,7 @@ func (r *SkillGroupRepo) List(ctx context.Context) ([]models.SkillGroup, error) 
 	for rows.Next() {
 		var g models.SkillGroup
 		var items string
-		if err := rows.Scan(&g.ID, &g.Category, &g.Level, &items, &g.SortOrder); err != nil {
+		if err := rows.Scan(&g.ID, &g.Category, &g.Level, &g.Achievement, &items, &g.SortOrder); err != nil {
 			return nil, err
 		}
 		g.Items = splitNonEmpty(items, ",")

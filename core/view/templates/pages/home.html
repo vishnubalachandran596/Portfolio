@@ -28,6 +28,7 @@
           <h3>{{.Category}}</h3>
           {{if .Level}}<span class="skill-level skill-level-{{.Level}}">{{.Level}}</span>{{end}}
         </div>
+        {{if .Achievement}}<p class="skill-achievement">{{.Achievement}}</p>{{end}}
         <ul class="skill-tags">
           {{range .Items}}<li>{{.}}</li>{{end}}
         </ul>

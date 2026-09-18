@@ -33,11 +33,12 @@ type Profile struct {
 }
 
 type SkillGroup struct {
-	ID        int64
-	Category  string
-	Level     string
-	Items     []string
-	SortOrder int
+	ID          int64
+	Category    string
+	Level       string
+	Achievement string
+	Items       []string
+	SortOrder   int
 }
 
 type Experience struct {

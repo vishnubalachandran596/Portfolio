@@ -92,7 +92,7 @@ func (a *App) About(w http.ResponseWriter, r *http.Request) {
 	}
 
 	a.View.Render(w, http.StatusOK, "about", AboutData{
-		BaseData:   a.base(r, profile.Name+" — Technical Consultant, Java Expert & Software Architect", profile.Summary, "about"),
+		BaseData:   a.base(r, profile.Name+" — Technical Consultant, Java Expert & Software Architect", profile.HeroSubtitle, "about"),
 		Profile:    profile,
 		Skills:     skills,
 		Experience: exp,
