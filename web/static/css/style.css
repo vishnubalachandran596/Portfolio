@@ -311,6 +311,10 @@ a, button, .slot-btn, .faq-item summary { cursor: pointer; }
   letter-spacing: -0.01em;
   white-space: nowrap;
   flex-shrink: 0;
+  margin-right: clamp(1rem, 6vw, 3rem);
+}
+.brand.active .brand-mark {
+  box-shadow: 0 0 0 0.125rem var(--color-bg), 0 0 0 0.25rem var(--color-primary);
 }
 .primary-nav {
   display: flex;
@@ -318,7 +322,7 @@ a, button, .slot-btn, .faq-item summary { cursor: pointer; }
   gap: clamp(0.75rem, 2.5vw, 1.625rem);
   flex: 1 1 auto;
   min-width: 0;
-  justify-content: center;
+  justify-content: flex-start;
 }
 .primary-nav a {
   font-size: 0.93rem;

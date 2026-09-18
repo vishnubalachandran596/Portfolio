@@ -7,7 +7,7 @@
 {{end}}
 <header class="site-header">
   <div class="container header-inner">
-    <a class="brand" href="{{.Nav.Home}}" aria-label="{{.SiteName}} — Home">
+    <a class="brand{{if eq .Active "home"}} active{{end}}" href="{{.Nav.Home}}" aria-label="{{.SiteName}} — Home">
       <span class="brand-full">{{.SiteName}}</span>
       <span class="brand-mark" aria-hidden="true">VB</span>
     </a>
