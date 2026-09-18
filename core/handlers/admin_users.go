@@ -191,9 +191,7 @@ func (a *App) AdminUserMessageSend(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if profile, err := a.Profile.Get(ctx); err == nil && profile.Email != "" {
-		body += "\n\nFeel free to reach out to me at " + profile.Email
-	}
+	body = a.withContactSignature(ctx, body)
 
 	if _, err := a.AdminMessages.Create(ctx, id, body); err != nil {
 		a.serverError(w, "send message", err)

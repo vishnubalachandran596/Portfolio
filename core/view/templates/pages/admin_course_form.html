@@ -65,6 +65,14 @@
         <input type="file" name="content_file" accept=".html,.htm">
       </label>
 
+      {{if not .IsNew}}
+      <hr class="admin-form-divider">
+      <h2 class="admin-form-subhead">Notify buyers</h2>
+      <label>What changed <span class="optional">(optional — leave blank to save silently. Filling this in sends every paid buyer of this course a message, e.g. "Added a new section on X, fixed a typo in the Y example.")</span>
+        <textarea name="update_note" rows="3" placeholder="e.g. Added a new section on X, fixed a typo in the Y example."></textarea>
+      </label>
+      {{end}}
+
       <div class="form-actions">
         <button type="submit" class="btn btn-primary" data-loading-text="Saving…">Save Course</button>
         <a class="btn btn-secondary" href="/admin/courses">Cancel</a>

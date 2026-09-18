@@ -248,6 +248,17 @@ func (a *App) userNotifications(ctx context.Context, userID int64) []Notificatio
 	return items
 }
 
+// withContactSignature appends a fixed "reach out to me" line pointing at
+// the admin's own contact email, if one is on file. Used by every message
+// sent to a visitor's account — a course-update notice or a one-off admin
+// message alike — so they all close the same way.
+func (a *App) withContactSignature(ctx context.Context, body string) string {
+	if profile, err := a.Profile.Get(ctx); err == nil && profile.Email != "" {
+		body += "\n\nFeel free to reach out to me at " + profile.Email
+	}
+	return body
+}
+
 func truncate(s string, n int) string {
 	if len(s) <= n {
 		return s
