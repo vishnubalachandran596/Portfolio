@@ -465,29 +465,29 @@ a, button, .slot-btn, .faq-item summary { cursor: pointer; }
 }
 .nav-toggle:hover { border-color: var(--color-accent); }
 
-/* Brand: full site name on wider screens, a compact monogram once the tab
-   strip needs the room — avoids showing the same name twice in the first
-   screenful on mobile (header brand + hero heading). */
-.brand-mark { display: none; }
+/* Brand: always the compact "VB" monogram, on every screen size — never
+   the full site name, which would repeat the hero heading right below it
+   on every page and crowd the header on narrow screens. */
+.brand-full { display: none; }
+.brand-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 2.5rem;
+  height: 2.5rem;
+  margin-left: 0.25rem;
+  border-radius: 50%;
+  background: var(--color-text);
+  color: var(--color-bg);
+  font-family: var(--font-serif);
+  font-weight: 600;
+  font-size: 1rem;
+}
 .btn-sm { padding: 0.5rem 1rem; font-size: 0.85rem; }
 .header-logout-form { display: inline-flex; align-items: center; }
 
 @media (max-width: 860px) {
-  .brand-full { display: none; }
-  .brand-mark {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    width: 2.5rem;
-    height: 2.5rem;
-    border-radius: 50%;
-    background: var(--color-text);
-    color: var(--color-bg);
-    font-family: var(--font-serif);
-    font-weight: 600;
-    font-size: 1rem;
-  }
   .primary-nav { justify-content: flex-start; gap: 1rem; }
 }
 
