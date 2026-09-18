@@ -187,6 +187,29 @@ what you want"), pays via Razorpay Checkout, and is redirected to
   purchase button is hidden until both are set. See `/admin/purchases`
   for a log of every order and its status.
 
+### Notifying buyers when a course is updated
+
+Course content updates (rewriting/extending a lesson) are normally done in
+code — editing the HTML in `core/content/courses/*.html` and deploying, not
+through the admin portal. To let every paid buyer of that course know what
+changed, insert one row into `course_updates` (`course_id`, `note`); a
+Postgres trigger (`core/db/migrations/026_course_updates.sql`) fans it out
+automatically to an `admin_messages` row per paid buyer — the same table
+and mechanism that already powers the notification bell and
+`/account#messages`, contact-email signature included. Nothing else to
+run or remember:
+
+```sql
+INSERT INTO course_updates (course_id, note)
+VALUES ((SELECT id FROM courses WHERE slug = 'payment-integration-razorpay'),
+        'Added a real production bug walkthrough and a promo-code section.');
+```
+
+The same thing is also exposed in the admin portal: the course edit form
+(`/admin/courses/<id>/edit`) has an optional "What changed" field that,
+when filled in, calls the identical `CourseUpdateRepo.Create` under the
+hood. Leaving it blank saves the course silently.
+
 ## Consultancy (paid 1:1 booking)
 
 `/consultancy` is the only page with a "Book Now" call to action; it links
