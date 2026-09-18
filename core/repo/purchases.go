@@ -131,30 +131,6 @@ func (r *PurchaseRepo) ListByUserID(ctx context.Context, userID int64) ([]models
 	return out, rows.Err()
 }
 
-// ListPaidUserIDsByCourseID returns the distinct account IDs of everyone
-// with a paid purchase of a course — the audience for a "this course was
-// updated" notification. A guest checkout (no account) has no user_id and
-// is skipped, since there's no account to notify.
-func (r *PurchaseRepo) ListPaidUserIDsByCourseID(ctx context.Context, courseID int64) ([]int64, error) {
-	rows, err := r.db.QueryContext(ctx, `
-		SELECT DISTINCT user_id FROM purchases
-		WHERE course_id = $1 AND status = 'paid' AND user_id IS NOT NULL`, courseID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var out []int64
-	for rows.Next() {
-		var id int64
-		if err := rows.Scan(&id); err != nil {
-			return nil, err
-		}
-		out = append(out, id)
-	}
-	return out, rows.Err()
-}
-
 func (r *PurchaseRepo) ListAll(ctx context.Context) ([]models.Purchase, error) {
 	rows, err := r.db.QueryContext(ctx, `SELECT `+purchaseColumns+` FROM purchases ORDER BY created_at DESC`)
 	if err != nil {

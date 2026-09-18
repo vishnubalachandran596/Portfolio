@@ -1,8 +1,6 @@
 package handlers
 
 import (
-	"context"
-	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -328,30 +326,16 @@ func (a *App) AdminCourseSave(w http.ResponseWriter, r *http.Request) {
 
 	if isEdit {
 		if note := strings.TrimSpace(r.FormValue("update_note")); note != "" {
-			a.notifyCourseBuyers(ctx, id, course.Title, note)
+			// One row is the whole notification — a database trigger fans
+			// it out to every paid buyer as an admin_messages row (see
+			// migration 026_course_updates.sql).
+			if err := a.CourseUpdates.Create(ctx, id, note); err != nil {
+				log.Printf("record course update for course %d: %v", id, err)
+			}
 		}
 	}
 
 	http.Redirect(w, r, "/admin/courses", http.StatusSeeOther)
-}
-
-// notifyCourseBuyers sends every paid buyer of a course a message noting
-// what changed, reusing the same admin-message mechanism (and its fixed
-// contact-email signature) as a one-off message sent from a user's detail
-// page. A buyer sees it the same way: in the notification bell and under
-// /account#messages.
-func (a *App) notifyCourseBuyers(ctx context.Context, courseID int64, courseTitle, note string) {
-	userIDs, err := a.Purchases.ListPaidUserIDsByCourseID(ctx, courseID)
-	if err != nil {
-		log.Printf("notify course buyers: load buyers for course %d: %v", courseID, err)
-		return
-	}
-	body := a.withContactSignature(ctx, fmt.Sprintf("%q was updated: %s", courseTitle, note))
-	for _, uid := range userIDs {
-		if _, err := a.AdminMessages.Create(ctx, uid, body); err != nil {
-			log.Printf("notify course buyers: message user %d: %v", uid, err)
-		}
-	}
 }
 
 func (a *App) AdminCourseDelete(w http.ResponseWriter, r *http.Request) {
