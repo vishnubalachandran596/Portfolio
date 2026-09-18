@@ -15,7 +15,7 @@
       <a href="{{.Nav.Terms}}">Terms</a>
       <a href="{{.Nav.Refund}}">Refund Policy</a>
       <a href="{{.Nav.Cookies}}">Cookies</a>
-      <a href="{{.Nav.Admin}}">Admin</a>
+      {{if .IsAdmin}}<a href="{{.Nav.Admin}}">Admin</a>{{end}}
     </nav>
   </div>
 </footer>

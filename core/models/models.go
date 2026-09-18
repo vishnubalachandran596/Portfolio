@@ -341,3 +341,56 @@ func (p PromoCode) RedemptionsDisplay() string {
 	}
 	return strconv.Itoa(p.RedemptionCount) + " / " + strconv.Itoa(p.MaxRedemptions)
 }
+
+// QuizPassPercent is the minimum score required to pass a course's final
+// quiz and unlock a completion certificate.
+const QuizPassPercent = 70
+
+// QuizQuestion is one multiple-choice question in a course's final quiz.
+type QuizQuestion struct {
+	ID            int64
+	CourseID      int64
+	Question      string
+	OptionA       string
+	OptionB       string
+	OptionC       string
+	OptionD       string
+	CorrectOption string // "A" | "B" | "C" | "D"
+	SortOrder     int
+}
+
+// Option returns the text of the option labeled by the given letter
+// ("A"-"D"), for rendering the quiz-taking form generically.
+func (q QuizQuestion) Option(letter string) string {
+	switch letter {
+	case "A":
+		return q.OptionA
+	case "B":
+		return q.OptionB
+	case "C":
+		return q.OptionC
+	case "D":
+		return q.OptionD
+	}
+	return ""
+}
+
+// QuizAttempt records one completed run through a course's final quiz —
+// by a logged-in visitor (UserID set) or an admin previewing their own
+// course (IsAdmin true, no UserID needed). CertificateCode is only set
+// once Passed is true, and is what the certificate download is looked up
+// by.
+type QuizAttempt struct {
+	ID              int64
+	CourseID        int64
+	UserID          *int64
+	IsAdmin         bool
+	Name            string
+	Email           string
+	TotalQuestions  int
+	CorrectAnswers  int
+	ScorePercent    int
+	Passed          bool
+	CertificateCode string
+	CreatedAt       time.Time
+}

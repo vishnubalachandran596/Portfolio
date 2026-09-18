@@ -27,7 +27,8 @@ import (
 func (a *App) CourseLearn(w http.ResponseWriter, r *http.Request) {
 	slug := r.PathValue("slug")
 	course, err := a.Courses.GetBySlug(r.Context(), slug)
-	if err != nil || !course.IsPaid || !course.IsPublished {
+	isAdmin := a.Auth.IsAuthenticated(r) && !a.isPreviewingAsVisitor(r)
+	if err != nil || !course.IsPaid || (!course.IsPublished && !isAdmin) {
 		a.NotFound(w, r)
 		return
 	}

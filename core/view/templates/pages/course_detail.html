@@ -16,6 +16,7 @@
       {{if .HasAccess}}
       <div class="hero-actions">
         <a class="btn btn-primary" href="/courses/{{.Course.Slug}}/learn">Open Course</a>
+        {{if .HasQuiz}}<a class="btn btn-secondary" href="/courses/{{.Course.Slug}}/quiz">Take the Final Quiz</a>{{end}}
       </div>
       {{else if .PaymentsEnabled}}
       <div class="purchase-box" id="purchase-box">

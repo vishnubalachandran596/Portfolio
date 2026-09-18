@@ -1,0 +1,40 @@
+{{define "content"}}
+<section class="section">
+  <div class="container">
+    <p class="eyebrow"><a href="/admin/courses/{{.Course.ID}}/quiz">← {{.Course.Title}} quiz</a></p>
+    <h1>{{if .IsNew}}Add Quiz Question{{else}}Edit Quiz Question{{end}}</h1>
+    {{if .Error}}<div class="alert alert-error">{{.Error}}</div>{{end}}
+    <form method="POST" action="{{if .IsNew}}/admin/courses/{{.Course.ID}}/quiz/new{{else}}/admin/courses/{{.Course.ID}}/quiz/{{.Question.ID}}/edit{{end}}" class="admin-form">
+      <label>Question
+        <textarea name="question" rows="2" required>{{.Question.Question}}</textarea>
+      </label>
+      <label>Option A
+        <input type="text" name="option_a" value="{{.Question.OptionA}}" required>
+      </label>
+      <label>Option B
+        <input type="text" name="option_b" value="{{.Question.OptionB}}" required>
+      </label>
+      <label>Option C
+        <input type="text" name="option_c" value="{{.Question.OptionC}}" required>
+      </label>
+      <label>Option D
+        <input type="text" name="option_d" value="{{.Question.OptionD}}" required>
+      </label>
+      <fieldset class="form-fieldset">
+        <legend>Correct option</legend>
+        <label class="checkbox-label"><input type="radio" name="correct_option" value="A" {{if eq .Question.CorrectOption "A"}}checked{{end}}> A</label>
+        <label class="checkbox-label"><input type="radio" name="correct_option" value="B" {{if eq .Question.CorrectOption "B"}}checked{{end}}> B</label>
+        <label class="checkbox-label"><input type="radio" name="correct_option" value="C" {{if eq .Question.CorrectOption "C"}}checked{{end}}> C</label>
+        <label class="checkbox-label"><input type="radio" name="correct_option" value="D" {{if eq .Question.CorrectOption "D"}}checked{{end}}> D</label>
+      </fieldset>
+      <label>Sort order
+        <input type="number" name="sort_order" value="{{.Question.SortOrder}}">
+      </label>
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary" data-loading-text="Saving…">Save Question</button>
+        <a class="btn btn-secondary" href="/admin/courses/{{.Course.ID}}/quiz">Cancel</a>
+      </div>
+    </form>
+  </div>
+</section>
+{{end}}

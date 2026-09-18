@@ -30,6 +30,7 @@
   // A light fade-out before navigating to an internal link, and a spinner
   // for anything slower than an instant cache hit, instead of a hard jump.
   var pageLoader = document.getElementById("page-loader");
+  var pageLoaderMark = document.getElementById("page-loader-mark");
   var loaderTimer = null;
   document.addEventListener("click", function (e) {
     var link = e.target.closest && e.target.closest("a[href]");
@@ -45,14 +46,17 @@
     if (!isInternal || isSamePage || link.target === "_blank" || link.hasAttribute("download") || e.metaKey || e.ctrlKey || e.shiftKey) {
       return;
     }
-    if (pageLoader) {
-      loaderTimer = setTimeout(function () {
-        pageLoader.classList.add("active");
-      }, 220);
-    }
+    // A short delay avoids a visible flash on an instant cache hit, but
+    // short enough that a normal-speed navigation still shows the
+    // branded indicator rather than only the browser's own loading bar.
+    loaderTimer = setTimeout(function () {
+      if (pageLoader) pageLoader.classList.add("active");
+      if (pageLoaderMark) pageLoaderMark.classList.add("active");
+    }, 60);
   });
   window.addEventListener("pageshow", function () {
     if (pageLoader) pageLoader.classList.remove("active");
+    if (pageLoaderMark) pageLoaderMark.classList.remove("active");
     if (loaderTimer) clearTimeout(loaderTimer);
   });
 

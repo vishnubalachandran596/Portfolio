@@ -106,7 +106,15 @@ type CoursesListData struct {
 }
 
 func (a *App) CoursesList(w http.ResponseWriter, r *http.Request) {
-	courses, err := a.Courses.ListPublished(r.Context())
+	var courses []models.Course
+	var err error
+	if a.Auth.IsAuthenticated(r) && !a.isPreviewingAsVisitor(r) {
+		// Admin sees every course, including unpublished drafts, so a new
+		// or in-progress course can be previewed before it goes live.
+		courses, err = a.Courses.ListAll(r.Context())
+	} else {
+		courses, err = a.Courses.ListPublished(r.Context())
+	}
 	if err != nil {
 		a.serverError(w, "load courses", err)
 		return
@@ -130,20 +138,22 @@ type CourseDetailData struct {
 	ResolvedMinWhole   int
 	ResolvedMinDisplay string
 	UserEmail          string
+	HasQuiz            bool
 }
 
 func (a *App) CourseDetail(w http.ResponseWriter, r *http.Request) {
 	slug := r.PathValue("slug")
 	course, err := a.Courses.GetBySlug(r.Context(), slug)
 	if err != nil {
-		if err == repo.ErrNotFound || !course.IsPublished {
+		if err == repo.ErrNotFound {
 			a.NotFound(w, r)
 			return
 		}
 		a.serverError(w, "load course", err)
 		return
 	}
-	if !course.IsPublished {
+	isAdmin := a.Auth.IsAuthenticated(r) && !a.isPreviewingAsVisitor(r)
+	if !course.IsPublished && !isAdmin {
 		a.NotFound(w, r)
 		return
 	}
@@ -164,6 +174,12 @@ func (a *App) CourseDetail(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	quizCount, err := a.QuizQuestions.CountByCourse(r.Context(), course.ID)
+	if err != nil {
+		a.serverError(w, "load quiz count", err)
+		return
+	}
+
 	a.View.Render(w, http.StatusOK, "course_detail", CourseDetailData{
 		BaseData:           base,
 		Course:             course,
@@ -177,6 +193,7 @@ func (a *App) CourseDetail(w http.ResponseWriter, r *http.Request) {
 		ResolvedMinWhole:   minCents / 100,
 		ResolvedMinDisplay: models.FormatMoney(minCents, currency),
 		UserEmail:          userEmail,
+		HasQuiz:            quizCount > 0,
 	})
 }
 

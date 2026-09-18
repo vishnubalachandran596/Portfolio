@@ -22,6 +22,16 @@ func (r *AdminRepo) GetByEmail(ctx context.Context, email string) (models.Admin,
 	return a, err
 }
 
+func (r *AdminRepo) GetByID(ctx context.Context, id int64) (models.Admin, error) {
+	var a models.Admin
+	err := r.db.QueryRowContext(ctx, `SELECT id, email, password_hash, name, created_at FROM admins WHERE id = $1`, id).
+		Scan(&a.ID, &a.Email, &a.PasswordHash, &a.Name, &a.CreatedAt)
+	if errors.Is(err, sql.ErrNoRows) {
+		return models.Admin{}, ErrNotFound
+	}
+	return a, err
+}
+
 func (r *AdminRepo) Count(ctx context.Context) (int, error) {
 	var n int
 	err := r.db.QueryRowContext(ctx, `SELECT count(*) FROM admins`).Scan(&n)

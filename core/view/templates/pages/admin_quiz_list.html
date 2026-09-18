@@ -1,0 +1,33 @@
+{{define "content"}}
+<section class="section">
+  <div class="container">
+    <p class="eyebrow"><a href="/admin/courses">← Courses</a></p>
+    <div class="section-header-row">
+      <h1>Quiz — {{.Course.Title}}</h1>
+      <a class="btn btn-primary" href="/admin/courses/{{.Course.ID}}/quiz/new">Add Question</a>
+    </div>
+    {{if .Questions}}
+    <table class="admin-table">
+      <thead><tr><th>Question</th><th>Correct</th><th>Sort</th><th></th></tr></thead>
+      <tbody>
+        {{range .Questions}}
+        <tr>
+          <td>{{.Question}}</td>
+          <td>{{.CorrectOption}}</td>
+          <td>{{.SortOrder}}</td>
+          <td class="admin-table-actions">
+            <a class="link-button" href="/admin/courses/{{.CourseID}}/quiz/{{.ID}}/edit">Edit</a>
+            <form method="POST" action="/admin/courses/{{.CourseID}}/quiz/{{.ID}}/delete" onsubmit="return confirm('Delete this question?');">
+              <button type="submit" class="link-button danger">Delete</button>
+            </form>
+          </td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+    {{else}}
+    <p class="empty-state">No quiz questions yet — the course won't show a "Take the Final Quiz" link until it has at least one.</p>
+    {{end}}
+  </div>
+</section>
+{{end}}

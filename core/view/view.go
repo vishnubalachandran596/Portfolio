@@ -34,6 +34,7 @@ var funcs = template.FuncMap{
 		}
 		return fmt.Sprintf("%s%d.%02d", symbol, cents/100, cents%100)
 	},
+	"add1": func(i int) int { return i + 1 },
 	"splitLines": func(s string) []string {
 		var out []string
 		for _, p := range strings.Split(strings.ReplaceAll(s, "\r\n", "\n"), "\n\n") {
@@ -81,6 +82,8 @@ func New() (*Renderer, error) {
 		"templates/pages/contact.html",
 		"templates/pages/account.html",
 		"templates/pages/account_reschedule.html",
+		"templates/pages/quiz.html",
+		"templates/pages/quiz_result.html",
 		"templates/pages/login.html",
 		"templates/pages/search.html",
 		"templates/pages/legal.html",
@@ -107,6 +110,8 @@ func New() (*Renderer, error) {
 		"templates/pages/admin_experience_form.html",
 		"templates/pages/admin_promo_list.html",
 		"templates/pages/admin_promo_form.html",
+		"templates/pages/admin_quiz_list.html",
+		"templates/pages/admin_quiz_form.html",
 	}
 
 	r := &Renderer{pages: map[string]renderEntry{}}

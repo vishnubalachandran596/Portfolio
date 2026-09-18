@@ -124,6 +124,13 @@ func (a *Auth) IsAuthenticated(r *http.Request) bool {
 	return ok
 }
 
+// AdminID returns the authenticated admin's id from the session cookie,
+// for handlers outside the RequireAdmin chain (which otherwise only
+// exposes it via context) that still need to know which admin is asking.
+func (a *Auth) AdminID(r *http.Request) (int64, bool) {
+	return a.adminIDFromRequest(r)
+}
+
 // --- Visitor (non-admin) sessions ---
 //
 // A separate cookie/JWT from the admin session above: a visitor logs in

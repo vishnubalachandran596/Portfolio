@@ -17,6 +17,7 @@
           <td>{{if .IsPublished}}Yes{{else}}No{{end}}</td>
           <td class="admin-table-actions">
             <a href="/admin/courses/{{.ID}}/edit">Edit</a>
+            <a class="link-button" href="/admin/courses/{{.ID}}/quiz">Quiz</a>
             <form method="POST" action="/admin/courses/{{.ID}}/delete" onsubmit="return confirm('Delete this course?');">
               <button type="submit" class="link-button danger">Delete</button>
             </form>

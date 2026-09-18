@@ -7,13 +7,12 @@
 {{end}}
 <header class="site-header">
   <div class="container header-inner">
-    <a class="brand" href="{{.Nav.Home}}">
+    <a class="brand" href="{{.Nav.Home}}" aria-label="{{.SiteName}} — Home">
       <span class="brand-full">{{.SiteName}}</span>
       <span class="brand-mark" aria-hidden="true">VB</span>
     </a>
 
     <nav class="primary-nav" aria-label="Primary">
-      <a href="{{.Nav.Home}}" class="{{if eq .Active "home"}}active{{end}}">Home</a>
       {{if .IsAdmin}}
       <a href="{{.Nav.Admin}}" class="{{if eq .Active "admin"}}active{{end}}">Admin Console</a>
       {{end}}
