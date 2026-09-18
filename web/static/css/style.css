@@ -344,10 +344,11 @@ a, button, .slot-btn, .faq-item summary { cursor: pointer; }
 .header-menu { position: relative; }
 .header-dropdown {
   position: absolute;
-  top: calc(100% + 10px);
-  right: 0;
-  min-width: 220px;
-  max-width: min(88vw, 300px);
+  top: calc(100% + 12px);
+  right: -4px;
+  width: max-content;
+  min-width: 200px;
+  max-width: min(78vw, 260px);
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
@@ -357,6 +358,19 @@ a, button, .slot-btn, .faq-item summary { cursor: pointer; }
   display: flex;
   flex-direction: column;
   gap: 2px;
+}
+.header-dropdown::before {
+  content: "";
+  position: absolute;
+  top: -5px;
+  right: 12px;
+  width: 10px;
+  height: 10px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-bottom: none;
+  border-right: none;
+  transform: rotate(45deg);
 }
 .header-dropdown-item {
   display: block;
@@ -1078,6 +1092,8 @@ input:focus, textarea:focus, select:focus {
 .stat-number { display: block; font-size: 2rem; font-weight: 700; color: var(--color-primary-strong); }
 .stat-label { color: var(--color-text-muted); font-size: 0.88rem; }
 
+.table-scroll { overflow-x: auto; margin-bottom: 24px; }
+.table-scroll .admin-table { margin-bottom: 0; }
 .admin-table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
 .admin-table th, .admin-table td {
   text-align: left;

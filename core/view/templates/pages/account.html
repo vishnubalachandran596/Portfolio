@@ -43,6 +43,7 @@
     </div>
     {{end}}
     {{end}}
+    <div class="table-scroll">
     <table class="admin-table">
       <thead><tr><th>When</th><th>Status</th><th></th></tr></thead>
       <tbody>
@@ -55,6 +56,7 @@
         {{end}}
       </tbody>
     </table>
+    </div>
     {{else}}
     <p class="empty-state">No bookings yet — <a href="/consultancy">book a session</a>.</p>
     {{end}}
@@ -65,6 +67,7 @@
   <div class="container">
     <h2 class="section-title">Payments</h2>
     {{if .Payments}}
+    <div class="table-scroll">
     <table class="admin-table">
       <thead><tr><th>When</th><th>Description</th><th>Amount</th><th></th></tr></thead>
       <tbody>
@@ -78,6 +81,7 @@
         {{end}}
       </tbody>
     </table>
+    </div>
     {{else}}
     <p class="empty-state">No payments yet.</p>
     {{end}}

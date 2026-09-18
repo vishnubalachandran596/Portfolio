@@ -6,6 +6,7 @@ import (
 	"context"
 	"database/sql"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/vishnubalachandran596/portfolio/core/config"
@@ -159,25 +160,44 @@ func (a *App) base(r *http.Request, title, metaDescription, active string) BaseD
 	previewing := a.isPreviewingAsVisitor(r)
 	isAdmin := a.Auth.IsAuthenticated(r) && !previewing
 	isUser := a.Auth.IsUserAuthenticated(r)
-	userName := ""
+	ctx := r.Context()
+
+	// Every page render pays for these, so they run concurrently rather
+	// than as sequential DB round-trips: the profile fetch (just for the
+	// footer's LinkedIn link) happens on every single page view, and a
+	// logged-in visitor also pays for their name lookup and notifications.
+	var wg sync.WaitGroup
+	var userName, linkedIn string
 	var notifications []NotificationItem
 	if isUser {
 		if uid, ok := a.Auth.UserID(r); ok {
-			if u, err := a.Users.GetByID(r.Context(), uid); err == nil {
-				userName = u.Name
-			}
-			notifications = a.userNotifications(r.Context(), uid)
+			wg.Add(2)
+			go func() {
+				defer wg.Done()
+				if u, err := a.Users.GetByID(ctx, uid); err == nil {
+					userName = u.Name
+				}
+			}()
+			go func() {
+				defer wg.Done()
+				notifications = a.userNotifications(ctx, uid)
+			}()
 		}
 	}
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		if profile, err := a.Profile.Get(ctx); err == nil {
+			linkedIn = profile.LinkedInURL
+		}
+	}()
+	wg.Wait()
+
 	unreadCount := 0
 	for _, n := range notifications {
 		if n.Unread {
 			unreadCount++
 		}
-	}
-	linkedIn := ""
-	if profile, err := a.Profile.Get(r.Context()); err == nil {
-		linkedIn = profile.LinkedInURL
 	}
 	return BaseData{
 		SiteName:        a.Cfg.SiteName,
