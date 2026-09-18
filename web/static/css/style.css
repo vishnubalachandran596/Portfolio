@@ -140,20 +140,35 @@ a, button, .slot-btn, .faq-item summary { cursor: pointer; }
   width: 100%;
   max-width: var(--container-width);
   margin: 0 auto;
-  padding: 0 1.5rem;
+  padding: 0 clamp(1.5rem, 4vw, 3rem);
 }
 
 .skip-link {
   position: absolute;
-  left: -624.9375rem;
   top: 0;
+  left: 0;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
   background: var(--color-primary);
   color: var(--color-primary-ink);
   padding: 0.625rem 1rem;
   border-radius: 0 0 var(--radius-sm) 0;
   z-index: 200;
 }
-.skip-link:focus { left: 0; }
+/* A large negative left offset (the older way to visually hide this) can,
+   in some browsers, extend the page's own horizontal scroll bounds —
+   clip-path here achieves the same "hidden until focused" effect without
+   that risk. */
+.skip-link:focus {
+  width: auto;
+  height: auto;
+  overflow: visible;
+  clip-path: none;
+  white-space: normal;
+}
 
 /* ---------------------------------------------------------------------
    Page transitions + loaders
