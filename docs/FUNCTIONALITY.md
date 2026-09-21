@@ -17,7 +17,7 @@ Domain: `vishnubalachandran.com`, canonical host `www.vishnubalachandran.com`. A
 ## 2. Public (unauthenticated visitor) functionality
 
 ### Home (`GET /`)
-Hero (name, title, subtitle), a skills grid pulled from `skill_groups` (category/level/achievement/tags), a CTA row into Consultancy/Courses, and a "Worth reading" teaser of the latest published articles.
+Hero (headshot from `Profile.PhotoURL`, name, title, subtitle), a skills grid pulled from `skill_groups` (category/level/achievement/tags), a CTA row into Consultancy/Courses, and a "Giving back" teaser of the latest published blog posts linking to `/articles`.
 
 ### About (`GET /about`)
 Full bio, headshot, skill groups, work experience, education, a downloadable PDF resume (`GET /resume.pdf`, generated in-process from live profile/skills/experience/education data — never drifts from what's on the page), a GitHub link, and published testimonials (only ones an admin has approved — see §4).
@@ -52,8 +52,8 @@ If a course has quiz questions, a purchaser (or previewing admin) can take a mul
 ### Booking (`GET /booking`, requires login) — hourly consultancy
 A calendar of available slots computed from `availability_rules` minus already-booked slots (`core/scheduler`). Pick a slot → optional promo code → Razorpay checkout (`POST /booking/checkout/order` / `/verify`) exactly mirrors the audit flow but also **provisionally reserves the slot** (`status=pending_payment`) the moment an order is created, so two visitors can't race for the same hour; a unique constraint on `slot_start` is the backstop. A Telegram notification fires on confirmed payment.
 
-### Articles / blog (`GET /articles`, `GET /articles/{slug}`)
-A mix of **original blog posts** (admin-written, has a `Body`) and **curated link-outs** (admin pastes a source URL + writes a short take, no `Body`). The list page supports search (`?q=`), tag filter (`?tag=`), and sort (`newest` / `oldest` / `most thumbs-up`), paginated. Each article has its own permanent URL. A post's body can be **plain text** (blank-line-separated paragraphs, auto-escaped) or **full HTML** (headings, links, lists, images — detected by the body *starting* with a tag) — see `articleBody` in `core/view/view.go`. An optional cover image shows atop the post and as a list thumbnail. Visitors can thumbs-up an article once (`POST /articles/{slug}/thumbs-up`, de-duplicated via a cookie).
+### Blog (`GET /articles`, `GET /articles/{slug}` — nav/footer label "Blog")
+Vishnu's original writing only — every published row has a `Body`. The schema and admin form still support a **curated link-out** mode (admin pastes a source URL + writes a short take, no `Body` — `IsOriginal()` in `core/models/models.go` returns false for these), but as of the "keep only original blogs" cleanup, all 42 previously-published curated rows were hard-deleted from `articles` (not soft-unpublished) and only original posts remain live. Curated link-outs remain a supported *feature* if the admin wants to use it again, just with zero current rows. The list page supports search (`?q=`), tag filter (`?tag=`), and sort (`newest` / `oldest` / `most thumbs-up`), paginated. Each article has its own permanent URL. A post's body can be **plain text** (blank-line-separated paragraphs, auto-escaped) or **full HTML** (headings, links, lists, images — detected by the body *starting* with a tag) — see `articleBody` in `core/view/view.go`. An optional cover image shows atop the post and as a list thumbnail. Visitors can thumbs-up an article once (`POST /articles/{slug}/thumbs-up`, de-duplicated via a cookie).
 
 ### Contact (`GET /contact`)
 Email (with copy-to-clipboard), LinkedIn link, and a CTA into Consultancy.
@@ -122,8 +122,8 @@ Full CRUD, plus **Approve** (one click, for a visitor-submitted testimonial stil
 ### Promo codes (`/admin/promo-codes`)
 CRUD for percentage-off codes, each scoped to exactly one product (`course` or `consultancy`), optionally to specific courses (`promo_code_courses` join table) or all of them, with an expiry, a redemption cap (0 = unlimited), and an active toggle. Redeemed at course/booking checkout via `resolvePromoCode()`.
 
-### Articles (`/admin/articles`)
-Full CRUD for both curated links and original blog posts — see §2's Articles section for the content model. Fields: title, summary, body (plain text or HTML), cover image URL, source URL/name (curated only), tags, slug (auto-generated from title if left blank), published date, published toggle, sort order.
+### Blog / articles (`/admin/articles`)
+Full CRUD — see §2's Blog section for the content model (original posts only, currently; curated link-out mode still exists in the form but has no published rows). Fields: title, summary, body (plain text or HTML), cover image URL, source URL/name (curated only), tags, slug (auto-generated from title if left blank), published date, published toggle, sort order.
 
 ### Availability (`/admin/availability`)
 CRUD for the weekly recurring rules (weekday, start/end time, slot length in minutes, active toggle) that `core/scheduler` expands into bookable hourly slots for §2's Booking page.

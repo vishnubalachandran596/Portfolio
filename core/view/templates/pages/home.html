@@ -1,13 +1,16 @@
 {{define "jsonld"}}<script type="application/ld+json">{{.JSONLD}}</script>{{end}}
 {{define "content"}}
 <section class="hero hero-simple">
-  <div class="container hero-inner">
-    <h1>{{.Profile.Name}}</h1>
-    <p class="hero-title">{{.Profile.Title}}</p>
-    <p class="hero-subtitle">{{.Profile.HeroSubtitle}}</p>
-    <div class="hero-actions">
-      <a class="btn btn-primary" href="{{.Nav.Consultancy}}">Work With Me</a>
-      <a class="btn btn-secondary" href="{{.Nav.About}}">About Me</a>
+  <div class="container hero-inner{{if .Profile.PhotoURL}} hero-inner-with-photo{{end}}">
+    {{if .Profile.PhotoURL}}<img class="hero-photo" src="{{.Profile.PhotoURL}}" alt="{{.Profile.Name}}" width="176" height="176">{{end}}
+    <div class="hero-copy">
+      <h1>{{.Profile.Name}}</h1>
+      <p class="hero-title">{{.Profile.Title}}</p>
+      <p class="hero-subtitle">{{.Profile.HeroSubtitle}}</p>
+      <div class="hero-actions">
+        <a class="btn btn-primary" href="{{.Nav.Consultancy}}">Work With Me</a>
+        <a class="btn btn-secondary" href="{{.Nav.About}}">About Me</a>
+      </div>
     </div>
   </div>
 </section>
@@ -52,9 +55,10 @@
 <section class="section">
   <div class="container">
     <div class="section-header-row">
-      <h2 class="section-title">Worth reading</h2>
-      <a class="link-arrow" href="{{.Nav.Articles}}">All articles →</a>
+      <h2 class="section-title">Giving back</h2>
+      <a class="link-arrow" href="{{.Nav.Articles}}">Read the blog →</a>
     </div>
+    <p class="section-lead">Writing up what I learn building real systems — architecture, event-driven design, and engineering careers — free on the blog.</p>
     <div class="article-grid">
       {{range .Articles}}
       <a class="article-card" href="/articles/{{.Slug}}">
@@ -63,7 +67,7 @@
           <p>{{.Summary}}</p>
         </div>
         <div class="article-card-meta">
-          <span>{{if .SourceName}}{{.SourceName}}{{else}}Read the take{{end}} →</span>
+          <span>Read the post →</span>
         </div>
       </a>
       {{end}}

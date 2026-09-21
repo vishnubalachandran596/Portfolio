@@ -541,6 +541,7 @@ a, button, .slot-btn, .faq-item summary { cursor: pointer; }
   margin-bottom: 1.75rem;
 }
 .section-header-row .section-title { margin-bottom: 0; }
+.section-lead { color: var(--color-text-muted); max-width: 40rem; margin: -1rem 0 1.75rem; }
 
 .eyebrow {
   text-transform: uppercase;
@@ -566,6 +567,15 @@ a, button, .slot-btn, .faq-item summary { cursor: pointer; }
   .section { padding: 2.5rem 0; }
 }
 .hero-inner { max-width: 45rem; }
+.hero-inner-with-photo { display: flex; align-items: center; gap: 2.5rem; max-width: 54rem; }
+.hero-inner-with-photo .hero-copy { flex: 1; min-width: 0; }
+.hero-photo { width: 11rem; height: 11rem; border-radius: 50%; object-fit: cover; border: 0.1875rem solid var(--color-surface); box-shadow: 0 0 0 0.0625rem var(--color-border); flex-shrink: 0; }
+@media (max-width: 720px) {
+  .hero-inner-with-photo { flex-direction: column; text-align: center; gap: 1.5rem; }
+  .hero-inner-with-photo .hero-subtitle { margin-left: auto; margin-right: auto; }
+  .hero-inner-with-photo .hero-actions { justify-content: center; }
+  .hero-photo { width: 8rem; height: 8rem; }
+}
 .hero h1 { font-size: clamp(2.2rem, 5vw, 3.4rem); font-weight: 700; letter-spacing: -0.02em; margin: 0.25rem 0 0.5rem; }
 .hero-title { font-size: 1.15rem; color: var(--color-primary-strong); font-weight: 600; margin-bottom: 1.125rem; }
 .hero-tagline { font-size: 1.3rem; font-weight: 600; margin-bottom: 0.625rem; }
