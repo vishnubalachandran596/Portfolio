@@ -13,6 +13,13 @@ func (a *App) Routes() http.Handler {
 	mux := http.NewServeMux()
 
 	mux.Handle("GET /static/", staticCache(http.FileServerFS(web.StaticFS)))
+	// Some browsers and bots still probe the root path directly regardless
+	// of the <link rel="icon"> tags in <head>.
+	mux.Handle("GET /favicon.ico", staticCache(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		r2 := r.Clone(r.Context())
+		r2.URL.Path = "/static/img/favicon.ico"
+		http.FileServerFS(web.StaticFS).ServeHTTP(w, r2)
+	})))
 
 	// Public site.
 	mux.HandleFunc("GET /{$}", a.Home)
