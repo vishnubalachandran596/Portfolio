@@ -1,0 +1,13 @@
+# Cursor rules for this repo — see also CLAUDE.md and .cursor/rules/architecture.mdc (full detail)
+
+Before any change: read docs/FUNCTIONALITY.md (what the product does) and docs/ARCHITECTURE.md (how it's built). Update whichever doc your change affects, in the same commit — not a follow-up.
+
+Core rules:
+1. Reuse existing utilities (e.g. models.FormatMoney, slugify(), resolvePromoCode()) — search before writing a near-duplicate. A duplicate money-formatting function once silently disagreed with the real one; that's the bug class this rule prevents.
+2. New features follow the layered pattern additively: models -> repo (all SQL) -> handlers -> templates -> routes.go. Reference: core/repo/audit_requests.go + consultancy.go's Audit checkout — a 4th paid product added without touching existing checkout code.
+3. Design for horizontal scale: stateless serverless function, no in-process state across requests except the pooled DB connection. Run independent DB lookups on hot paths concurrently.
+4. Never commit secrets. .env/.env.local stay gitignored; .env.example holds placeholders only. Check the diff before pushing anything config-adjacent.
+5. Payment/access confirmation is server-side (HMAC-verified) only — never trust a client-reported success.
+6. Stay consistent with the stack: Go stdlib net/http, server-rendered html/template, plain CSS (existing design tokens), raw SQL via database/sql, rem units. No framework additions for a single feature.
+
+Full detail lives in CLAUDE.md and .cursor/rules/architecture.mdc — read those for the complete rules and rationale.

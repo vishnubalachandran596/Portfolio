@@ -4,6 +4,8 @@
 
 **Keep this updated.** A new table, a new package, a new route pattern, a new external integration — update this file in the same commit.
 
+**Working conventions for any agent or developer touching this repo** live in `CLAUDE.md` (repo root), mirrored for Cursor in `.cursor/rules/architecture.mdc` and `.cursorrules` — read those before making a change, alongside this file and `docs/FUNCTIONALITY.md`.
+
 ---
 
 ## 1. Stack at a glance
@@ -30,7 +32,7 @@
 ```
 core/
   app/          Bootstrap() — the one place that wires config+DB+renderer into handlers.App
-  authutil/     password hashing (bcrypt wrapper)
+  authutil/     password hashing (bcrypt wrapper) + RandomHex, the one shared source of cryptographically random tokens (OAuth state, access tokens, cert codes, placeholder passwords)
   certificate/  PDF quiz-completion certificate generator
   config/       env-var loading (Config struct)
   content/      go:embed of the course content HTML files under core/content/courses/*.html

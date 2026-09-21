@@ -1,8 +1,6 @@
 package handlers
 
 import (
-	"crypto/rand"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -11,17 +9,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/vishnubalachandran596/portfolio/core/authutil"
 	"github.com/vishnubalachandran596/portfolio/core/geo"
 	"github.com/vishnubalachandran596/portfolio/core/models"
 	"github.com/vishnubalachandran596/portfolio/core/repo"
 )
 
 func generateAccessToken() (string, error) {
-	b := make([]byte, 32)
-	if _, err := rand.Read(b); err != nil {
-		return "", err
-	}
-	return hex.EncodeToString(b), nil
+	return authutil.RandomHex(32)
 }
 
 func accessCookieName(courseID int64) string {

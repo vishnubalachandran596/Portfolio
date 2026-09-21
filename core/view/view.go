@@ -9,6 +9,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/vishnubalachandran596/portfolio/core/models"
 )
 
 //go:embed all:templates
@@ -27,14 +29,13 @@ var funcs = template.FuncMap{
 	"formatDateTime": func(t time.Time) string {
 		return t.Format("Mon, Jan 2 2006 · 3:04 PM")
 	},
-	"money": func(cents int, currency string) string {
-		symbol := map[string]string{"EUR": "€", "GBP": "£", "INR": "₹"}[currency]
-		if symbol == "" {
-			symbol = "$"
-		}
-		return fmt.Sprintf("%s%d.%02d", symbol, cents/100, cents%100)
-	},
-	"add1": func(i int) int { return i + 1 },
+	// money reuses models.FormatMoney rather than re-implementing currency
+	// formatting a second time — the two independent implementations that
+	// existed here before disagreed on a real case ("$3000" vs "$3000.00"
+	// for a whole-dollar amount), which is exactly the bug class a single
+	// shared utility exists to prevent.
+	"money": models.FormatMoney,
+	"add1":  func(i int) int { return i + 1 },
 	"splitLines": func(s string) []string {
 		var out []string
 		for _, p := range strings.Split(strings.ReplaceAll(s, "\r\n", "\n"), "\n\n") {

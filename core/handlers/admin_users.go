@@ -1,8 +1,6 @@
 package handlers
 
 import (
-	"crypto/rand"
-	"encoding/hex"
 	"net/http"
 	"strconv"
 	"strings"
@@ -226,12 +224,12 @@ func (a *App) AdminUserPromote(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	randomBytes := make([]byte, 32)
-	if _, err := rand.Read(randomBytes); err != nil {
+	randomPassword, err := authutil.RandomHex(32)
+	if err != nil {
 		a.serverError(w, "generate admin password", err)
 		return
 	}
-	hash, err := authutil.HashPassword(hex.EncodeToString(randomBytes))
+	hash, err := authutil.HashPassword(randomPassword)
 	if err != nil {
 		a.serverError(w, "hash admin password", err)
 		return

@@ -6,6 +6,15 @@ password-protected admin portal to manage courses, bookings, weekly
 availability, and profile/about content — all backed by Postgres
 (Supabase-compatible), deployable to Vercel as a Go serverless function.
 
+## Working on this repo? Read this first
+
+Before making a change — human or AI agent — read:
+- **[`CLAUDE.md`](./CLAUDE.md)** — architecture rules, extensibility pattern, and the "never commit secrets" policy. Cursor users: the same rules also live in `.cursor/rules/architecture.mdc` (auto-loaded).
+- **[`docs/FUNCTIONALITY.md`](./docs/FUNCTIONALITY.md)** — every feature, what a visitor/user/admin can do, and the business rules behind each flow.
+- **[`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md)** — package layout, full ER diagram, auth model, payment flows, deployment.
+
+These three files are kept up to date in the same commit as whatever they describe — treat them as the current source of truth, not just onboarding reading.
+
 ## Stack
 
 - **Backend:** Go 1.24, standard library `net/http` (Go 1.22+ pattern-based

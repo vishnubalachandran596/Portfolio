@@ -1,8 +1,6 @@
 package handlers
 
 import (
-	"crypto/rand"
-	"encoding/hex"
 	"net/http"
 	"strings"
 	"time"
@@ -66,12 +64,11 @@ func (a *App) GoogleLoginStart(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/login?error=Google+sign-in+isn%27t+configured+yet", http.StatusSeeOther)
 		return
 	}
-	stateBytes := make([]byte, 24)
-	if _, err := rand.Read(stateBytes); err != nil {
+	state, err := authutil.RandomHex(24)
+	if err != nil {
 		a.serverError(w, "generate oauth state", err)
 		return
 	}
-	state := hex.EncodeToString(stateBytes)
 	next := safeNext(r)
 
 	http.SetCookie(w, &http.Cookie{
@@ -129,12 +126,12 @@ func (a *App) GoogleLoginCallback(w http.ResponseWriter, r *http.Request) {
 	if err == repo.ErrNotFound {
 		// A Google sign-in never sets a usable password — the column is
 		// NOT NULL, so store a random value nobody could ever type in.
-		randomBytes := make([]byte, 32)
-		if _, rerr := rand.Read(randomBytes); rerr != nil {
+		randomPassword, rerr := authutil.RandomHex(32)
+		if rerr != nil {
 			a.serverError(w, "provision google user", rerr)
 			return
 		}
-		hash, herr := authutil.HashPassword(hex.EncodeToString(randomBytes))
+		hash, herr := authutil.HashPassword(randomPassword)
 		if herr != nil {
 			a.serverError(w, "provision google user", herr)
 			return

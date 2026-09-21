@@ -1,13 +1,12 @@
 package handlers
 
 import (
-	"crypto/rand"
-	"encoding/hex"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
 
+	"github.com/vishnubalachandran596/portfolio/core/authutil"
 	"github.com/vishnubalachandran596/portfolio/core/certificate"
 	"github.com/vishnubalachandran596/portfolio/core/models"
 	"github.com/vishnubalachandran596/portfolio/core/repo"
@@ -206,9 +205,9 @@ func (a *App) CertificateDownload(w http.ResponseWriter, r *http.Request) {
 }
 
 func generateCertificateCode() (string, error) {
-	b := make([]byte, 8)
-	if _, err := rand.Read(b); err != nil {
+	code, err := authutil.RandomHex(8)
+	if err != nil {
 		return "", err
 	}
-	return strings.ToUpper(hex.EncodeToString(b)), nil
+	return strings.ToUpper(code), nil
 }
