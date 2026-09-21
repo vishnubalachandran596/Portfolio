@@ -8,7 +8,9 @@
 <meta name="theme-color" content="#1c1917">
 <link rel="canonical" href="{{.CanonicalURL}}">
 <link rel="icon" href="/static/img/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/static/css/style.css">
+<link rel="alternate icon" href="/static/img/favicon.ico">
+<link rel="apple-touch-icon" href="/static/img/apple-touch-icon.png">
+<link rel="stylesheet" href="/static/css/style.css?v={{.AssetVersion}}">
 
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="{{.SiteName}}">
@@ -35,6 +37,6 @@
 </main>
 {{template "footer" .}}
 <button type="button" id="back-to-top" class="back-to-top" aria-label="Back to top" hidden>↑</button>
-<script src="/static/js/main.js" defer></script>
+<script src="/static/js/main.js?v={{.AssetVersion}}" defer></script>
 </body>
 </html>

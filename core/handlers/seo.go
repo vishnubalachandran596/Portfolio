@@ -104,6 +104,52 @@ func (a *App) Robots(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "User-agent: *\nAllow: /\nDisallow: /admin/\n\nSitemap: %s/sitemap.xml\n", base)
 }
 
+// LLMsTxt serves a plain-text summary of the site for AI assistants and
+// answer engines to read directly — the emerging (informal, unstandardized)
+// llms.txt convention. Built from the same live profile/course data as the
+// rest of the site rather than a static file, so it can't silently drift
+// out of date.
+func (a *App) LLMsTxt(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	profile, err := a.Profile.Get(ctx)
+	if err != nil {
+		a.serverError(w, "load profile for llms.txt", err)
+		return
+	}
+	courses, err := a.Courses.ListPublished(ctx)
+	if err != nil {
+		a.serverError(w, "load courses for llms.txt", err)
+		return
+	}
+
+	base := a.pageURL(r, "")
+
+	var b strings.Builder
+	fmt.Fprintf(&b, "# %s\n\n", profile.Name)
+	fmt.Fprintf(&b, "> %s\n\n", profile.HeroSubtitle)
+	if profile.Summary != "" {
+		fmt.Fprintf(&b, "%s\n\n", profile.Summary)
+	}
+
+	b.WriteString("## Pages\n\n")
+	fmt.Fprintf(&b, "- [About](%s/about): Background, skills, and experience\n", base)
+	fmt.Fprintf(&b, "- [Consultancy](%s/consultancy): Fixed-price architecture reviews, fractional advisory retainers, and hourly sessions\n", base)
+	fmt.Fprintf(&b, "- [Courses](%s/courses): Practical courses on Java, architecture, system design, and distributed systems\n", base)
+	fmt.Fprintf(&b, "- [Articles](%s/articles): Original writing and curated reading on software architecture\n", base)
+	fmt.Fprintf(&b, "- [Contact](%s/contact): Get in touch\n\n", base)
+
+	if len(courses) > 0 {
+		b.WriteString("## Courses\n\n")
+		for _, c := range courses {
+			fmt.Fprintf(&b, "- [%s](%s/courses/%s): %s\n", c.Title, base, c.Slug, c.Summary)
+		}
+		b.WriteString("\n")
+	}
+
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.Write([]byte(b.String()))
+}
+
 type SearchData struct {
 	BaseData
 	Query   string

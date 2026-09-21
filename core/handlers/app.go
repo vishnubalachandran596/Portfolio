@@ -17,6 +17,7 @@ import (
 	"github.com/vishnubalachandran596/portfolio/core/payments"
 	"github.com/vishnubalachandran596/portfolio/core/repo"
 	"github.com/vishnubalachandran596/portfolio/core/view"
+	"github.com/vishnubalachandran596/portfolio/web"
 )
 
 type App struct {
@@ -73,6 +74,7 @@ type BaseData struct {
 	LinkedInURL         string
 	Notifications       []NotificationItem
 	UnreadNotifCount    int
+	AssetVersion        string
 }
 
 // NotificationItem is one entry in the header's notification menu —
@@ -236,6 +238,7 @@ func (a *App) base(r *http.Request, title, metaDescription, active string) BaseD
 		LinkedInURL:         linkedIn,
 		Notifications:       notifications,
 		UnreadNotifCount:    unreadCount,
+		AssetVersion:        web.AssetVersion,
 	}
 }
 

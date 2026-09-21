@@ -12,7 +12,7 @@ import (
 func (a *App) Routes() http.Handler {
 	mux := http.NewServeMux()
 
-	mux.Handle("GET /static/", http.FileServerFS(web.StaticFS))
+	mux.Handle("GET /static/", staticCache(http.FileServerFS(web.StaticFS)))
 
 	// Public site.
 	mux.HandleFunc("GET /{$}", a.Home)
@@ -55,6 +55,7 @@ func (a *App) Routes() http.Handler {
 	// SEO.
 	mux.HandleFunc("GET /sitemap.xml", a.Sitemap)
 	mux.HandleFunc("GET /robots.txt", a.Robots)
+	mux.HandleFunc("GET /llms.txt", a.LLMsTxt)
 
 	// Legal / compliance.
 	mux.HandleFunc("GET /privacy", a.LegalPage("privacy", "Privacy Policy"))
@@ -146,6 +147,18 @@ func (a *App) Routes() http.Handler {
 func noindex(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("X-Robots-Tag", "noindex, nofollow")
+		next.ServeHTTP(w, r)
+	})
+}
+
+// staticCache marks every static asset cacheable forever. This is only
+// safe because every CSS/JS URL is requested with a "?v=" query string
+// derived from the file's own content (web.AssetVersion) — the exact URL
+// only ever repeats when the bytes behind it are identical, so there's no
+// way for a visitor to get stuck on a stale file after a deploy.
+func staticCache(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
 		next.ServeHTTP(w, r)
 	})
 }
