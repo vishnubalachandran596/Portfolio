@@ -4,7 +4,7 @@
 
 **Keep this updated.** A new table, a new package, a new route pattern, a new external integration — update this file in the same commit.
 
-**Working conventions for any agent or developer touching this repo** live in `CLAUDE.md` (repo root), mirrored for Cursor in `.cursor/rules/architecture.mdc` and `.cursorrules` — read those before making a change, alongside this file and `docs/FUNCTIONALITY.md`.
+**Working conventions for any agent or developer touching this repo** live in `CLAUDE.md` (repo root), mirrored for Cursor in `.cursor/rules/architecture.mdc` and `.cursorrules`, and for Codex in `AGENTS.md` — read those before making a change, alongside this file and `docs/FUNCTIONALITY.md`.
 
 ---
 
@@ -87,6 +87,8 @@ erDiagram
     promo_codes ||--o{ purchases : "discounts (nullable FK)"
     promo_codes ||--o{ bookings : "discounts (nullable FK)"
     availability_rules ||--o{ bookings : "generates slots for (app-level, not FK)"
+    articles ||--o{ article_thumbs_up : "receives"
+    users ||--o{ article_thumbs_up : "casts (nullable FK — vote never requires login)"
 
     admins {
         serial id PK
@@ -293,6 +295,12 @@ erDiagram
         int sort_order
         timestamptz created_at
     }
+    article_thumbs_up {
+        bigserial id PK
+        bigint article_id FK
+        bigint user_id FK "nullable — NULL means anonymous visitor"
+        timestamptz created_at
+    }
     promo_codes {
         bigserial id PK
         text code UK
@@ -336,7 +344,7 @@ erDiagram
 
 `handlers.App` (in `core/handlers/app.go`) is the one struct every handler is a method on. It holds:
 - `Cfg *config.Config`, `DB *sql.DB`, `View *view.Renderer`, `Auth *middleware.Auth`
-- One repo field per aggregate: `Profile, Skills, Experience, Education, Features, Courses, Bookings, Availability, Admins, Purchases, Users, Articles, PromoCodes, QuizQuestions, QuizAttempts, AdminMessages, CourseUpdates, Testimonials, AuditRequests`
+- One repo field per aggregate: `Profile, Skills, Experience, Education, Features, Courses, Bookings, Availability, Admins, Purchases, Users, Articles, PromoCodes, QuizQuestions, QuizAttempts, AdminMessages, CourseUpdates, Testimonials, AuditRequests, ArticleVotes`
 - `Razorpay *payments.Razorpay`, `Telegram *notify.Telegram`, `Google *oauth.Google`, `Timezone *time.Location`
 
 `App.base(r, title, metaDescription, active) BaseData` runs on **every single page render** — it resolves login state (both admin and user), notifications, the footer's LinkedIn link, nav URLs, and the asset-version string. Because it runs on every page, its three independent DB lookups (user name, notifications, profile) are fetched **concurrently** via `sync.WaitGroup` (not `errgroup` — this function's existing contract is "degrade quietly on error," which `errgroup` doesn't fit). Every page-specific `*Data` struct embeds `BaseData`.

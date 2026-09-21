@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"html/template"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -129,7 +130,8 @@ func articleVoteCookie(slug string) string { return "au_" + slug }
 // wall in front of a lightweight reaction.
 func (a *App) ArticleThumbsUp(w http.ResponseWriter, r *http.Request) {
 	slug := r.PathValue("slug")
-	if _, err := a.Articles.GetBySlug(r.Context(), slug); err != nil {
+	article, err := a.Articles.GetBySlug(r.Context(), slug)
+	if err != nil {
 		writeJSON(w, http.StatusNotFound, map[string]string{"error": "Article not found."})
 		return
 	}
@@ -144,6 +146,18 @@ func (a *App) ArticleThumbsUp(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		a.serverError(w, "increment thumbs up", err)
 		return
+	}
+
+	// Best-effort: who-voted detail for the admin view. userID is nil for
+	// an anonymous visitor, which is the normal case — voting never
+	// requires login, so a failure here should never block the vote
+	// itself from counting.
+	var userID *int64
+	if id, ok := a.Auth.UserID(r); ok {
+		userID = &id
+	}
+	if err := a.ArticleVotes.Create(r.Context(), article.ID, userID); err != nil {
+		log.Printf("record article vote detail: %v", err)
 	}
 	http.SetCookie(w, &http.Cookie{
 		Name:     cookieName,
@@ -181,6 +195,7 @@ type AdminArticleFormData struct {
 	Article models.Article
 	IsNew   bool
 	Error   string
+	Votes   []models.ArticleVote
 }
 
 func (a *App) AdminArticleNewPage(w http.ResponseWriter, r *http.Request) {
@@ -206,9 +221,15 @@ func (a *App) AdminArticleEditPage(w http.ResponseWriter, r *http.Request) {
 		a.serverError(w, "load article", err)
 		return
 	}
+	votes, err := a.ArticleVotes.ListByArticle(r.Context(), article.ID)
+	if err != nil {
+		a.serverError(w, "load article votes", err)
+		return
+	}
 	a.View.Render(w, http.StatusOK, "admin_article_form", AdminArticleFormData{
 		BaseData: a.base(r, "Edit Article — Admin", "", "admin"),
 		Article:  article,
+		Votes:    votes,
 	})
 }
 

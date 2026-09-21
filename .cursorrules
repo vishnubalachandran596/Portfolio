@@ -1,4 +1,4 @@
-# Cursor rules for this repo — see also CLAUDE.md and .cursor/rules/architecture.mdc (full detail)
+# Cursor rules for this repo — see also CLAUDE.md, AGENTS.md, and .cursor/rules/architecture.mdc (full detail)
 
 Before any change: read docs/FUNCTIONALITY.md (what the product does) and docs/ARCHITECTURE.md (how it's built). Update whichever doc your change affects, in the same commit — not a follow-up.
 

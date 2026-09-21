@@ -9,11 +9,11 @@ availability, and profile/about content — all backed by Postgres
 ## Working on this repo? Read this first
 
 Before making a change — human or AI agent — read:
-- **[`CLAUDE.md`](./CLAUDE.md)** — architecture rules, extensibility pattern, and the "never commit secrets" policy. Cursor users: the same rules also live in `.cursor/rules/architecture.mdc` (auto-loaded).
+- **[`CLAUDE.md`](./CLAUDE.md)** — architecture rules, extensibility pattern, and the "never commit secrets" policy. Cursor users: the same rules also live in `.cursor/rules/architecture.mdc` (auto-loaded) and `.cursorrules`. Codex users: see **[`AGENTS.md`](./AGENTS.md)**.
 - **[`docs/FUNCTIONALITY.md`](./docs/FUNCTIONALITY.md)** — every feature, what a visitor/user/admin can do, and the business rules behind each flow.
 - **[`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md)** — package layout, full ER diagram, auth model, payment flows, deployment.
 
-These three files are kept up to date in the same commit as whatever they describe — treat them as the current source of truth, not just onboarding reading.
+These files are kept up to date in the same commit as whatever they describe — treat them as the current source of truth, not just onboarding reading.
 
 ## Stack
 

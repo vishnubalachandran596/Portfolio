@@ -9,6 +9,11 @@
       {{if .Article.IsOriginal}}<span>By {{.SiteName}}</span>{{else if .Article.SourceName}}<span>{{.Article.SourceName}}</span>{{end}}
       {{range .Article.Tags}}<a class="tag-chip" href="/articles?tag={{.}}">{{.}}</a>{{end}}
     </div>
+    <div class="article-thumbs-top">
+      <button type="button" class="btn btn-secondary article-thumbs-btn" data-slug="{{.Article.Slug}}" {{if .Voted}}disabled{{end}}>
+        👍 <span class="thumbs-count-num">{{.Article.ThumbsUpCount}}</span>{{if .Voted}} · Thanks!{{end}}
+      </button>
+    </div>
   </div>
 </section>
 
@@ -31,8 +36,8 @@
 
     <div class="article-detail-actions">
       {{if .Article.SourceURL}}<a class="btn btn-primary" href="{{.Article.SourceURL}}" target="_blank" rel="noopener noreferrer">Read the full article ↗</a>{{end}}
-      <button type="button" class="btn btn-secondary" id="thumbs-up-btn" data-slug="{{.Article.Slug}}" {{if .Voted}}disabled{{end}}>
-        👍 <span id="thumbs-up-count">{{.Article.ThumbsUpCount}}</span>{{if .Voted}} · Thanks!{{end}}
+      <button type="button" class="btn btn-secondary article-thumbs-btn" data-slug="{{.Article.Slug}}" {{if .Voted}}disabled{{end}}>
+        👍 <span class="thumbs-count-num">{{.Article.ThumbsUpCount}}</span>{{if .Voted}} · Thanks!{{end}}
       </button>
     </div>
 
@@ -42,20 +47,44 @@
 
 <script>
 (function () {
-  var btn = document.getElementById("thumbs-up-btn");
-  if (!btn) return;
-  btn.addEventListener("click", function () {
-    if (btn.disabled) return;
-    btn.disabled = true;
-    fetch("/articles/" + btn.dataset.slug + "/thumbs-up", { method: "POST" })
-      .then(function (r) { return r.json(); })
-      .then(function (data) {
-        if (typeof data.thumbs_up_count === "number") {
-          document.getElementById("thumbs-up-count").textContent = data.thumbs_up_count;
-        }
-      })
-      .catch(function () { btn.disabled = false; });
-  });
+  // Top and bottom thumbs-up widgets share one vote — both point at the
+  // same article, so a click on either one has to disable and update
+  // both together, not just the button that was clicked.
+  var buttons = document.querySelectorAll(".article-thumbs-btn[data-slug]");
+  if (!buttons.length) return;
+
+  function setAllDisabled(disabled) {
+    for (var i = 0; i < buttons.length; i++) buttons[i].disabled = disabled;
+  }
+  function setCount(n) {
+    for (var i = 0; i < buttons.length; i++) {
+      var el = buttons[i].querySelector(".thumbs-count-num");
+      if (el) el.textContent = n;
+    }
+  }
+  function markVoted() {
+    for (var i = 0; i < buttons.length; i++) {
+      if (!buttons[i].dataset.voted) {
+        buttons[i].dataset.voted = "1";
+        buttons[i].insertAdjacentText("beforeend", " · Thanks!");
+      }
+    }
+  }
+
+  for (var i = 0; i < buttons.length; i++) {
+    buttons[i].addEventListener("click", function (e) {
+      var slug = e.currentTarget.dataset.slug;
+      if (e.currentTarget.disabled) return;
+      setAllDisabled(true);
+      fetch("/articles/" + slug + "/thumbs-up", { method: "POST" })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          if (typeof data.thumbs_up_count === "number") setCount(data.thumbs_up_count);
+          markVoted();
+        })
+        .catch(function () { setAllDisabled(false); });
+    });
+  }
 })();
 </script>
 {{end}}

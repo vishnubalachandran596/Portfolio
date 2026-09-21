@@ -46,6 +46,25 @@
         <a class="btn btn-secondary" href="/admin/articles">Cancel</a>
       </div>
     </form>
+
+    {{if not .IsNew}}
+    <h2 class="section-title admin-subsection-title">Thumbs up ({{.Article.ThumbsUpCount}})</h2>
+    {{if .Votes}}
+    <table class="admin-table">
+      <thead><tr><th>When</th><th>Voter</th></tr></thead>
+      <tbody>
+        {{range .Votes}}
+        <tr>
+          <td>{{formatDateTime .CreatedAt}}</td>
+          <td>{{if .IsAnonymous}}<span class="admin-table-subtext">Anonymous visitor</span>{{else}}{{.UserName}} <span class="admin-table-subtext">{{.UserEmail}}</span>{{end}}</td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+    {{else}}
+    <p class="empty-state">No thumbs up yet.</p>
+    {{end}}
+    {{end}}
   </div>
 </section>
 {{end}}

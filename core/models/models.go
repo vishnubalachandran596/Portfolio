@@ -336,6 +336,21 @@ func (a Article) TagsDisplay() string {
 	return strings.Join(a.Tags, ", ")
 }
 
+// ArticleVote is one thumbs-up on an article, for the admin "who voted"
+// view. UserName/UserEmail are empty when the voter wasn't logged in —
+// voting never requires an account, so an anonymous vote is expected,
+// not an error.
+type ArticleVote struct {
+	ID        int64
+	UserName  string
+	UserEmail string
+	CreatedAt time.Time
+}
+
+// IsAnonymous reports whether this vote came from a visitor without a
+// logged-in account.
+func (v ArticleVote) IsAnonymous() bool { return v.UserEmail == "" }
+
 type AvailabilityRule struct {
 	ID          int64
 	Weekday     time.Weekday

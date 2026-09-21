@@ -1,6 +1,6 @@
-# Instructions for AI coding agents (Claude Code, Cursor, or any other)
+# Instructions for AI coding agents (Claude Code, Cursor, Codex, or any other)
 
-This file is the entry point. Read it, and the two docs it points to, **before making any change** — not after something breaks. If you're an AI agent and you're reading this mid-task having already edited files, stop, read `docs/FUNCTIONALITY.md` and `docs/ARCHITECTURE.md` now, then continue.
+This file is the entry point for Claude Code. Codex reads `AGENTS.md` and Cursor reads `.cursor/rules/architecture.mdc`/`.cursorrules` — all three carry the same rules, kept in sync on every push. Read this file, and the two docs it points to, **before making any change** — not after something breaks. If you're an AI agent and you're reading this mid-task having already edited files, stop, read `docs/FUNCTIONALITY.md` and `docs/ARCHITECTURE.md` now, then continue.
 
 ## Read these two docs first, always
 
