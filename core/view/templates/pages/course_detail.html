@@ -12,16 +12,19 @@
     </div>
 
     {{if .Course.IsPaid}}
-      {{if .PurchaseRequired}}<div class="alert alert-error">Purchase required — pay below to unlock this course.</div>{{end}}
+      {{if .PurchaseRequired}}<div class="alert alert-error">Get access below to continue — it only takes a moment.</div>{{end}}
       {{if .HasAccess}}
       <div class="hero-actions">
         <a class="btn btn-primary" href="/courses/{{.Course.Slug}}/learn">Open Course</a>
         {{if .HasQuiz}}<a class="btn btn-secondary" href="/courses/{{.Course.Slug}}/quiz">Take the Final Quiz</a>{{end}}
       </div>
-      {{else if .PaymentsEnabled}}
+      {{else}}
       <div class="purchase-box" id="purchase-box">
-        <p class="purchase-box-title">Unlock this course</p>
-        <p class="purchase-box-sub">Pay-what-you-want — {{.ResolvedMinDisplay}} minimum{{if eq .Country "IN"}} (India pricing){{end}}.</p>
+        <p class="purchase-box-title">Get access</p>
+        <p class="purchase-box-sub">
+          {{if gt .ResolvedMinCents 0}}Free to start — a minimum contribution of {{.ResolvedMinDisplay}} applies{{if eq .Country "IN"}} (India pricing){{end}}.
+          {{else}}This course is free. Contribute whatever you'd like to support future courses — or leave it at 0 and enroll now.{{end}}
+        </p>
         <div id="purchase-error" class="alert alert-error" hidden></div>
         {{if .UserEmail}}
         <p class="purchase-box-sub">Access will be sent to <strong>{{.UserEmail}}</strong>.</p>
@@ -30,17 +33,17 @@
           <input type="email" id="purchase-email" required>
         </label>
         {{end}}
-        <label>Contribution ({{.ResolvedCurrency}})
-          <input type="number" id="purchase-amount" min="{{.ResolvedMinWhole}}" step="1" value="{{.ResolvedMinWhole}}">
+        <label>Contribution ({{.ResolvedCurrency}}) <span class="optional">{{if .PaymentsEnabled}}optional — leave at 0 for free access{{else}}contributions aren't enabled yet — enroll free below{{end}}</span>
+          <input type="number" id="purchase-amount" min="{{.ResolvedMinWhole}}" step="1" value="{{.ResolvedMinWhole}}" {{if not .PaymentsEnabled}}disabled{{end}}>
         </label>
+        {{if .PaymentsEnabled}}
         <label>Promo code <span class="optional">(optional)</span>
           <input type="text" id="purchase-promo-code" autocapitalize="characters">
         </label>
-        <button type="button" class="btn btn-primary" id="purchase-btn" data-slug="{{.Course.Slug}}" data-min-cents="{{.ResolvedMinCents}}">Pay &amp; Unlock</button>
+        {{end}}
+        <button type="button" class="btn btn-primary" id="purchase-btn" data-slug="{{.Course.Slug}}" data-min-cents="{{.ResolvedMinCents}}">{{if gt .ResolvedMinCents 0}}Continue{{else}}Get Free Access{{end}}</button>
       </div>
-      <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
-      {{else}}
-      <p class="empty-state">Checkout isn't configured yet — check back soon.</p>
+      {{if .PaymentsEnabled}}<script src="https://checkout.razorpay.com/v1/checkout.js"></script>{{end}}
       {{end}}
     {{else}}
     <div class="hero-actions">

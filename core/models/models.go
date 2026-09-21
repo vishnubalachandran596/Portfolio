@@ -106,17 +106,29 @@ type Course struct {
 // IsFree reports whether the course has no listed price.
 func (c Course) IsFree() bool { return !c.IsPaid && c.PriceCents == 0 }
 
-// PriceDisplay renders the price as a human string, e.g. "$49" or "Free".
-// For a paid course this shows the international minimum — see
-// RegionalPrice for the visitor-aware version (India gets an INR floor).
+// PriceDisplay renders the price as a human string. Every paid course is
+// "contribute as you like" by default (no hard price) — see
+// RegionalPriceDisplay for the visitor-aware version (India gets its own
+// INR minimum, when one is set).
 func (c Course) PriceDisplay() string {
 	if c.IsPaid {
-		return "From " + FormatMoney(c.MinPriceCents, c.Currency)
+		return contributeDisplay(c.MinPriceCents, c.Currency)
 	}
 	if c.IsFree() {
 		return "Free"
 	}
 	return FormatMoney(c.PriceCents, c.Currency)
+}
+
+// contributeDisplay renders the "contribute as you like" pricing copy used
+// everywhere a paid course's price would otherwise show: no minimum set
+// (the default) reads as fully free with an optional contribution, and a
+// minimum reads the same way with the floor called out after an asterisk.
+func contributeDisplay(minCents int, currency string) string {
+	if minCents <= 0 {
+		return "Contribute as you like to support"
+	}
+	return "Contribute as you like to support *min " + FormatMoney(minCents, currency)
 }
 
 // MinPriceDisplay renders the minimum contribution for a paid course.
@@ -138,7 +150,8 @@ func (c Course) RegionalPrice(country string) (currency string, minCents int) {
 	return c.Currency, c.MinPriceCents
 }
 
-// RegionalPriceDisplay renders "From ₹500" / "From $5" / "Free" for the
+// RegionalPriceDisplay renders the "contribute as you like" pricing copy
+// (with a "*min $X" suffix only when a minimum is actually set) for the
 // given visitor's country — the region-aware counterpart to PriceDisplay,
 // used wherever a course price is shown to an actual visitor.
 func (c Course) RegionalPriceDisplay(country string) string {
@@ -146,7 +159,7 @@ func (c Course) RegionalPriceDisplay(country string) string {
 		return c.PriceDisplay()
 	}
 	currency, cents := c.RegionalPrice(country)
-	return "From " + FormatMoney(cents, currency)
+	return contributeDisplay(cents, currency)
 }
 
 func FormatMoney(cents int, currency string) string {
@@ -195,12 +208,31 @@ type Booking struct {
 	CreatedAt              time.Time
 }
 
-// Consultancy is a single paid 1:1 offering (not stored per-row like a
-// course — one product, priced by region the same way a paid course is).
+// Consultancy is now three tiers, not one hourly rate — see the growth
+// strategy doc: a fixed-price Architecture Review is the primary CTA (a
+// low-friction way to start working together and the standard on-ramp
+// into a retainer), a monthly retainer is discussed directly rather than
+// self-checkout (real retainers are negotiated, not sold off a price
+// list), and hourly booking still exists but repriced to the "experienced
+// consultant" tier and repositioned as the smallest, least-emphasized
+// option rather than the only one.
 const (
 	ConsultancyDurationMinutes = 60
-	ConsultancyPriceCentsUSD   = 4000   // $40/hour
-	ConsultancyPriceCentsINR   = 300000 // ₹3,000/hour
+	ConsultancyPriceCentsUSD   = 20000   // $200/hour
+	ConsultancyPriceCentsINR   = 1000000 // ₹10,000/hour
+
+	// AuditPriceCentsUSD/INR is the fixed price of a Technical
+	// Architecture Review / Due Diligence engagement — a scoped,
+	// fixed-fee package (not billed hourly), paid up front via the same
+	// Razorpay checkout pattern as a course or a booking.
+	AuditPriceCentsUSD = 300000  // $3,000
+	AuditPriceCentsINR = 15000000 // ₹1,50,000
+
+	// RetainerPriceRangeUSD/INR are display-only ranges shown on the
+	// consultancy page — a retainer is scoped on a call, never
+	// self-checkout, so there's no fixed cents constant to charge against.
+	RetainerPriceRangeUSD = "$4,000–$8,000/month"
+	RetainerPriceRangeINR = "₹2,00,000–₹4,00,000/month"
 )
 
 // ConsultancyRegionalPrice mirrors Course.RegionalPrice: India gets its
@@ -212,12 +244,59 @@ func ConsultancyRegionalPrice(country string) (currency string, cents int) {
 	return "USD", ConsultancyPriceCentsUSD
 }
 
-// ConsultancyRegionalPriceDisplay renders "₹3,000/hour" or "$40/hour" for
+// ConsultancyRegionalPriceDisplay renders "₹10,000/hour" or "$200/hour" for
 // the given visitor's country.
 func ConsultancyRegionalPriceDisplay(country string) string {
 	currency, cents := ConsultancyRegionalPrice(country)
 	return FormatMoney(cents, currency) + "/hour"
 }
+
+// AuditRegionalPrice mirrors ConsultancyRegionalPrice for the fixed-price
+// Architecture Review package.
+func AuditRegionalPrice(country string) (currency string, cents int) {
+	if country == "IN" {
+		return "INR", AuditPriceCentsINR
+	}
+	return "USD", AuditPriceCentsUSD
+}
+
+func AuditRegionalPriceDisplay(country string) string {
+	currency, cents := AuditRegionalPrice(country)
+	return FormatMoney(cents, currency)
+}
+
+// RetainerRangeDisplay renders the display-only monthly retainer range for
+// the visitor's region.
+func RetainerRangeDisplay(country string) string {
+	if country == "IN" {
+		return RetainerPriceRangeINR
+	}
+	return RetainerPriceRangeUSD
+}
+
+// AuditRequest is a paid, fixed-scope Architecture Review / technical due
+// diligence engagement — a single fixed-price checkout (unlike a course's
+// pay-what-you-want model), so it's modeled much closer to Booking than to
+// Purchase: one row per inquiry, moving from pending_payment to paid.
+type AuditRequest struct {
+	ID                int64
+	Name              string
+	Email             string
+	Company           string
+	Brief             string
+	AmountCents       int
+	Currency          string
+	Status            string
+	RazorpayOrderID   string
+	RazorpayPaymentID string
+	CreatedAt         time.Time
+	PaidAt            *time.Time
+}
+
+const (
+	AuditStatusPendingPayment = "pending_payment"
+	AuditStatusPaid           = "paid"
+)
 
 type User struct {
 	ID           int64

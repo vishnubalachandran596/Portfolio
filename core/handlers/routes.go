@@ -27,6 +27,8 @@ func (a *App) Routes() http.Handler {
 	mux.Handle("POST /courses/{slug}/quiz", noindex(http.HandlerFunc(a.QuizSubmit)))
 	mux.Handle("GET /courses/{slug}/certificate", noindex(http.HandlerFunc(a.CertificateDownload)))
 	mux.HandleFunc("GET /consultancy", a.ConsultancyPage)
+	mux.HandleFunc("POST /consultancy/audit/checkout/order", a.AuditCheckoutOrder)
+	mux.HandleFunc("POST /consultancy/audit/checkout/verify", a.AuditCheckoutVerify)
 	mux.Handle("GET /booking", a.Auth.RequireUser(http.HandlerFunc(a.BookingPage)))
 	mux.HandleFunc("POST /booking/checkout/order", a.BookingCheckoutOrder)
 	mux.HandleFunc("POST /booking/checkout/verify", a.BookingCheckoutVerify)

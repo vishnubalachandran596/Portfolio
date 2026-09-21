@@ -40,11 +40,6 @@ func writeJSON(w http.ResponseWriter, status int, v any) {
 // a client-supplied amount below the minimum, though paying *more* is
 // always fine.
 func (a *App) CheckoutCreateOrder(w http.ResponseWriter, r *http.Request) {
-	if !a.Razorpay.Enabled() {
-		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "Payments are not configured yet."})
-		return
-	}
-
 	slug := r.PathValue("slug")
 	course, err := a.Courses.GetBySlug(r.Context(), slug)
 	if err != nil || !course.IsPaid || !course.IsPublished {
@@ -98,10 +93,67 @@ func (a *App) CheckoutCreateOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	amountCents -= discountCents
+	if amountCents < 0 {
+		amountCents = 0
+	}
 
 	token, err := generateAccessToken()
 	if err != nil {
 		a.serverError(w, "generate access token", err)
+		return
+	}
+
+	purchase := models.Purchase{
+		CourseID:      course.ID,
+		UserID:        userID,
+		Email:         email,
+		AmountCents:   amountCents,
+		Currency:      currency,
+		AccessToken:   token,
+		DiscountCents: discountCents,
+	}
+	if promo != nil {
+		purchase.PromoCodeID = &promo.ID
+		purchase.PromoCode = promo.Code
+	}
+
+	// A $0 course (the default — every course is "contribute as you like")
+	// never touches Razorpay at all: it's recorded straight as paid, and
+	// the visitor gets instant access. Razorpay is only involved once a
+	// visitor actually chooses to contribute something.
+	if amountCents == 0 {
+		purchase.RazorpayOrderID = "free-" + token
+		if _, err := a.Purchases.Create(r.Context(), purchase); err != nil {
+			a.serverError(w, "record free enrollment", err)
+			return
+		}
+		if err := a.Purchases.MarkPaid(r.Context(), purchase.RazorpayOrderID, ""); err != nil {
+			a.serverError(w, "mark free enrollment paid", err)
+			return
+		}
+		if promo != nil {
+			if err := a.PromoCodes.IncrementRedemption(r.Context(), promo.ID); err != nil {
+				log.Printf("increment promo redemption: %v", err)
+			}
+		}
+		http.SetCookie(w, &http.Cookie{
+			Name:     accessCookieName(course.ID),
+			Value:    token,
+			Path:     "/",
+			HttpOnly: true,
+			Secure:   a.Cfg.IsProduction(),
+			SameSite: http.SameSiteLaxMode,
+			Expires:  time.Now().AddDate(2, 0, 0),
+		})
+		writeJSON(w, http.StatusOK, map[string]any{
+			"free":     true,
+			"redirect": "/courses/" + slug + "/learn",
+		})
+		return
+	}
+
+	if !a.Razorpay.Enabled() {
+		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "Contributions aren't enabled yet — leave the amount at 0 for free access."})
 		return
 	}
 
@@ -112,21 +164,7 @@ func (a *App) CheckoutCreateOrder(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusBadGateway, map[string]string{"error": "Could not start checkout. Please try again."})
 		return
 	}
-
-	purchase := models.Purchase{
-		CourseID:        course.ID,
-		UserID:          userID,
-		Email:           email,
-		AmountCents:     amountCents,
-		Currency:        currency,
-		RazorpayOrderID: orderID,
-		AccessToken:     token,
-		DiscountCents:   discountCents,
-	}
-	if promo != nil {
-		purchase.PromoCodeID = &promo.ID
-		purchase.PromoCode = promo.Code
-	}
+	purchase.RazorpayOrderID = orderID
 	if _, err := a.Purchases.Create(r.Context(), purchase); err != nil {
 		a.serverError(w, "record purchase", err)
 		return

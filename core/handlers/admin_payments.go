@@ -42,6 +42,11 @@ func (a *App) AdminPaymentsList(w http.ResponseWriter, r *http.Request) {
 		a.serverError(w, "load bookings", err)
 		return
 	}
+	auditRequests, err := a.AuditRequests.ListAll(ctx)
+	if err != nil {
+		a.serverError(w, "load audit requests", err)
+		return
+	}
 
 	var rows []adminPaymentRow
 	totalCents := map[string]int{}
@@ -90,6 +95,25 @@ func (a *App) AdminPaymentsList(w http.ResponseWriter, r *http.Request) {
 		}
 		rows = append(rows, row)
 		totalCents[b.Currency] += b.AmountCents
+	}
+	for _, aud := range auditRequests {
+		if aud.Status != models.AuditStatusPaid || aud.PaidAt == nil {
+			continue
+		}
+		desc := "Architecture Review"
+		if aud.Company != "" {
+			desc += " · " + aud.Company
+		}
+		rows = append(rows, adminPaymentRow{
+			When:        aud.PaidAt.In(a.Timezone).Format("Jan 2, 2006 · 3:04 PM"),
+			whenSort:    aud.PaidAt.Unix(),
+			Type:        "Audit",
+			Description: desc,
+			Email:       aud.Email,
+			Amount:      models.FormatMoney(aud.AmountCents, aud.Currency),
+			PaymentID:   aud.RazorpayPaymentID,
+		})
+		totalCents[aud.Currency] += aud.AmountCents
 	}
 
 	sort.Slice(rows, func(i, j int) bool { return rows[i].whenSort > rows[j].whenSort })

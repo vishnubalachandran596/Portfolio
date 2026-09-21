@@ -16,17 +16,125 @@ import (
 
 type ConsultancyData struct {
 	BaseData
-	PriceDisplay string
+	PriceDisplay         string
+	AuditPriceDisplay    string
+	AuditCurrency        string
+	AuditAmountCents     int
+	AuditSuccess         bool
+	RetainerRangeDisplay string
+	PaymentsEnabled      bool
+	UserEmail            string
+	UserName             string
 }
 
-// ConsultancyPage is the informational page — the only place on the site
-// with a "Book Now" call to action, which leads to /booking.
+// ConsultancyPage is the informational page — three tiers (a fixed-price
+// Architecture Review as the primary CTA, a monthly retainer that's
+// discussed rather than self-checkout, and hourly booking repositioned as
+// the smallest, least-emphasized option) leading to /booking or the
+// inline audit-request checkout on this same page.
 func (a *App) ConsultancyPage(w http.ResponseWriter, r *http.Request) {
-	base := a.base(r, "Technical Consultant — Architecture & System Design Consulting | "+a.Cfg.SiteName, "Hire a technical consultant for architecture reviews, system design decisions, and engineering leadership — book a 1:1 session directly.", "consultancy")
+	base := a.base(r, "Technical Consultant — Architecture Reviews & Fractional Advisory | "+a.Cfg.SiteName, "Hire a technical consultant for a fixed-price architecture review, an ongoing fractional advisory retainer, or a 1:1 hourly session — from an 8+ year banking and fintech platform architect.", "consultancy")
+	currency, cents := models.AuditRegionalPrice(base.Country)
+
+	userEmail, userName := "", ""
+	if uid, ok := a.Auth.UserID(r); ok {
+		if u, err := a.Users.GetByID(r.Context(), uid); err == nil {
+			userEmail = u.Email
+			userName = u.Name
+		}
+	}
+
 	a.View.Render(w, http.StatusOK, "consultancy", ConsultancyData{
-		BaseData:     base,
-		PriceDisplay: models.ConsultancyRegionalPriceDisplay(base.Country),
+		BaseData:             base,
+		PriceDisplay:         models.ConsultancyRegionalPriceDisplay(base.Country),
+		AuditPriceDisplay:    models.AuditRegionalPriceDisplay(base.Country),
+		AuditCurrency:        currency,
+		AuditAmountCents:     cents,
+		AuditSuccess:         r.URL.Query().Get("audit") == "1",
+		RetainerRangeDisplay: models.RetainerRangeDisplay(base.Country),
+		PaymentsEnabled:      a.Razorpay.Enabled(),
+		UserEmail:            userEmail,
+		UserName:             userName,
 	})
+}
+
+// AuditCheckoutOrder creates a Razorpay order for the fixed-price
+// Architecture Review package — no calendar slot involved, just an
+// intake (name, email, company, brief) and a fixed amount resolved
+// server-side from the visitor's region, mirroring BookingCheckoutOrder.
+func (a *App) AuditCheckoutOrder(w http.ResponseWriter, r *http.Request) {
+	if !a.Razorpay.Enabled() {
+		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "Payments are not configured yet — reach out directly instead."})
+		return
+	}
+	if err := r.ParseMultipartForm(1 << 20); err != nil && err != http.ErrNotMultipart {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Invalid form submission."})
+		return
+	}
+	name := strings.TrimSpace(r.FormValue("name"))
+	email := strings.TrimSpace(r.FormValue("email"))
+	company := strings.TrimSpace(r.FormValue("company"))
+	brief := strings.TrimSpace(r.FormValue("brief"))
+	if name == "" || email == "" || !strings.Contains(email, "@") {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Name and a valid email are required."})
+		return
+	}
+
+	currency, cents := models.AuditRegionalPrice(geo.CountryFromRequest(r))
+
+	receipt := fmt.Sprintf("audit-%d", time.Now().UnixNano())
+	orderID, err := a.Razorpay.CreateOrder(cents, currency, receipt)
+	if err != nil {
+		log.Printf("razorpay create order (audit): %v", err)
+		writeJSON(w, http.StatusBadGateway, map[string]string{"error": "Could not start checkout. Please try again."})
+		return
+	}
+
+	if _, err := a.AuditRequests.Create(r.Context(), models.AuditRequest{
+		Name: name, Email: email, Company: company, Brief: brief,
+		AmountCents: cents, Currency: currency, RazorpayOrderID: orderID,
+	}); err != nil {
+		a.serverError(w, "record audit request", err)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{
+		"order_id": orderID,
+		"amount":   cents,
+		"currency": currency,
+		"key_id":   a.Razorpay.KeyID,
+		"email":    email,
+		"name":     name,
+	})
+}
+
+func (a *App) AuditCheckoutVerify(w http.ResponseWriter, r *http.Request) {
+	if !a.Razorpay.Enabled() {
+		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "Payments are not configured yet."})
+		return
+	}
+	var body struct {
+		OrderID   string `json:"razorpay_order_id"`
+		PaymentID string `json:"razorpay_payment_id"`
+		Signature string `json:"razorpay_signature"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Invalid request."})
+		return
+	}
+	if !a.Razorpay.VerifySignature(body.OrderID, body.PaymentID, body.Signature) {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Payment verification failed."})
+		return
+	}
+	if err := a.AuditRequests.MarkPaid(r.Context(), body.OrderID, body.PaymentID); err != nil && err != repo.ErrNotFound {
+		a.serverError(w, "mark audit request paid", err)
+		return
+	}
+	if req, aerr := a.AuditRequests.GetByRazorpayOrderID(r.Context(), body.OrderID); aerr == nil {
+		a.Telegram.Send(fmt.Sprintf("🏗️ Architecture Review purchased\nName: %s\nEmail: %s\nCompany: %s\nAmount: %s\nBrief: %s",
+			req.Name, req.Email, req.Company, models.FormatMoney(req.AmountCents, req.Currency), req.Brief))
+	}
+	writeJSON(w, http.StatusOK, map[string]string{"redirect": "/consultancy?audit=1"})
 }
 
 type BookingData struct {

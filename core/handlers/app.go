@@ -44,6 +44,7 @@ type App struct {
 	AdminMessages *repo.AdminMessageRepo
 	CourseUpdates *repo.CourseUpdateRepo
 	Testimonials  *repo.TestimonialRepo
+	AuditRequests *repo.AuditRequestRepo
 
 	Razorpay *payments.Razorpay
 	Telegram *notify.Telegram
@@ -136,6 +137,7 @@ func New(cfg *config.Config, db *sql.DB, renderer *view.Renderer) *App {
 		AdminMessages: repo.NewAdminMessageRepo(db),
 		CourseUpdates: repo.NewCourseUpdateRepo(db),
 		Testimonials:  repo.NewTestimonialRepo(db),
+		AuditRequests: repo.NewAuditRequestRepo(db),
 		Razorpay:      payments.NewRazorpay(cfg.RazorpayKeyID, cfg.RazorpayKeySecret),
 		Telegram:      notify.NewTelegram(cfg.TelegramBotToken, cfg.TelegramChatID),
 		Google:        oauth.NewGoogle(cfg.GoogleClientID, cfg.GoogleClientSecret, cfg.GoogleRedirectURL),

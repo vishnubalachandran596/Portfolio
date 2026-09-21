@@ -250,10 +250,11 @@
       }
       var amount = Math.round(parseFloat(amountInput ? amountInput.value : "0") * 100);
       if (isNaN(amount) || amount < minCents) amount = minCents;
+      var defaultLabel = amount > 0 ? "Continue" : "Get Free Access";
 
       if (errorBox) errorBox.hidden = true;
       purchaseBtn.disabled = true;
-      purchaseBtn.textContent = "Starting checkout…";
+      purchaseBtn.textContent = amount > 0 ? "Starting checkout…" : "Getting access…";
 
       var form = new FormData();
       form.append("email", email);
@@ -268,6 +269,10 @@
           });
         })
         .then(function (order) {
+          if (order.free) {
+            window.location.href = order.redirect;
+            return;
+          }
           var rzp = new Razorpay({
             key: order.key_id,
             amount: order.amount,
@@ -303,18 +308,114 @@
             modal: {
               ondismiss: function () {
                 purchaseBtn.disabled = false;
-                purchaseBtn.textContent = "Pay & Unlock";
+                purchaseBtn.textContent = defaultLabel;
               },
             },
           });
           rzp.open();
           purchaseBtn.disabled = false;
-          purchaseBtn.textContent = "Pay & Unlock";
+          purchaseBtn.textContent = defaultLabel;
         })
         .catch(function (err) {
           showError(err.message || "Could not start checkout.");
           purchaseBtn.disabled = false;
-          purchaseBtn.textContent = "Pay & Unlock";
+          purchaseBtn.textContent = defaultLabel;
+        });
+    });
+  }
+
+  // --- Architecture Review: fixed-price checkout, no calendar slot -------
+  var auditBtn = document.getElementById("audit-btn");
+  if (auditBtn) {
+    auditBtn.addEventListener("click", function () {
+      var nameInput = document.getElementById("audit-name");
+      var emailInput = document.getElementById("audit-email");
+      var companyInput = document.getElementById("audit-company");
+      var briefInput = document.getElementById("audit-brief");
+      var errorBox = document.getElementById("audit-error");
+
+      function showAuditError(msg) {
+        if (errorBox) {
+          errorBox.textContent = msg;
+          errorBox.hidden = false;
+        }
+      }
+
+      var name = nameInput ? nameInput.value.trim() : "";
+      var email = emailInput ? emailInput.value.trim() : "";
+      if (!name) {
+        showAuditError("Please enter your name.");
+        return;
+      }
+      if (!email || email.indexOf("@") === -1) {
+        showAuditError("Please enter a valid email.");
+        return;
+      }
+
+      if (errorBox) errorBox.hidden = true;
+      var defaultAuditLabel = auditBtn.textContent;
+      auditBtn.disabled = true;
+      auditBtn.textContent = "Starting checkout…";
+
+      var form = new FormData();
+      form.append("name", name);
+      form.append("email", email);
+      form.append("company", companyInput ? companyInput.value.trim() : "");
+      form.append("brief", briefInput ? briefInput.value.trim() : "");
+
+      fetch("/consultancy/audit/checkout/order", { method: "POST", body: form })
+        .then(function (res) {
+          return res.json().then(function (data) {
+            if (!res.ok) throw new Error(data.error || "Could not start checkout.");
+            return data;
+          });
+        })
+        .then(function (order) {
+          var rzp = new Razorpay({
+            key: order.key_id,
+            amount: order.amount,
+            currency: order.currency,
+            name: "Architecture Review",
+            description: order.name,
+            order_id: order.order_id,
+            prefill: { email: order.email, name: order.name },
+            handler: function (response) {
+              fetch("/consultancy/audit/checkout/verify", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  razorpay_order_id: response.razorpay_order_id,
+                  razorpay_payment_id: response.razorpay_payment_id,
+                  razorpay_signature: response.razorpay_signature,
+                }),
+              })
+                .then(function (res) { return res.json(); })
+                .then(function (result) {
+                  if (result.redirect) {
+                    window.location.href = result.redirect;
+                  } else {
+                    showAuditError(result.error || "Payment could not be verified.");
+                  }
+                })
+                .catch(function () {
+                  showAuditError("Payment could not be verified. Contact support with your payment ID.");
+                });
+            },
+            modal: {
+              ondismiss: function () {
+                auditBtn.disabled = false;
+                auditBtn.textContent = defaultAuditLabel;
+              },
+            },
+          });
+          rzp.open();
+          auditBtn.disabled = false;
+          auditBtn.textContent = defaultAuditLabel;
+        })
+        .catch(function (err) {
+          showAuditError(err.message || "Could not start checkout.");
+          auditBtn.disabled = false;
+          auditBtn.textContent = defaultAuditLabel;
         });
     });
   }

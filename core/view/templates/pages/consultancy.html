@@ -3,67 +3,99 @@
   <div class="container">
     <p class="eyebrow">Consultancy</p>
     <h1>Work with me directly</h1>
-    <p class="hero-subtitle">A focused, 1:1 hour to work through an architecture review, a system-design decision, a technical leadership question, or a career conversation — grounded in 8+ years building banking and fintech platforms at scale.</p>
-    <div class="hero-actions">
-      <a class="btn btn-primary" href="{{.Nav.Booking}}">Book Now — {{.PriceDisplay}}</a>
-    </div>
+    <p class="hero-subtitle">Three ways to get real time with me, grounded in 8+ years building banking and fintech platforms at scale — a fixed-price architecture review to start, an ongoing retainer once we know it's a fit, or a quick hourly session for a focused question.</p>
+    {{if .AuditSuccess}}<div class="alert alert-success">Thanks — your Architecture Review is booked. I'll email you within one business day to schedule the walkthrough.</div>{{end}}
   </div>
 </section>
 
 <section class="section section-alt">
+  <div class="container">
+    <div class="pricing-grid">
+
+      <div class="pricing-card pricing-card-featured" id="audit">
+        <p class="pricing-card-badge">Recommended starting point</p>
+        <h2 class="pricing-card-title">Architecture Review</h2>
+        <p class="pricing-card-price">{{.AuditPriceDisplay}}<span class="pricing-card-price-note"> · fixed price</span></p>
+        <p class="pricing-card-sub">A scoped, fixed-fee review of a real system or decision — not an open-ended hour. I look at your architecture, design docs, or a specific migration (e.g. an event-driven system, a Kafka setup, a payments/billing flow), and you get a written set of findings and a clear recommendation, not just conversation.</p>
+        <ul class="pricing-card-list">
+          <li>A structured review of the system or decision you bring</li>
+          <li>A written summary: risks, trade-offs, and a specific recommendation</li>
+          <li>One follow-up call to walk through it together</li>
+          <li>The standard first step before an ongoing retainer</li>
+        </ul>
+
+        {{if .PaymentsEnabled}}
+        <div class="purchase-box" id="audit-box">
+          <div id="audit-error" class="alert alert-error" hidden></div>
+          {{if .UserEmail}}
+          <p class="purchase-box-sub">Confirmation will be sent to <strong>{{.UserEmail}}</strong>.</p>
+          <input type="hidden" id="audit-email" value="{{.UserEmail}}">
+          <label>Your name
+            <input type="text" id="audit-name" value="{{.UserName}}" required>
+          </label>
+          {{else}}
+          <label>Your name
+            <input type="text" id="audit-name" required>
+          </label>
+          <label>Your email
+            <input type="email" id="audit-email" required>
+          </label>
+          {{end}}
+          <label>Company <span class="optional">(optional)</span>
+            <input type="text" id="audit-company">
+          </label>
+          <label>What should I look at? <span class="optional">(a sentence or two is enough)</span>
+            <textarea id="audit-brief" rows="3"></textarea>
+          </label>
+          <button type="button" class="btn btn-primary" id="audit-btn">Book the Review — {{.AuditPriceDisplay}}</button>
+        </div>
+        <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+        {{else}}
+        <a class="btn btn-primary" href="{{.Nav.Contact}}">Get in touch to book</a>
+        {{end}}
+      </div>
+
+      <div class="pricing-card" id="retainer">
+        <h2 class="pricing-card-title">Fractional Advisory</h2>
+        <p class="pricing-card-price">{{.RetainerRangeDisplay}}</p>
+        <p class="pricing-card-sub">Ongoing access for a team that wants a technical architect on call — regular reviews, on-demand design input, and a second opinion before big decisions. Scoped and priced on a short call, not a self-checkout — every retainer looks a little different depending on what you actually need.</p>
+        <ul class="pricing-card-list">
+          <li>Regular architecture/design reviews on a cadence that fits you</li>
+          <li>Async access for questions between calls</li>
+          <li>Usually starts after an Architecture Review, once it's a clear fit</li>
+        </ul>
+        <a class="btn btn-secondary" href="{{.Nav.Contact}}">Discuss a Retainer</a>
+      </div>
+
+      <div class="pricing-card" id="hourly">
+        <h2 class="pricing-card-title">Hourly Session</h2>
+        <p class="pricing-card-price">{{.PriceDisplay}}</p>
+        <p class="pricing-card-sub">A single focused hour — for a specific question, a second opinion, or for an existing client who just needs quick time. Not the place to start for a full architecture review; the fixed-price review above covers that in more depth for a comparable price.</p>
+        <a class="btn btn-secondary" href="{{.Nav.Booking}}">Book an Hour — {{.PriceDisplay}}</a>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<section class="section">
   <div class="container">
     <h2 class="section-title">What you walk away with</h2>
-    <p class="hero-subtitle">Not just an hour of conversation — a concrete, actionable outcome. Expect a specific recommendation and the trade-offs behind it, not vague encouragement: which of two architectures to pick and why, the three things to fix before your next launch, or a clear next step on a career decision. If it's useful to have in writing, I'll send a short follow-up summary to your email after the call.</p>
-  </div>
-</section>
-
-<section class="section">
-  <div class="container">
-    <h2 class="section-title">What a session can cover</h2>
-    <div class="feature-grid">
-      <div class="feature-card">
-        <h3>Architecture review</h3>
-        <p>Bring a system or a design doc — we'll walk through the trade-offs, risks, and what I'd change.</p>
-      </div>
-      <div class="feature-card">
-        <h3>System design decisions</h3>
-        <p>Scaling a service, choosing a data store, designing an event-driven pipeline — talk it through before you commit to it.</p>
-      </div>
-      <div class="feature-card">
-        <h3>Technical leadership</h3>
-        <p>Leading a team through a hard delivery, structuring an engineering org, or growing into a tech-lead role.</p>
-      </div>
-      <div class="feature-card">
-        <h3>Career guidance</h3>
-        <p>Interview prep, resume/portfolio feedback, or mapping out your next move as a backend or platform engineer.</p>
-      </div>
-    </div>
+    <p class="hero-subtitle">Not just time on a call — a concrete, actionable outcome either way: which of two architectures to pick and why, the specific risks in a migration plan, or a clear next step on a technical or career decision. Every engagement (audit included) ends with something in writing, not just a memory of the conversation.</p>
   </div>
 </section>
 
 <section class="section section-alt">
-  <div class="container">
-    <h2 class="section-title">How it works</h2>
-    <ol class="how-it-works">
-      <li><strong>Log in or create an account</strong> — needed so your booking and receipt are tied to you.</li>
-      <li><strong>Pick an open hour</strong> from the calendar on the booking page.</li>
-      <li><strong>Pay securely via Razorpay</strong> — {{.PriceDisplay}}, cards and UPI supported. Your slot is confirmed the moment payment clears.</li>
-      <li><strong>We meet</strong> — you'll get the details at the email on your account.</li>
-    </ol>
-  </div>
-</section>
-
-<section class="section">
   <div class="container">
     <h2 class="section-title">Worth knowing before you book</h2>
     <div class="feature-grid">
       <div class="feature-card">
         <h3>Availability &amp; time zone</h3>
-        <p>I'm based in India (IST). Bookable hours are weekday mornings IST, which line up well with a European or UK business day — for US time zones they land very early. If nothing open works for you, reach out directly and I'll try to find a slot.</p>
+        <p>I'm based in India (IST). Bookable hourly slots are weekday mornings IST, which line up well with a European or UK business day — for US time zones they land very early. Architecture Reviews and retainer calls are scheduled directly by email once you've reached out, with more flexibility.</p>
       </div>
       <div class="feature-card">
         <h3>Why book direct</h3>
-        <p>No marketplace markup, no assigned-consultant lottery — you're booking time with me specifically, at a lower price than a platform's cut would allow, and talking to the person who actually did the work described on this site.</p>
+        <p>No marketplace markup, no assigned-consultant lottery — you're working with me specifically, at a lower price than a platform's cut would allow, and talking to the person who actually did the work described on this site.</p>
       </div>
       <div class="feature-card">
         <h3>Professional boundaries</h3>
@@ -75,9 +107,9 @@
 
 <section class="section cta-section">
   <div class="container cta-inner">
-    <h2>Ready to book?</h2>
-    <p>Pick a time that works and let's talk it through.</p>
-    <a class="btn btn-primary" href="{{.Nav.Booking}}">Book Now — {{.PriceDisplay}}</a>
+    <h2>Not sure which one fits?</h2>
+    <p>Start with the Architecture Review — it's the fastest way to see if we're a good fit, with a concrete outcome either way.</p>
+    <a class="btn btn-primary" href="#audit">See the Architecture Review</a>
   </div>
 </section>
 {{end}}

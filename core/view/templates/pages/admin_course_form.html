@@ -47,13 +47,13 @@
       <h2 class="admin-form-subhead">Pricing &amp; payment</h2>
       <label class="checkbox-label">
         <input type="checkbox" name="is_paid" {{if .Course.IsPaid}}checked{{end}}>
-        Paid course (Razorpay checkout, pay-what-you-want with the minimum below)
+        Contribute-as-you-like (shows a Razorpay contribution box; free access if the amount is left at 0)
       </label>
       <div class="form-row">
-        <label>Minimum price, USD (cents) <span class="optional">e.g. 1200 = $12</span>
+        <label>Minimum contribution, USD (cents) <span class="optional">0 = fully free, e.g. 1200 = $12 minimum</span>
           <input type="number" name="min_price_cents" value="{{.Course.MinPriceCents}}" min="0">
         </label>
-        <label>Minimum price, India (paise) <span class="optional">e.g. 100000 = ₹1,000</span>
+        <label>Minimum contribution, India (paise) <span class="optional">0 = fully free, e.g. 100000 = ₹1,000 minimum</span>
           <input type="number" name="min_price_cents_inr" value="{{.Course.MinPriceCentsINR}}" min="0">
         </label>
       </div>
