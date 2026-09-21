@@ -860,6 +860,15 @@ a, button, .slot-btn, .faq-item summary { cursor: pointer; }
   transition: border-color var(--transition-fast);
 }
 .article-row:hover { border-color: var(--color-accent); }
+.article-row-link {
+  display: flex;
+  align-items: flex-start;
+  gap: 1.25rem;
+  flex: 1;
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+}
 .article-row h3 { font-size: 1.08rem; margin-bottom: 0.5rem; }
 .article-row-body p { color: var(--color-text-muted); font-size: 0.92rem; margin-bottom: 0.625rem; }
 .article-row-meta { display: flex; flex-wrap: wrap; gap: 0.625rem; align-items: center; font-size: 0.82rem; color: var(--color-text-faint); }
@@ -872,7 +881,20 @@ a, button, .slot-btn, .faq-item summary { cursor: pointer; }
   font-size: 0.76rem;
 }
 .article-row-votes { flex-shrink: 0; }
-.thumbs-count { font-size: 0.9rem; color: var(--color-text-faint); white-space: nowrap; }
+.thumbs-count {
+  font: inherit;
+  font-size: 0.9rem;
+  color: var(--color-text-faint);
+  white-space: nowrap;
+  background: none;
+  border: 0.0625rem solid transparent;
+  border-radius: var(--radius-sm);
+  padding: 0.25rem 0.5rem;
+  cursor: pointer;
+  transition: border-color var(--transition-fast), color var(--transition-fast);
+}
+.thumbs-count:hover:not(:disabled) { border-color: var(--color-border); color: var(--color-text); }
+.thumbs-count:disabled { cursor: default; color: var(--color-primary-strong); }
 
 .pagination { display: flex; justify-content: space-between; align-items: center; padding-top: 0.75rem; border-top: 0.0625rem solid var(--color-border); }
 .pagination a { color: var(--color-accent); font-weight: 600; font-size: 0.92rem; }

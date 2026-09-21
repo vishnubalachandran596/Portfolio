@@ -31,21 +31,23 @@
     <p class="article-result-count">{{.Total}} article{{if ne .Total 1}}s{{end}}</p>
     <div class="article-list">
       {{range .Articles}}
-      <a class="article-row" href="/articles/{{.Slug}}">
-        {{if .CoverImageURL}}<img class="article-row-thumb" src="{{.CoverImageURL}}" alt="" loading="lazy">{{end}}
-        <div class="article-row-body">
-          <h3>{{.Title}}</h3>
-          <p>{{.Summary}}</p>
-          <div class="article-row-meta">
-            {{if .PublishedDate}}<span>{{formatDateOptional .PublishedDate}}</span>{{end}}
-            {{if .IsOriginal}}<span>By {{$.SiteName}}</span>{{else if .SourceName}}<span>{{.SourceName}}</span>{{end}}
-            {{range .Tags}}<span class="tag-chip">{{.}}</span>{{end}}
+      <div class="article-row">
+        <a class="article-row-link" href="/articles/{{.Slug}}">
+          {{if .CoverImageURL}}<img class="article-row-thumb" src="{{.CoverImageURL}}" alt="" loading="lazy">{{end}}
+          <div class="article-row-body">
+            <h3>{{.Title}}</h3>
+            <p>{{.Summary}}</p>
+            <div class="article-row-meta">
+              {{if .PublishedDate}}<span>{{formatDateOptional .PublishedDate}}</span>{{end}}
+              {{if .IsOriginal}}<span>By {{$.SiteName}}</span>{{else if .SourceName}}<span>{{.SourceName}}</span>{{end}}
+              {{range .Tags}}<span class="tag-chip">{{.}}</span>{{end}}
+            </div>
           </div>
-        </div>
+        </a>
         <div class="article-row-votes">
-          <span class="thumbs-count">👍 {{.ThumbsUpCount}}</span>
+          <button type="button" class="thumbs-count" data-slug="{{.Slug}}">👍 <span class="thumbs-count-num">{{.ThumbsUpCount}}</span></button>
         </div>
-      </a>
+      </div>
       {{end}}
     </div>
 

@@ -520,4 +520,30 @@
         });
     });
   }
+
+  // --- Article list thumbs-up ------------------------------------------
+  // Each row's vote button is a sibling of the row's link (not nested
+  // inside it), specifically so a click here never falls through to the
+  // link's navigation — a button nested inside an <a> previously caused
+  // exactly that bug.
+  var thumbsButtons = document.querySelectorAll(".thumbs-count[data-slug]");
+  for (var ti = 0; ti < thumbsButtons.length; ti++) {
+    (function (btn) {
+      btn.addEventListener("click", function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (btn.disabled) return;
+        btn.disabled = true;
+        fetch("/articles/" + btn.dataset.slug + "/thumbs-up", { method: "POST" })
+          .then(function (r) { return r.json(); })
+          .then(function (data) {
+            if (typeof data.thumbs_up_count === "number") {
+              var numEl = btn.querySelector(".thumbs-count-num");
+              if (numEl) numEl.textContent = data.thumbs_up_count;
+            }
+          })
+          .catch(function () { btn.disabled = false; });
+      });
+    })(thumbsButtons[ti]);
+  }
 })();
