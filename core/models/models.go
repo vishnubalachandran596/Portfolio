@@ -218,8 +218,13 @@ type Booking struct {
 // option rather than the only one.
 const (
 	ConsultancyDurationMinutes = 60
-	ConsultancyPriceCentsUSD   = 20000   // $200/hour
-	ConsultancyPriceCentsINR   = 1000000 // ₹10,000/hour
+	// Free for now, deliberately: framed as "book an hour to schedule a
+	// call" rather than a paid session — BookingCheckoutOrder skips
+	// Razorpay entirely at $0, same pattern as a $0 course purchase.
+	// Restore a real price here (and nowhere else) to re-enable paid
+	// hourly checkout.
+	ConsultancyPriceCentsUSD = 0
+	ConsultancyPriceCentsINR = 0
 
 	// AuditPriceCentsUSD/INR is the fixed price of a Technical
 	// Architecture Review / Due Diligence engagement — a scoped,

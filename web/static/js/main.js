@@ -472,6 +472,10 @@
           });
         })
         .then(function (order) {
+          if (order.free) {
+            window.location.href = order.redirect;
+            return;
+          }
           var rzp = new Razorpay({
             key: order.key_id,
             amount: order.amount,

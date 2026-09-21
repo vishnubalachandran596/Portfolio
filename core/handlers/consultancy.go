@@ -17,6 +17,7 @@ import (
 type ConsultancyData struct {
 	BaseData
 	PriceDisplay         string
+	HourlyIsFree         bool
 	AuditPriceDisplay    string
 	AuditCurrency        string
 	AuditAmountCents     int
@@ -47,6 +48,7 @@ func (a *App) ConsultancyPage(w http.ResponseWriter, r *http.Request) {
 	a.View.Render(w, http.StatusOK, "consultancy", ConsultancyData{
 		BaseData:             base,
 		PriceDisplay:         models.ConsultancyRegionalPriceDisplay(base.Country),
+		HourlyIsFree:         models.ConsultancyPriceCentsUSD <= 0,
 		AuditPriceDisplay:    models.AuditRegionalPriceDisplay(base.Country),
 		AuditCurrency:        currency,
 		AuditAmountCents:     cents,
@@ -143,6 +145,7 @@ type BookingData struct {
 	Success      bool
 	Error        string
 	PriceDisplay string
+	IsFree       bool
 	Currency     string
 	AmountCents  int
 	KeyID        string
@@ -177,6 +180,7 @@ func (a *App) BookingPage(w http.ResponseWriter, r *http.Request) {
 		Success:      r.URL.Query().Get("booked") == "1",
 		Error:        r.URL.Query().Get("error"),
 		PriceDisplay: models.FormatMoney(cents, currency) + "/hour",
+		IsFree:       cents <= 0,
 		Currency:     currency,
 		AmountCents:  cents,
 		KeyID:        a.Razorpay.KeyID,
@@ -187,12 +191,11 @@ func (a *App) BookingPage(w http.ResponseWriter, r *http.Request) {
 
 // BookingCheckoutOrder creates a Razorpay order for one hour of
 // consultancy and, in the same step, provisionally reserves the chosen
-// slot (status=pending_payment) so a second buyer can't race for it.
+// slot (status=pending_payment) so a second buyer can't race for it. When
+// the final price is $0 (see the free/paid branch below), Razorpay is
+// skipped entirely, so its own configured-or-not state doesn't gate this
+// handler at the top anymore — only the paid branch checks it.
 func (a *App) BookingCheckoutOrder(w http.ResponseWriter, r *http.Request) {
-	if !a.Razorpay.Enabled() {
-		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "Payments are not configured yet."})
-		return
-	}
 	uid, ok := a.Auth.UserID(r)
 	if !ok {
 		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "Please log in to book a session."})
@@ -246,12 +249,33 @@ func (a *App) BookingCheckoutOrder(w http.ResponseWriter, r *http.Request) {
 	}
 	cents -= discountCents
 
-	receipt := fmt.Sprintf("booking-%d-%d", uid, time.Now().UnixNano())
-	orderID, err := a.Razorpay.CreateOrder(cents, currency, receipt)
-	if err != nil {
-		log.Printf("razorpay create order (booking): %v", err)
-		writeJSON(w, http.StatusBadGateway, map[string]string{"error": "Could not start checkout. Please try again."})
-		return
+	// Hourly consultancy is free for now (see models.ConsultancyPriceCentsUSD/INR)
+	// — same "skip Razorpay entirely" pattern as a $0 course purchase in
+	// checkout.go: a synthetic order id, straight to confirmed, no payment
+	// step at all. Still reuses CreatePending/MarkPaid rather than a new
+	// code path, so the slot-race protection (unique constraint on
+	// slot_start) applies exactly the same as a paid booking.
+	var orderID string
+	if cents <= 0 {
+		token, terr := generateAccessToken()
+		if terr != nil {
+			a.serverError(w, "generate free booking token", terr)
+			return
+		}
+		orderID = "free-" + token
+	} else {
+		if !a.Razorpay.Enabled() {
+			writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "Payments are not configured yet."})
+			return
+		}
+		receipt := fmt.Sprintf("booking-%d-%d", uid, time.Now().UnixNano())
+		oid, oerr := a.Razorpay.CreateOrder(cents, currency, receipt)
+		if oerr != nil {
+			log.Printf("razorpay create order (booking): %v", oerr)
+			writeJSON(w, http.StatusBadGateway, map[string]string{"error": "Could not start checkout. Please try again."})
+			return
+		}
+		orderID = oid
 	}
 
 	booking := models.Booking{
@@ -277,6 +301,15 @@ func (a *App) BookingCheckoutOrder(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		a.serverError(w, "reserve booking", err)
+		return
+	}
+
+	if cents <= 0 {
+		if err := a.Bookings.MarkPaid(ctx, orderID, ""); err != nil {
+			a.serverError(w, "confirm free booking", err)
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]any{"free": true, "redirect": "/booking?booked=1"})
 		return
 	}
 

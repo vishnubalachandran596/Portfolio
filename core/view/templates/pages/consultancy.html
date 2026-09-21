@@ -68,10 +68,16 @@
       </div>
 
       <div class="pricing-card" id="hourly">
-        <h2 class="pricing-card-title">Hourly Session</h2>
+        <h2 class="pricing-card-title">Schedule a Call</h2>
+        {{if .HourlyIsFree}}
+        <p class="pricing-card-price">Free <span class="pricing-card-price-note"> · for now</span></p>
+        <p class="pricing-card-sub">Book an hour to schedule a call — for a specific question, a second opinion, or just to talk through what you're working on. Free while this is new; not the place to start for a full architecture review, the fixed-price review above covers that in more depth.</p>
+        <a class="btn btn-secondary" href="{{.Nav.Booking}}">Book an Hour — Free</a>
+        {{else}}
         <p class="pricing-card-price">{{.PriceDisplay}}</p>
         <p class="pricing-card-sub">A single focused hour — for a specific question, a second opinion, or for an existing client who just needs quick time. Not the place to start for a full architecture review; the fixed-price review above covers that in more depth for a comparable price.</p>
         <a class="btn btn-secondary" href="{{.Nav.Booking}}">Book an Hour — {{.PriceDisplay}}</a>
+        {{end}}
       </div>
 
     </div>
