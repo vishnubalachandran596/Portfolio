@@ -303,6 +303,7 @@ type User struct {
 	Email        string
 	PasswordHash string
 	Name         string
+	IsGuest      bool
 	CreatedAt    time.Time
 }
 
@@ -344,12 +345,16 @@ type ArticleVote struct {
 	ID        int64
 	UserName  string
 	UserEmail string
+	// IsGuest is true when UserEmail is set but the account was created
+	// from the anonymous-vote form's optional email field, not an actual
+	// sign-in — distinct from a real logged-in visitor's vote.
+	IsGuest   bool
 	CreatedAt time.Time
 }
 
-// IsAnonymous reports whether this vote came from a visitor without a
-// logged-in account.
-func (v ArticleVote) IsAnonymous() bool { return v.UserEmail == "" }
+// IsAnonymous reports whether this vote came with no name or email at
+// all — the visitor left both fields on the vote form blank.
+func (v ArticleVote) IsAnonymous() bool { return v.UserEmail == "" && v.UserName == "" }
 
 type AvailabilityRule struct {
 	ID          int64

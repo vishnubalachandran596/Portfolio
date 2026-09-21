@@ -899,6 +899,9 @@ a, button, .slot-btn, .faq-item summary { cursor: pointer; }
 .thumbs-count:hover:not(:disabled) { border-color: var(--color-border); color: var(--color-text); }
 .thumbs-count:disabled { cursor: default; color: var(--color-primary-strong); }
 .article-thumbs-top { margin-top: 1.125rem; }
+.article-thumbs-guest { display: inline-flex; flex-direction: column; gap: 0.625rem; }
+.article-thumbs-guest-form { display: flex; gap: 0.625rem; flex-wrap: wrap; align-items: center; }
+.article-thumbs-guest-form input { padding: 0.5rem 0.75rem; border: 0.0625rem solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-surface); color: var(--color-text); font: inherit; font-size: 0.86rem; width: 12rem; max-width: 100%; }
 
 .pagination { display: flex; justify-content: space-between; align-items: center; padding-top: 0.75rem; border-top: 0.0625rem solid var(--color-border); }
 .pagination a { color: var(--color-accent); font-weight: 600; font-size: 0.92rem; }

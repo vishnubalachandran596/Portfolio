@@ -1,4 +1,24 @@
 {{define "jsonld"}}{{if .JSONLD}}<script type="application/ld+json">{{.JSONLD}}</script>{{end}}{{end}}
+
+{{define "articleThumbsWidget"}}
+{{if .IsUser}}
+<button type="button" class="btn btn-secondary article-thumbs-btn" data-slug="{{.Article.Slug}}" {{if .Voted}}disabled{{end}}>
+  👍 <span class="thumbs-count-num">{{.Article.ThumbsUpCount}}</span>{{if .Voted}} · Thanks!{{end}}
+</button>
+{{else}}
+<div class="article-thumbs-guest">
+  <button type="button" class="btn btn-secondary article-thumbs-guest-toggle" data-slug="{{.Article.Slug}}">
+    👍 <span class="thumbs-count-num">{{.Article.ThumbsUpCount}}</span>
+  </button>
+  <form class="article-thumbs-guest-form" data-slug="{{.Article.Slug}}" hidden>
+    <input type="text" name="name" placeholder="Name (optional)" maxlength="80" autocomplete="name">
+    <input type="email" name="email" placeholder="Email (optional)" maxlength="200" autocomplete="email">
+    <button type="submit" class="btn btn-primary btn-sm">Give it a thumbs up</button>
+  </form>
+</div>
+{{end}}
+{{end}}
+
 {{define "content"}}
 <section class="section page-hero page-hero-narrow">
   <div class="container">
@@ -10,13 +30,7 @@
       {{range .Article.Tags}}<a class="tag-chip" href="/articles?tag={{.}}">{{.}}</a>{{end}}
     </div>
     <div class="article-thumbs-top">
-      {{if .IsUser}}
-      <button type="button" class="btn btn-secondary article-thumbs-btn" data-slug="{{.Article.Slug}}" {{if .Voted}}disabled{{end}}>
-        👍 <span class="thumbs-count-num">{{.Article.ThumbsUpCount}}</span>{{if .Voted}} · Thanks!{{end}}
-      </button>
-      {{else}}
-      <a class="btn btn-secondary" href="/login?next=/articles/{{.Article.Slug}}">👍 {{.Article.ThumbsUpCount}} · Login to vote</a>
-      {{end}}
+      {{template "articleThumbsWidget" .}}
     </div>
   </div>
 </section>
@@ -38,16 +52,10 @@
     <p>{{.Article.Summary}}</p>
     {{end}}
 
-    <p class="article-thumbs-cta">Found this useful? {{if .IsUser}}Give it a thumbs up{{else}}Login and give a thumbs up{{end}} for more of these contents.</p>
+    <p class="article-thumbs-cta">Found this useful? Give it a thumbs up for more of these contents.</p>
     <div class="article-detail-actions">
       {{if .Article.SourceURL}}<a class="btn btn-primary" href="{{.Article.SourceURL}}" target="_blank" rel="noopener noreferrer">Read the full article ↗</a>{{end}}
-      {{if .IsUser}}
-      <button type="button" class="btn btn-secondary article-thumbs-btn" data-slug="{{.Article.Slug}}" {{if .Voted}}disabled{{end}}>
-        👍 <span class="thumbs-count-num">{{.Article.ThumbsUpCount}}</span>{{if .Voted}} · Thanks!{{end}}
-      </button>
-      {{else}}
-      <a class="btn btn-secondary" href="/login?next=/articles/{{.Article.Slug}}">👍 {{.Article.ThumbsUpCount}} · Login to vote</a>
-      {{end}}
+      {{template "articleThumbsWidget" .}}
     </div>
 
     <p class="hero-meta"><a href="/articles">← Back to all articles</a></p>
@@ -56,12 +64,11 @@
 
 <script>
 (function () {
-  // Top and bottom thumbs-up widgets share one vote — both point at the
-  // same article, so a click on either one has to disable and update
-  // both together, not just the button that was clicked.
-  var buttons = document.querySelectorAll(".article-thumbs-btn[data-slug]");
-  if (!buttons.length) return;
+  // Top and bottom widgets share one vote — both point at the same
+  // article, so an action on either one has to update both together.
 
+  // --- Logged-in: plain vote button ------------------------------------
+  var buttons = document.querySelectorAll(".article-thumbs-btn[data-slug]");
   function setAllDisabled(disabled) {
     for (var i = 0; i < buttons.length; i++) buttons[i].disabled = disabled;
   }
@@ -79,7 +86,6 @@
       }
     }
   }
-
   for (var i = 0; i < buttons.length; i++) {
     buttons[i].addEventListener("click", function (e) {
       var slug = e.currentTarget.dataset.slug;
@@ -98,6 +104,57 @@
           markVoted();
         })
         .catch(function () { setAllDisabled(false); });
+    });
+  }
+
+  // --- Signed-out: toggle + optional name/email form --------------------
+  var toggles = document.querySelectorAll(".article-thumbs-guest-toggle[data-slug]");
+  var forms = document.querySelectorAll(".article-thumbs-guest-form[data-slug]");
+  function setGuestCount(n) {
+    for (var i = 0; i < toggles.length; i++) {
+      var el = toggles[i].querySelector(".thumbs-count-num");
+      if (el) el.textContent = n;
+    }
+  }
+  function markGuestVoted() {
+    for (var i = 0; i < toggles.length; i++) {
+      toggles[i].disabled = true;
+      if (!toggles[i].dataset.voted) {
+        toggles[i].dataset.voted = "1";
+        toggles[i].insertAdjacentText("beforeend", " · Thanks!");
+      }
+    }
+    for (var i = 0; i < forms.length; i++) forms[i].hidden = true;
+  }
+  for (var i = 0; i < toggles.length; i++) {
+    toggles[i].addEventListener("click", function (e) {
+      var slug = e.currentTarget.dataset.slug;
+      for (var j = 0; j < forms.length; j++) {
+        if (forms[j].dataset.slug === slug) forms[j].hidden = !forms[j].hidden;
+      }
+    });
+  }
+  for (var i = 0; i < forms.length; i++) {
+    forms[i].addEventListener("submit", function (e) {
+      e.preventDefault();
+      var form = e.currentTarget;
+      var slug = form.dataset.slug;
+      var body = new URLSearchParams();
+      body.set("name", form.elements["name"].value || "");
+      body.set("email", form.elements["email"].value || "");
+      var submitBtn = form.querySelector("button[type=submit]");
+      if (submitBtn) submitBtn.disabled = true;
+      fetch("/articles/" + slug + "/thumbs-up", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: body.toString(),
+      })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          if (typeof data.thumbs_up_count === "number") setGuestCount(data.thumbs_up_count);
+          markGuestVoted();
+        })
+        .catch(function () { if (submitBtn) submitBtn.disabled = false; });
     });
   }
 })();

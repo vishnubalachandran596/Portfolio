@@ -18,7 +18,9 @@ func NewArticleVoteRepo(db *sql.DB) *ArticleVoteRepo { return &ArticleVoteRepo{d
 // for the same account and survives a race between two requests.
 var ErrAlreadyVoted = errors.New("already voted")
 
-// Create records one thumbs-up on an article by a logged-in visitor.
+// Create records one thumbs-up on an article by a real or guest-by-email
+// user (either way, a row in the users table — the unique constraint
+// de-dupes on that id).
 func (r *ArticleVoteRepo) Create(ctx context.Context, articleID, userID int64) error {
 	_, err := r.db.ExecContext(ctx,
 		`INSERT INTO article_thumbs_up (article_id, user_id) VALUES ($1, $2)`,
@@ -27,6 +29,18 @@ func (r *ArticleVoteRepo) Create(ctx context.Context, articleID, userID int64) e
 	if isUniqueViolation(err) {
 		return ErrAlreadyVoted
 	}
+	return err
+}
+
+// CreateGuest records one thumbs-up from a visitor who gave a name but no
+// email (or nothing at all) — there's no stable identity to dedupe on,
+// so every call is a new, distinct vote, same as the site behaved before
+// any identity capture existed.
+func (r *ArticleVoteRepo) CreateGuest(ctx context.Context, articleID int64, name string) error {
+	_, err := r.db.ExecContext(ctx,
+		`INSERT INTO article_thumbs_up (article_id, guest_name) VALUES ($1, $2)`,
+		articleID, name,
+	)
 	return err
 }
 
@@ -43,9 +57,12 @@ func (r *ArticleVoteRepo) HasVoted(ctx context.Context, articleID, userID int64)
 
 // ListByArticle returns every vote on an article, newest first, with the
 // voter's name/email joined in — the admin "who thumbs-up'd this" view.
+// Name falls back to the vote row's own guest_name when there's no
+// linked user (a name-only, no-email vote); email is only ever present
+// through a linked user row, real or guest-by-email.
 func (r *ArticleVoteRepo) ListByArticle(ctx context.Context, articleID int64) ([]models.ArticleVote, error) {
 	rows, err := r.db.QueryContext(ctx, `
-		SELECT t.id, COALESCE(u.name, ''), COALESCE(u.email, ''), t.created_at
+		SELECT t.id, COALESCE(u.name, t.guest_name, ''), COALESCE(u.email, ''), COALESCE(u.is_guest, false), t.created_at
 		FROM article_thumbs_up t
 		LEFT JOIN users u ON u.id = t.user_id
 		WHERE t.article_id = $1
@@ -57,7 +74,7 @@ func (r *ArticleVoteRepo) ListByArticle(ctx context.Context, articleID int64) ([
 	var out []models.ArticleVote
 	for rows.Next() {
 		var v models.ArticleVote
-		if err := rows.Scan(&v.ID, &v.UserName, &v.UserEmail, &v.CreatedAt); err != nil {
+		if err := rows.Scan(&v.ID, &v.UserName, &v.UserEmail, &v.IsGuest, &v.CreatedAt); err != nil {
 			return nil, err
 		}
 		out = append(out, v)

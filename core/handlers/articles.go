@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/vishnubalachandran596/portfolio/core/authutil"
 	"github.com/vishnubalachandran596/portfolio/core/models"
 	"github.com/vishnubalachandran596/portfolio/core/repo"
 )
@@ -127,20 +128,15 @@ func (a *App) ArticleDetailPage(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// ArticleThumbsUp records one thumbs-up per logged-in visitor per
-// article — voting requires an account (the button links to /login when
-// signed out) specifically so the admin "who voted" view means
-// something. The unique constraint on (article_id, user_id) is the
-// authoritative de-dup, not a cookie, so it holds across browsers/
-// devices for the same account and survives a race between two
-// concurrent requests.
+// ArticleThumbsUp records one thumbs-up. A logged-in visitor votes with
+// their real account. A signed-out visitor gets an optional name/email
+// form instead of a login wall: giving an email reuses (or creates) a
+// guest account for that email — email is the unique identity, so a
+// second vote from the same email de-dupes exactly like a real login
+// does, via the same UNIQUE(article_id, user_id) constraint. A name with
+// no email (or nothing at all) has no stable identity, so it's stored
+// directly on the vote row and never de-dupes — every submission counts.
 func (a *App) ArticleThumbsUp(w http.ResponseWriter, r *http.Request) {
-	userID, ok := a.Auth.UserID(r)
-	if !ok {
-		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "login_required"})
-		return
-	}
-
 	slug := r.PathValue("slug")
 	article, err := a.Articles.GetBySlug(r.Context(), slug)
 	if err != nil {
@@ -148,6 +144,51 @@ func (a *App) ArticleThumbsUp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if userID, ok := a.Auth.UserID(r); ok {
+		a.recordArticleVote(w, r, article, userID)
+		return
+	}
+
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "invalid form", http.StatusBadRequest)
+		return
+	}
+	email := strings.ToLower(strings.TrimSpace(r.FormValue("email")))
+	name := strings.TrimSpace(r.FormValue("name"))
+
+	if email == "" {
+		if err := a.ArticleVotes.CreateGuest(r.Context(), article.ID, name); err != nil {
+			a.serverError(w, "record guest article vote", err)
+			return
+		}
+		count, err := a.Articles.IncrementThumbsUp(r.Context(), slug)
+		if err != nil {
+			a.serverError(w, "increment thumbs up", err)
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]any{"thumbs_up_count": count})
+		return
+	}
+
+	randomPassword, err := authutil.RandomHex(32)
+	if err != nil {
+		a.serverError(w, "provision guest voter", err)
+		return
+	}
+	hash, err := authutil.HashPassword(randomPassword)
+	if err != nil {
+		a.serverError(w, "provision guest voter", err)
+		return
+	}
+	userID, err := a.Users.GetOrCreateGuest(r.Context(), email, hash, name)
+	if err != nil {
+		a.serverError(w, "provision guest voter", err)
+		return
+	}
+	a.recordArticleVote(w, r, article, userID)
+}
+
+func (a *App) recordArticleVote(w http.ResponseWriter, r *http.Request, article models.Article, userID int64) {
 	if err := a.ArticleVotes.Create(r.Context(), article.ID, userID); err != nil {
 		if err == repo.ErrAlreadyVoted {
 			writeJSON(w, http.StatusOK, map[string]any{"already_voted": true, "thumbs_up_count": article.ThumbsUpCount})
@@ -157,7 +198,7 @@ func (a *App) ArticleThumbsUp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	count, err := a.Articles.IncrementThumbsUp(r.Context(), slug)
+	count, err := a.Articles.IncrementThumbsUp(r.Context(), article.Slug)
 	if err != nil {
 		a.serverError(w, "increment thumbs up", err)
 		return

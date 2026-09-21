@@ -88,7 +88,7 @@ erDiagram
     promo_codes ||--o{ bookings : "discounts (nullable FK)"
     availability_rules ||--o{ bookings : "generates slots for (app-level, not FK)"
     articles ||--o{ article_thumbs_up : "receives"
-    users ||--o{ article_thumbs_up : "casts (login required to vote)"
+    users ||--o{ article_thumbs_up : "casts (nullable FK — real login, guest-by-email, or a name-only vote with no user row)"
 
     admins {
         serial id PK
@@ -102,6 +102,7 @@ erDiagram
         text email UK
         text password_hash
         text name
+        bool is_guest "true = captured via anonymous article thumbs-up form, never signed in"
         timestamptz created_at
     }
     profile {
@@ -298,7 +299,8 @@ erDiagram
     article_thumbs_up {
         bigserial id PK
         bigint article_id FK
-        bigint user_id FK "voting requires login; UNIQUE(article_id, user_id) is the vote de-dup"
+        bigint user_id FK "nullable — set for a real or guest-by-email vote; UNIQUE(article_id, user_id) is the de-dup"
+        text guest_name "only used when user_id is null (name given, no email) — never deduped"
         timestamptz created_at
     }
     promo_codes {

@@ -56,7 +56,12 @@
         {{range .Votes}}
         <tr>
           <td>{{formatDateTime .CreatedAt}}</td>
-          <td>{{if .IsAnonymous}}<span class="admin-table-subtext">Anonymous visitor</span>{{else}}{{.UserName}} <span class="admin-table-subtext">{{.UserEmail}}</span>{{end}}</td>
+          <td>
+            {{if .IsAnonymous}}<span class="admin-table-subtext">Anonymous visitor</span>
+            {{else if .UserEmail}}{{if .UserName}}{{.UserName}}{{else}}<span class="admin-table-subtext">(no name given)</span>{{end}} <span class="admin-table-subtext">{{.UserEmail}}{{if .IsGuest}} · not signed up{{end}}</span>
+            {{else}}{{.UserName}} <span class="admin-table-subtext">no email given</span>
+            {{end}}
+          </td>
         </tr>
         {{end}}
       </tbody>

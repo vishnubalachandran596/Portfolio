@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -145,6 +146,15 @@ func (a *App) GoogleLoginCallback(w http.ResponseWriter, r *http.Request) {
 	} else if err != nil {
 		a.serverError(w, "load user", err)
 		return
+	} else if user.IsGuest {
+		// This email was previously captured via the anonymous article
+		// thumbs-up form (never actually signed in) — now that they're
+		// signing in for real, the account (and its vote history) stays
+		// the same row, it's just no longer "not signed up" in the admin
+		// view. Best-effort: never block a real login over this.
+		if merr := a.Users.MarkSignedUp(ctx, user.ID); merr != nil {
+			log.Printf("mark guest user signed up: %v", merr)
+		}
 	}
 	a.Auth.IssueUserSession(w, user.ID)
 

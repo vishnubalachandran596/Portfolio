@@ -40,14 +40,32 @@ This app runs as a single stateless serverless function (Vercel) that can have a
 - **Every DB round-trip on a hot path should be considered for concurrency.** `App.base()` runs on *every* page render and fetches three independent things concurrently via `sync.WaitGroup` for exactly this reason — a sequential chain of round-trips there multiplies across every single page view. When you add a new handler that needs multiple independent lookups, ask whether they can run concurrently the same way, and use `sync.WaitGroup` (best-effort, swallow individual errors) or `errgroup` (propagate the first error) depending on which behavior the feature actually needs — see the comment in `core/handlers/app.go` for why that choice isn't arbitrary.
 - **Payment confirmation is never trusted from the client.** All three checkout flows verify the HMAC signature server-side before granting anything. A new paid flow must do the same — never flip a "paid" status from a client-reported success callback alone.
 
-### 4. Never commit secrets — this is a hard rule, not a style preference
+### 4. Every migration must be idempotent — this caused a real outage
+
+`core/db/db.go`'s `Migrate()` re-runs every un-recorded file in `core/db/migrations/` on **every cold start** (see rule 3 — Vercel can spin up any number of instances), and `Bootstrap()` treats a migration error as **fatal for the entire app**, not just the feature it belongs to. A migration that only works once will eventually run twice — a redeploy, a retried cold start, or (as actually happened) a migration applied manually to unblock work mid-session, then re-run automatically on the next deploy. That real incident: `ALTER TABLE ... ADD CONSTRAINT` was pushed as migration 034, but the constraint had already been added by hand a few minutes earlier via the Supabase MCP tool — the next cold start re-ran the file, hit `constraint already exists`, and took `www.vishnubalachandran.com` down entirely (`503: apply migration 034_...: relation already exists`) until a hotfix (`7601c8a`) landed.
+
+- `CREATE TABLE IF NOT EXISTS` and `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` are naturally idempotent — Postgres supports the guard directly. Prefer these whenever possible.
+- **`ALTER TABLE ... ADD CONSTRAINT` has no `IF NOT EXISTS` form in Postgres.** Wrap it:
+  ```sql
+  DO $$
+  BEGIN
+      IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'your_constraint_name') THEN
+          ALTER TABLE t ADD CONSTRAINT your_constraint_name ...;
+      END IF;
+  END $$;
+  ```
+  Same principle for anything else without a native `IF NOT EXISTS`/`OR REPLACE` (some index types, some trigger syntax) — check first with a guard, don't assume the bare statement is safe to re-run.
+- If you apply a migration manually (e.g. via an MCP tool, to unblock work before a deploy), the checked-in `.sql` file **must still be idempotent** — it will run for real on the next cold start once the code ships. Manually applying it is not a substitute for writing it correctly; it's exactly the scenario that causes this class of outage if the file isn't already safe to re-run.
+- Test the idempotency claim, don't assume it: run the migration's exact SQL a second time (locally or via an MCP query tool against the dev/prod DB) and confirm it no-ops before pushing.
+
+### 5. Never commit secrets — this is a hard rule, not a style preference
 
 - `.env` and `.env.local` are gitignored — keep them that way. Real credentials (`DATABASE_URL` with a real password, `JWT_SECRET`, `RAZORPAY_KEY_SECRET`, OAuth client secrets, bot tokens) live **only** in Vercel's environment variables and a local, untracked `.env`.
 - `.env.example` documents every variable with a placeholder or dummy value — never a real one, even a "harmless-looking" one from a test account. Before adding a new env var, add it to `.env.example` with a clear comment on what it's for and where to get it, matching the existing file's style.
 - Before any commit or push, if you touched config, deployment, or anything credential-adjacent, re-check `git status`/`git diff` for anything that looks like a real secret — a connection string with an actual password, an API key that isn't obviously a placeholder — and stop to flag it rather than pushing it.
 - Never log a secret, even at debug level, and never echo one into a commit message, a code comment, or this repo's own documentation.
 
-### 5. Keep it consistent with what's already here
+### 6. Keep it consistent with what's already here
 
 - Go 1.24, standard library `net/http`, no web framework — don't introduce one for a single feature.
 - Server-rendered `html/template`, no client-side JS framework — don't add React/Vue/etc. for a single page.
@@ -62,7 +80,8 @@ This app runs as a single stateless serverless function (Vercel) that can have a
 1. Does this change make `docs/FUNCTIONALITY.md` or `docs/ARCHITECTURE.md` inaccurate? If yes, update the doc in this same commit.
 2. Did I reuse an existing utility/pattern instead of writing a new one that does almost the same thing?
 3. Does the new code follow the models → repo → handlers → templates → routes layering, as its own additive piece?
-4. Is there anything resembling a real secret in the diff? (`git diff` it, don't assume.)
-5. `go build ./... && go vet ./...` clean? CSS valid (no stray syntax errors)? Any new/changed template smoke-tested (a throwaway Go program calling `view.New()` + `Renderer.Render()` is the established pattern in this project's history — cheap, catches template errors before deploy)?
+4. **Any new/changed `.sql` migration — is it safe to run twice?** `CREATE ... IF NOT EXISTS` and `ADD COLUMN IF NOT EXISTS` are fine as-is; `ADD CONSTRAINT` and anything else without a native guard needs a `DO $$ ... IF NOT EXISTS ...` wrapper (see rule 4 above). This one caused a real production outage — don't skip it.
+5. Is there anything resembling a real secret in the diff? (`git diff` it, don't assume.)
+6. `go build ./... && go vet ./...` clean? CSS valid (no stray syntax errors)? Any new/changed template smoke-tested (a throwaway Go program calling `view.New()` + `Renderer.Render()` is the established pattern in this project's history — cheap, catches template errors before deploy)?
 
 This file, `docs/FUNCTIONALITY.md`, and `docs/ARCHITECTURE.md` are meant to be read together, every session, by whichever agent — Claude Code, Cursor, or a human — picks up work on this repo next.
