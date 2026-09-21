@@ -100,6 +100,11 @@ func (a *App) BookingConfirm(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Invalid form submission."})
 		return
 	}
+	phone := strings.TrimSpace(r.FormValue("phone"))
+	if phone == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Please enter a contact number."})
+		return
+	}
 	message := strings.TrimSpace(r.FormValue("message"))
 	slotRaw := strings.TrimSpace(r.FormValue("slot"))
 	slotStart, err := time.Parse(time.RFC3339, slotRaw)
@@ -136,6 +141,7 @@ func (a *App) BookingConfirm(w http.ResponseWriter, r *http.Request) {
 		UserID:          uid,
 		Name:            user.Name,
 		Email:           user.Email,
+		Phone:           phone,
 		Message:         message,
 		SlotStart:       slotStart,
 		SlotEnd:         slotStart.Add(time.Duration(slotMinutes) * time.Minute),
@@ -154,8 +160,12 @@ func (a *App) BookingConfirm(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	a.Telegram.Send(fmt.Sprintf("📅 Consultancy call booked\nName: %s\nEmail: %s\nWhen: %s",
-		user.Name, user.Email, slotStart.In(a.Timezone).Format("Mon, Jan 2 · 3:04 PM MST")))
+	phoneLine := ""
+	if phone != "" {
+		phoneLine = "\nPhone: " + phone
+	}
+	a.Telegram.Send(fmt.Sprintf("📅 Consultancy call booked\nName: %s\nEmail: %s%s\nWhen: %s",
+		user.Name, user.Email, phoneLine, slotStart.In(a.Timezone).Format("Mon, Jan 2 · 3:04 PM MST")))
 
 	writeJSON(w, http.StatusOK, map[string]any{"redirect": "/booking?booked=1"})
 }
@@ -163,6 +173,8 @@ func (a *App) BookingConfirm(w http.ResponseWriter, r *http.Request) {
 type ContactData struct {
 	BaseData
 	Profile models.Profile
+	Success bool
+	Error   bool
 }
 
 func (a *App) ContactPage(w http.ResponseWriter, r *http.Request) {
@@ -174,5 +186,42 @@ func (a *App) ContactPage(w http.ResponseWriter, r *http.Request) {
 	a.View.Render(w, http.StatusOK, "contact", ContactData{
 		BaseData: a.base(r, "Contact — "+a.Cfg.SiteName, "Get in touch, or book a consultancy session directly.", "contact"),
 		Profile:  profile,
+		Success:  r.URL.Query().Get("sent") == "1",
+		Error:    r.URL.Query().Get("error") == "1",
 	})
+}
+
+// ContactSubmit records a /contact form submission (name, email, phone,
+// message — phone optional) and notifies the admin over Telegram, the
+// same notification mechanism every other lead/event on this site uses.
+// No login required — this is the one way a visitor who isn't ready to
+// book a call yet can still reach out.
+func (a *App) ContactSubmit(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		http.Redirect(w, r, "/contact?error=1", http.StatusSeeOther)
+		return
+	}
+	name := strings.TrimSpace(r.FormValue("name"))
+	email := strings.TrimSpace(r.FormValue("email"))
+	phone := strings.TrimSpace(r.FormValue("phone"))
+	message := strings.TrimSpace(r.FormValue("message"))
+	if name == "" || email == "" || !strings.Contains(email, "@") || message == "" {
+		http.Redirect(w, r, "/contact?error=1", http.StatusSeeOther)
+		return
+	}
+
+	if _, err := a.ContactMessages.Create(r.Context(), models.ContactMessage{
+		Name: name, Email: email, Phone: phone, Message: message,
+	}); err != nil {
+		a.serverError(w, "record contact message", err)
+		return
+	}
+
+	phoneLine := ""
+	if phone != "" {
+		phoneLine = "\nPhone: " + phone
+	}
+	a.Telegram.Send(fmt.Sprintf("✉️ Contact form message\nName: %s\nEmail: %s%s\n%s", name, email, phoneLine, message))
+
+	http.Redirect(w, r, "/contact?sent=1", http.StatusSeeOther)
 }

@@ -347,6 +347,7 @@
     confirmBtn.addEventListener("click", function () {
       var errorBox = document.getElementById("booking-error");
       var messageInput = document.getElementById("booking-message");
+      var phoneInput = document.getElementById("booking-phone");
       function showError(msg) {
         if (errorBox) {
           errorBox.textContent = msg;
@@ -357,6 +358,11 @@
         showError("Please pick a time slot first.");
         return;
       }
+      var phone = phoneInput ? phoneInput.value.trim() : "";
+      if (!phone) {
+        showError("Please enter a contact number.");
+        return;
+      }
       if (errorBox) errorBox.hidden = true;
       confirmBtn.disabled = true;
       var originalText = confirmBtn.textContent;
@@ -364,6 +370,7 @@
 
       var form = new FormData();
       form.append("slot", selectedSlot);
+      form.append("phone", phone);
       form.append("message", messageInput ? messageInput.value : "");
 
       fetch("/booking/confirm", { method: "POST", body: form })

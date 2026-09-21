@@ -3,7 +3,7 @@
   <div class="container">
     <p class="eyebrow">Contact</p>
     <h1>Get in touch</h1>
-    <p class="hero-subtitle">For a focused 1:1 conversation, booking a consultancy session is the fastest way to actually talk. For anything else, reach out directly.</p>
+    <p class="hero-subtitle">For a focused 1:1 conversation, booking a consultancy session is the fastest way to actually talk. For anything else, use the form below or reach out directly.</p>
   </div>
 </section>
 
@@ -26,6 +26,35 @@
       <p>Need real time on a problem, not just an email thread? Book a paid 1:1 session.</p>
       <a class="btn btn-primary" href="{{.Nav.Consultancy}}">View Consultancy</a>
     </div>
+  </div>
+</section>
+
+<section class="section section-alt">
+  <div class="container">
+    <h2 class="section-title">Send a message</h2>
+    {{if .Success}}
+    <div class="alert alert-success">Thanks — your message is in, I'll get back to you at the email you gave.</div>
+    {{end}}
+    {{if .Error}}
+    <div class="alert alert-error">Please fill in your name, a valid email, and a message.</div>
+    {{end}}
+    <form method="POST" action="/contact" class="admin-form">
+      <label>Your name
+        <input type="text" name="name" required>
+      </label>
+      <label>Your email
+        <input type="email" name="email" required>
+      </label>
+      <label>Contact number <span class="optional">(optional)</span>
+        <input type="tel" name="phone" autocomplete="tel">
+      </label>
+      <label>Message
+        <textarea name="message" rows="5" required></textarea>
+      </label>
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary" data-loading-text="Sending…">Send Message</button>
+      </div>
+    </form>
   </div>
 </section>
 {{end}}

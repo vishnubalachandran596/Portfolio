@@ -191,6 +191,7 @@ type Booking struct {
 	UserID                 int64
 	Name                   string
 	Email                  string
+	Phone                  string
 	Message                string
 	SlotStart              time.Time
 	SlotEnd                time.Time
@@ -206,6 +207,20 @@ type Booking struct {
 	PromoCode              string
 	DiscountCents          int
 	CreatedAt              time.Time
+}
+
+// ContactMessage is a submission from the /contact page's form — a
+// simple lead capture (name, email, phone, message), no payment or
+// scheduling involved. Read-only from the visitor's side once sent;
+// IsRead lets the admin track which ones they've already seen.
+type ContactMessage struct {
+	ID        int64
+	Name      string
+	Email     string
+	Phone     string
+	Message   string
+	IsRead    bool
+	CreatedAt time.Time
 }
 
 // Consultancy is three tiers, none of them self-checkout: a fixed-price

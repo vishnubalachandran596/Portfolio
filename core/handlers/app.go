@@ -27,26 +27,27 @@ type App struct {
 	View *view.Renderer
 	Auth *middleware.Auth
 
-	Profile       *repo.ProfileRepo
-	Skills        *repo.SkillGroupRepo
-	Experience    *repo.ExperienceRepo
-	Education     *repo.EducationRepo
-	Features      *repo.HomeFeatureRepo
-	Courses       *repo.CourseRepo
-	Bookings      *repo.BookingRepo
-	Availability  *repo.AvailabilityRepo
-	Admins        *repo.AdminRepo
-	Purchases     *repo.PurchaseRepo
-	Users         *repo.UserRepo
-	Articles      *repo.ArticleRepo
-	PromoCodes    *repo.PromoCodeRepo
-	QuizQuestions *repo.QuizQuestionRepo
-	QuizAttempts  *repo.QuizAttemptRepo
-	AdminMessages *repo.AdminMessageRepo
-	CourseUpdates *repo.CourseUpdateRepo
-	Testimonials  *repo.TestimonialRepo
-	AuditRequests *repo.AuditRequestRepo
-	ArticleVotes  *repo.ArticleVoteRepo
+	Profile         *repo.ProfileRepo
+	Skills          *repo.SkillGroupRepo
+	Experience      *repo.ExperienceRepo
+	Education       *repo.EducationRepo
+	Features        *repo.HomeFeatureRepo
+	Courses         *repo.CourseRepo
+	Bookings        *repo.BookingRepo
+	Availability    *repo.AvailabilityRepo
+	Admins          *repo.AdminRepo
+	Purchases       *repo.PurchaseRepo
+	Users           *repo.UserRepo
+	Articles        *repo.ArticleRepo
+	PromoCodes      *repo.PromoCodeRepo
+	QuizQuestions   *repo.QuizQuestionRepo
+	QuizAttempts    *repo.QuizAttemptRepo
+	AdminMessages   *repo.AdminMessageRepo
+	CourseUpdates   *repo.CourseUpdateRepo
+	Testimonials    *repo.TestimonialRepo
+	AuditRequests   *repo.AuditRequestRepo
+	ArticleVotes    *repo.ArticleVoteRepo
+	ContactMessages *repo.ContactMessageRepo
 
 	Razorpay *payments.Razorpay
 	Telegram *notify.Telegram
@@ -118,34 +119,35 @@ func New(cfg *config.Config, db *sql.DB, renderer *view.Renderer) *App {
 		loc = time.UTC
 	}
 	return &App{
-		Cfg:           cfg,
-		DB:            db,
-		View:          renderer,
-		Auth:          middleware.NewAuth(cfg.JWTSecret, cfg.SessionTTL, cfg.IsProduction()),
-		Profile:       repo.NewProfileRepo(db),
-		Skills:        repo.NewSkillGroupRepo(db),
-		Experience:    repo.NewExperienceRepo(db),
-		Education:     repo.NewEducationRepo(db),
-		Features:      repo.NewHomeFeatureRepo(db),
-		Courses:       repo.NewCourseRepo(db),
-		Bookings:      repo.NewBookingRepo(db),
-		Availability:  repo.NewAvailabilityRepo(db),
-		Admins:        repo.NewAdminRepo(db),
-		Purchases:     repo.NewPurchaseRepo(db),
-		Users:         repo.NewUserRepo(db),
-		Articles:      repo.NewArticleRepo(db),
-		PromoCodes:    repo.NewPromoCodeRepo(db),
-		QuizQuestions: repo.NewQuizQuestionRepo(db),
-		QuizAttempts:  repo.NewQuizAttemptRepo(db),
-		AdminMessages: repo.NewAdminMessageRepo(db),
-		CourseUpdates: repo.NewCourseUpdateRepo(db),
-		Testimonials:  repo.NewTestimonialRepo(db),
-		AuditRequests: repo.NewAuditRequestRepo(db),
-		ArticleVotes:  repo.NewArticleVoteRepo(db),
-		Razorpay:      payments.NewRazorpay(cfg.RazorpayKeyID, cfg.RazorpayKeySecret),
-		Telegram:      notify.NewTelegram(cfg.TelegramBotToken, cfg.TelegramChatID),
-		Google:        oauth.NewGoogle(cfg.GoogleClientID, cfg.GoogleClientSecret, cfg.GoogleRedirectURL),
-		Timezone:      loc,
+		Cfg:             cfg,
+		DB:              db,
+		View:            renderer,
+		Auth:            middleware.NewAuth(cfg.JWTSecret, cfg.SessionTTL, cfg.IsProduction()),
+		Profile:         repo.NewProfileRepo(db),
+		Skills:          repo.NewSkillGroupRepo(db),
+		Experience:      repo.NewExperienceRepo(db),
+		Education:       repo.NewEducationRepo(db),
+		Features:        repo.NewHomeFeatureRepo(db),
+		Courses:         repo.NewCourseRepo(db),
+		Bookings:        repo.NewBookingRepo(db),
+		Availability:    repo.NewAvailabilityRepo(db),
+		Admins:          repo.NewAdminRepo(db),
+		Purchases:       repo.NewPurchaseRepo(db),
+		Users:           repo.NewUserRepo(db),
+		Articles:        repo.NewArticleRepo(db),
+		PromoCodes:      repo.NewPromoCodeRepo(db),
+		QuizQuestions:   repo.NewQuizQuestionRepo(db),
+		QuizAttempts:    repo.NewQuizAttemptRepo(db),
+		AdminMessages:   repo.NewAdminMessageRepo(db),
+		CourseUpdates:   repo.NewCourseUpdateRepo(db),
+		Testimonials:    repo.NewTestimonialRepo(db),
+		AuditRequests:   repo.NewAuditRequestRepo(db),
+		ArticleVotes:    repo.NewArticleVoteRepo(db),
+		ContactMessages: repo.NewContactMessageRepo(db),
+		Razorpay:        payments.NewRazorpay(cfg.RazorpayKeyID, cfg.RazorpayKeySecret),
+		Telegram:        notify.NewTelegram(cfg.TelegramBotToken, cfg.TelegramChatID),
+		Google:          oauth.NewGoogle(cfg.GoogleClientID, cfg.GoogleClientSecret, cfg.GoogleRedirectURL),
+		Timezone:        loc,
 	}
 }
 

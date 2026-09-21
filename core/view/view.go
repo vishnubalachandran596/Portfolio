@@ -127,6 +127,7 @@ func New() (*Renderer, error) {
 		"templates/pages/admin_booking_reschedule.html",
 		"templates/pages/admin_purchases.html",
 		"templates/pages/admin_payments_list.html",
+		"templates/pages/admin_contact_messages.html",
 		"templates/pages/admin_availability.html",
 		"templates/pages/admin_profile.html",
 		"templates/pages/admin_articles_list.html",

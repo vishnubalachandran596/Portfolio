@@ -1,0 +1,33 @@
+{{define "content"}}
+<section class="section">
+  <div class="container">
+    <h1>Contact Messages</h1>
+    {{if .Messages}}
+    <table class="admin-table">
+      <thead><tr><th>When</th><th>Name</th><th>Email</th><th>Phone</th><th>Message</th><th>Status</th></tr></thead>
+      <tbody>
+        {{range .Messages}}
+        <tr>
+          <td>{{formatDateTime .CreatedAt}}</td>
+          <td>{{.Name}}</td>
+          <td>{{.Email}}</td>
+          <td>{{if .Phone}}{{.Phone}}{{else}}—{{end}}</td>
+          <td>{{.Message}}</td>
+          <td>
+            {{if .IsRead}}<span class="status-badge status-confirmed">Read</span>
+            {{else}}
+            <form method="POST" action="/admin/contact-messages/{{.ID}}/read">
+              <button type="submit" class="btn btn-secondary btn-sm">Mark read</button>
+            </form>
+            {{end}}
+          </td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+    {{else}}
+    <p class="empty-state">No contact messages yet.</p>
+    {{end}}
+  </div>
+</section>
+{{end}}

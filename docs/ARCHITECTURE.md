@@ -240,6 +240,7 @@ erDiagram
         bigint user_id FK
         text name
         text email
+        text phone
         text message
         timestamptz slot_start UK
         timestamptz slot_end
@@ -271,6 +272,16 @@ erDiagram
         timestamptz created_at
         timestamptz paid_at "nullable"
         note "Architecture Review — read-only now, historical rows only, self-checkout removed"
+    }
+    contact_messages {
+        bigserial id PK
+        text name
+        text email
+        text phone "optional"
+        text message
+        bool is_read
+        timestamptz created_at
+        note "one /contact form submission — no login, no FK, standalone lead capture"
     }
     availability_rules {
         serial id PK
@@ -347,7 +358,7 @@ erDiagram
 
 `handlers.App` (in `core/handlers/app.go`) is the one struct every handler is a method on. It holds:
 - `Cfg *config.Config`, `DB *sql.DB`, `View *view.Renderer`, `Auth *middleware.Auth`
-- One repo field per aggregate: `Profile, Skills, Experience, Education, Features, Courses, Bookings, Availability, Admins, Purchases, Users, Articles, PromoCodes, QuizQuestions, QuizAttempts, AdminMessages, CourseUpdates, Testimonials, AuditRequests, ArticleVotes`
+- One repo field per aggregate: `Profile, Skills, Experience, Education, Features, Courses, Bookings, Availability, Admins, Purchases, Users, Articles, PromoCodes, QuizQuestions, QuizAttempts, AdminMessages, CourseUpdates, Testimonials, AuditRequests, ArticleVotes, ContactMessages`
 - `Razorpay *payments.Razorpay`, `Telegram *notify.Telegram`, `Google *oauth.Google`, `Timezone *time.Location`
 
 `App.base(r, title, metaDescription, active) BaseData` runs on **every single page render** — it resolves login state (both admin and user), notifications, the footer's LinkedIn link, nav URLs, and the asset-version string. Because it runs on every page, its three independent DB lookups (user name, notifications, profile) are fetched **concurrently** via `sync.WaitGroup` (not `errgroup` — this function's existing contract is "degrade quietly on error," which `errgroup` doesn't fit). Every page-specific `*Data` struct embeds `BaseData`.
@@ -359,7 +370,8 @@ Handler files, by area:
 |---|---|
 | `public.go` | Home, About, Resume, CoursesList, CourseDetail, Sitemap-adjacent data |
 | `checkout.go` | Course purchase order/verify, `courseAccess()` gate |
-| `consultancy.go` | Consultancy page, Audit checkout order/verify, Booking page/checkout/verify, Contact |
+| `consultancy.go` | Consultancy page, Booking page/confirm (free, no payment gateway), Contact page/submit |
+| `admin_contact.go` | Admin contact-messages list + mark-read |
 | `articles.go` | Public article list/detail/thumbs-up + Admin article CRUD |
 | `account.go` | `/account` page + PDF receipts + testimonial submission |
 | `booking_reschedule.go` | Both admin- and self-service booking reschedule flows |

@@ -4,13 +4,14 @@
     <h1>Bookings</h1>
     {{if .Bookings}}
     <table class="admin-table">
-      <thead><tr><th>When</th><th>Name</th><th>Email</th><th>Amount</th><th>Promo</th><th>Message</th><th>Status</th><th></th></tr></thead>
+      <thead><tr><th>When</th><th>Name</th><th>Email</th><th>Phone</th><th>Amount</th><th>Promo</th><th>Message</th><th>Status</th><th></th></tr></thead>
       <tbody>
         {{range .Bookings}}
         <tr>
           <td>{{formatDateTime .SlotStart}}</td>
           <td>{{.Name}}</td>
           <td>{{.Email}}</td>
+          <td>{{if .Phone}}{{.Phone}}{{else}}—{{end}}</td>
           <td>{{if .AmountCents}}{{money .AmountCents .Currency}}{{else}}—{{end}}</td>
           <td>{{if .PromoCode}}{{.PromoCode}} (-{{money .DiscountCents .Currency}}){{else}}—{{end}}</td>
           <td class="booking-message">{{.Message}}</td>
