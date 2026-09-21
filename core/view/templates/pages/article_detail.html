@@ -10,9 +10,13 @@
       {{range .Article.Tags}}<a class="tag-chip" href="/articles?tag={{.}}">{{.}}</a>{{end}}
     </div>
     <div class="article-thumbs-top">
+      {{if .IsUser}}
       <button type="button" class="btn btn-secondary article-thumbs-btn" data-slug="{{.Article.Slug}}" {{if .Voted}}disabled{{end}}>
         👍 <span class="thumbs-count-num">{{.Article.ThumbsUpCount}}</span>{{if .Voted}} · Thanks!{{end}}
       </button>
+      {{else}}
+      <a class="btn btn-secondary" href="/login?next=/articles/{{.Article.Slug}}">👍 {{.Article.ThumbsUpCount}} · Login to vote</a>
+      {{end}}
     </div>
   </div>
 </section>
@@ -34,11 +38,16 @@
     <p>{{.Article.Summary}}</p>
     {{end}}
 
+    <p class="article-thumbs-cta">Found this useful? {{if .IsUser}}Give it a thumbs up{{else}}Login and give a thumbs up{{end}} for more of these contents.</p>
     <div class="article-detail-actions">
       {{if .Article.SourceURL}}<a class="btn btn-primary" href="{{.Article.SourceURL}}" target="_blank" rel="noopener noreferrer">Read the full article ↗</a>{{end}}
+      {{if .IsUser}}
       <button type="button" class="btn btn-secondary article-thumbs-btn" data-slug="{{.Article.Slug}}" {{if .Voted}}disabled{{end}}>
         👍 <span class="thumbs-count-num">{{.Article.ThumbsUpCount}}</span>{{if .Voted}} · Thanks!{{end}}
       </button>
+      {{else}}
+      <a class="btn btn-secondary" href="/login?next=/articles/{{.Article.Slug}}">👍 {{.Article.ThumbsUpCount}} · Login to vote</a>
+      {{end}}
     </div>
 
     <p class="hero-meta"><a href="/articles">← Back to all articles</a></p>
@@ -77,7 +86,13 @@
       if (e.currentTarget.disabled) return;
       setAllDisabled(true);
       fetch("/articles/" + slug + "/thumbs-up", { method: "POST" })
-        .then(function (r) { return r.json(); })
+        .then(function (r) {
+          if (r.status === 401) {
+            window.location.href = "/login?next=" + encodeURIComponent("/articles/" + slug);
+            throw new Error("login required");
+          }
+          return r.json();
+        })
         .then(function (data) {
           if (typeof data.thumbs_up_count === "number") setCount(data.thumbs_up_count);
           markVoted();

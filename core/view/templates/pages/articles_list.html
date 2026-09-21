@@ -45,7 +45,11 @@
           </div>
         </a>
         <div class="article-row-votes">
+          {{if $.IsUser}}
           <button type="button" class="thumbs-count" data-slug="{{.Slug}}">👍 <span class="thumbs-count-num">{{.ThumbsUpCount}}</span></button>
+          {{else}}
+          <a class="thumbs-count" href="/login?next=/articles/{{.Slug}}">👍 {{.ThumbsUpCount}}</a>
+          {{end}}
         </div>
       </div>
       {{end}}

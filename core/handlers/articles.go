@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"html/template"
-	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -111,24 +110,37 @@ func (a *App) ArticleDetailPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = r.Cookie(articleVoteCookie(slug))
-	alreadyVoted := err == nil
+	var voted bool
+	if userID, ok := a.Auth.UserID(r); ok {
+		voted, err = a.ArticleVotes.HasVoted(r.Context(), article.ID, userID)
+		if err != nil {
+			a.serverError(w, "check article vote", err)
+			return
+		}
+	}
 	base := a.base(r, article.Title+" — "+a.Cfg.SiteName, article.Summary, "articles")
 	a.View.Render(w, http.StatusOK, "article_detail", ArticleDetailData{
 		BaseData: base,
 		Article:  article,
-		Voted:    alreadyVoted,
+		Voted:    voted,
 		JSONLD:   articleJSONLD(article, base.CanonicalURL, a.Cfg.SiteName),
 	})
 }
 
-func articleVoteCookie(slug string) string { return "au_" + slug }
-
-// ArticleThumbsUp records one thumbs-up per visitor per article, guarded
-// by a long-lived cookie rather than a login — good enough to stop
-// trivial repeat-clicking on a personal site without putting a login
-// wall in front of a lightweight reaction.
+// ArticleThumbsUp records one thumbs-up per logged-in visitor per
+// article — voting requires an account (the button links to /login when
+// signed out) specifically so the admin "who voted" view means
+// something. The unique constraint on (article_id, user_id) is the
+// authoritative de-dup, not a cookie, so it holds across browsers/
+// devices for the same account and survives a race between two
+// concurrent requests.
 func (a *App) ArticleThumbsUp(w http.ResponseWriter, r *http.Request) {
+	userID, ok := a.Auth.UserID(r)
+	if !ok {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "login_required"})
+		return
+	}
+
 	slug := r.PathValue("slug")
 	article, err := a.Articles.GetBySlug(r.Context(), slug)
 	if err != nil {
@@ -136,9 +148,12 @@ func (a *App) ArticleThumbsUp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	cookieName := articleVoteCookie(slug)
-	if _, err := r.Cookie(cookieName); err == nil {
-		writeJSON(w, http.StatusOK, map[string]any{"already_voted": true})
+	if err := a.ArticleVotes.Create(r.Context(), article.ID, userID); err != nil {
+		if err == repo.ErrAlreadyVoted {
+			writeJSON(w, http.StatusOK, map[string]any{"already_voted": true, "thumbs_up_count": article.ThumbsUpCount})
+			return
+		}
+		a.serverError(w, "record article vote", err)
 		return
 	}
 
@@ -147,27 +162,6 @@ func (a *App) ArticleThumbsUp(w http.ResponseWriter, r *http.Request) {
 		a.serverError(w, "increment thumbs up", err)
 		return
 	}
-
-	// Best-effort: who-voted detail for the admin view. userID is nil for
-	// an anonymous visitor, which is the normal case — voting never
-	// requires login, so a failure here should never block the vote
-	// itself from counting.
-	var userID *int64
-	if id, ok := a.Auth.UserID(r); ok {
-		userID = &id
-	}
-	if err := a.ArticleVotes.Create(r.Context(), article.ID, userID); err != nil {
-		log.Printf("record article vote detail: %v", err)
-	}
-	http.SetCookie(w, &http.Cookie{
-		Name:     cookieName,
-		Value:    "1",
-		Path:     "/",
-		HttpOnly: true,
-		Secure:   a.Cfg.IsProduction(),
-		SameSite: http.SameSiteLaxMode,
-		Expires:  time.Now().AddDate(5, 0, 0),
-	})
 	writeJSON(w, http.StatusOK, map[string]any{"thumbs_up_count": count})
 }
 

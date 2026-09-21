@@ -882,9 +882,12 @@ a, button, .slot-btn, .faq-item summary { cursor: pointer; }
 }
 .article-row-votes { flex-shrink: 0; }
 .thumbs-count {
+  display: inline-flex;
+  align-items: center;
   font: inherit;
   font-size: 0.9rem;
   color: var(--color-text-faint);
+  text-decoration: none;
   white-space: nowrap;
   background: none;
   border: 0.0625rem solid transparent;
@@ -903,8 +906,9 @@ a, button, .slot-btn, .faq-item summary { cursor: pointer; }
 .pagination-disabled { color: var(--color-text-faint); font-size: 0.92rem; }
 .pagination-status { color: var(--color-text-faint); font-size: 0.86rem; }
 
-.article-detail-actions { display: flex; gap: 0.875rem; flex-wrap: wrap; align-items: center; margin: 1.5rem 0; }
-#thumbs-up-btn:disabled { opacity: 0.7; cursor: default; }
+.article-thumbs-cta { color: var(--color-text-muted); font-size: 0.92rem; margin: 2rem 0 0.75rem; }
+.article-detail-actions { display: flex; gap: 0.875rem; flex-wrap: wrap; align-items: center; margin: 0 0 1.5rem; }
+.article-thumbs-btn:disabled { opacity: 0.7; cursor: default; }
 
 .admin-form-divider { border: none; border-top: 0.0625rem solid var(--color-border); margin: 0.5rem 0 0.25rem; }
 .admin-form-subhead { font-size: 1.05rem; margin: 0 0 0.25rem; }

@@ -534,8 +534,15 @@
         e.stopPropagation();
         if (btn.disabled) return;
         btn.disabled = true;
-        fetch("/articles/" + btn.dataset.slug + "/thumbs-up", { method: "POST" })
-          .then(function (r) { return r.json(); })
+        var slug = btn.dataset.slug;
+        fetch("/articles/" + slug + "/thumbs-up", { method: "POST" })
+          .then(function (r) {
+            if (r.status === 401) {
+              window.location.href = "/login?next=" + encodeURIComponent("/articles/" + slug);
+              throw new Error("login required");
+            }
+            return r.json();
+          })
           .then(function (data) {
             if (typeof data.thumbs_up_count === "number") {
               var numEl = btn.querySelector(".thumbs-count-num");
