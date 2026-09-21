@@ -14,6 +14,16 @@ import (
 	"github.com/vishnubalachandran596/portfolio/core/scheduler"
 )
 
+// nonCoursePaymentsDisabled switches off Razorpay for every consultancy
+// flow (Architecture Review self-checkout, and hourly booking's paid
+// branch — currently unreachable anyway since ConsultancyPriceCentsUSD/
+// INR are 0, but guarded explicitly so it stays off even if a price is
+// restored without also revisiting this policy) independently of
+// a.Razorpay.Enabled(). This is a deliberate business policy ("no live
+// payment gateway anywhere except courses, for now"), not a
+// configuration state — flip to false to lift it site-wide.
+const nonCoursePaymentsDisabled = true
+
 type ConsultancyData struct {
 	BaseData
 	PriceDisplay         string
@@ -46,13 +56,22 @@ func (a *App) ConsultancyPage(w http.ResponseWriter, r *http.Request) {
 // server-side from the visitor's region, mirroring BookingCheckoutOrder.
 //
 // The consultancy page no longer links here: the Architecture Review is
-// now scoped over a call first (like the retainer), not self-checkout.
-// This handler, its route, and the audit_requests table are left intact
-// rather than deleted — real historical rows exist from when self-checkout
-// was live, and the fastest way back to self-checkout (if that's ever
-// wanted again) is re-adding the form to consultancy.html, not rebuilding
-// this from scratch.
+// now scoped over a call first (like the retainer), not self-checkout —
+// and per that same policy, the payment gateway itself is switched off
+// here, not just unlinked from the UI (see the nonCoursePaymentsDisabled
+// guard below), so there's no live paid endpoint sitting reachable in
+// the background for a flow the site no longer offers. This handler,
+// its route, and the audit_requests table are left intact rather than
+// deleted — real historical rows exist from when self-checkout was
+// live, and the fastest way back to self-checkout (if that's ever
+// wanted again) is flipping nonCoursePaymentsDisabled back to false and
+// re-adding the form to consultancy.html, not rebuilding this from
+// scratch.
 func (a *App) AuditCheckoutOrder(w http.ResponseWriter, r *http.Request) {
+	if nonCoursePaymentsDisabled {
+		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "Architecture Review self-checkout isn't available right now — get in touch instead."})
+		return
+	}
 	if !a.Razorpay.Enabled() {
 		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "Payments are not configured yet — reach out directly instead."})
 		return
@@ -252,6 +271,10 @@ func (a *App) BookingCheckoutOrder(w http.ResponseWriter, r *http.Request) {
 		}
 		orderID = "free-" + token
 	} else {
+		if nonCoursePaymentsDisabled {
+			writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "Paid hourly sessions aren't available right now — the hourly session is free, or get in touch about a retainer."})
+			return
+		}
 		if !a.Razorpay.Enabled() {
 			writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "Payments are not configured yet."})
 			return

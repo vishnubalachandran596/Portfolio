@@ -397,19 +397,21 @@ Both live in `core/middleware/auth.go`, sharing one `Auth` struct (one JWT secre
 
 ---
 
-## 6. Payments — three independent Razorpay flows, one shared pattern
+## 6. Payments — three independent Razorpay flows, one shared pattern; currently only one is live
 
 All three follow the same shape: **create-order handler** (server resolves the true price, creates a Razorpay order, writes a `pending`/`created` DB row) → client opens Razorpay's Checkout.js modal with that order ID → **verify handler** (HMAC-verifies the callback server-side via `Razorpay.VerifySignature`, flips the DB row to paid, fires a Telegram notification, returns a redirect). Access/confirmation is **only ever granted from the verify step**, never trusted from the client-side "success" callback alone.
 
-| Flow | Create endpoint | Verify endpoint | DB table | Special-cased |
+**As of now, only the course flow can actually reach Razorpay.** A deliberate business policy — "no live payment gateway anywhere except courses, for now" — is enforced in code via `consultancy.go`'s `nonCoursePaymentsDisabled = true` constant, checked as the very first line of both `AuditCheckoutOrder` and `BookingCheckoutOrder`'s paid branch, *before* the usual `a.Razorpay.Enabled()` config check. This is deliberately stronger than just unlinking the UI: even a direct `POST` to either endpoint gets an immediate `503`, so there's no live paid endpoint reachable in the background for either flow. Flip that one constant back to `false` (and re-link the relevant UI) to restore either.
+
+| Flow | Create endpoint | Verify endpoint | DB table | Currently live? |
 |---|---|---|---|---|
-| Course purchase | `POST /courses/{slug}/checkout/order` | `.../verify` | `purchases` | **Skips Razorpay entirely when amount resolves to $0** — see §3 |
-| Consultancy hourly | `POST /booking/checkout/order` | `.../verify` | `bookings` | Also provisionally reserves the calendar slot at order-creation time. **Currently always skips Razorpay** — `models.ConsultancyPriceCentsUSD/INR = 0`, same $0-skip branch as the course flow |
-| Architecture Review | `POST /consultancy/audit/checkout/order` | `.../verify` | `audit_requests` | Fixed price, no pay-what-you-want, no calendar slot. **Fully functional but not linked from `consultancy.html` anymore** — the page routes to `/contact` to scope on a call first instead, same as the retainer; re-add the inline form to relink it |
+| Course purchase | `POST /courses/{slug}/checkout/order` | `.../verify` | `purchases` | **Yes** — real Razorpay when the resolved amount is above $0; **skips Razorpay entirely when it resolves to $0** — see §3 |
+| Consultancy hourly | `POST /booking/checkout/order` | `.../verify` | `bookings` | No — always free right now (`models.ConsultancyPriceCentsUSD/INR = 0`, same $0-skip branch as the course flow); the paid `else` branch is additionally gated by `nonCoursePaymentsDisabled` as a second, independent safeguard |
+| Architecture Review | `POST /consultancy/audit/checkout/order` | `.../verify` | `audit_requests` | No — gated by `nonCoursePaymentsDisabled`; not linked from `consultancy.html` either, which routes to `/contact` to scope on a call first, same as the retainer |
 
-`core/payments/razorpay.go`: `Razorpay.Enabled()` is `false` whenever `RAZORPAY_KEY_ID`/`RAZORPAY_KEY_SECRET` aren't set — every create-order handler checks this (except the course flow's $0 branch, and the hourly flow while its price is $0, neither of which needs Razorpay at all) and returns `503` with a friendly message instead of erroring.
+`core/payments/razorpay.go`: `Razorpay.Enabled()` is `false` whenever `RAZORPAY_KEY_ID`/`RAZORPAY_KEY_SECRET` aren't set — every create-order handler still checks this too (belt-and-suspenders alongside `nonCoursePaymentsDisabled` for the two disabled flows) and returns `503` with a friendly message instead of erroring.
 
-**To add a fourth fixed-price paid product**, copy the Architecture Review pattern (`consultancy.go`'s `AuditCheckoutOrder`/`AuditCheckoutVerify` + `audit_requests` table) rather than the course or booking pattern — it's the simplest of the three (no pay-what-you-want, no slot reservation). The pattern is still the right reference even though this particular instance of it isn't linked from the UI right now.
+**To add a fourth fixed-price paid product**, copy the Architecture Review pattern (`consultancy.go`'s `AuditCheckoutOrder`/`AuditCheckoutVerify` + `audit_requests` table) rather than the course or booking pattern — it's the simplest of the three (no pay-what-you-want, no slot reservation). The pattern is still the right reference even though this particular instance is currently disabled.
 
 ---
 
