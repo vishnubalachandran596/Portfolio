@@ -71,7 +71,7 @@ func (a *App) ArticlesPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	a.View.Render(w, http.StatusOK, "articles_list", ArticlesData{
-		BaseData:   a.base(r, "Articles — "+a.Cfg.SiteName, "Curated reading on architecture, AI, system design, and engineering careers, with a short take and a link to the original.", "articles"),
+		BaseData:   a.base(r, "Blog — "+a.Cfg.SiteName, "Original writing on architecture, event-driven systems, and engineering careers, plus a short take on other pieces worth your time.", "articles"),
 		Articles:   result.Articles,
 		Tags:       tags,
 		Query:      opt.Query,
