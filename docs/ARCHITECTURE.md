@@ -255,6 +255,7 @@ erDiagram
         text promo_code
         int discount_cents
         timestamptz created_at
+        note "amount_cents/currency/discount_cents/promo_code* are always 0/empty now — hourly consultancy has no payment step; razorpay_order_id is only a unique token for MarkPaid to scope its update to, never a real Razorpay reference"
     }
     audit_requests {
         bigserial id PK
@@ -269,7 +270,7 @@ erDiagram
         text razorpay_payment_id
         timestamptz created_at
         timestamptz paid_at "nullable"
-        note "Architecture Review — fixed price, modeled like bookings not purchases"
+        note "Architecture Review — read-only now, historical rows only, self-checkout removed"
     }
     availability_rules {
         serial id PK
@@ -336,7 +337,7 @@ erDiagram
 **Notes on the model that aren't obvious from the diagram:**
 - `admins` and `users` are **completely separate tables** — an admin logging in does not create a `users` row, and vice versa. The two sessions (§5) are independent; the same email *can* hold both.
 - `purchases.access_token` is the single mechanism gating `/courses/{slug}/learn` — see `courseAccess()` in `core/handlers/checkout.go`. A `$0` "free" purchase still gets a real row and a real token; it just skips Razorpay entirely (`amountCents == 0` branch in `CheckoutCreateOrder`).
-- `audit_requests` deliberately does **not** reuse the `purchases` table, even though it's conceptually similar (a paid Razorpay flow) — it has no course, no pay-what-you-want amount, and a different intake form (name/company/brief), so it's modeled as its own table closer to `bookings`' pending→paid pattern.
+- `audit_requests` is now read-only from the app's perspective — nothing writes new rows anymore since the Architecture Review's self-checkout was removed (see §6). The table and its historical rows are kept purely so the admin payments ledger still shows what was actually paid before the removal.
 - `course_updates` has no Go-side fan-out logic — a **Postgres trigger** (`trg_course_updates_notify`, from migration `026_course_updates.sql`) does the INSERT into `admin_messages` for every buyer automatically. Inserting a `course_updates` row (from the admin course-edit form's "what changed" field, or directly via SQL) is the *entire* notification mechanism.
 - `min_price_cents` / `min_price_cents_inr` on `courses` default to `0` (migration `030`) — "contribute as you like, fully free" is the standard state; a positive value is an opt-in minimum, not the default.
 
@@ -397,21 +398,19 @@ Both live in `core/middleware/auth.go`, sharing one `Auth` struct (one JWT secre
 
 ---
 
-## 6. Payments — three independent Razorpay flows, one shared pattern; currently only one is live
+## 6. Payments — Razorpay is wired up for courses only
 
-All three follow the same shape: **create-order handler** (server resolves the true price, creates a Razorpay order, writes a `pending`/`created` DB row) → client opens Razorpay's Checkout.js modal with that order ID → **verify handler** (HMAC-verifies the callback server-side via `Razorpay.VerifySignature`, flips the DB row to paid, fires a Telegram notification, returns a redirect). Access/confirmation is **only ever granted from the verify step**, never trusted from the client-side "success" callback alone.
+**Course purchases are the only paid flow left on this site.** Consultancy (Architecture Review, retainer, hourly) never touches a payment gateway at all — no code path, no dormant endpoint, nothing to re-enable by flipping a flag. This was a deliberate removal, not a disable: the site owner isn't taking payment integration further any time soon, and having a live-but-unlinked paid endpoint sitting in the background was considered worse than just deleting it. If self-checkout for consultancy is ever wanted again, it needs to be rebuilt — `git log` on `consultancy.go`/`booking.html` around the removal commit is the reference for what the Razorpay version looked like.
 
-**As of now, only the course flow can actually reach Razorpay.** A deliberate business policy — "no live payment gateway anywhere except courses, for now" — is enforced in code via `consultancy.go`'s `nonCoursePaymentsDisabled = true` constant, checked as the very first line of both `AuditCheckoutOrder` and `BookingCheckoutOrder`'s paid branch, *before* the usual `a.Razorpay.Enabled()` config check. This is deliberately stronger than just unlinking the UI: even a direct `POST` to either endpoint gets an immediate `503`, so there's no live paid endpoint reachable in the background for either flow. Flip that one constant back to `false` (and re-link the relevant UI) to restore either.
+**Course purchase** (`POST /courses/{slug}/checkout/order` → `.../verify`, `purchases` table) follows: **create-order handler** (server resolves the true price, creates a Razorpay order, writes a `pending` DB row) → client opens Razorpay's Checkout.js modal with that order ID → **verify handler** (HMAC-verifies the callback server-side via `Razorpay.VerifySignature`, flips the DB row to paid, fires a Telegram notification, returns a redirect). Access is **only ever granted from the verify step**, never trusted from the client-side "success" callback alone. It **skips Razorpay entirely when the resolved amount is $0** — see §3.
 
-| Flow | Create endpoint | Verify endpoint | DB table | Currently live? |
-|---|---|---|---|---|
-| Course purchase | `POST /courses/{slug}/checkout/order` | `.../verify` | `purchases` | **Yes** — real Razorpay when the resolved amount is above $0; **skips Razorpay entirely when it resolves to $0** — see §3 |
-| Consultancy hourly | `POST /booking/checkout/order` | `.../verify` | `bookings` | No — always free right now (`models.ConsultancyPriceCentsUSD/INR = 0`, same $0-skip branch as the course flow); the paid `else` branch is additionally gated by `nonCoursePaymentsDisabled` as a second, independent safeguard |
-| Architecture Review | `POST /consultancy/audit/checkout/order` | `.../verify` | `audit_requests` | No — gated by `nonCoursePaymentsDisabled`; not linked from `consultancy.html` either, which routes to `/contact` to scope on a call first, same as the retainer |
+**Consultancy hourly** (`POST /booking/confirm`, `bookings` table) is a plain "reserve the slot, confirm it" flow with no price and no payment step of any kind — `BookingConfirm` in `consultancy.go` calls `BookingRepo.CreatePending` then `MarkPaid` back to back, purely to reuse the existing slot-race protection (the unique constraint on `slot_start`), not because anything is actually "paid." A synthetic `razorpay_order_id` (`"free-"+token`) only exists so `MarkPaid` has something unambiguous to scope its update to.
 
-`core/payments/razorpay.go`: `Razorpay.Enabled()` is `false` whenever `RAZORPAY_KEY_ID`/`RAZORPAY_KEY_SECRET` aren't set — every create-order handler still checks this too (belt-and-suspenders alongside `nonCoursePaymentsDisabled` for the two disabled flows) and returns `503` with a friendly message instead of erroring.
+**Architecture Review and Fractional Advisory** have no create/verify endpoints at all — both route to `/contact` from `consultancy.html`, to be scoped and invoiced outside this site. The `audit_requests` table and `AuditRequestRepo.ListAll` still exist, read-only, purely so the admin payments ledger (`admin_payments.go`) can keep showing the real historical Architecture Review purchases from when self-checkout briefly existed; nothing writes to that table anymore.
 
-**To add a fourth fixed-price paid product**, copy the Architecture Review pattern (`consultancy.go`'s `AuditCheckoutOrder`/`AuditCheckoutVerify` + `audit_requests` table) rather than the course or booking pattern — it's the simplest of the three (no pay-what-you-want, no slot reservation). The pattern is still the right reference even though this particular instance is currently disabled.
+`core/payments/razorpay.go`: `Razorpay.Enabled()` is `false` whenever `RAZORPAY_KEY_ID`/`RAZORPAY_KEY_SECRET` aren't set — the course create-order handler checks this (except its own $0 branch, which doesn't need Razorpay at all) and returns `503` with a friendly message instead of erroring.
+
+**To add a new fixed-price paid product**, the course purchase flow (`checkout.go`'s `CheckoutCreateOrder`/`CheckoutVerify` + `purchases` table) is now the only live reference implementation for a Razorpay create/verify pair in this codebase.
 
 ---
 

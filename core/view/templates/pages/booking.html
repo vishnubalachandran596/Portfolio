@@ -2,19 +2,15 @@
 <section class="section page-hero">
   <div class="container">
     <p class="eyebrow"><a href="{{.Nav.Consultancy}}">← Consultancy</a></p>
-    <h1>Book a consultancy session</h1>
-    {{if .IsFree}}
-    <p class="hero-subtitle">One hour of 1:1 consultancy, discussion, or brainstorming — <strong>free, for now</strong>. Pick an open slot below and your call is confirmed instantly. Times shown in India Standard Time (IST).</p>
-    {{else}}
-    <p class="hero-subtitle">One hour of 1:1 consultancy, discussion, or brainstorming — <strong>{{.PriceDisplay}}</strong>. Pick an open slot below, pay securely via Razorpay, and your booking is confirmed instantly. Times shown in India Standard Time (IST).</p>
-    {{end}}
+    <h1>Book a consultancy call</h1>
+    <p class="hero-subtitle">One hour of 1:1 consultancy, discussion, or brainstorming — <strong>free</strong>. Pick an open slot below and your call is confirmed instantly. Times shown in India Standard Time (IST).</p>
   </div>
 </section>
 
 <section class="section">
   <div class="container">
     {{if .Success}}
-    <div class="alert alert-success">{{if .IsFree}}Your session is booked! You'll hear back at {{.UserEmail}}.{{else}}Your session is booked and paid! You'll hear back at {{.UserEmail}}.{{end}}</div>
+    <div class="alert alert-success">Your call is booked! You'll hear back at {{.UserEmail}}.</div>
     {{end}}
     {{if .Error}}
     <div class="alert alert-error">{{.Error}}</div>
@@ -40,23 +36,13 @@
 
     <div class="booking-contact" id="booking-contact" hidden>
       <p>Selected time: <strong id="selected-slot-label"></strong></p>
-      {{if .IsFree}}
-      <p class="booking-price-line">Free — confirmed instantly, no payment needed.</p>
-      {{else}}
-      <p class="booking-price-line">Total: <strong>{{.PriceDisplay}}</strong> — billed once, confirmed on payment.</p>
-      {{end}}
+      <p class="booking-price-line">Free — confirmed instantly.</p>
       <label>Anything you'd like to cover? <span class="optional">(optional)</span>
         <textarea id="booking-message" rows="3" maxlength="1000"></textarea>
       </label>
-      <label>Promo code <span class="optional">(optional)</span>
-        <input type="text" id="booking-promo-code" autocapitalize="characters">
-      </label>
       <div id="booking-error" class="alert alert-error" hidden></div>
-      <button type="button" class="btn btn-primary" id="booking-pay-btn"
-        data-amount-cents="{{.AmountCents}}" data-currency="{{.Currency}}" data-key-id="{{.KeyID}}"
-        data-email="{{.UserEmail}}" data-name="{{.UserName}}">{{if .IsFree}}Schedule the Call{{else}}Pay {{.PriceDisplay}} &amp; Confirm{{end}}</button>
+      <button type="button" class="btn btn-primary" id="booking-confirm-btn">Schedule the Call</button>
     </div>
-    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
     {{else}}
     <p class="empty-state">No availability is configured right now — check back soon.</p>
     {{end}}

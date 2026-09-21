@@ -62,17 +62,11 @@ func (r *BookingRepo) CreatePending(ctx context.Context, b models.Booking) (int6
 	return id, err
 }
 
-func (r *BookingRepo) GetByRazorpayOrderID(ctx context.Context, orderID string) (models.Booking, error) {
-	b, err := scanBooking(r.db.QueryRowContext(ctx, `SELECT `+bookingColumns+` FROM bookings WHERE razorpay_order_id = $1`, orderID))
-	if errors.Is(err, sql.ErrNoRows) {
-		return models.Booking{}, ErrNotFound
-	}
-	return b, err
-}
-
-// MarkPaid confirms a pending booking once Razorpay's signature has been
-// verified. Scoped to status='pending_payment' so a replayed verify call
-// is a no-op (ErrNotFound) rather than double-processing.
+// MarkPaid confirms a pending booking — historically only called after a
+// Razorpay signature was verified, now called directly from
+// BookingConfirm since there's no payment step at all. Still scoped to
+// status='pending_payment' so a replayed call is a no-op (ErrNotFound)
+// rather than double-processing.
 func (r *BookingRepo) MarkPaid(ctx context.Context, orderID, paymentID string) error {
 	res, err := r.db.ExecContext(ctx, `
 		UPDATE bookings SET status = $1, razorpay_payment_id = $2

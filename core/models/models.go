@@ -208,28 +208,22 @@ type Booking struct {
 	CreatedAt              time.Time
 }
 
-// Consultancy is now three tiers, not one hourly rate — see the growth
-// strategy doc: a fixed-price Architecture Review is the primary CTA (a
-// low-friction way to start working together and the standard on-ramp
-// into a retainer), a monthly retainer is discussed directly rather than
-// self-checkout (real retainers are negotiated, not sold off a price
-// list), and hourly booking still exists but repriced to the "experienced
-// consultant" tier and repositioned as the smallest, least-emphasized
-// option rather than the only one.
+// Consultancy is three tiers, none of them self-checkout: a fixed-price
+// (reference only, see below) Architecture Review and a monthly retainer
+// are both scoped on a call via /contact, and hourly booking is a free
+// scheduled call via /booking with no price at all — no payment gateway
+// is wired up anywhere in consultancy right now (see
+// docs/ARCHITECTURE.md §6). AuditPriceCentsUSD/INR is kept as a
+// reference figure shown on the page ("Discuss an Architecture Review —
+// $3,000 · scoped on a call"), not something charged against; there is
+// no equivalent constant for the hourly session since it has no price
+// to display anymore.
 const (
 	ConsultancyDurationMinutes = 60
-	// Free for now, deliberately: framed as "book an hour to schedule a
-	// call" rather than a paid session — BookingCheckoutOrder skips
-	// Razorpay entirely at $0, same pattern as a $0 course purchase.
-	// Restore a real price here (and nowhere else) to re-enable paid
-	// hourly checkout.
-	ConsultancyPriceCentsUSD = 0
-	ConsultancyPriceCentsINR = 0
 
-	// AuditPriceCentsUSD/INR is the fixed price of a Technical
-	// Architecture Review / Due Diligence engagement — a scoped,
-	// fixed-fee package (not billed hourly), paid up front via the same
-	// Razorpay checkout pattern as a course or a booking.
+	// AuditPriceCentsUSD/INR is a reference figure only — shown on the
+	// consultancy page, never charged. The Architecture Review is scoped
+	// and invoiced outside this site.
 	AuditPriceCentsUSD = 300000   // $3,000
 	AuditPriceCentsINR = 15000000 // ₹1,50,000
 
@@ -240,24 +234,8 @@ const (
 	RetainerPriceRangeINR = "₹2,00,000–₹4,00,000/month"
 )
 
-// ConsultancyRegionalPrice mirrors Course.RegionalPrice: India gets its
-// own INR rate, everyone else the USD rate.
-func ConsultancyRegionalPrice(country string) (currency string, cents int) {
-	if country == "IN" {
-		return "INR", ConsultancyPriceCentsINR
-	}
-	return "USD", ConsultancyPriceCentsUSD
-}
-
-// ConsultancyRegionalPriceDisplay renders "₹10,000/hour" or "$200/hour" for
-// the given visitor's country.
-func ConsultancyRegionalPriceDisplay(country string) string {
-	currency, cents := ConsultancyRegionalPrice(country)
-	return FormatMoney(cents, currency) + "/hour"
-}
-
-// AuditRegionalPrice mirrors ConsultancyRegionalPrice for the fixed-price
-// Architecture Review package.
+// AuditRegionalPrice mirrors Course.RegionalPrice for the reference-only
+// Architecture Review figure.
 func AuditRegionalPrice(country string) (currency string, cents int) {
 	if country == "IN" {
 		return "INR", AuditPriceCentsINR
