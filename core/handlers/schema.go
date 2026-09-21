@@ -138,6 +138,7 @@ type articleSchema struct {
 	Headline      string `json:"headline"`
 	Description   string `json:"description"`
 	URL           string `json:"url"`
+	Image         string `json:"image,omitempty"`
 	DatePublished string `json:"datePublished,omitempty"`
 	Keywords      string `json:"keywords,omitempty"`
 	Author        struct {
@@ -146,13 +147,24 @@ type articleSchema struct {
 	} `json:"author"`
 }
 
+// articleJSONLD only marks up genuinely original writing as a BlogPosting
+// — a curated link-out (no body of its own) isn't this site's own
+// article, and marking a one-line summary of someone else's post as
+// original BlogPosting content is exactly the kind of thin/misleading
+// structured data that risks a content-quality penalty. Curated pages
+// get no article schema at all; the Person/Website graph already covers
+// them.
 func articleJSONLD(a models.Article, pageURL, authorName string) template.JS {
+	if !a.IsOriginal() {
+		return ""
+	}
 	s := articleSchema{
 		Context:     "https://schema.org",
 		Type:        "BlogPosting",
 		Headline:    a.Title,
 		Description: a.Summary,
 		URL:         pageURL,
+		Image:       a.CoverImageURL,
 	}
 	if a.PublishedDate != nil {
 		s.DatePublished = a.PublishedDate.Format("2006-01-02")

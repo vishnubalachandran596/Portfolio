@@ -232,16 +232,17 @@ func (a *App) AdminArticleSave(w http.ResponseWriter, r *http.Request) {
 
 	sortOrder, _ := strconv.Atoi(r.FormValue("sort_order"))
 	article := models.Article{
-		ID:          id,
-		Slug:        slugify(r.FormValue("slug")),
-		Title:       strings.TrimSpace(r.FormValue("title")),
-		Summary:     strings.TrimSpace(r.FormValue("summary")),
-		Body:        strings.TrimSpace(r.FormValue("body")),
-		SourceURL:   strings.TrimSpace(r.FormValue("source_url")),
-		SourceName:  strings.TrimSpace(r.FormValue("source_name")),
-		Tags:        parseTags(r.FormValue("tags")),
-		IsPublished: r.FormValue("is_published") == "on",
-		SortOrder:   sortOrder,
+		ID:            id,
+		Slug:          slugify(r.FormValue("slug")),
+		Title:         strings.TrimSpace(r.FormValue("title")),
+		Summary:       strings.TrimSpace(r.FormValue("summary")),
+		Body:          strings.TrimSpace(r.FormValue("body")),
+		CoverImageURL: strings.TrimSpace(r.FormValue("cover_image_url")),
+		SourceURL:     strings.TrimSpace(r.FormValue("source_url")),
+		SourceName:    strings.TrimSpace(r.FormValue("source_name")),
+		Tags:          parseTags(r.FormValue("tags")),
+		IsPublished:   r.FormValue("is_published") == "on",
+		SortOrder:     sortOrder,
 	}
 	if article.Slug == "" {
 		article.Slug = slugify(article.Title)

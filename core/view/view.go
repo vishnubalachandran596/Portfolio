@@ -45,6 +45,34 @@ var funcs = template.FuncMap{
 		}
 		return out
 	},
+	// articleBody renders a blog post's body as either the HTML the admin
+	// wrote directly (detected by the content *starting* with a tag — the
+	// admin is the only one who can ever write this, so it's trusted
+	// content, same as every other admin-authored field rendered on the
+	// site) or, for a plain-text body written the old way, one <p> per
+	// blank-line-separated paragraph — so a single Body field keeps
+	// accepting both without the admin needing to pick a mode up front.
+	// Checking only the prefix (not "contains a < and a > anywhere")
+	// matters: plain prose that happens to mention e.g. "List<String>"
+	// mid-paragraph must still go through the escaping path below, not
+	// get emitted raw.
+	"articleBody": func(s string) template.HTML {
+		trimmed := strings.TrimSpace(s)
+		if strings.HasPrefix(trimmed, "<") {
+			return template.HTML(trimmed)
+		}
+		var b strings.Builder
+		for _, p := range strings.Split(strings.ReplaceAll(trimmed, "\r\n", "\n"), "\n\n") {
+			p = strings.TrimSpace(p)
+			if p == "" {
+				continue
+			}
+			b.WriteString("<p>")
+			b.WriteString(template.HTMLEscapeString(p))
+			b.WriteString("</p>")
+		}
+		return template.HTML(b.String())
+	},
 }
 
 type renderEntry struct {

@@ -2,7 +2,7 @@
 <section class="section">
   <div class="container">
     <h1>{{if .IsNew}}Add Article{{else}}Edit Article{{end}}</h1>
-    <p class="admin-form-note">Two kinds of article: a curated link (paste a source, write a short take) or an original piece (fill in the body below, leave the source link blank). Fill in exactly one of the two — a source link, or a body.</p>
+    <p class="admin-form-note">Two kinds of article: a curated link (paste a source, write a short take) or an original blog post (fill in the body below — plain text or full HTML with images, both work — leave the source link blank). Fill in exactly one of the two — a source link, or a body.</p>
     {{if .Error}}<div class="alert alert-error">{{.Error}}</div>{{end}}
     <form method="POST" action="{{if .IsNew}}/admin/articles/new{{else}}/admin/articles/{{.Article.ID}}/edit{{end}}" class="admin-form">
       <label>Title
@@ -11,8 +11,11 @@
       <label>Summary <span class="optional">(shown in listings — for a curated link, why it's worth reading; for an original piece, a one-line hook)</span>
         <textarea name="summary" rows="3" required>{{.Article.Summary}}</textarea>
       </label>
-      <label>Body <span class="optional">(fill in for an original piece — leave blank for a curated link. Separate paragraphs with a blank line.)</span>
-        <textarea name="body" rows="10">{{.Article.Body}}</textarea>
+      <label>Cover image URL <span class="optional">(optional — shown at the top of the post and as a thumbnail in the articles list)</span>
+        <input type="url" name="cover_image_url" value="{{.Article.CoverImageURL}}" placeholder="https://...">
+      </label>
+      <label>Body <span class="optional">(fill in for an original piece — leave blank for a curated link. Plain paragraphs: separate with a blank line. Full HTML — headings, links, lists, bold/italic, images — is also supported, but the body must then *start* with a tag, e.g. &lt;p&gt;, so it's detected as HTML.)</span>
+        <textarea name="body" rows="18" placeholder="Plain text example:&#10;First paragraph.&#10;&#10;Second paragraph.&#10;&#10;— or start with a tag for full HTML: &lt;h2&gt;A heading&lt;/h2&gt;&#10;&lt;p&gt;A paragraph with &lt;strong&gt;bold&lt;/strong&gt; text and a &lt;a href=&quot;https://example.com&quot;&gt;link&lt;/a&gt;.&lt;/p&gt;&#10;&lt;img src=&quot;https://...&quot; alt=&quot;description&quot;&gt;"></textarea>
       </label>
       <label>Source link <span class="optional">(fill in for a curated link — leave blank for an original piece)</span>
         <input type="url" name="source_url" value="{{.Article.SourceURL}}" placeholder="https://...">

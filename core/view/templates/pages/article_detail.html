@@ -1,4 +1,4 @@
-{{define "jsonld"}}<script type="application/ld+json">{{.JSONLD}}</script>{{end}}
+{{define "jsonld"}}{{if .JSONLD}}<script type="application/ld+json">{{.JSONLD}}</script>{{end}}{{end}}
 {{define "content"}}
 <section class="section page-hero page-hero-narrow">
   <div class="container">
@@ -12,13 +12,19 @@
   </div>
 </section>
 
+{{if .Article.CoverImageURL}}
+<section class="section article-cover-section">
+  <div class="container">
+    <img class="article-cover-image" src="{{.Article.CoverImageURL}}" alt="{{.Article.Title}}" loading="eager">
+  </div>
+</section>
+{{end}}
+
 <section class="section">
   <div class="container course-description">
     {{if .Article.IsOriginal}}
     <p><strong>{{.Article.Summary}}</strong></p>
-    <div class="article-body">
-      {{range $p := splitLines .Article.Body}}<p>{{$p}}</p>{{end}}
-    </div>
+    <div class="article-body">{{articleBody .Article.Body}}</div>
     {{else}}
     <p>{{.Article.Summary}}</p>
     {{end}}

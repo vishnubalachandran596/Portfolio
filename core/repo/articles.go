@@ -15,13 +15,13 @@ type ArticleRepo struct{ db *sql.DB }
 
 func NewArticleRepo(db *sql.DB) *ArticleRepo { return &ArticleRepo{db: db} }
 
-const articleColumns = `id, slug, title, summary, body, source_url, source_name, tags, thumbs_up_count, published_date, is_published, sort_order, created_at`
+const articleColumns = `id, slug, title, summary, body, cover_image_url, source_url, source_name, tags, thumbs_up_count, published_date, is_published, sort_order, created_at`
 
 func scanArticle(row interface{ Scan(...any) error }) (models.Article, error) {
 	var a models.Article
 	var published sql.NullTime
 	var tags []string
-	err := row.Scan(&a.ID, &a.Slug, &a.Title, &a.Summary, &a.Body, &a.SourceURL, &a.SourceName, pq.Array(&tags),
+	err := row.Scan(&a.ID, &a.Slug, &a.Title, &a.Summary, &a.Body, &a.CoverImageURL, &a.SourceURL, &a.SourceName, pq.Array(&tags),
 		&a.ThumbsUpCount, &published, &a.IsPublished, &a.SortOrder, &a.CreatedAt)
 	a.Tags = tags
 	if published.Valid {
@@ -173,18 +173,18 @@ func (r *ArticleRepo) GetBySlug(ctx context.Context, slug string) (models.Articl
 func (r *ArticleRepo) Create(ctx context.Context, a models.Article) (int64, error) {
 	var id int64
 	err := r.db.QueryRowContext(ctx, `
-		INSERT INTO articles (slug, title, summary, body, source_url, source_name, tags, published_date, is_published, sort_order)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id`,
-		a.Slug, a.Title, a.Summary, a.Body, a.SourceURL, a.SourceName, pq.Array(a.Tags), a.PublishedDate, a.IsPublished, a.SortOrder,
+		INSERT INTO articles (slug, title, summary, body, cover_image_url, source_url, source_name, tags, published_date, is_published, sort_order)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING id`,
+		a.Slug, a.Title, a.Summary, a.Body, a.CoverImageURL, a.SourceURL, a.SourceName, pq.Array(a.Tags), a.PublishedDate, a.IsPublished, a.SortOrder,
 	).Scan(&id)
 	return id, err
 }
 
 func (r *ArticleRepo) Update(ctx context.Context, a models.Article) error {
 	_, err := r.db.ExecContext(ctx, `
-		UPDATE articles SET slug=$1, title=$2, summary=$3, body=$4, source_url=$5, source_name=$6, tags=$7, published_date=$8, is_published=$9, sort_order=$10
-		WHERE id=$11`,
-		a.Slug, a.Title, a.Summary, a.Body, a.SourceURL, a.SourceName, pq.Array(a.Tags), a.PublishedDate, a.IsPublished, a.SortOrder, a.ID,
+		UPDATE articles SET slug=$1, title=$2, summary=$3, body=$4, cover_image_url=$5, source_url=$6, source_name=$7, tags=$8, published_date=$9, is_published=$10, sort_order=$11
+		WHERE id=$12`,
+		a.Slug, a.Title, a.Summary, a.Body, a.CoverImageURL, a.SourceURL, a.SourceName, pq.Array(a.Tags), a.PublishedDate, a.IsPublished, a.SortOrder, a.ID,
 	)
 	return err
 }

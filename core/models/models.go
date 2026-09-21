@@ -225,7 +225,7 @@ const (
 	// Architecture Review / Due Diligence engagement — a scoped,
 	// fixed-fee package (not billed hourly), paid up front via the same
 	// Razorpay checkout pattern as a course or a booking.
-	AuditPriceCentsUSD = 300000  // $3,000
+	AuditPriceCentsUSD = 300000   // $3,000
 	AuditPriceCentsINR = 15000000 // ₹1,50,000
 
 	// RetainerPriceRangeUSD/INR are display-only ranges shown on the
@@ -315,6 +315,7 @@ type Article struct {
 	Title         string
 	Summary       string
 	Body          string
+	CoverImageURL string
 	SourceURL     string
 	SourceName    string
 	Tags          []string

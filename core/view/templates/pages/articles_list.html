@@ -3,7 +3,7 @@
   <div class="container">
     <p class="eyebrow">Articles</p>
     <h1>Worth reading</h1>
-    <p class="hero-subtitle">A short take on pieces worth your time — architecture, AI, system design, and engineering careers — each one linked back to its original source.</p>
+    <p class="hero-subtitle">Original writing on architecture, event-driven systems, and engineering careers, plus a short take on other pieces worth your time — each with its own link so you can share it anywhere.</p>
   </div>
 </section>
 
@@ -32,12 +32,13 @@
     <div class="article-list">
       {{range .Articles}}
       <a class="article-row" href="/articles/{{.Slug}}">
+        {{if .CoverImageURL}}<img class="article-row-thumb" src="{{.CoverImageURL}}" alt="" loading="lazy">{{end}}
         <div class="article-row-body">
           <h3>{{.Title}}</h3>
           <p>{{.Summary}}</p>
           <div class="article-row-meta">
             {{if .PublishedDate}}<span>{{formatDateOptional .PublishedDate}}</span>{{end}}
-            {{if .SourceName}}<span>{{.SourceName}}</span>{{end}}
+            {{if .IsOriginal}}<span>By {{$.SiteName}}</span>{{else if .SourceName}}<span>{{.SourceName}}</span>{{end}}
             {{range .Tags}}<span class="tag-chip">{{.}}</span>{{end}}
           </div>
         </div>
