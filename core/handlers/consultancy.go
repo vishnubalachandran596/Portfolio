@@ -19,44 +19,24 @@ type ConsultancyData struct {
 	PriceDisplay         string
 	HourlyIsFree         bool
 	AuditPriceDisplay    string
-	AuditCurrency        string
-	AuditAmountCents     int
-	AuditSuccess         bool
 	RetainerRangeDisplay string
-	PaymentsEnabled      bool
-	UserEmail            string
-	UserName             string
 }
 
-// ConsultancyPage is the informational page — three tiers (a fixed-price
-// Architecture Review as the primary CTA, a monthly retainer that's
-// discussed rather than self-checkout, and hourly booking repositioned as
-// the smallest, least-emphasized option) leading to /booking or the
-// inline audit-request checkout on this same page.
+// ConsultancyPage is the informational page — three tiers, none of them
+// self-checkout from here anymore: the Architecture Review and the
+// Fractional Advisory retainer both route to /contact to scope on a
+// call first (see AuditCheckoutOrder's doc comment for why the paid
+// self-checkout backend still exists even though this page no longer
+// links to it), and the hourly session books directly via /booking.
 func (a *App) ConsultancyPage(w http.ResponseWriter, r *http.Request) {
 	base := a.base(r, "Technical Consultant — Architecture Reviews & Fractional Advisory | "+a.Cfg.SiteName, "Hire a technical consultant for a fixed-price architecture review, an ongoing fractional advisory retainer, or a 1:1 hourly session — from an 8+ year banking and fintech platform architect.", "consultancy")
-	currency, cents := models.AuditRegionalPrice(base.Country)
-
-	userEmail, userName := "", ""
-	if uid, ok := a.Auth.UserID(r); ok {
-		if u, err := a.Users.GetByID(r.Context(), uid); err == nil {
-			userEmail = u.Email
-			userName = u.Name
-		}
-	}
 
 	a.View.Render(w, http.StatusOK, "consultancy", ConsultancyData{
 		BaseData:             base,
 		PriceDisplay:         models.ConsultancyRegionalPriceDisplay(base.Country),
 		HourlyIsFree:         models.ConsultancyPriceCentsUSD <= 0,
 		AuditPriceDisplay:    models.AuditRegionalPriceDisplay(base.Country),
-		AuditCurrency:        currency,
-		AuditAmountCents:     cents,
-		AuditSuccess:         r.URL.Query().Get("audit") == "1",
 		RetainerRangeDisplay: models.RetainerRangeDisplay(base.Country),
-		PaymentsEnabled:      a.Razorpay.Enabled(),
-		UserEmail:            userEmail,
-		UserName:             userName,
 	})
 }
 
@@ -64,6 +44,14 @@ func (a *App) ConsultancyPage(w http.ResponseWriter, r *http.Request) {
 // Architecture Review package — no calendar slot involved, just an
 // intake (name, email, company, brief) and a fixed amount resolved
 // server-side from the visitor's region, mirroring BookingCheckoutOrder.
+//
+// The consultancy page no longer links here: the Architecture Review is
+// now scoped over a call first (like the retainer), not self-checkout.
+// This handler, its route, and the audit_requests table are left intact
+// rather than deleted — real historical rows exist from when self-checkout
+// was live, and the fastest way back to self-checkout (if that's ever
+// wanted again) is re-adding the form to consultancy.html, not rebuilding
+// this from scratch.
 func (a *App) AuditCheckoutOrder(w http.ResponseWriter, r *http.Request) {
 	if !a.Razorpay.Enabled() {
 		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "Payments are not configured yet — reach out directly instead."})

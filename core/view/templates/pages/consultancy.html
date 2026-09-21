@@ -3,8 +3,7 @@
   <div class="container">
     <p class="eyebrow">Consultancy</p>
     <h1>Work with me directly</h1>
-    <p class="hero-subtitle">Three ways to get real time with me, grounded in 8+ years building banking and fintech platforms at scale — a fixed-price architecture review to start, an ongoing retainer once we know it's a fit, or a quick hourly session for a focused question.</p>
-    {{if .AuditSuccess}}<div class="alert alert-success">Thanks — your Architecture Review is booked. I'll email you within one business day to schedule the walkthrough.</div>{{end}}
+    <p class="hero-subtitle">Three ways to get real time with me, grounded in 8+ years building banking and fintech platforms at scale — an architecture review scoped to what you actually need, an ongoing retainer once we know it's a fit, or a quick hourly session for a focused question.</p>
   </div>
 </section>
 
@@ -15,44 +14,15 @@
       <div class="pricing-card pricing-card-featured" id="audit">
         <p class="pricing-card-badge">Recommended starting point</p>
         <h2 class="pricing-card-title">Architecture Review</h2>
-        <p class="pricing-card-price">{{.AuditPriceDisplay}}<span class="pricing-card-price-note"> · fixed price</span></p>
-        <p class="pricing-card-sub">A scoped, fixed-fee review of a real system or decision — not an open-ended hour. I look at your architecture, design docs, or a specific migration (e.g. an event-driven system, a Kafka setup, a payments/billing flow), and you get a written set of findings and a clear recommendation, not just conversation.</p>
+        <p class="pricing-card-price">{{.AuditPriceDisplay}}<span class="pricing-card-price-note"> · scoped on a call</span></p>
+        <p class="pricing-card-sub">A focused review of a real system or decision — not an open-ended hour. I look at your architecture, design docs, or a specific migration (e.g. an event-driven system, a Kafka setup, a payments/billing flow), and you get a written set of findings and a clear recommendation, not just conversation. Get in touch first — I'll understand what you need before we agree on scope and price, same as a retainer.</p>
         <ul class="pricing-card-list">
           <li>A structured review of the system or decision you bring</li>
           <li>A written summary: risks, trade-offs, and a specific recommendation</li>
           <li>One follow-up call to walk through it together</li>
           <li>The standard first step before an ongoing retainer</li>
         </ul>
-
-        {{if .PaymentsEnabled}}
-        <div class="purchase-box" id="audit-box">
-          <div id="audit-error" class="alert alert-error" hidden></div>
-          {{if .UserEmail}}
-          <p class="purchase-box-sub">Confirmation will be sent to <strong>{{.UserEmail}}</strong>.</p>
-          <input type="hidden" id="audit-email" value="{{.UserEmail}}">
-          <label>Your name
-            <input type="text" id="audit-name" value="{{.UserName}}" required>
-          </label>
-          {{else}}
-          <label>Your name
-            <input type="text" id="audit-name" required>
-          </label>
-          <label>Your email
-            <input type="email" id="audit-email" required>
-          </label>
-          {{end}}
-          <label>Company <span class="optional">(optional)</span>
-            <input type="text" id="audit-company">
-          </label>
-          <label>What should I look at? <span class="optional">(a sentence or two is enough)</span>
-            <textarea id="audit-brief" rows="3"></textarea>
-          </label>
-          <button type="button" class="btn btn-primary" id="audit-btn">Book the Review — {{.AuditPriceDisplay}}</button>
-        </div>
-        <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
-        {{else}}
-        <a class="btn btn-primary" href="{{.Nav.Contact}}">Get in touch to book</a>
-        {{end}}
+        <a class="btn btn-primary" href="{{.Nav.Contact}}">Discuss an Architecture Review</a>
       </div>
 
       <div class="pricing-card" id="retainer">

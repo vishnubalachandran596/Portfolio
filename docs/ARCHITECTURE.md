@@ -404,12 +404,12 @@ All three follow the same shape: **create-order handler** (server resolves the t
 | Flow | Create endpoint | Verify endpoint | DB table | Special-cased |
 |---|---|---|---|---|
 | Course purchase | `POST /courses/{slug}/checkout/order` | `.../verify` | `purchases` | **Skips Razorpay entirely when amount resolves to $0** — see §3 |
-| Consultancy hourly | `POST /booking/checkout/order` | `.../verify` | `bookings` | Also provisionally reserves the calendar slot at order-creation time |
-| Architecture Review | `POST /consultancy/audit/checkout/order` | `.../verify` | `audit_requests` | Fixed price, no pay-what-you-want, no calendar slot |
+| Consultancy hourly | `POST /booking/checkout/order` | `.../verify` | `bookings` | Also provisionally reserves the calendar slot at order-creation time. **Currently always skips Razorpay** — `models.ConsultancyPriceCentsUSD/INR = 0`, same $0-skip branch as the course flow |
+| Architecture Review | `POST /consultancy/audit/checkout/order` | `.../verify` | `audit_requests` | Fixed price, no pay-what-you-want, no calendar slot. **Fully functional but not linked from `consultancy.html` anymore** — the page routes to `/contact` to scope on a call first instead, same as the retainer; re-add the inline form to relink it |
 
-`core/payments/razorpay.go`: `Razorpay.Enabled()` is `false` whenever `RAZORPAY_KEY_ID`/`RAZORPAY_KEY_SECRET` aren't set — every create-order handler checks this (except the course flow's $0 branch, which deliberately doesn't need Razorpay at all) and returns `503` with a friendly message instead of erroring.
+`core/payments/razorpay.go`: `Razorpay.Enabled()` is `false` whenever `RAZORPAY_KEY_ID`/`RAZORPAY_KEY_SECRET` aren't set — every create-order handler checks this (except the course flow's $0 branch, and the hourly flow while its price is $0, neither of which needs Razorpay at all) and returns `503` with a friendly message instead of erroring.
 
-**To add a fourth fixed-price paid product**, copy the Architecture Review pattern (`consultancy.go`'s `AuditCheckoutOrder`/`AuditCheckoutVerify` + `audit_requests` table) rather than the course or booking pattern — it's the simplest of the three (no pay-what-you-want, no slot reservation).
+**To add a fourth fixed-price paid product**, copy the Architecture Review pattern (`consultancy.go`'s `AuditCheckoutOrder`/`AuditCheckoutVerify` + `audit_requests` table) rather than the course or booking pattern — it's the simplest of the three (no pay-what-you-want, no slot reservation). The pattern is still the right reference even though this particular instance of it isn't linked from the UI right now.
 
 ---
 
