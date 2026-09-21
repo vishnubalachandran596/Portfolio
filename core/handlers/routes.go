@@ -63,6 +63,7 @@ func (a *App) Routes() http.Handler {
 	mux.HandleFunc("GET /sitemap.xml", a.Sitemap)
 	mux.HandleFunc("GET /robots.txt", a.Robots)
 	mux.HandleFunc("GET /llms.txt", a.LLMsTxt)
+	mux.HandleFunc("GET /"+indexNowKey+".txt", a.IndexNowKeyFile)
 
 	// Legal / compliance.
 	mux.HandleFunc("GET /privacy", a.LegalPage("privacy", "Privacy Policy"))

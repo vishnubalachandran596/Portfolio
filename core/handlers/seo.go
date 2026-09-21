@@ -1,13 +1,59 @@
 package handlers
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/vishnubalachandran596/portfolio/core/middleware"
 	"github.com/vishnubalachandran596/portfolio/core/repo"
 )
+
+// indexNowKey authorizes this site's IndexNow submissions — proven by
+// serving it back at /{key}.txt, per the protocol. IndexNow (supported by
+// Bing, Yandex, and other engines that don't require a Search-Console-style
+// account) lets a site push "this URL changed" directly instead of waiting
+// for the next crawl, which is otherwise the only lever a site this size
+// has over when a change actually gets re-indexed.
+const indexNowKey = "4e5f66a954c278a99dc0547f78f9fd9f"
+
+func (a *App) IndexNowKeyFile(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	fmt.Fprint(w, indexNowKey)
+}
+
+// submitIndexNow pings the IndexNow API with a batch of changed URLs. Fire
+// and forget with a short timeout — this is a nice-to-have nudge for
+// faster re-crawling, never something a request should block or fail on.
+func submitIndexNow(host string, paths []string) {
+	urls := make([]string, len(paths))
+	for i, p := range paths {
+		urls[i] = "https://" + host + p
+	}
+	body, err := json.Marshal(map[string]any{
+		"host":        host,
+		"key":         indexNowKey,
+		"keyLocation": "https://" + host + "/" + indexNowKey + ".txt",
+		"urlList":     urls,
+	})
+	if err != nil {
+		return
+	}
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Post("https://api.indexnow.org/indexnow", "application/json; charset=utf-8", bytes.NewReader(body))
+	if err != nil {
+		log.Printf("indexnow submit: %v", err)
+		return
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode >= 300 {
+		log.Printf("indexnow submit: unexpected status %d", resp.StatusCode)
+	}
+}
 
 // baseURL returns the canonical absolute origin used for canonical tags,
 // Open Graph URLs, and the sitemap. When SITE_URL is configured, every
