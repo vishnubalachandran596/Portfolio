@@ -7,10 +7,7 @@
       "url": "https://mcp.vercel.com"
     },
     "mem0": {
-      "url": "https://mcp.mem0.ai/mcp/",
-      "headers": {
-        "Authorization": "Token ${env:MEM0_API_KEY}"
-      }
+      "url": "https://mcp.mem0.ai/mcp"
     }
   }
 }
