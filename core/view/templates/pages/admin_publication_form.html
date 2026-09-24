@@ -1,0 +1,52 @@
+{{define "content"}}
+<section class="section">
+  <div class="container">
+    <h1>{{if .IsNew}}Add Entry{{else}}Edit Entry{{end}}</h1>
+    <p class="admin-form-note">Talks, podcast appearances, guest articles, and papers published somewhere other than this site. Posts you write here belong under <a href="/admin/articles">Articles</a>.</p>
+    {{if .Error}}<div class="alert alert-error">{{.Error}}</div>{{end}}
+    <form method="POST" action="{{if .IsNew}}/admin/publications/new{{else}}/admin/publications/{{.Publication.ID}}/edit{{end}}" class="admin-form">
+      <label>Title
+        <input type="text" name="title" value="{{.Publication.Title}}" required>
+      </label>
+      <div class="form-row">
+        <label>Kind <span class="optional">e.g. "Conference talk", "Podcast", "Guest article"</span>
+          <input type="text" name="kind" value="{{.Publication.Kind}}" list="publication-kinds">
+          <datalist id="publication-kinds">
+            <option value="Conference talk"></option>
+            <option value="Meetup talk"></option>
+            <option value="Podcast"></option>
+            <option value="Guest article"></option>
+            <option value="Paper"></option>
+            <option value="Webinar"></option>
+          </datalist>
+        </label>
+        <label>Venue <span class="optional">e.g. "JavaLand 2026", "The InfoQ Podcast"</span>
+          <input type="text" name="venue" value="{{.Publication.Venue}}">
+        </label>
+      </div>
+      <div class="form-row">
+        <label>Date <span class="optional">(optional)</span>
+          <input type="date" name="published_on" value="{{if .Publication.PublishedOn}}{{.Publication.PublishedOn.Format "2006-01-02"}}{{end}}">
+        </label>
+        <label>Link <span class="optional">(optional — the recording, slides, or article)</span>
+          <input type="url" name="url" value="{{.Publication.URL}}" placeholder="https://...">
+        </label>
+      </div>
+      <label>Summary <span class="optional">(optional — one line on what it covered)</span>
+        <textarea name="summary" rows="3">{{.Publication.Summary}}</textarea>
+      </label>
+      <label class="checkbox-label">
+        <input type="checkbox" name="is_published" {{if or .IsNew .Publication.IsPublished}}checked{{end}}>
+        Published (visible on the About page)
+      </label>
+      <label>Sort order
+        <input type="number" name="sort_order" value="{{.Publication.SortOrder}}">
+      </label>
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary" data-loading-text="Saving…">Save Entry</button>
+        <a class="btn btn-secondary" href="/admin/publications">Cancel</a>
+      </div>
+    </form>
+  </div>
+</section>
+{{end}}

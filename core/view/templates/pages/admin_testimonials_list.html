@@ -1,0 +1,39 @@
+{{define "content"}}
+<section class="section">
+  <div class="container">
+    <div class="section-header-row">
+      <h1>Testimonials</h1>
+      <a class="btn btn-primary" href="/admin/testimonials/new">Add Testimonial</a>
+    </div>
+    {{if .Testimonials}}
+    <table class="admin-table">
+      <thead><tr><th>Author</th><th>Source</th><th>Quote</th><th>Status</th><th>Sort</th><th></th></tr></thead>
+      <tbody>
+        {{range .Testimonials}}
+        <tr>
+          <td>{{.AuthorName}}{{if .AuthorTitle}}<br><span class="admin-table-subtext">{{.AuthorTitle}}</span>{{end}}</td>
+          <td>{{if .UserID}}<span class="admin-table-subtext">Visitor submission</span>{{else}}<span class="admin-table-subtext">Added by you</span>{{end}}</td>
+          <td>{{.Body}}</td>
+          <td><span class="status-badge status-{{if .IsPublished}}confirmed{{else}}pending{{end}}">{{if .IsPublished}}Published{{else}}Pending review{{end}}</span></td>
+          <td>{{.SortOrder}}</td>
+          <td class="admin-table-actions">
+            {{if not .IsPublished}}
+            <form method="POST" action="/admin/testimonials/{{.ID}}/approve">
+              <button type="submit" class="link-button">Approve</button>
+            </form>
+            {{end}}
+            <a class="link-button" href="/admin/testimonials/{{.ID}}/edit">Edit</a>
+            <form method="POST" action="/admin/testimonials/{{.ID}}/delete" onsubmit="return confirm('Delete this testimonial?');">
+              <button type="submit" class="link-button danger">Delete</button>
+            </form>
+          </td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+    {{else}}
+    <p class="empty-state">No testimonials yet — they only show on the About page once added or approved here, and only real ones from real clients, colleagues, or visitors.</p>
+    {{end}}
+  </div>
+</section>
+{{end}}

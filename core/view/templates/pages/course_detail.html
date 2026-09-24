@@ -1,0 +1,68 @@
+{{define "jsonld"}}<script type="application/ld+json">{{.JSONLD}}</script>{{end}}
+{{define "content"}}
+<section class="section page-hero">
+  <div class="container">
+    <p class="eyebrow"><a href="{{.Nav.Courses}}">← All courses</a></p>
+    <span class="course-level">{{.Course.Level}}</span>
+    <h1>{{.Course.Title}}</h1>
+    <p class="hero-subtitle">{{.Course.Summary}}</p>
+    <div class="course-detail-meta">
+      <span>{{.Course.RegionalPriceDisplay .Country}}</span>
+      {{if .Course.Duration}}<span>· {{.Course.Duration}}</span>{{end}}
+    </div>
+
+    {{if .HasQuiz}}
+    {{/* The completion certificate already existed, but only became
+         visible once you were past the access gate — which is the wrong
+         side of the decision to enrol. */}}
+    <p class="course-detail-note">Ends with a final quiz. Score {{.QuizPassPercent}}% or better and you can download a completion certificate in your own name — shareable on LinkedIn, verifiable by its certificate code.</p>
+    {{end}}
+
+    {{if .Course.IsPaid}}
+      {{if .PurchaseRequired}}<div class="alert alert-error">Get access below to continue — it only takes a moment.</div>{{end}}
+      {{if .HasAccess}}
+      <div class="hero-actions">
+        <a class="btn btn-primary" href="/courses/{{.Course.Slug}}/learn">Open Course</a>
+        {{if .HasQuiz}}<a class="btn btn-secondary" href="/courses/{{.Course.Slug}}/quiz">Take the Final Quiz</a>{{end}}
+      </div>
+      {{else}}
+      <div class="purchase-box" id="purchase-box">
+        <p class="purchase-box-title">Get access</p>
+        <p class="purchase-box-sub">
+          {{if gt .ResolvedMinCents 0}}Free to start — a minimum contribution of {{.ResolvedMinDisplay}} applies{{if eq .Country "IN"}} (India pricing){{end}}.
+          {{else}}This course is free. Contribute whatever you'd like to support future courses — or leave it at 0 and enroll now.{{end}}
+        </p>
+        <div id="purchase-error" class="alert alert-error" hidden></div>
+        {{if .UserEmail}}
+        <p class="purchase-box-sub">Access will be sent to <strong>{{.UserEmail}}</strong>.</p>
+        {{else}}
+        <label>Your email <span class="optional">(access is sent here)</span>
+          <input type="email" id="purchase-email" required>
+        </label>
+        {{end}}
+        <label>Contribution ({{.ResolvedCurrency}}) <span class="optional">{{if .PaymentsEnabled}}optional — leave at 0 for free access{{else}}contributions aren't enabled yet — enroll free below{{end}}</span>
+          <input type="number" id="purchase-amount" min="{{.ResolvedMinWhole}}" step="1" value="{{.ResolvedMinWhole}}" {{if not .PaymentsEnabled}}disabled{{end}}>
+        </label>
+        {{if .PaymentsEnabled}}
+        <label>Promo code <span class="optional">(optional)</span>
+          <input type="text" id="purchase-promo-code" autocapitalize="characters">
+        </label>
+        {{end}}
+        <button type="button" class="btn btn-primary" id="purchase-btn" data-slug="{{.Course.Slug}}" data-min-cents="{{.ResolvedMinCents}}">{{if gt .ResolvedMinCents 0}}Continue{{else}}Get Free Access{{end}}</button>
+      </div>
+      {{if .PaymentsEnabled}}<script src="https://checkout.razorpay.com/v1/checkout.js"></script>{{end}}
+      {{end}}
+    {{else}}
+    <div class="hero-actions">
+      <a class="btn btn-primary" href="{{.Nav.Consultancy}}">Book Time to Discuss</a>
+    </div>
+    {{end}}
+  </div>
+</section>
+
+<section class="section">
+  <div class="container course-description">
+    {{range $p := splitLines .Course.Description}}<p>{{$p}}</p>{{end}}
+  </div>
+</section>
+{{end}}

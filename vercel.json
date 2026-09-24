@@ -1,0 +1,26 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "functions": {
+    "api/index.go": {
+      "maxDuration": 15
+    }
+  },
+  "redirects": [
+    {
+      "source": "/:path*",
+      "has": [{ "type": "host", "value": "vishnubalachandran.com" }],
+      "destination": "https://www.vishnubalachandran.com/:path*",
+      "statusCode": 301
+    },
+    {
+      "source": "/:path*",
+      "has": [{ "type": "host", "value": "home.vishnubalachandran.com" }],
+      "destination": "https://www.vishnubalachandran.com/:path*",
+      "statusCode": 301
+    }
+  ],
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/api/index" }
+  ]
+}

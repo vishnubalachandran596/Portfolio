@@ -1,0 +1,127 @@
+{{define "content"}}
+<section class="section page-hero">
+  <div class="container">
+    <p class="eyebrow">Consultancy</p>
+    <h1>Work with me directly</h1>
+    <p class="hero-subtitle">Three ways to get real time with me, grounded in 8+ years building banking and fintech platforms at scale — a fixed-scope architecture review, an ongoing advisory retainer, or a free call to work out which of those you actually need.</p>
+    <p class="hero-tertiary">Not sure which one fits? <a href="{{.Nav.Booking}}">Start with a free call</a> — it's the scoping step for all three, not a separate product.</p>
+  </div>
+</section>
+
+<section class="section section-alt">
+  <div class="container">
+    <div class="pricing-grid">
+
+      <a class="pricing-card" id="audit" href="{{.Nav.Contact}}">
+        <h2 class="pricing-card-title">Architecture Review</h2>
+        <p class="pricing-card-price">{{.AuditPriceDisplay}}<span class="pricing-card-price-note"> · indicative, quoted after scoping</span></p>
+        <p class="pricing-card-sub">A focused review of a real system or decision — not an open-ended hour. I look at your architecture, design docs, or a specific migration (an event-driven system, a Kafka setup, a payments or billing flow) and you get a written set of findings and a clear recommendation, not just conversation.</p>
+        <ul class="pricing-card-list">
+          <li><strong>Scope:</strong> one system, one migration, or one architecture decision — agreed in writing before anything starts, so neither of us is guessing</li>
+          <li><strong>You get:</strong> a written findings document — the risks, the trade-offs, and a specific recommendation you can act on</li>
+          <li><strong>How it runs:</strong> a scoping call, then the review itself, then one call to walk the findings through with you and your team</li>
+          <li><strong>Typical length:</strong> a couple of weeks end to end, depending on how much material there is to read</li>
+          <li><strong>Price:</strong> the figure above is what a review of this shape usually lands at; the quote comes after scoping, so you're never paying for work you didn't need</li>
+        </ul>
+        <span class="btn btn-primary">Discuss an Architecture Review</span>
+      </a>
+
+      <a class="pricing-card" id="retainer" href="{{.Nav.Contact}}">
+        <h2 class="pricing-card-title">Fractional Advisory</h2>
+        <p class="pricing-card-price">{{.RetainerRangeDisplay}}</p>
+        <p class="pricing-card-sub">Ongoing access for a team that wants a technical architect on call — regular reviews, on-demand design input, and a second opinion before the decisions that are expensive to reverse.</p>
+        <ul class="pricing-card-list">
+          <li><strong>Scope:</strong> ongoing architecture and design input alongside your team, rather than one fixed deliverable</li>
+          <li><strong>You get:</strong> notes and a recommendation in writing out of every review, so the decisions are on the record and not just in someone's memory</li>
+          <li><strong>Cadence:</strong> a standing review call on whatever rhythm fits you, plus async access for the questions that come up in between</li>
+          <li><strong>Commitment:</strong> month to month — usually starting once an Architecture Review has shown it's a clear fit</li>
+          <li><strong>Price:</strong> the range above covers most teams; where you land in it depends on cadence and how much async access you want</li>
+        </ul>
+        <span class="btn btn-primary">Discuss a Retainer</span>
+      </a>
+
+      <a class="pricing-card" id="hourly" href="{{.Nav.Booking}}">
+        <p class="pricing-card-badge pricing-card-badge-muted">Free · start here if you're unsure</p>
+        <h2 class="pricing-card-title">Schedule a Call</h2>
+        <p class="pricing-card-price">Free</p>
+        <p class="pricing-card-sub">An hour of my time, free, with no obligation — and the scoping step for <em>both</em> paid tiers above. Bring a specific question, a decision you want a second opinion on, or just describe what you're working on, and we'll work out together which option actually fits. If the honest answer is "none of them", I'll say that too.</p>
+        <ul class="pricing-card-list">
+          <li><strong>Scope:</strong> one call, on whatever you bring to it</li>
+          <li><strong>You get:</strong> a clear view of which tier fits your problem — or that neither does</li>
+          <li><strong>How it runs:</strong> pick a slot yourself on the booking page, no email thread to find a time — it asks you to sign in with Google first (one click, so the slot has a name and an email attached to it)</li>
+          <li><strong>Price:</strong> free, always — there's no version of this you pay for</li>
+        </ul>
+        <span class="btn btn-primary">Book a Free Call</span>
+      </a>
+
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <h2 class="section-title">What you walk away with</h2>
+    <p class="hero-subtitle">Not just time on a call — a concrete, actionable outcome either way: which of two architectures to pick and why, the specific risks in a migration plan, or a clear next step on a technical or career decision. Every paid engagement ends with something in writing, not just a memory of the conversation.</p>
+  </div>
+</section>
+
+<section class="section section-alt">
+  <div class="container">
+    <h2 class="section-title">Worth knowing before you book</h2>
+    <div class="feature-grid">
+      <div class="feature-card">
+        <h3>Scheduling that fits your time zone</h3>
+        <p>I work with clients across the US, the UK, Europe, and India. I'm based in IST, and the self-serve slots are deliberately set late enough in my day to land in the US morning and the UK/European afternoon — <a href="{{.Nav.Booking}}">pick one that works for you</a>. Need a time outside them? Say so when you get in touch and I'll schedule around your working day instead; Architecture Reviews and retainer calls are always booked with you directly rather than off a fixed calendar.</p>
+      </div>
+      <div class="feature-card">
+        <h3>Why book direct</h3>
+        <p>No marketplace markup, no assigned-consultant lottery — you're working with me specifically, at a lower price than a platform's cut would allow, and talking to the person who actually did the work described on this site.</p>
+      </div>
+      <div class="feature-card">
+        <h3>Professional boundaries</h3>
+        <p>Consulting engagements are handled entirely outside working hours and never touch my employer's clients, codebases, or confidential information — this is separate, independent work.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <h2 class="section-title">Questions people ask before they get in touch</h2>
+    <div class="faq-list">
+      <details class="faq-item">
+        <summary>How is this different from hiring a full-time architect?</summary>
+        <p>A full-time architect is a headcount decision — months of hiring, then a permanent cost whether or not there's an architecture-sized problem that quarter. This is the same judgement, bought by the decision or by the month. An Architecture Review gets you a senior opinion on one specific question in a couple of weeks; a retainer gets you that opinion continuously without the salary, the notice period, or the risk of hiring the wrong person for a role you only half need filled.</p>
+      </details>
+      <details class="faq-item">
+        <summary>What does an architecture review actually deliver?</summary>
+        <p>A written findings document, plus a call to walk through it. The document covers the risks I found in what you're building or planning, the trade-offs behind each one, and a specific recommendation — which option to take and why, not a list of things to consider. It's written to be forwarded: something you can put in front of an engineering team or a board without translating it first.</p>
+      </details>
+      <details class="faq-item">
+        <summary>What does a week actually look like on a retainer?</summary>
+        <p>Most weeks: a standing review call on whatever rhythm we agree, and async access in between for the questions that can't wait for it — a design doc you want read before it's circulated, a "are we about to regret this?" sanity check, a second opinion on a vendor or a database choice. Quiet weeks are quiet. Busy weeks are the point of having the access.</p>
+      </details>
+      <details class="faq-item">
+        <summary>How much does a fractional technical advisor cost?</summary>
+        <p>A Fractional Advisory retainer here runs {{.RetainerRangeDisplay}}, and a fixed-scope Architecture Review is typically around {{.AuditPriceDisplay}}. Both are priced on outcome rather than hours logged, so there's no timesheet to argue about. A call to work out which one you need — or whether you need either — is free.</p>
+      </details>
+      <details class="faq-item">
+        <summary>How do you handle confidentiality and NDAs?</summary>
+        <p>Send your standard mutual NDA with your first message and I'll sign it before we get into specifics. Nothing you share appears anywhere on this site — as a case study or otherwise — without your explicit written agreement. In the other direction: this consulting work sits entirely outside my day job and never touches my employer's clients, codebases, or confidential information.</p>
+      </details>
+      <details class="faq-item">
+        <summary>Do I have to pay anything to talk to you first?</summary>
+        <p>No. The free call is the front door for all three options, not a trimmed-down version of them — <a href="{{.Nav.Booking}}">book a slot</a> and we'll work out what you need. If that turns out to be an Architecture Review or a retainer, we'll scope it from there. If it turns out to be neither, that's a useful answer too.</p>
+      </details>
+    </div>
+  </div>
+</section>
+
+<section class="section section-alt cta-section">
+  <div class="container cta-inner">
+    <h2>Still not sure which one fits?</h2>
+    <p>Then don't pick yet. Book the free call, describe the problem, and we'll work out together whether it's an Architecture Review, a retainer, or something you don't need me for at all.</p>
+    <a class="btn btn-primary btn-lg" href="{{.Nav.Booking}}">Book a Free Call</a>
+  </div>
+</section>
+{{end}}

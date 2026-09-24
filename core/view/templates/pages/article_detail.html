@@ -1,0 +1,157 @@
+{{define "jsonld"}}{{if .JSONLD}}<script type="application/ld+json">{{.JSONLD}}</script>{{end}}{{end}}
+
+{{define "articleThumbsWidget"}}
+{{if .IsUser}}
+<button type="button" class="btn btn-secondary article-thumbs-btn" data-slug="{{.Article.Slug}}" {{if .Voted}}disabled{{end}}>
+  👍 <span class="thumbs-count-num">{{.Article.ThumbsUpCount}}</span>{{if .Voted}} · Thanks!{{end}}
+</button>
+{{else}}
+<div class="article-thumbs-guest">
+  <button type="button" class="btn btn-secondary article-thumbs-guest-toggle" data-slug="{{.Article.Slug}}">
+    👍 <span class="thumbs-count-num">{{.Article.ThumbsUpCount}}</span>
+  </button>
+  <form class="article-thumbs-guest-form" data-slug="{{.Article.Slug}}" hidden>
+    <input type="text" name="name" placeholder="Name (optional)" maxlength="80" autocomplete="name">
+    <input type="email" name="email" placeholder="Email (optional)" maxlength="200" autocomplete="email">
+    <button type="submit" class="btn btn-primary btn-sm">Give it a thumbs up</button>
+  </form>
+</div>
+{{end}}
+{{end}}
+
+{{define "content"}}
+<section class="section page-hero page-hero-narrow">
+  <div class="container">
+    <p class="eyebrow">Articles</p>
+    <h1>{{.Article.Title}}</h1>
+    <div class="article-row-meta">
+      {{if .Article.PublishedDate}}<span>{{formatDateOptional .Article.PublishedDate}}</span>{{end}}
+      <span>By {{.SiteName}}</span>
+      {{range .Article.Tags}}<a class="tag-chip" href="/articles?tag={{.}}">{{.}}</a>{{end}}
+    </div>
+    <div class="article-thumbs-top">
+      {{template "articleThumbsWidget" .}}
+    </div>
+  </div>
+</section>
+
+{{if .Article.CoverImageURL}}
+<section class="section article-cover-section">
+  <div class="container">
+    <img class="article-cover-image" src="{{.Article.CoverImageURL}}" alt="{{.Article.Title}}" loading="eager">
+  </div>
+</section>
+{{end}}
+
+<section class="section">
+  <div class="container course-description">
+    <p><strong>{{.Article.Summary}}</strong></p>
+    <div class="article-body">{{articleBody .Article.Body}}</div>
+
+    <p class="article-thumbs-cta">Found this useful? Give it a thumbs up for more of these contents.</p>
+    <div class="article-detail-actions">
+      {{template "articleThumbsWidget" .}}
+    </div>
+
+    <p class="hero-meta"><a href="/articles">← Back to all articles</a></p>
+  </div>
+</section>
+
+<script>
+(function () {
+  // Top and bottom widgets share one vote — both point at the same
+  // article, so an action on either one has to update both together.
+
+  // --- Logged-in: plain vote button ------------------------------------
+  var buttons = document.querySelectorAll(".article-thumbs-btn[data-slug]");
+  function setAllDisabled(disabled) {
+    for (var i = 0; i < buttons.length; i++) buttons[i].disabled = disabled;
+  }
+  function setCount(n) {
+    for (var i = 0; i < buttons.length; i++) {
+      var el = buttons[i].querySelector(".thumbs-count-num");
+      if (el) el.textContent = n;
+    }
+  }
+  function markVoted() {
+    for (var i = 0; i < buttons.length; i++) {
+      if (!buttons[i].dataset.voted) {
+        buttons[i].dataset.voted = "1";
+        buttons[i].insertAdjacentText("beforeend", " · Thanks!");
+      }
+    }
+  }
+  for (var i = 0; i < buttons.length; i++) {
+    buttons[i].addEventListener("click", function (e) {
+      var slug = e.currentTarget.dataset.slug;
+      if (e.currentTarget.disabled) return;
+      setAllDisabled(true);
+      fetch("/articles/" + slug + "/thumbs-up", { method: "POST" })
+        .then(function (r) {
+          if (r.status === 401) {
+            window.location.href = "/login?next=" + encodeURIComponent("/articles/" + slug);
+            throw new Error("login required");
+          }
+          return r.json();
+        })
+        .then(function (data) {
+          if (typeof data.thumbs_up_count === "number") setCount(data.thumbs_up_count);
+          markVoted();
+        })
+        .catch(function () { setAllDisabled(false); });
+    });
+  }
+
+  // --- Signed-out: toggle + optional name/email form --------------------
+  var toggles = document.querySelectorAll(".article-thumbs-guest-toggle[data-slug]");
+  var forms = document.querySelectorAll(".article-thumbs-guest-form[data-slug]");
+  function setGuestCount(n) {
+    for (var i = 0; i < toggles.length; i++) {
+      var el = toggles[i].querySelector(".thumbs-count-num");
+      if (el) el.textContent = n;
+    }
+  }
+  function markGuestVoted() {
+    for (var i = 0; i < toggles.length; i++) {
+      toggles[i].disabled = true;
+      if (!toggles[i].dataset.voted) {
+        toggles[i].dataset.voted = "1";
+        toggles[i].insertAdjacentText("beforeend", " · Thanks!");
+      }
+    }
+    for (var i = 0; i < forms.length; i++) forms[i].hidden = true;
+  }
+  for (var i = 0; i < toggles.length; i++) {
+    toggles[i].addEventListener("click", function (e) {
+      var slug = e.currentTarget.dataset.slug;
+      for (var j = 0; j < forms.length; j++) {
+        if (forms[j].dataset.slug === slug) forms[j].hidden = !forms[j].hidden;
+      }
+    });
+  }
+  for (var i = 0; i < forms.length; i++) {
+    forms[i].addEventListener("submit", function (e) {
+      e.preventDefault();
+      var form = e.currentTarget;
+      var slug = form.dataset.slug;
+      var body = new URLSearchParams();
+      body.set("name", form.elements["name"].value || "");
+      body.set("email", form.elements["email"].value || "");
+      var submitBtn = form.querySelector("button[type=submit]");
+      if (submitBtn) submitBtn.disabled = true;
+      fetch("/articles/" + slug + "/thumbs-up", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: body.toString(),
+      })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          if (typeof data.thumbs_up_count === "number") setGuestCount(data.thumbs_up_count);
+          markGuestVoted();
+        })
+        .catch(function () { if (submitBtn) submitBtn.disabled = false; });
+    });
+  }
+})();
+</script>
+{{end}}

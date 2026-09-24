@@ -1,0 +1,18 @@
+# Cursor rules for this repo — see also CLAUDE.md, AGENTS.md, and .cursor/rules/architecture.mdc (full detail)
+
+Before any change: read docs/FUNCTIONALITY.md (what the product does) and docs/ARCHITECTURE.md (how it's built). Update whichever doc your change affects, in the same commit — not a follow-up.
+
+Core rules:
+1. Reuse existing utilities (e.g. models.FormatMoney, slugify(), resolvePromoCode()) — search before writing a near-duplicate. A duplicate money-formatting function once silently disagreed with the real one; that's the bug class this rule prevents.
+2. New features follow the layered pattern additively: models -> repo (all SQL) -> handlers -> templates -> routes.go. Reference: core/repo/audit_requests.go + consultancy.go's Audit checkout — a 4th paid product added without touching existing checkout code.
+3. Design for horizontal scale: stateless serverless function, no in-process state across requests except the pooled DB connection. Run independent DB lookups on hot paths concurrently.
+4. Every migration must be idempotent — this caused a real outage. Bootstrap() treats any migration error as fatal for the WHOLE app on EVERY cold start, not just the feature. CREATE ... IF NOT EXISTS / ADD COLUMN IF NOT EXISTS are safe as-is. ADD CONSTRAINT has no IF NOT EXISTS form in Postgres — wrap it in `DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = '...') THEN ALTER TABLE ... ADD CONSTRAINT ...; END IF; END $$;`. Applying a migration manually to unblock work does NOT make the checked-in file safe — it still runs for real on the next cold start.
+5. Never commit secrets. .env/.env.local stay gitignored; .env.example holds placeholders only. Check the diff before pushing anything config-adjacent.
+6. Payment/access confirmation is server-side (HMAC-verified) only — never trust a client-reported success.
+7. Stay consistent with the stack: Go stdlib net/http, server-rendered html/template, plain CSS (existing design tokens), raw SQL via database/sql, rem units. No framework additions for a single feature.
+
+8. Keep project memory current — write it down as you go. Agents here share no conversation history, so record in Mem0 (via the Mem0 MCP server), as you learn it: decisions and their rationale, traps discovered the hard way, corrections to earlier assumptions (keep both the wrong answer and the right one), and requirement changes including what was ruled out and why. Several specific memories beat one long one — they surface independently on search. Batching it to the end of a session is how it gets lost.
+
+9. The repo is CODE ONLY — no content data, no profile-row exception. Migrations carry schema only (CREATE/ALTER/index/constraint/function): no content INSERT and no content UPDATE, for any table, including the profile identity row. UI chrome (labels, headings, nav, button copy) stays in code. Content lives in the live database; an idempotent snapshot portfolio_seed_data.sql is kept in a Google Drive folder named Portfolio. Refer to that folder by name only — never a URL. Direction of truth: edit in the admin console, then regenerate the snapshot from the live database (core/db/gen_bootstrap_data.sql). The snapshot is a bootstrap copy, not an authoring surface. A new feature ships DDL only; rows are added through admin, then the snapshot is regenerated. The repo alone cannot rebuild content — disaster recovery depends on the snapshot.
+
+Full detail lives in CLAUDE.md and .cursor/rules/architecture.mdc — read those for the complete rules and rationale.

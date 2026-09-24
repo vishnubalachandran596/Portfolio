@@ -1,0 +1,29 @@
+{{define "content"}}
+<section class="section">
+  <div class="container">
+    <h1>{{if .IsNew}}Add Skill{{else}}Edit Skill{{end}}</h1>
+    {{if .Error}}<div class="alert alert-error">{{.Error}}</div>{{end}}
+    <form method="POST" action="{{if .IsNew}}/admin/skills/new{{else}}/admin/skills/{{.Skill.ID}}/edit{{end}}" class="admin-form">
+      <label>Category <span class="optional">e.g. "Backend Engineering"</span>
+        <input type="text" name="category" value="{{.Skill.Category}}" required>
+      </label>
+      <label>Level <span class="optional">e.g. "Advanced", optional</span>
+        <input type="text" name="level" value="{{.Skill.Level}}">
+      </label>
+      <label>Achievement <span class="optional">what you achieve with this skill</span>
+        <textarea name="achievement" rows="3">{{.Skill.Achievement}}</textarea>
+      </label>
+      <label>Skill items <span class="optional">comma-separated, e.g. "Go, PostgreSQL, gRPC"</span>
+        <input type="text" name="items" value="{{range $i, $item := .Skill.Items}}{{if $i}}, {{end}}{{$item}}{{end}}" required>
+      </label>
+      <label>Sort order
+        <input type="number" name="sort_order" value="{{.Skill.SortOrder}}">
+      </label>
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary" data-loading-text="Saving…">Save Skill</button>
+        <a class="btn btn-secondary" href="/admin/skills">Cancel</a>
+      </div>
+    </form>
+  </div>
+</section>
+{{end}}

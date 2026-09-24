@@ -1,0 +1,74 @@
+{{define "content"}}
+<section class="section">
+  <div class="container">
+    <div class="section-header-row">
+      <h1>Course Promo Codes</h1>
+      <a class="btn btn-primary" href="/admin/promo-codes/new?product=course">Add Course Promo Code</a>
+    </div>
+    {{if .CoursePromos}}
+    <table class="admin-table">
+      <thead><tr><th>Code</th><th>Discount</th><th>Applies to</th><th>Redemptions</th><th>Expires</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+        {{range .CoursePromos}}
+        <tr>
+          <td>{{.Code}}{{if .Description}}<br><span class="optional">{{.Description}}</span>{{end}}</td>
+          <td>{{.DiscountPercent}}%</td>
+          <td>{{if .AppliesToAllCourses}}All courses{{else}}{{len .CourseIDs}} course{{if ne (len .CourseIDs) 1}}s{{end}}{{end}}</td>
+          <td>{{.RedemptionsDisplay}}</td>
+          <td>{{formatDateTime .ExpiresAt}}</td>
+          <td>
+            {{if not .IsActive}}<span class="status-badge status-cancelled">Disabled</span>
+            {{else if .IsExpired}}<span class="status-badge status-cancelled">Expired</span>
+            {{else if .IsExhausted}}<span class="status-badge status-cancelled">Exhausted</span>
+            {{else}}<span class="status-badge status-confirmed">Active</span>{{end}}
+          </td>
+          <td class="admin-table-actions">
+            <a class="link-button" href="/admin/promo-codes/{{.ID}}/edit">Edit</a>
+            <form method="POST" action="/admin/promo-codes/{{.ID}}/delete" onsubmit="return confirm('Delete this promo code?');">
+              <button type="submit" class="link-button danger">Delete</button>
+            </form>
+          </td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+    {{else}}
+    <p class="empty-state">No course promo codes yet.</p>
+    {{end}}
+
+    <div class="section-header-row">
+      <h1>Consultancy Promo Codes</h1>
+      <a class="btn btn-primary" href="/admin/promo-codes/new?product=consultancy">Add Consultancy Promo Code</a>
+    </div>
+    {{if .ConsultancyPromos}}
+    <table class="admin-table">
+      <thead><tr><th>Code</th><th>Discount</th><th>Redemptions</th><th>Expires</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+        {{range .ConsultancyPromos}}
+        <tr>
+          <td>{{.Code}}{{if .Description}}<br><span class="optional">{{.Description}}</span>{{end}}</td>
+          <td>{{.DiscountPercent}}%</td>
+          <td>{{.RedemptionsDisplay}}</td>
+          <td>{{formatDateTime .ExpiresAt}}</td>
+          <td>
+            {{if not .IsActive}}<span class="status-badge status-cancelled">Disabled</span>
+            {{else if .IsExpired}}<span class="status-badge status-cancelled">Expired</span>
+            {{else if .IsExhausted}}<span class="status-badge status-cancelled">Exhausted</span>
+            {{else}}<span class="status-badge status-confirmed">Active</span>{{end}}
+          </td>
+          <td class="admin-table-actions">
+            <a class="link-button" href="/admin/promo-codes/{{.ID}}/edit">Edit</a>
+            <form method="POST" action="/admin/promo-codes/{{.ID}}/delete" onsubmit="return confirm('Delete this promo code?');">
+              <button type="submit" class="link-button danger">Delete</button>
+            </form>
+          </td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+    {{else}}
+    <p class="empty-state">No consultancy promo codes yet.</p>
+    {{end}}
+  </div>
+</section>
+{{end}}

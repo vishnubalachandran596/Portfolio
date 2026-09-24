@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{.Title}}</title>
+<meta name="description" content="{{.MetaDescription}}">
+<meta name="theme-color" content="#1c1917">
+<link rel="canonical" href="{{.CanonicalURL}}">
+<link rel="icon" href="/static/img/favicon.svg" type="image/svg+xml">
+<link rel="alternate icon" href="/static/img/favicon.ico">
+<link rel="apple-touch-icon" href="/static/img/apple-touch-icon.png">
+<link rel="stylesheet" href="/static/css/style.css?v={{.AssetVersion}}">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="{{.SiteName}}">
+<meta property="og:title" content="{{.Title}}">
+<meta property="og:description" content="{{.MetaDescription}}">
+<meta property="og:url" content="{{.CanonicalURL}}">
+<meta property="og:image" content="{{.OGImageURL}}">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{{.Title}}">
+<meta name="twitter:description" content="{{.MetaDescription}}">
+<meta name="twitter:image" content="{{.OGImageURL}}">
+
+{{block "jsonld" .}}{{end}}
+</head>
+<body data-active="{{.Active}}">
+<div id="splash-loader" class="splash-loader" aria-hidden="true"><div class="splash-mark">VB</div></div>
+<div id="page-loader" class="page-loader" aria-hidden="true"><span></span></div>
+<div id="page-loader-mark" class="page-loader-mark" aria-hidden="true">VB</div>
+<div id="scroll-progress" class="scroll-progress" aria-hidden="true"></div>
+<a class="skip-link" href="#main-content">Skip to content</a>
+{{template "header" .}}
+<main id="main-content" class="page-enter">
+{{block "content" .}}{{end}}
+</main>
+{{template "footer" .}}
+<button type="button" id="back-to-top" class="back-to-top" aria-label="Back to top" hidden>↑</button>
+<script src="/static/js/main.js?v={{.AssetVersion}}" defer></script>
+</body>
+</html>

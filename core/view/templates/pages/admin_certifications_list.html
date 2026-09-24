@@ -1,0 +1,38 @@
+{{define "content"}}
+<section class="section">
+  <div class="container">
+    <div class="section-header-row">
+      <h1>Certifications</h1>
+      <a class="btn btn-primary" href="/admin/certifications/new">Add Certification</a>
+    </div>
+    {{if .Certifications}}
+    <table class="admin-table">
+      <thead><tr><th>Certification</th><th>Issued</th><th>Expires</th><th>Credential</th><th>Status</th><th>Sort</th><th></th></tr></thead>
+      <tbody>
+        {{range .Certifications}}
+        <tr>
+          <td>{{.Name}}{{if .Issuer}}<br><span class="admin-table-subtext">{{.Issuer}}</span>{{end}}</td>
+          <td>{{if .IssuedOn}}{{formatDateOptional .IssuedOn}}{{else}}<span class="admin-table-subtext">—</span>{{end}}</td>
+          <td>
+            {{if .ExpiresOn}}{{formatDateOptional .ExpiresOn}}{{if .IsExpired}} <span class="status-badge status-cancelled">Expired</span>{{end}}
+            {{else}}<span class="admin-table-subtext">Does not expire</span>{{end}}
+          </td>
+          <td>{{if .CredentialURL}}<a href="{{.CredentialURL}}" target="_blank" rel="noopener">Verify ↗</a>{{else}}<span class="admin-table-subtext">—</span>{{end}}</td>
+          <td><span class="status-badge status-{{if .IsPublished}}confirmed{{else}}cancelled{{end}}">{{if .IsPublished}}Published{{else}}Hidden{{end}}</span></td>
+          <td>{{.SortOrder}}</td>
+          <td class="admin-table-actions">
+            <a class="link-button" href="/admin/certifications/{{.ID}}/edit">Edit</a>
+            <form method="POST" action="/admin/certifications/{{.ID}}/delete" onsubmit="return confirm('Delete this certification?');">
+              <button type="submit" class="link-button danger">Delete</button>
+            </form>
+          </td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+    {{else}}
+    <p class="empty-state">No certifications yet. Until there's at least one published here, the About page leaves the section out entirely — no empty heading, nothing to explain. Add only real credentials you can point at a verification link for.</p>
+    {{end}}
+  </div>
+</section>
+{{end}}

@@ -1,0 +1,84 @@
+{{define "content"}}
+<section class="section page-hero">
+  <div class="container">
+    <p class="eyebrow">Blog</p>
+    <h1>Blog</h1>
+    <p class="hero-subtitle">Original writing on architecture, event-driven systems, reliability and engineering careers — drawn from production work on banking and high-traffic platforms, with the numbers and the trade-offs left in.</p>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    {{/*
+      The topics the archive actually covers, heaviest first, as real links
+      to /articles?tag=… rather than options inside a <select>. A dropdown
+      is invisible until you open it — so a reader couldn't see that there
+      are thirteen System Design pieces without going looking — and its
+      options aren't links, so a crawler never discovers the per-topic
+      pages at all. Same .tag-chip anchor article_detail.html already uses.
+    */}}
+    {{if .Tags}}
+    <nav class="topic-nav" aria-label="Article topics">
+      <span class="topic-nav-label">Topics</span>
+      <a class="tag-chip{{if not .ActiveTag}} tag-chip-active{{end}}" href="/articles">All</a>
+      {{$active := .ActiveTag}}
+      {{range .Tags}}
+      <a class="tag-chip{{if eq .Name $active}} tag-chip-active{{end}}" href="/articles?tag={{.Name}}">{{.Name}} <span class="tag-chip-count">{{.Count}}</span></a>
+      {{end}}
+    </nav>
+    {{end}}
+
+    <form method="GET" action="/articles" class="article-filters">
+      <input type="search" name="q" value="{{.Query}}" placeholder="Search articles…" class="article-search">
+      {{/* Keeps the chosen topic when searching or re-sorting within it. */}}
+      <input type="hidden" name="tag" value="{{.ActiveTag}}">
+      <select name="sort" class="article-select">
+        <option value="date_desc" {{if eq .Sort "date_desc"}}selected{{end}}>Newest first</option>
+        <option value="date_asc" {{if eq .Sort "date_asc"}}selected{{end}}>Oldest first</option>
+        <option value="thumbs_desc" {{if eq .Sort "thumbs_desc"}}selected{{end}}>Most thumbs up</option>
+      </select>
+      <button type="submit" class="btn btn-secondary">Apply</button>
+      {{if or .Query .ActiveTag}}<a class="link-button" href="/articles">Clear</a>{{end}}
+    </form>
+
+    {{if .Articles}}
+    <p class="article-result-count">{{.Total}} article{{if ne .Total 1}}s{{end}}</p>
+    <div class="article-list">
+      {{range .Articles}}
+      <div class="article-row">
+        <a class="article-row-link" href="/articles/{{.Slug}}">
+          {{if .CoverImageURL}}<img class="article-row-thumb" src="{{.CoverImageURL}}" alt="" loading="lazy">{{end}}
+          <div class="article-row-body">
+            <h3>{{.Title}}</h3>
+            <p>{{.Summary}}</p>
+            <div class="article-row-meta">
+              {{if .PublishedDate}}<span>{{formatDateOptional .PublishedDate}}</span>{{end}}
+              <span>By {{$.SiteName}}</span>
+              {{range .Tags}}<span class="tag-chip">{{.}}</span>{{end}}
+            </div>
+          </div>
+        </a>
+        <div class="article-row-votes">
+          {{if $.IsUser}}
+          <button type="button" class="thumbs-count" data-slug="{{.Slug}}">👍 <span class="thumbs-count-num">{{.ThumbsUpCount}}</span></button>
+          {{else}}
+          <a class="thumbs-count" href="/articles/{{.Slug}}">👍 {{.ThumbsUpCount}}</a>
+          {{end}}
+        </div>
+      </div>
+      {{end}}
+    </div>
+
+    {{if gt .TotalPages 1}}
+    <nav class="pagination" aria-label="Articles pagination">
+      {{if .HasPrev}}<a href="/articles?page={{.PrevPage}}&q={{.Query}}&tag={{.ActiveTag}}&sort={{.Sort}}">← Newer</a>{{else}}<span class="pagination-disabled">← Newer</span>{{end}}
+      <span class="pagination-status">Page {{.Page}} of {{.TotalPages}}</span>
+      {{if .HasNext}}<a href="/articles?page={{.NextPage}}&q={{.Query}}&tag={{.ActiveTag}}&sort={{.Sort}}">Older →</a>{{else}}<span class="pagination-disabled">Older →</span>{{end}}
+    </nav>
+    {{end}}
+    {{else}}
+    <p class="empty-state">No articles match — try a different search or clear the filters.</p>
+    {{end}}
+  </div>
+</section>
+{{end}}

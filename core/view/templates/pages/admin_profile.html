@@ -1,0 +1,55 @@
+{{define "content"}}
+<section class="section">
+  <div class="container">
+    <h1>Profile</h1>
+    {{if .Saved}}<div class="alert alert-success">Profile saved.</div>{{end}}
+    <form method="POST" action="/admin/profile" class="admin-form">
+      <div class="form-row">
+        <label>Name
+          <input type="text" name="name" value="{{.Profile.Name}}" required>
+        </label>
+        <label>Years of experience
+          <input type="number" name="years_experience" value="{{.Profile.YearsExperience}}" min="0">
+        </label>
+      </div>
+      <label>Title
+        <input type="text" name="title" value="{{.Profile.Title}}">
+      </label>
+      <label>Hero tagline
+        <input type="text" name="tagline" value="{{.Profile.Tagline}}">
+      </label>
+      <label>Hero subtitle
+        <input type="text" name="hero_subtitle" value="{{.Profile.HeroSubtitle}}">
+      </label>
+      <label>About summary <span class="optional">(separate paragraphs with a blank line)</span>
+        <textarea name="summary" rows="10">{{.Profile.Summary}}</textarea>
+      </label>
+      <label>Location
+        <input type="text" name="location" value="{{.Profile.Location}}">
+      </label>
+      <div class="form-row">
+        <label>Public email <span class="optional">(optional)</span>
+          <input type="email" name="email" value="{{.Profile.Email}}">
+        </label>
+        <label>LinkedIn URL
+          <input type="url" name="linkedin_url" value="{{.Profile.LinkedInURL}}">
+        </label>
+      </div>
+      <div class="form-row">
+        <label>GitHub URL
+          <input type="url" name="github_url" value="{{.Profile.GitHubURL}}">
+        </label>
+        <label>Resume URL
+          <input type="url" name="resume_url" value="{{.Profile.ResumeURL}}">
+        </label>
+      </div>
+      <label>Photo URL
+        <input type="url" name="photo_url" value="{{.Profile.PhotoURL}}">
+      </label>
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">Save Profile</button>
+      </div>
+    </form>
+  </div>
+</section>
+{{end}}

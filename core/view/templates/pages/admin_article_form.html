@@ -1,0 +1,67 @@
+{{define "content"}}
+<section class="section">
+  <div class="container">
+    <h1>{{if .IsNew}}Add Article{{else}}Edit Article{{end}}</h1>
+    <p class="admin-form-note">An article is your own writing, hosted here — title, a one-line summary for the listings, and the body. Plain text or full HTML both work; see the body field for which is which.</p>
+    {{if .Error}}<div class="alert alert-error">{{.Error}}</div>{{end}}
+    <form method="POST" action="{{if .IsNew}}/admin/articles/new{{else}}/admin/articles/{{.Article.ID}}/edit{{end}}" class="admin-form">
+      <label>Title
+        <input type="text" name="title" value="{{.Article.Title}}" required>
+      </label>
+      <label>Summary <span class="optional">(shown in listings and as the opening line of the post — a one-line hook)</span>
+        <textarea name="summary" rows="3" required>{{.Article.Summary}}</textarea>
+      </label>
+      <label>Cover image URL <span class="optional">(optional — shown at the top of the post and as a thumbnail in the articles list)</span>
+        <input type="url" name="cover_image_url" value="{{.Article.CoverImageURL}}" placeholder="https://...">
+      </label>
+      <label>Body <span class="optional">(required. Plain paragraphs: separate with a blank line. Full HTML — headings, links, lists, bold/italic, inline SVG diagrams — is also supported, but the body must then *start* with a tag, e.g. &lt;p&gt;, so it's detected as HTML.)</span>
+        <textarea name="body" rows="18" required placeholder="Plain text example:&#10;First paragraph.&#10;&#10;Second paragraph.&#10;&#10;— or start with a tag for full HTML: &lt;h2&gt;A heading&lt;/h2&gt;&#10;&lt;p&gt;A paragraph with &lt;strong&gt;bold&lt;/strong&gt; text and a &lt;a href=&quot;https://example.com&quot;&gt;link&lt;/a&gt;.&lt;/p&gt;">{{.Article.Body}}</textarea>
+      </label>
+      <label>Published date <span class="optional">(optional)</span>
+        <input type="date" name="published_date" value="{{if .Article.PublishedDate}}{{.Article.PublishedDate.Format "2006-01-02"}}{{end}}">
+      </label>
+      <label>Tags <span class="optional">comma-separated, e.g. "AI, System Design"</span>
+        <input type="text" name="tags" value="{{.Article.TagsDisplay}}" placeholder="AI, System Design">
+      </label>
+      <label>URL slug <span class="optional">(leave blank to generate from the title)</span>
+        <input type="text" name="slug" value="{{.Article.Slug}}" placeholder="auto-generated">
+      </label>
+      <label>Sort order
+        <input type="number" name="sort_order" value="{{.Article.SortOrder}}">
+      </label>
+      <label class="checkbox-label">
+        <input type="checkbox" name="is_published" {{if or .IsNew .Article.IsPublished}}checked{{end}}>
+        Published (visible on the public site)
+      </label>
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary" data-loading-text="Saving…">Save Article</button>
+        <a class="btn btn-secondary" href="/admin/articles">Cancel</a>
+      </div>
+    </form>
+
+    {{if not .IsNew}}
+    <h2 class="section-title admin-subsection-title">Thumbs up ({{.Article.ThumbsUpCount}})</h2>
+    {{if .Votes}}
+    <table class="admin-table">
+      <thead><tr><th>When</th><th>Voter</th></tr></thead>
+      <tbody>
+        {{range .Votes}}
+        <tr>
+          <td>{{formatDateTime .CreatedAt}}</td>
+          <td>
+            {{if .IsAnonymous}}<span class="admin-table-subtext">Anonymous visitor</span>
+            {{else if .UserEmail}}{{if .UserName}}{{.UserName}}{{else}}<span class="admin-table-subtext">(no name given)</span>{{end}} <span class="admin-table-subtext">{{.UserEmail}}{{if .IsGuest}} · not signed up{{end}}</span>
+            {{else}}{{.UserName}} <span class="admin-table-subtext">no email given</span>
+            {{end}}
+          </td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+    {{else}}
+    <p class="empty-state">No thumbs up yet.</p>
+    {{end}}
+    {{end}}
+  </div>
+</section>
+{{end}}

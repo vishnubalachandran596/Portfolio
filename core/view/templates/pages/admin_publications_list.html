@@ -1,0 +1,36 @@
+{{define "content"}}
+<section class="section">
+  <div class="container">
+    <div class="section-header-row">
+      <h1>Speaking &amp; Publications</h1>
+      <a class="btn btn-primary" href="/admin/publications/new">Add Entry</a>
+    </div>
+    {{if .Publications}}
+    <table class="admin-table">
+      <thead><tr><th>Title</th><th>Kind</th><th>Venue</th><th>Date</th><th>Link</th><th>Status</th><th>Sort</th><th></th></tr></thead>
+      <tbody>
+        {{range .Publications}}
+        <tr>
+          <td>{{.Title}}{{if .Summary}}<br><span class="admin-table-subtext">{{.Summary}}</span>{{end}}</td>
+          <td>{{if .Kind}}{{.Kind}}{{else}}<span class="admin-table-subtext">—</span>{{end}}</td>
+          <td>{{if .Venue}}{{.Venue}}{{else}}<span class="admin-table-subtext">—</span>{{end}}</td>
+          <td>{{if .PublishedOn}}{{formatDateOptional .PublishedOn}}{{else}}<span class="admin-table-subtext">—</span>{{end}}</td>
+          <td>{{if .URL}}<a href="{{.URL}}" target="_blank" rel="noopener">Open ↗</a>{{else}}<span class="admin-table-subtext">—</span>{{end}}</td>
+          <td><span class="status-badge status-{{if .IsPublished}}confirmed{{else}}cancelled{{end}}">{{if .IsPublished}}Published{{else}}Hidden{{end}}</span></td>
+          <td>{{.SortOrder}}</td>
+          <td class="admin-table-actions">
+            <a class="link-button" href="/admin/publications/{{.ID}}/edit">Edit</a>
+            <form method="POST" action="/admin/publications/{{.ID}}/delete" onsubmit="return confirm('Delete this entry?');">
+              <button type="submit" class="link-button danger">Delete</button>
+            </form>
+          </td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+    {{else}}
+    <p class="empty-state">Nothing here yet. This is for talks, podcast appearances, guest articles, and papers published elsewhere — your own posts on this site belong under Articles instead. Until there's at least one published entry, the About page leaves the section out entirely.</p>
+    {{end}}
+  </div>
+</section>
+{{end}}

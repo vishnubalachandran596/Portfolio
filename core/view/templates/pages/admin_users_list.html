@@ -1,0 +1,25 @@
+{{define "content"}}
+<section class="section">
+  <div class="container">
+    <h1>Users</h1>
+    {{if .Users}}
+    <table class="admin-table">
+      <thead><tr><th>Name</th><th>Email</th><th>Joined</th><th>Role</th><th></th></tr></thead>
+      <tbody>
+        {{range .Users}}
+        <tr>
+          <td>{{.Name}}</td>
+          <td>{{.Email}}</td>
+          <td>{{formatDate .CreatedAt}}</td>
+          <td>{{if .IsAdmin}}<span class="status-badge status-confirmed">Admin</span>{{end}}</td>
+          <td class="admin-table-actions"><a class="link-button" href="/admin/users/{{.ID}}">View</a></td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+    {{else}}
+    <p class="empty-state">No visitor accounts yet.</p>
+    {{end}}
+  </div>
+</section>
+{{end}}

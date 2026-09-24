@@ -1,0 +1,66 @@
+{{define "content"}}
+<section class="section">
+  <div class="container">
+    <h1>Weekly Availability</h1>
+    <p class="hero-subtitle">Rules repeat every week. Times are in the site's local timezone (Asia/Kolkata).</p>
+
+    {{if .Rules}}
+    <table class="admin-table">
+      <thead><tr><th>Day</th><th>Start</th><th>End</th><th>Slot length</th><th>Active</th><th></th></tr></thead>
+      <tbody>
+        {{range .Rules}}
+        <tr>
+          <td>{{.Weekday}}</td>
+          <td>{{.StartTime}}</td>
+          <td>{{.EndTime}}</td>
+          <td>{{.SlotMinutes}} min</td>
+          <td>
+            <form method="POST" action="/admin/availability/{{.ID}}/toggle">
+              <input type="hidden" name="active" value="{{if .Active}}{{else}}on{{end}}">
+              <button type="submit" class="link-button">{{if .Active}}Active{{else}}Inactive{{end}}</button>
+            </form>
+          </td>
+          <td>
+            <form method="POST" action="/admin/availability/{{.ID}}/delete" onsubmit="return confirm('Delete this rule?');">
+              <button type="submit" class="link-button danger">Delete</button>
+            </form>
+          </td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+    {{else}}
+    <p class="empty-state">No availability rules yet.</p>
+    {{end}}
+
+    <h2 class="section-title">Add a rule</h2>
+    <form method="POST" action="/admin/availability/new" class="admin-form">
+      <div class="form-row">
+        <label>Day of week
+          <select name="weekday">
+            <option value="0">Sunday</option>
+            <option value="1" selected>Monday</option>
+            <option value="2">Tuesday</option>
+            <option value="3">Wednesday</option>
+            <option value="4">Thursday</option>
+            <option value="5">Friday</option>
+            <option value="6">Saturday</option>
+          </select>
+        </label>
+        <label>Slot length (minutes)
+          <input type="number" name="slot_minutes" value="60" min="30" step="30">
+        </label>
+      </div>
+      <div class="form-row">
+        <label>Start time
+          <input type="time" name="start_time" value="18:00" required>
+        </label>
+        <label>End time
+          <input type="time" name="end_time" value="20:00" required>
+        </label>
+      </div>
+      <button type="submit" class="btn btn-primary">Add Rule</button>
+    </form>
+  </div>
+</section>
+{{end}}

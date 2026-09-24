@@ -1,0 +1,123 @@
+{{/*
+  The one skills grid, shared by Home ("What I bring") and About ("Skills")
+  so the two can never drift apart. Takes a []models.SkillGroup as its dot:
+  {{template "skills_grid" .Skills}}
+
+  Two display modes, and the difference between them is structural rather
+  than cosmetic — see the .skills-grid block in style.css:
+
+    * Collapsed (default). A card shows its category, its level, and the
+      first four of those areas as chips — capped at four so all nine
+      cards rest at the same size, with an "and N more" control standing
+      in for the remainder. The achievement summary is not on the face:
+      it lives in the overlay with the full tag list, revealed on hover,
+      keyboard focus, or a click/tap. The panel is positioned absolutely
+      over that card; being out of normal flow is exactly what stops the
+      grid reflowing when a card is active, and is what keeps the summary
+      out of the resting layout.
+    * Expanded (a card pinned open, or the "Expand all" control). The
+      panel shows the achievement summary plus every tag. Expand-all
+      cannot use absolute positioning — nine panels out of flow would
+      overlap each other and spill out of the grid while every card kept
+      its collapsed height. So the modifier class puts the panels back
+      into normal flow and lets the cards size to their content, with
+      CSS Grid equalising the row. The four-chip preview is redundant
+      there (the panel below it lists everything) so it is hidden, along
+      with the "and N more" control.
+
+  Both JS-only controls — "Expand all" and each card's "and N more" — are
+  rendered hidden and unhidden by main.js on init: they do nothing without
+  JS, so with JS off they should not be there at all. The hover/focus
+  reveal is pure CSS, so the grid is still fully usable then. The live
+  region next to "Expand all" announces the mode change, which is
+  otherwise a purely visual event.
+*/}}
+{{define "skills_grid"}}
+<div class="skills-wrap">
+  <div class="skills-toolbar">
+    <button type="button" class="btn btn-secondary btn-sm skills-expand-all" data-skills-expand-all
+            aria-expanded="false" aria-controls="skills-grid" hidden>
+      {{/* Four corner brackets pointing outward for expand, inward for
+           collapse. Both are rendered and CSS shows whichever matches
+           aria-expanded, so toggling needs no DOM surgery. currentColor
+           means they follow the button's own token colour into dark
+           theme. */}}
+      <svg class="skills-expand-icon skills-expand-icon-out" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+           aria-hidden="true" focusable="false">
+        <path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M16 3h3a2 2 0 0 1 2 2v3"/>
+        <path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M21 16v3a2 2 0 0 1-2 2h-3"/>
+      </svg>
+      <svg class="skills-expand-icon skills-expand-icon-in" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+           aria-hidden="true" focusable="false">
+        <path d="M8 3v3a2 2 0 0 1-2 2H3"/><path d="M21 8h-3a2 2 0 0 1-2-2V3"/>
+        <path d="M3 16h3a2 2 0 0 1 2 2v3"/><path d="M16 21v-3a2 2 0 0 1 2-2h3"/>
+      </svg>
+      <span data-skills-expand-label>Expand all</span>
+    </button>
+    <p class="sr-only" aria-live="polite" data-skills-status></p>
+  </div>
+
+  <div class="skills-grid" id="skills-grid">
+    {{range .}}
+    {{/* The resting card shows the first four items only. First four in the
+         stored order, which is the order these were authored in — never
+         re-sorted, and never trimmed to the four that happen to fit best.
+         $extra is the length of what's left rather than a subtraction
+         because html/template has no arithmetic builtin, and adding one to
+         the FuncMap for a number `slice` already gives us would be a
+         second way to compute the same thing. */}}
+    {{$preview := .Items}}
+    {{$extra := 0}}
+    {{if gt (len .Items) 4}}
+      {{$preview = slice .Items 0 4}}
+      {{$extra = len (slice .Items 4)}}
+    {{end}}
+    <article class="skill-card" data-skill-card>
+      <button type="button" class="skill-card-toggle" aria-expanded="false" aria-controls="skill-detail-{{.ID}}">
+        <span class="skill-card-head">
+          <span class="skill-card-title">{{.Category}}</span>
+          {{if .Level}}<span class="skill-level skill-level-{{.Level}}">{{.Level}}</span>{{end}}
+        </span>
+      </button>
+      {{/* Outside the button above, deliberately: "and N more" is a real
+           control, and a <button> inside a <button> is invalid HTML that
+           browsers handle inconsistently. The same reasoning already keeps
+           the article list's thumbs-up button a sibling of the row link
+           rather than a child of it. Both controls carry aria-controls for
+           the one panel and main.js keeps their aria-expanded in step.
+
+           The control sits in the list as the item after the fourth chip,
+           so it flows inline with the chips instead of claiming a row of
+           its own, and its accessible name names the card ("and 5 more
+           focus areas in Databases & Caching") because "and 5 more" alone
+           says nothing out of context. */}}
+      <ul class="skill-tags skill-tags-preview">
+        {{range $preview}}<li>{{.}}</li>{{end}}
+        {{if $extra}}
+        <li class="skill-tags-more-item">
+          <button type="button" class="skill-card-more" data-skill-more hidden
+                  aria-expanded="false" aria-controls="skill-detail-{{.ID}}">and {{$extra}} more<span class="sr-only"> focus area{{if ne $extra 1}}s{{end}} in {{.Category}}</span></button>
+        </li>
+        {{end}}
+      </ul>
+      <div class="skill-card-detail" id="skill-detail-{{.ID}}">
+        {{/* The panel repeats the category and level because, in collapsed
+             mode, it covers the face that carries them. In expanded mode
+             the face is still visible above it, so CSS hides this copy
+             rather than showing the heading twice. */}}
+        <div class="skill-card-head skill-card-detail-head">
+          <span class="skill-card-title">{{.Category}}</span>
+          {{if .Level}}<span class="skill-level skill-level-{{.Level}}">{{.Level}}</span>{{end}}
+        </div>
+        {{if .Achievement}}<p class="skill-achievement">{{.Achievement}}</p>{{end}}
+        <ul class="skill-tags">
+          {{range .Items}}<li>{{.}}</li>{{end}}
+        </ul>
+      </div>
+    </article>
+    {{end}}
+  </div>
+</div>
+{{end}}

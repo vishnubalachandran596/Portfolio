@@ -1,0 +1,2019 @@
+/* ---------------------------------------------------------------------
+   Design tokens — a premium, editorial system: warm near-black + a
+   single gold accent (no dual amber/violet, no gradients), Cormorant
+   for display type paired with Montserrat for body text. Deliberately
+   not the generic dark-navy/purple "AI product" look.
+--------------------------------------------------------------------- */
+@import url('https://fonts.googleapis.com/css2?family=Cormorant:wght@500;600;700&family=Montserrat:wght@300;400;500;600;700&display=swap');
+
+:root {
+  --font-sans: "Montserrat", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-serif: "Cormorant", Georgia, "Times New Roman", serif;
+
+  --color-bg: #fafaf9;
+  --color-bg-alt: #f2f1ee;
+  --color-surface: #ffffff;
+  --color-surface-2: #f5f4f2;
+  --color-border: #d9d5d0;
+  --color-text: #1c1917;
+  --color-text-muted: #57534e;
+  --color-text-faint: #78716c;
+
+  --color-primary: #a16207;
+  --color-primary-strong: #78460a;
+  --color-primary-ink: #ffffff;
+  --color-accent: #a16207;
+  --color-accent-strong: #78460a;
+  --color-accent-ink: #ffffff;
+
+  --color-success-bg: #dcfce7;
+  --color-success-text: #15803d;
+  --color-error-bg: #fee2e2;
+  --color-error-text: #b91c1c;
+
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.875rem;
+
+  --shadow-md: 0 1rem 2.5rem -1.25rem rgba(28, 25, 23, 0.28);
+  --shadow-sm: 0 0.25rem 1rem -0.625rem rgba(28, 25, 23, 0.18);
+
+  --container-width: 70rem;
+  --transition-fast: 180ms ease;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg: #16130f;
+    --color-bg-alt: #1c1815;
+    --color-surface: #221d19;
+    --color-surface-2: #2b241f;
+    --color-border: #453b33;
+    --color-text: #f5f0ea;
+    --color-text-muted: #cbbfb2;
+    --color-text-faint: #9c8f81;
+    --color-primary: #d6a531;
+    --color-primary-strong: #e8bd56;
+    --color-primary-ink: #16130f;
+    --color-accent: #d6a531;
+    --color-accent-strong: #e8bd56;
+    --color-accent-ink: #16130f;
+    --shadow-md: 0 1rem 2.5rem -1rem rgba(0, 0, 0, 0.6);
+    --shadow-sm: 0 0.25rem 1rem -0.5rem rgba(0, 0, 0, 0.45);
+  }
+}
+
+/* Explicit theme override (from the header toggle), takes precedence over
+   the OS-preference media query above regardless of which way it goes. */
+:root[data-theme="dark"] {
+  --color-bg: #16130f;
+  --color-bg-alt: #1c1815;
+  --color-surface: #221d19;
+  --color-surface-2: #2b241f;
+  --color-border: #453b33;
+  --color-text: #f5f0ea;
+  --color-text-muted: #cbbfb2;
+  --color-text-faint: #9c8f81;
+  --color-primary: #d6a531;
+  --color-primary-strong: #e8bd56;
+  --color-primary-ink: #16130f;
+  --color-accent: #d6a531;
+  --color-accent-strong: #e8bd56;
+  --color-accent-ink: #16130f;
+  --shadow-md: 0 1rem 2.5rem -1rem rgba(0, 0, 0, 0.6);
+  --shadow-sm: 0 0.25rem 1rem -0.5rem rgba(0, 0, 0, 0.45);
+}
+:root[data-theme="light"] {
+  --color-bg: #fafaf9;
+  --color-bg-alt: #f2f1ee;
+  --color-surface: #ffffff;
+  --color-surface-2: #f5f4f2;
+  --color-border: #d9d5d0;
+  --color-text: #1c1917;
+  --color-text-muted: #57534e;
+  --color-text-faint: #78716c;
+  --color-primary: #a16207;
+  --color-primary-strong: #78460a;
+  --color-primary-ink: #ffffff;
+  --color-accent: #a16207;
+  --color-accent-strong: #78460a;
+  --color-accent-ink: #ffffff;
+  --shadow-md: 0 1rem 2.5rem -1.25rem rgba(28, 25, 23, 0.28);
+  --shadow-sm: 0 0.25rem 1rem -0.625rem rgba(28, 25, 23, 0.18);
+}
+
+/* ---------------------------------------------------------------------
+   Reset & base
+--------------------------------------------------------------------- */
+*, *::before, *::after { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  font-family: var(--font-sans);
+  background: var(--color-bg);
+  color: var(--color-text);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+/* Sticky footer: on a short page (e.g. login), #main-content grows to
+   fill the leftover space instead of stranding the footer high up with
+   a large empty gap below it. */
+#main-content { flex: 1 0 auto; }
+.site-footer { flex-shrink: 0; }
+img { max-width: 100%; display: block; }
+a { color: inherit; text-decoration: none; }
+ul { margin: 0; padding: 0; list-style: none; }
+h1, h2, h3, p { margin: 0; }
+h1, h2, h3, .brand { font-family: var(--font-serif); font-weight: 600; letter-spacing: -0.01em; }
+button { font-family: inherit; cursor: pointer; }
+a, button, .slot-btn, .faq-item summary { cursor: pointer; }
+:focus-visible { outline: 0.125rem solid var(--color-accent); outline-offset: 0.125rem; }
+
+.container {
+  width: 100%;
+  max-width: var(--container-width);
+  margin: 0 auto;
+  padding: 0 clamp(1.5rem, 4vw, 3rem);
+}
+
+/* Available to a screen reader, drawn nowhere. Same clip-path technique as
+   .skip-link below, for content that never becomes visible — an
+   aria-live region announcing a state change a sighted user can just see. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.skip-link {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  background: var(--color-primary);
+  color: var(--color-primary-ink);
+  padding: 0.625rem 1rem;
+  border-radius: 0 0 var(--radius-sm) 0;
+  z-index: 200;
+}
+/* A large negative left offset (the older way to visually hide this) can,
+   in some browsers, extend the page's own horizontal scroll bounds —
+   clip-path here achieves the same "hidden until focused" effect without
+   that risk. */
+.skip-link:focus {
+  width: auto;
+  height: auto;
+  overflow: visible;
+  clip-path: none;
+  white-space: normal;
+}
+
+/* ---------------------------------------------------------------------
+   Page transitions + loaders
+--------------------------------------------------------------------- */
+.page-enter { animation: page-fade-in 420ms cubic-bezier(.16,1,.3,1) both; }
+@keyframes page-fade-in {
+  from { opacity: 0; transform: translateY(0.875rem) scale(.99); filter: blur(0.25rem); }
+  to { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+}
+
+/* First-visit splash: a branded "VB" mark, shown once per browser tab
+   while the very first page of a session loads. */
+.splash-loader {
+  position: fixed;
+  inset: 0;
+  z-index: 400;
+  background: var(--color-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 420ms ease, visibility 420ms ease;
+}
+.splash-loader.hide { opacity: 0; visibility: hidden; pointer-events: none; }
+.splash-mark {
+  width: 5.25rem;
+  height: 5.25rem;
+  border-radius: 50%;
+  background: #1c1917;
+  border: 0.0938rem solid #a16207;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-serif);
+  font-weight: 600;
+  font-size: 1.9rem;
+  color: #e8bd56;
+  letter-spacing: 0.02em;
+  animation: splash-pulse 1.3s ease-in-out infinite;
+  box-shadow: 0 1.25rem 3.75rem -1.25rem rgba(161, 98, 7, 0.5);
+}
+@keyframes splash-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+}
+
+/* Between-page loader: a small branded route indicator (not a
+   full-screen blocker) shown for any navigation, not just slow ones —
+   a plain opacity fade-in, deliberately not the splash's pulse/scale. */
+.page-loader {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 300;
+  height: 0.1875rem;
+  background: transparent;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 160ms ease;
+}
+.page-loader.active { opacity: 1; }
+.page-loader span {
+  display: block;
+  height: 100%;
+  width: 40%;
+  border-radius: 0 0.1875rem 0.1875rem 0;
+  background: linear-gradient(90deg, var(--color-primary), var(--color-accent));
+  animation: route-sweep 1.1s ease-in-out infinite;
+}
+@keyframes route-sweep {
+  0% { transform: translateX(-100%); width: 20%; }
+  50% { width: 55%; }
+  100% { transform: translateX(250%); width: 20%; }
+}
+.page-loader-mark {
+  position: fixed;
+  top: 0.875rem;
+  left: 0.875rem;
+  z-index: 300;
+  width: 1.875rem;
+  height: 1.875rem;
+  border-radius: 50%;
+  background: #1c1917;
+  border: 0.0938rem solid #a16207;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-serif);
+  font-weight: 600;
+  font-size: 0.75rem;
+  color: #e8bd56;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 160ms ease;
+}
+.page-loader-mark.active { opacity: 1; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ---------------------------------------------------------------------
+   Header
+--------------------------------------------------------------------- */
+.preview-banner {
+  background: var(--color-accent);
+  color: var(--color-accent-ink);
+  text-align: center;
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0.5rem 1rem;
+  position: sticky;
+  top: 0;
+  z-index: 51;
+}
+.preview-banner a { color: var(--color-accent-ink); text-decoration: underline; margin-left: 0.5rem; }
+
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: rgba(248, 250, 252, 0.88);
+  backdrop-filter: blur(0.625rem);
+  border-bottom: 0.0625rem solid var(--color-border);
+}
+@media (prefers-color-scheme: dark) {
+  .site-header { background: rgba(15, 23, 42, 0.88); }
+}
+:root[data-theme="dark"] .site-header { background: rgba(15, 23, 42, 0.88); }
+:root[data-theme="light"] .site-header { background: rgba(248, 250, 252, 0.88); }
+
+.header-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: clamp(0.625rem, 3vw, 1.5rem);
+  min-height: 4rem;
+  padding: 0.625rem 0;
+}
+.brand {
+  font-weight: 700;
+  font-size: 1.05rem;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.brand.active .brand-mark {
+  box-shadow: 0 0 0 0.125rem var(--color-bg), 0 0 0 0.25rem var(--color-primary);
+}
+.primary-nav {
+  display: flex;
+  align-items: center;
+  gap: clamp(0.75rem, 2.5vw, 1.625rem);
+  flex: 1 1 auto;
+  min-width: 0;
+  justify-content: flex-start;
+}
+.primary-nav a {
+  font-size: 0.93rem;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  transition: color var(--transition-fast);
+  padding: 0.375rem 0;
+  border-bottom: 0.125rem solid transparent;
+}
+.primary-nav a:hover,
+.primary-nav a.active {
+  color: var(--color-text);
+  border-bottom-color: var(--color-primary);
+}
+
+.header-actions { display: flex; align-items: center; gap: 0.375rem; flex-shrink: 0; }
+.header-actions .link-button { font-size: 0.9rem; line-height: 1; white-space: nowrap; }
+
+/* Icon buttons (theme, notifications, account) and their dropdown panels.
+   Kept as one row on every breakpoint — the nav strip scrolls
+   horizontally instead of wrapping to a second row. */
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  width: 2.375rem;
+  height: 2.375rem;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 0.0625rem solid var(--color-border);
+  background: var(--color-surface-2);
+  color: var(--color-text);
+}
+.icon-btn:hover { border-color: var(--color-accent); }
+.icon-btn svg { width: 1.125rem; height: 1.125rem; }
+
+.header-menu { position: relative; }
+.header-dropdown {
+  position: absolute;
+  top: calc(100% + 0.75rem);
+  right: -0.25rem;
+  width: max-content;
+  min-width: 12.5rem;
+  max-width: min(78vw, 16.25rem);
+  background: var(--color-surface);
+  border: 0.0625rem solid var(--color-border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-md);
+  padding: 0.5rem;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+/* The [hidden] attribute and this class have equal specificity, and an
+   author rule wins that tie over the browser's default `[hidden] {
+   display: none}` — without this, `display: flex` above always won and
+   the panel never actually hid, regardless of the hidden attribute the
+   dropdown toggle JS sets. */
+.header-dropdown[hidden] { display: none; }
+.header-dropdown::before {
+  content: "";
+  position: absolute;
+  top: -0.3125rem;
+  right: 0.75rem;
+  width: 0.625rem;
+  height: 0.625rem;
+  background: var(--color-surface);
+  border: 0.0625rem solid var(--color-border);
+  border-bottom: none;
+  border-right: none;
+  transform: rotate(45deg);
+}
+.header-dropdown-item {
+  display: block;
+  width: 100%;
+  padding: 0.625rem 0.75rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--color-text);
+  text-align: left;
+  background: none;
+  border: none;
+  font-family: inherit;
+}
+.header-dropdown-item:hover { background: var(--color-bg-alt); }
+.header-dropdown-item.unread { font-weight: 700; }
+.header-dropdown-item-accent { color: var(--color-primary); font-weight: 700; }
+.header-dropdown-button { cursor: pointer; }
+.header-dropdown-divider { height: 0.0625rem; background: var(--color-border); margin: 0.375rem 0.25rem; }
+.header-dropdown-empty { padding: 0.625rem 0.75rem; margin: 0; font-size: 0.85rem; color: var(--color-text-faint); }
+
+.menu-badge {
+  position: absolute;
+  top: -0.125rem;
+  right: -0.125rem;
+  min-width: 1rem;
+  height: 1rem;
+  padding: 0 0.25rem;
+  border-radius: 62.4375rem;
+  background: var(--color-accent);
+  color: var(--color-accent-ink);
+  font-size: 0.65rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+.badge-inline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1rem;
+  height: 1rem;
+  padding: 0 0.25rem;
+  border-radius: 62.4375rem;
+  background: var(--color-accent);
+  color: var(--color-accent-ink);
+  font-size: 0.65rem;
+  font-weight: 700;
+  vertical-align: middle;
+}
+
+.nav-toggle {
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.3125rem;
+  background: var(--color-surface-2);
+  border: 0.0625rem solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 0.625rem;
+  width: 2.5rem;
+  height: 2.5rem;
+}
+.nav-toggle span {
+  width: 1.125rem;
+  height: 0.125rem;
+  background: var(--color-text);
+  border-radius: 0.125rem;
+}
+.nav-toggle:hover { border-color: var(--color-accent); }
+
+/* Brand: always the compact "VB" monogram, on every screen size — never
+   the full site name, which would repeat the hero heading right below it
+   on every page and crowd the header on narrow screens. */
+.brand-full { display: none; }
+.brand-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 2.5rem;
+  height: 2.5rem;
+  margin-left: 0.625rem;
+  border-radius: 50%;
+  background: var(--color-text);
+  color: var(--color-bg);
+  font-family: var(--font-serif);
+  font-weight: 600;
+  font-size: 1rem;
+}
+.btn-sm { padding: 0.5rem 1rem; font-size: 0.85rem; }
+.header-logout-form { display: inline-flex; align-items: center; }
+
+@media (max-width: 860px) {
+  .primary-nav { justify-content: flex-start; gap: 1rem; }
+}
+
+/* The tab strip is the only nav on every breakpoint — no separate
+   hamburger/drawer duplicating the same links. On narrow screens it
+   scrolls horizontally instead of collapsing. */
+.primary-nav {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.primary-nav::-webkit-scrollbar { display: none; }
+.primary-nav a { flex-shrink: 0; }
+
+/* ---------------------------------------------------------------------
+   Footer
+--------------------------------------------------------------------- */
+.site-footer {
+  border-top: 0.0625rem solid var(--color-border);
+  padding: 2rem 0;
+  margin-top: 5rem;
+}
+.footer-inner {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--color-text-faint);
+  font-size: 0.9rem;
+}
+.footer-nav { display: flex; gap: 1.25rem; flex-wrap: wrap; }
+.footer-nav a { color: var(--color-text-faint); }
+.footer-nav a:hover { color: var(--color-text); }
+
+/* ---------------------------------------------------------------------
+   Sections & typography
+--------------------------------------------------------------------- */
+.section { padding: 4rem 0; }
+.section-alt { background: var(--color-bg-alt); }
+.section-title { font-size: 1.6rem; font-weight: 700; margin-bottom: 1.75rem; letter-spacing: -0.01em; }
+.section-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 1.75rem;
+}
+.section-header-row .section-title { margin-bottom: 0; }
+.section-lead { color: var(--color-text-muted); max-width: 40rem; margin: -1rem 0 1.75rem; }
+/* For a second lead further down a section, where there's no section
+   title above it to pull up against. */
+.section-lead-spaced { margin-top: 2.5rem; }
+/* Home "What I bring": the professional summary (Profile.Summary) sits
+   directly above the skills grid. Paragraph spacing matches About's
+   bio so the same field does not look like two different voices. */
+.home-bring-summary { max-width: 46rem; margin: -0.5rem 0 2rem; }
+.home-bring-summary p { color: var(--color-text-muted); margin: 0 0 1rem; }
+.home-bring-summary p:last-child { margin-bottom: 0; }
+
+.eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--color-primary-strong);
+  margin-bottom: 0.75rem;
+}
+.link-arrow { color: var(--color-accent); font-weight: 600; font-size: 0.94rem; }
+.link-arrow:hover { color: var(--color-accent-strong); }
+
+.empty-state { color: var(--color-text-muted); padding: 2rem 0; }
+
+/* ---------------------------------------------------------------------
+   Hero
+--------------------------------------------------------------------- */
+.hero { padding: 6rem 0 4.5rem; }
+.hero-simple { padding: 6.75rem 0 3.5rem; }
+@media (max-width: 860px) {
+  .hero { padding: 2.5rem 0 2rem; }
+  .hero-simple { padding: 2.5rem 0 2rem; }
+  .section { padding: 2.5rem 0; }
+}
+.hero-inner { max-width: 45rem; }
+.hero-inner-with-photo { display: flex; align-items: center; gap: 2.5rem; max-width: 54rem; }
+.hero-inner-with-photo .hero-copy { flex: 1; min-width: 0; }
+.hero-photo { width: 11rem; height: 11rem; border-radius: 50%; object-fit: cover; border: 0.1875rem solid var(--color-surface); box-shadow: 0 0 0 0.0625rem var(--color-border); flex-shrink: 0; }
+@media (max-width: 720px) {
+  .hero-inner-with-photo { flex-direction: column; text-align: center; gap: 1.5rem; }
+  .hero-inner-with-photo .hero-subtitle { margin-left: auto; margin-right: auto; }
+  .hero-inner-with-photo .hero-actions { justify-content: center; }
+  .hero-photo { width: 8rem; height: 8rem; }
+}
+.hero h1 { font-size: clamp(2.2rem, 5vw, 3.4rem); font-weight: 700; letter-spacing: -0.02em; margin: 0.25rem 0 0.5rem; }
+.hero-title { font-size: 1.15rem; color: var(--color-primary-strong); font-weight: 600; margin-bottom: 1.125rem; }
+.hero-tagline { font-size: 1.3rem; font-weight: 600; margin-bottom: 0.625rem; }
+.hero-subtitle { font-size: 1.05rem; color: var(--color-text-muted); max-width: 40rem; margin-bottom: 1.75rem; }
+.hero-actions { display: flex; gap: 0.875rem; flex-wrap: wrap; align-items: center; margin-bottom: 1rem; }
+.hero-meta { color: var(--color-text-faint); font-size: 0.9rem; }
+
+/* The third rung of the home page's CTA ladder: consultancy is the
+   primary button, About/resume the secondary, courses a plain text link —
+   so the ordering itself tells a visitor where to go first. */
+.hero-tertiary { color: var(--color-text-muted); font-size: 0.94rem; margin-bottom: 1.5rem; }
+.hero-tertiary a { color: var(--color-accent); font-weight: 600; }
+
+/* "Previously at" — company-name credibility high on the page, before a
+   visitor has to click through to About for it. */
+/* A wrapping flex row, so five employer names reflow down the page on a
+   narrow screen instead of off the side of it, and the gap does the
+   separating — no punctuation character to orphan at a line break. */
+.hero-provenance {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.375rem 1.125rem;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+.hero-provenance-label {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 600;
+  font-size: 0.72rem;
+  color: var(--color-text-faint);
+  white-space: nowrap;
+}
+/* Each company name stays intact even when the row wraps around it. */
+.hero-provenance-item { white-space: nowrap; font-weight: 600; }
+
+.page-hero { padding-top: 4.5rem; padding-bottom: 2.5rem; }
+.page-hero-narrow .container { max-width: 45rem; }
+.page-hero h1 { font-size: clamp(1.9rem, 4vw, 2.6rem); font-weight: 700; letter-spacing: -0.02em; margin-bottom: 0.375rem; }
+
+/* ---------------------------------------------------------------------
+   Buttons
+--------------------------------------------------------------------- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 1.375rem;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  font-size: 0.95rem;
+  border: 0.0625rem solid transparent;
+  transition: transform var(--transition-fast), background var(--transition-fast), border-color var(--transition-fast);
+}
+.btn:hover { transform: translateY(-0.0625rem); }
+.btn-lg { padding: 0.9375rem 1.75rem; font-size: 1rem; }
+.btn-primary { background: var(--color-accent); color: var(--color-accent-ink); }
+.btn-primary:hover { background: var(--color-accent-strong); }
+.btn-secondary { background: transparent; border-color: var(--color-border); color: var(--color-text); }
+.btn-secondary:hover { border-color: var(--color-accent); color: var(--color-accent); }
+
+.link-button {
+  background: none;
+  border: none;
+  color: var(--color-accent);
+  font-weight: 600;
+  padding: 0;
+}
+.link-button.danger { color: #dc2626; }
+.link-button:hover { text-decoration: underline; }
+
+/* ---------------------------------------------------------------------
+   Feature / course cards
+--------------------------------------------------------------------- */
+.feature-grid, .course-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: 1.25rem;
+}
+
+.feature-card, .course-card, .skill-card, .stat-card, .contact-card {
+  background: var(--color-surface);
+  border: 0.0625rem solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 1.5rem;
+  box-shadow: var(--shadow-sm);
+}
+.feature-card h3 { font-size: 1.05rem; margin-bottom: 0.5rem; }
+.feature-card p { color: var(--color-text-muted); font-size: 0.94rem; }
+
+.course-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  transition: transform var(--transition-fast), border-color var(--transition-fast);
+}
+.course-card:hover { transform: translateY(-0.1875rem); border-color: var(--color-accent); }
+.course-card h3 { font-size: 1.15rem; }
+.course-card p { color: var(--color-text-muted); font-size: 0.94rem; flex-grow: 1; }
+.course-level {
+  align-self: flex-start;
+  background: var(--color-surface-2);
+  color: var(--color-primary-strong);
+  font-size: 0.76rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0.25rem 0.625rem;
+  border-radius: 62.4375rem;
+}
+.course-price { font-weight: 700; }
+.course-duration { color: var(--color-text-faint); font-weight: 400; }
+.course-detail-meta { display: flex; gap: 0.625rem; color: var(--color-text-muted); margin: 0.875rem 0 1.375rem; font-weight: 600; }
+.course-detail-note {
+  color: var(--color-text-muted);
+  font-size: 0.92rem;
+  max-width: 40rem;
+  margin-bottom: 1.375rem;
+  padding-left: 0.875rem;
+  border-left: 0.1875rem solid var(--color-accent);
+}
+.course-description { max-width: 47.5rem; }
+.course-description p { color: var(--color-text-muted); margin-bottom: 1rem; }
+
+/* ---------------------------------------------------------------------
+   Blog: cover image, list thumbnails, and rich (HTML) post bodies
+--------------------------------------------------------------------- */
+.article-cover-section { padding-top: 0; padding-bottom: 0; }
+.article-cover-image {
+  width: 100%;
+  max-height: 25rem;
+  object-fit: cover;
+  border-radius: var(--radius-md);
+}
+.article-row-thumb {
+  width: 6rem;
+  height: 6rem;
+  flex-shrink: 0;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+}
+.article-body { color: var(--color-text-muted); }
+.article-body p { margin-bottom: 1rem; }
+.article-body h2, .article-body h3 { color: var(--color-text); margin: 1.75rem 0 0.75rem; }
+.article-body h2:first-child, .article-body h3:first-child { margin-top: 0; }
+.article-body ul, .article-body ol { margin: 0 0 1rem 1.25rem; }
+.article-body li { margin-bottom: 0.375rem; }
+.article-body a { color: var(--color-accent); text-decoration: underline; }
+.article-body img { max-width: 100%; border-radius: var(--radius-md); margin: 1rem 0; display: block; }
+.article-body blockquote {
+  border-left: 0.1875rem solid var(--color-primary);
+  padding-left: 1rem;
+  margin: 1rem 0;
+  color: var(--color-text-faint);
+  font-style: italic;
+}
+.article-body code { background: var(--color-surface-2); padding: 0.125rem 0.375rem; border-radius: 0.25rem; font-size: 0.9em; }
+.article-body pre { background: var(--color-surface-2); padding: 1rem; border-radius: var(--radius-md); overflow-x: auto; margin-bottom: 1rem; }
+.article-body pre code { background: none; padding: 0; }
+
+/* Inline-SVG diagrams inside an article body. There's no image pipeline
+   here, so architecture and flow diagrams are hand-authored SVG embedded
+   directly in the body HTML — which also means they're part of the
+   document, so they can be drawn in `currentColor` and the design tokens
+   and therefore follow the light/dark theme toggle. An <img src> to an
+   .svg file could not: an image-embedded SVG is an isolated document that
+   never sees this page's custom properties. */
+/* A diagram is authored on a ~480-unit-wide viewBox and displayed between
+   26rem and 36rem, so the viewBox scale factor stays near 1 and the label
+   text lands in a legible range at every width. Below 26rem the figure
+   scrolls horizontally rather than scaling the diagram down further,
+   because a 480-unit diagram squeezed into a 20rem phone screen renders
+   its labels at around half their intended size. */
+.article-figure { margin: 1.75rem 0; overflow-x: auto; }
+.article-diagram {
+  display: block;
+  width: 100%;
+  min-width: 26rem;
+  max-width: 36rem;
+  height: auto;
+  margin: 0 auto;
+  color: var(--color-text-muted);
+  font-family: var(--font-sans);
+}
+.article-diagram text { fill: currentColor; font-size: 0.8125rem; }
+.article-diagram .dg-strong { fill: var(--color-text); font-weight: 600; }
+.article-diagram .dg-accent-text { fill: var(--color-primary); font-weight: 600; }
+.article-diagram .dg-box { fill: var(--color-surface-2); stroke: var(--color-border); stroke-width: 1; }
+.article-diagram .dg-box-accent { fill: var(--color-surface-2); stroke: var(--color-primary); stroke-width: 1.5; }
+.article-diagram .dg-line { stroke: var(--color-text-faint); stroke-width: 1; fill: none; }
+.article-diagram .dg-line-dash { stroke: var(--color-text-faint); stroke-width: 1; fill: none; stroke-dasharray: 4 3; }
+.article-diagram .dg-line-accent { stroke: var(--color-primary); stroke-width: 1.5; fill: none; }
+.article-diagram .dg-arrow { fill: var(--color-text-faint); stroke: none; }
+.article-diagram .dg-arrow-accent { fill: var(--color-primary); stroke: none; }
+.article-figure figcaption {
+  margin-top: 0.75rem;
+  font-size: 0.85rem;
+  color: var(--color-text-faint);
+  text-align: center;
+}
+
+/* ---------------------------------------------------------------------
+   About page
+--------------------------------------------------------------------- */
+.about-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 3rem;
+  align-items: start;
+}
+/* Tagline and bio share one .section. .hero-subtitle's 1.75rem bottom
+   margin is for the home hero, where CTAs follow; here it would be a
+   second reserved gap. Paragraph spacing matches .about-summary p. */
+.about-intro .hero-subtitle { margin-bottom: 0; }
+.about-intro .about-grid { margin-top: 1rem; }
+.about-hero-copy { flex: 1; min-width: min(16rem, 100%); }
+.about-summary p { color: var(--color-text-muted); margin-bottom: 1rem; }
+.about-links { display: flex; gap: 0.75rem; flex-wrap: wrap; margin-top: 1.375rem; }
+.about-facts {
+  background: var(--color-surface);
+  border: 0.0625rem solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 1.5rem;
+}
+.about-facts dl { display: grid; grid-template-columns: auto 1fr; gap: 0.5rem 1rem; }
+.about-facts dt { color: var(--color-text-faint); font-size: 0.85rem; }
+.about-facts dd { margin: 0; font-weight: 600; }
+.about-fact-note { font-size: 0.85rem; color: var(--color-text-muted); margin: 1rem 0 0; padding-top: 1rem; border-top: 0.0625rem solid var(--color-border); }
+.about-fact-note + .about-fact-note { margin-top: 0.75rem; padding-top: 0; border-top: none; }
+@media (max-width: 820px) { .about-grid { grid-template-columns: 1fr; } }
+
+.about-hero-row { display: flex; align-items: center; gap: 1.75rem; flex-wrap: wrap; }
+.about-photo { width: 10rem; height: 10rem; border-radius: 50%; object-fit: cover; border: 0.1875rem solid var(--color-surface); box-shadow: 0 0 0 0.0625rem var(--color-border); flex-shrink: 0; }
+@media (max-width: 560px) { .about-photo { width: 7rem; height: 7rem; } }
+
+.testimonial-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(17.5rem, 1fr)); gap: 1.25rem; margin-top: 1.5rem; }
+.testimonial-card { background: var(--color-surface); border: 0.0625rem solid var(--color-border); border-radius: var(--radius-md); padding: 1.5rem; margin: 0; }
+.testimonial-card p { color: var(--color-text-muted); font-style: italic; margin: 0 0 1rem; }
+.testimonial-card cite { display: block; font-style: normal; font-weight: 600; }
+.testimonial-card cite span { display: block; font-weight: 400; font-size: 0.85rem; color: var(--color-text-faint); margin-top: 0.125rem; }
+.admin-table-subtext { color: var(--color-text-faint); font-size: 0.82rem; font-weight: 400; }
+
+/* ---------------------------------------------------------------------
+   Skills grid — three per row, summary revealed on demand
+
+   Two display modes, and they need different layout techniques.
+
+   COLLAPSED (default). The card face carries the category, the level, and
+   the first four items as chips (.skill-tags-preview) with an "and N more"
+   control after the fourth. Four is a hard cap rather than "however many
+   fit": the groups run 5 to 9 items, so letting each card show its own
+   number is what made the nine look like nine unrelated boxes. The
+   achievement summary is not on the face at rest — it belongs in the
+   overlay with the full tag list, so equal card heights come from four
+   chips rather than from nine summaries of different lengths.
+
+   The achievement plus the full tag list show at a time, in
+   .skill-card-detail, positioned absolutely over its own card and drawn
+   above its siblings. Being out of normal flow is the whole point: a card
+   never grows, never pushes its neighbours, never re-flows a row, and
+   never shifts the page's scroll position. Reveal is wired to hover,
+   keyboard focus (:focus-visible), and an explicit click/tap toggle
+   (.is-open, set by main.js) so it works with a mouse, a touchscreen, and
+   a keyboard alike. Hover is a transient preview of that overlay; it must
+   not leave the summary in the resting layout.
+
+   Hover and click are two different gestures with two different meanings:
+   hover (and focus) is a transient preview, a click pins the card open and
+   a second click unpins it. .is-dismissed is what makes that second click
+   actually visible — see its rule below.
+
+   EXPANDED (.is-expanded-all, the "Expand all" control, or a single card
+   pinned open). Absolute positioning cannot do nine panels at once — nine
+   boxes out of flow would overlap each other and spill past the grid while
+   every card kept its collapsed height. So expand-all is a genuine second
+   mode, not a loop over the per-card toggle: the panels go back to
+   position: static, the cards size to their content, and CSS Grid's
+   default stretch equalises every card in a row against the tallest one
+   in it. A pinned card keeps the overlay so one summary never reflows the
+   grid.
+
+   Uniform sizing is a requirement in both modes, not just stable sizing:
+   every card is the same width and height at rest, the revealed panel is
+   a fixed size so one card's summary is never a different shape from
+   another's, and in expanded mode the row stretch plus a bottom-pinned tag
+   list keeps the boxes equal. The content rebalance in migration 045 is
+   what makes that look deliberate rather than padded — it narrowed the
+   per-card item counts from a 2-to-13 spread to 5-to-9.
+--------------------------------------------------------------------- */
+.skills-wrap { display: flex; flex-direction: column; gap: 1rem; }
+.skills-toolbar { display: flex; justify-content: flex-end; }
+.skills-expand-all { display: inline-flex; align-items: center; gap: 0.5rem; }
+.skills-expand-all[hidden] { display: none; }
+.skills-expand-icon { width: 1.05rem; height: 1.05rem; flex: none; }
+/* Only the glyph matching the current state is drawn. */
+.skills-expand-all .skills-expand-icon-in,
+.skills-expand-all[aria-expanded="true"] .skills-expand-icon-out { display: none; }
+.skills-expand-all[aria-expanded="true"] .skills-expand-icon-in { display: block; }
+
+.skills-grid {
+  /* A floor under the revealed panel in collapsed mode, so the smallest
+     groups don't reveal a stubby box next to their neighbours'.
+     Deliberately a low floor, not a uniform height: forcing all nine to
+     the tallest one's size was tried and looked worse than the problem it
+     solved — it left well over 100px of visible void inside the shortest
+     card, which is the "one skill having a lot of blank space" complaint
+     this work exists to fix. What actually makes the reveals look alike is
+     the content itself: migration 045 narrowed the item counts from a
+     2-to-13 spread to 5-to-9 and shortened the most verbose labels, since
+     a 46-character chip occupies a whole line while three short ones share
+     one. With that done the floor only has to catch the shortest few. */
+  --skill-detail-min: 20rem;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  /* Every row as tall as the tallest row, not just as tall as its own
+     tallest card. In an auto-height grid a 1fr track resolves to the
+     largest base size among the flexible tracks, so all three rows take
+     the height of whichever card needed the most — which is what makes the
+     nine footprints identical rather than merely equal within a row. A
+     fixed min-height cannot do this job: how many lines four chips need
+     depends on the card's width, so guessing one number for all of them
+     leaves dead space at the widths that didn't need it. */
+  grid-auto-rows: 1fr;
+  align-items: stretch;
+  gap: 1.25rem;
+}
+
+/* .skill-card keeps the shared card chrome (surface, border, radius,
+   shadow) from the rule above and only drops its padding, which the
+   toggle and the detail panel each carry themselves so the two line up
+   exactly on top of each other. Column direction matters for expanded
+   mode, where the detail panel rejoins the flow and has to stack under
+   the face rather than sit beside it. */
+/* Height comes from the grid's equal rows (see grid-auto-rows above); the
+   min-height is only a floor for the degenerate case of a single-card grid,
+   where there is no taller sibling to equalise against. */
+.skill-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  min-height: 11rem;
+  transition: border-color var(--transition-fast);
+}
+
+/* The always-visible face: category and level only. The achievement
+   summary lives in .skill-card-detail, not here — otherwise it would
+   sit in the resting layout. The chip preview below is a sibling, not
+   part of this button — see the comment in skills_grid.html. */
+.skill-card-toggle {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1.5rem 1.5rem 0.875rem;
+  background: none;
+  border: 0;
+  border-radius: inherit;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.skill-card-toggle:focus-visible { outline: 0.125rem solid var(--color-accent); outline-offset: 0.125rem; }
+
+.skill-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+.skill-card-title {
+  font-family: var(--font-serif);
+  font-size: 1.2rem;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+}
+
+/* The four-chip preview. flex: 1 hands it the card's leftover height and
+   align-content: flex-end spends that slack above the chips rather than
+   below them, so every card's chip block ends flush with the card's bottom
+   edge however many lines its four labels needed — the same reason the
+   revealed panel pins its own tag list to the bottom. */
+.skill-tags-preview {
+  flex: 1;
+  align-content: flex-end;
+  padding: 0 1.5rem 1.5rem;
+}
+/* The one list item that holds a control instead of a label drops the chip
+   chrome and lets the button draw itself. It goes with the button when the
+   button is hidden (JS off), so the list never ends on an empty item. */
+.skill-tags-more-item { padding: 0; background: none; }
+.skill-tags-more-item:has(.skill-card-more[hidden]) { display: none; }
+/* Sized to a chip's exact height (its border stands in for the 0.0625rem
+   of padding it gives up) so it sits on the chip baseline rather than
+   nudging its row taller. Dashed, and in the accent token, to read as "the
+   rest is behind this" rather than as a tenth skill. */
+.skill-card-more {
+  /* Native <button> chrome (appearance: auto) ignores border-color in
+     Chromium, so the dashed outline stayed the light-theme token in dark
+     mode even though the rule already said var(--color-border). */
+  appearance: none;
+  -webkit-appearance: none;
+  font-size: 0.82rem;
+  line-height: 1.6;
+  font-weight: 600;
+  color: var(--color-accent);
+  background: none;
+  border: 0.0625rem dashed var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 0.3125rem 0.5625rem;
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+.skill-card-more[hidden] { display: none; }
+.skill-card:hover .skill-card-more,
+.skill-card:has(:focus-visible) .skill-card-more {
+  border-color: var(--color-accent);
+  background: var(--color-surface-2);
+}
+
+/* The revealed summary, collapsed mode. Negative insets put its border
+   exactly where the card's own border is, so it reads as the same card
+   rather than a box inside a box. min-height takes whichever is larger of
+   the uniform floor (see --skill-detail-min above) and the card's own box,
+   so a reveal is never smaller than the card it covers and never smaller
+   than its siblings' reveals. Growing past the floor is free: the panel is
+   out of flow, so a taller one overlays the row below rather than
+   displacing it.
+
+   pointer-events stay off so a click always lands on the toggle
+   underneath, which is what makes click-to-pin behave the same way
+   whether or not the panel happens to be showing already. */
+.skill-card-detail {
+  position: absolute;
+  top: -0.0625rem;
+  left: -0.0625rem;
+  right: -0.0625rem;
+  min-height: max(var(--skill-detail-min), calc(100% + 0.125rem));
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1.5rem;
+  background: var(--color-surface);
+  border: 0.0625rem solid var(--color-accent);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity var(--transition-fast), visibility var(--transition-fast);
+}
+.skill-card-detail .skill-card-head { margin-bottom: 0.125rem; }
+/* Pinned to the bottom so a group with fewer items puts its slack between
+   the sentence and the tags instead of leaving a ragged gap under them.
+   This is what makes equal-size boxes look intentional in both modes. */
+.skill-card-detail .skill-tags { margin-top: auto; }
+
+/* Hover is gated behind a real pointer so a tap on a touchscreen doesn't
+   leave a card stuck in a phantom hover state — there, the .is-open
+   toggle below is the only reveal. */
+@media (hover: hover) and (pointer: fine) {
+  .skill-card:hover { z-index: 3; border-color: var(--color-accent); }
+  .skill-card:hover .skill-card-detail { opacity: 1; visibility: visible; }
+}
+/* :focus-visible, not :focus-within. A mouse click focuses the control it
+   landed on, and with :focus-within that focus outlived the click — so
+   clicking a pinned card shut left the panel on screen anyway, and the
+   second click read as a no-op. :focus-visible is the keyboard-focus half
+   of focus and nothing else, which is exactly the half that should preview:
+   a keyboard visitor has no hover to preview with, a mouse visitor does. */
+.skill-card:has(:focus-visible),
+.skill-card.is-open { z-index: 3; border-color: var(--color-accent); }
+.skill-card:has(:focus-visible) .skill-card-detail,
+.skill-card.is-open .skill-card-detail { opacity: 1; visibility: visible; }
+
+/* A card the visitor has just clicked shut. Without this the second click
+   would still look like a no-op: the pointer has not moved, so :hover goes
+   on revealing the panel the instant .is-open comes off — and for a
+   keyboard visitor pressing Space, so does :focus-visible. These rules win
+   on source order alone (same specificity as the two above, declared after
+   them). main.js drops the class the next time the pointer or the keyboard
+   arrives at the card, so the class scopes the dismissal to the gesture
+   that asked for it and nothing more. */
+.skill-card.is-dismissed { z-index: auto; border-color: var(--color-border); }
+.skill-card.is-dismissed .skill-card-detail { opacity: 0; visibility: hidden; }
+.skill-card.is-dismissed .skill-card-more {
+  border-color: var(--color-border);
+  background: none;
+}
+
+/* --- Expanded mode: every card shows its summary at once ------------- */
+
+/* Back into normal flow. Without this the nine panels would all be
+   absolutely positioned at once, overlapping their neighbours and
+   overflowing the grid while the cards stayed at collapsed height. */
+.skills-grid.is-expanded-all .skill-card-detail {
+  position: static;
+  height: auto;
+  min-height: 0;
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  border: 0;
+  box-shadow: none;
+  background: none;
+  /* The face above already carries the category and level, so the panel's
+     own copy would be a duplicate heading. */
+  padding: 0 1.5rem 1.5rem;
+  gap: 0.875rem;
+}
+.skills-grid.is-expanded-all .skill-card-detail-head { display: none; }
+/* The panel right below now lists every item, so a four-chip preview of
+   the same list would just be the first four of them twice — and the
+   "and N more" control inside it would point at something already open. */
+.skills-grid.is-expanded-all .skill-tags-preview { display: none; }
+/* Nine dense cards at once is a lot of text, so the expanded state gets
+   more air than the collapsed one: a looser sentence. The summary lives
+   only in this panel — there is no face copy to hide. */
+.skills-grid.is-expanded-all .skill-achievement { line-height: 1.7; }
+.skills-grid.is-expanded-all .skill-card-toggle {
+  gap: 0.875rem;
+  padding-bottom: 1rem;
+  cursor: default;
+}
+/* Grid stretch equalises the row; the card must not fight it with its own
+   height, and the tag list takes up the slack at the bottom so every card
+   in a row ends flush. Rows go back to sizing themselves independently:
+   equalising all three against the tallest is right for nine one-line
+   summaries but not for nine full ones, where it was tried and left well
+   over 100px of visible void inside the shortest card. */
+.skills-grid.is-expanded-all { grid-auto-rows: auto; }
+.skills-grid.is-expanded-all .skill-card { min-height: 0; }
+.skills-grid.is-expanded-all .skill-card-toggle { flex: none; }
+.skills-grid.is-expanded-all .skill-card-detail .skill-tags { margin-top: auto; }
+
+@media (max-width: 62rem) {
+  .skills-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 40rem) {
+  .skills-grid { grid-template-columns: minmax(0, 1fr); }
+}
+
+.skill-achievement { color: var(--color-text-muted); font-size: 0.88rem; margin: 0; }
+.skill-level {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.1875rem 0.5625rem;
+  border-radius: 62.4375rem;
+  background: var(--color-surface-2);
+  color: var(--color-text-faint);
+}
+.skill-level-Expert { color: var(--color-primary-strong); background: rgba(161, 98, 7, 0.14); }
+.skill-level-Advanced { color: var(--color-text-muted); background: var(--color-surface-2); }
+.skill-tags { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.skill-tags li {
+  font-size: 0.82rem;
+  color: var(--color-text-muted);
+  background: var(--color-surface-2);
+  border-radius: var(--radius-sm);
+  padding: 0.375rem 0.625rem;
+  /* flex-wrap only moves a chip to the next line; it cannot shrink one that
+     is wider than the card on its own, which silently cut the tail off the
+     longest label. These two let such a chip wrap inside itself instead. */
+  max-width: 100%;
+  overflow-wrap: break-word;
+}
+
+/* ---------------------------------------------------------------------
+   Course learning path — the three rungs on /courses
+
+   Bucketed from each course's own Level (models.Course.Track), so a course
+   added or re-levelled in the admin console lands on the right rung and a
+   rung with no courses in it renders nothing at all.
+--------------------------------------------------------------------- */
+.track {
+  display: grid;
+  grid-template-columns: minmax(0, 18rem) minmax(0, 1fr);
+  gap: 1.5rem 2.5rem;
+  padding: 1.5rem 0;
+  border-top: 0.0625rem solid var(--color-border);
+}
+.track:last-child { border-bottom: 0.0625rem solid var(--color-border); }
+.track-step {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-accent);
+  margin-bottom: 0.375rem;
+}
+.track-head h3 { font-size: 1.1rem; margin-bottom: 0.375rem; }
+.track-head p { color: var(--color-text-muted); font-size: 0.9rem; }
+.track-list { display: flex; flex-direction: column; gap: 0.75rem; }
+.track-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem 0.75rem;
+}
+.track-list a { font-weight: 600; }
+.track-list a:hover { color: var(--color-accent); }
+.track-level {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-faint);
+  background: var(--color-surface-2);
+  border-radius: var(--radius-sm);
+  padding: 0.1875rem 0.5rem;
+}
+@media (max-width: 48rem) {
+  .track { grid-template-columns: minmax(0, 1fr); gap: 1rem; }
+}
+
+/* Timeline */
+.timeline { display: flex; flex-direction: column; gap: 2rem; }
+.timeline-item {
+  display: grid;
+  grid-template-columns: 9.375rem 1fr;
+  gap: 1.5rem;
+  padding-bottom: 2rem;
+  border-bottom: 0.0625rem solid var(--color-border);
+}
+.timeline-item:last-child { border-bottom: none; padding-bottom: 0; }
+.timeline-dates { color: var(--color-text-faint); font-size: 0.88rem; font-weight: 600; }
+.timeline-body h3 { font-size: 1.15rem; margin-bottom: 0.25rem; }
+.timeline-company { color: var(--color-primary-strong); font-weight: 600; font-size: 0.92rem; margin-bottom: 0.75rem; }
+.timeline-body ul { display: flex; flex-direction: column; gap: 0.5rem; }
+.timeline-body li {
+  color: var(--color-text-muted);
+  font-size: 0.94rem;
+  padding-left: 1.125rem;
+  position: relative;
+}
+.timeline-body li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.55em;
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: 50%;
+  background: var(--color-accent);
+}
+@media (max-width: 640px) { .timeline-item { grid-template-columns: 1fr; gap: 0.375rem; } }
+
+.education-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(16.25rem, 1fr)); gap: 1.25rem; }
+.education-item { background: var(--color-surface); border: 0.0625rem solid var(--color-border); border-radius: var(--radius-md); padding: 1.375rem; }
+.education-item h3 { font-size: 1.05rem; margin-bottom: 0.375rem; }
+.education-item p { color: var(--color-text-muted); font-size: 0.92rem; }
+.education-years { color: var(--color-text-faint); margin-top: 0.25rem; }
+
+/* Certifications and Speaking & publications on /about. One list style for
+   both: they are the same shape of entry (a name, an attribution line, and
+   a row of small facts), so they read as a pair rather than two unrelated
+   sections. A single column rather than the education grid, because these
+   lists grow over time and a scannable vertical list stays readable at
+   twenty entries where a card grid stops being one. */
+.credential-list { display: flex; flex-direction: column; gap: 0.75rem; }
+.credential-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem 1.5rem;
+  background: var(--color-surface);
+  border: 0.0625rem solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 1.125rem 1.375rem;
+}
+.credential-main { min-width: 0; }
+.credential-item h3 { font-size: 1.02rem; margin: 0; }
+.credential-issuer { color: var(--color-text-muted); font-size: 0.92rem; margin: 0.25rem 0 0; }
+/* Wraps instead of overflowing when an entry carries every optional field. */
+.credential-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.375rem 0.875rem;
+  color: var(--color-text-faint);
+  font-size: 0.85rem;
+  margin: 0;
+}
+.credential-kind {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-muted);
+  background: var(--color-surface-2);
+  border-radius: 62.4375rem;
+  padding: 0.1875rem 0.5625rem;
+}
+
+/* ---------------------------------------------------------------------
+   Consultancy / Contact
+--------------------------------------------------------------------- */
+.article-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(16.25rem, 1fr)); gap: 1.25rem; }
+.article-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 1rem;
+  background: var(--color-surface);
+  border: 0.0625rem solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 1.375rem;
+  box-shadow: var(--shadow-sm);
+  transition: transform var(--transition-fast), border-color var(--transition-fast);
+}
+.article-card:hover { transform: translateY(-0.1875rem); border-color: var(--color-accent); }
+.article-card h3 { font-size: 1.05rem; margin-bottom: 0.5rem; }
+.article-card-body p { color: var(--color-text-muted); font-size: 0.92rem; }
+.article-card-meta { color: var(--color-primary-strong); font-size: 0.82rem; font-weight: 600; }
+
+/* Articles listing: search/filter/sort bar, a vertical list (not a grid),
+   pagination, and per-article tags + thumbs-up count. */
+.article-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.625rem;
+  align-items: center;
+  margin-bottom: 1.75rem;
+}
+.article-search {
+  flex: 1;
+  min-width: 11.25rem;
+  padding: 0.625rem 0.875rem;
+  border-radius: var(--radius-sm);
+  border: 0.0625rem solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  font-size: 0.92rem;
+}
+.article-select {
+  padding: 0.625rem 0.75rem;
+  border-radius: var(--radius-sm);
+  border: 0.0625rem solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  font-size: 0.9rem;
+}
+.article-result-count { color: var(--color-text-faint); font-size: 0.86rem; margin-bottom: 1rem; }
+
+.article-list { display: flex; flex-direction: column; gap: 0.875rem; margin-bottom: 2rem; }
+.article-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1.25rem;
+  background: var(--color-surface);
+  border: 0.0625rem solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 1.375rem 1.5rem;
+  transition: border-color var(--transition-fast);
+}
+.article-row:hover { border-color: var(--color-accent); }
+.article-row-link {
+  display: flex;
+  align-items: flex-start;
+  gap: 1.25rem;
+  flex: 1;
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+}
+.article-row h3 { font-size: 1.08rem; margin-bottom: 0.5rem; }
+.article-row-body p { color: var(--color-text-muted); font-size: 0.92rem; margin-bottom: 0.625rem; }
+.article-row-meta { display: flex; flex-wrap: wrap; gap: 0.625rem; align-items: center; font-size: 0.82rem; color: var(--color-text-faint); }
+.tag-chip {
+  background: var(--color-surface-2);
+  color: var(--color-primary-strong);
+  padding: 0.1875rem 0.625rem;
+  border-radius: 62.4375rem;
+  font-weight: 600;
+  font-size: 0.76rem;
+}
+
+/* ---------------------------------------------------------------------
+   Topic nav on /articles — the blog's topic clusters, made visible
+
+   The tags were only ever reachable through a <select>, which meant a
+   reader couldn't see what the archive goes deep on and a crawler never
+   found the per-topic pages. Same .tag-chip as elsewhere, as an anchor,
+   with a count and an active state.
+--------------------------------------------------------------------- */
+.topic-nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+.topic-nav-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text-faint);
+  margin-right: 0.25rem;
+}
+a.tag-chip {
+  border: 0.0625rem solid transparent;
+  transition: border-color var(--transition-fast), color var(--transition-fast);
+}
+a.tag-chip:hover { border-color: var(--color-accent); color: var(--color-accent); }
+.tag-chip-active {
+  background: var(--color-primary-strong);
+  color: var(--color-surface);
+}
+a.tag-chip-active:hover { color: var(--color-surface); border-color: var(--color-primary-strong); }
+.tag-chip-count { opacity: 0.6; font-weight: 700; }
+
+.article-row-votes { flex-shrink: 0; }
+.thumbs-count {
+  display: inline-flex;
+  align-items: center;
+  font: inherit;
+  font-size: 0.9rem;
+  color: var(--color-text-faint);
+  text-decoration: none;
+  white-space: nowrap;
+  background: none;
+  border: 0.0625rem solid transparent;
+  border-radius: var(--radius-sm);
+  padding: 0.25rem 0.5rem;
+  cursor: pointer;
+  transition: border-color var(--transition-fast), color var(--transition-fast);
+}
+.thumbs-count:hover:not(:disabled) { border-color: var(--color-border); color: var(--color-text); }
+.thumbs-count:disabled { cursor: default; color: var(--color-primary-strong); }
+.article-thumbs-top { margin-top: 1.125rem; }
+.article-thumbs-guest { display: inline-flex; flex-direction: column; gap: 0.625rem; }
+.article-thumbs-guest-form { display: flex; gap: 0.625rem; flex-wrap: wrap; align-items: center; }
+.article-thumbs-guest-form input { padding: 0.5rem 0.75rem; border: 0.0625rem solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-surface); color: var(--color-text); font: inherit; font-size: 0.86rem; width: 12rem; max-width: 100%; }
+
+.pagination { display: flex; justify-content: space-between; align-items: center; padding-top: 0.75rem; border-top: 0.0625rem solid var(--color-border); }
+.pagination a { color: var(--color-accent); font-weight: 600; font-size: 0.92rem; }
+.pagination a:hover { color: var(--color-accent-strong); }
+.pagination-disabled { color: var(--color-text-faint); font-size: 0.92rem; }
+.pagination-status { color: var(--color-text-faint); font-size: 0.86rem; }
+
+.article-thumbs-cta { color: var(--color-text-muted); font-size: 0.92rem; margin: 2rem 0 0.75rem; }
+.article-detail-actions { display: flex; gap: 0.875rem; flex-wrap: wrap; align-items: center; margin: 0 0 1.5rem; }
+.article-thumbs-btn:disabled { opacity: 0.7; cursor: default; }
+
+.admin-form-divider { border: none; border-top: 0.0625rem solid var(--color-border); margin: 0.5rem 0 0.25rem; }
+.admin-form-subhead { font-size: 1.05rem; margin: 0 0 0.25rem; }
+.admin-form-note { color: var(--color-text-muted); font-size: 0.88rem; margin: -0.5rem 0 0.25rem; }
+
+.how-it-works { display: flex; flex-direction: column; gap: 0.875rem; max-width: 40rem; padding-left: 1.375rem; list-style: decimal; color: var(--color-text-muted); }
+.how-it-works li { padding-left: 0.375rem; }
+.how-it-works strong { color: var(--color-text); }
+.contact-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(13.75rem, 1fr)); gap: 1.25rem; }
+.contact-card h3 { margin-bottom: 0.5rem; }
+.contact-card p { color: var(--color-text-muted); margin-bottom: 0.875rem; }
+.booking-price-line { color: var(--color-text-muted); }
+
+/* ---------------------------------------------------------------------
+   CTA
+--------------------------------------------------------------------- */
+.cta-section { text-align: center; }
+.cta-inner { max-width: 35rem; margin: 0 auto; }
+.cta-inner h2 { font-size: 1.7rem; margin-bottom: 0.75rem; }
+.cta-inner p { color: var(--color-text-muted); margin-bottom: 1.5rem; }
+.cta-inner .hero-actions { justify-content: center; }
+
+/* ---------------------------------------------------------------------
+   Booking
+--------------------------------------------------------------------- */
+.days-scroller {
+  display: flex;
+  gap: 1rem;
+  overflow-x: auto;
+  padding-bottom: 0.75rem;
+  margin-bottom: 1.75rem;
+}
+.day-column {
+  flex: 0 0 10rem;
+  background: var(--color-surface);
+  border: 0.0625rem solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 1rem;
+}
+.day-column h3 { font-size: 0.88rem; margin-bottom: 0.75rem; color: var(--color-text-muted); }
+.slot-list { display: flex; flex-direction: column; gap: 0.5rem; }
+.slot-list form { display: contents; }
+.slot-btn { width: 100%; }
+.slot-btn {
+  background: var(--color-surface-2);
+  border: 0.0625rem solid var(--color-border);
+  color: var(--color-text);
+  border-radius: var(--radius-sm);
+  padding: 0.5625rem 0.5rem;
+  font-size: 0.86rem;
+  font-weight: 600;
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+}
+.slot-btn:hover:not(:disabled) { border-color: var(--color-accent); }
+.slot-btn.selected { background: var(--color-accent); color: var(--color-accent-ink); border-color: var(--color-accent); }
+.slot-btn.disabled, .slot-btn:disabled { opacity: 0.35; cursor: not-allowed; text-decoration: line-through; }
+
+.booking-contact {
+  max-width: 28.75rem;
+  background: var(--color-surface);
+  border: 0.0625rem solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.booking-contact[hidden] { display: none; }
+
+/* ---------------------------------------------------------------------
+   Forms
+--------------------------------------------------------------------- */
+label { display: flex; flex-direction: column; gap: 0.375rem; font-size: 0.9rem; font-weight: 600; color: var(--color-text-muted); }
+.optional { font-weight: 400; color: var(--color-text-faint); }
+input, textarea, select {
+  font-family: inherit;
+  font-size: 0.95rem;
+  padding: 0.6875rem 0.875rem;
+  border-radius: var(--radius-sm);
+  border: 0.0625rem solid var(--color-border);
+  background: var(--color-surface-2);
+  color: var(--color-text);
+}
+input:focus, textarea:focus, select:focus {
+  outline: none;
+  border-color: var(--color-accent);
+}
+.checkbox-label { flex-direction: row; align-items: center; gap: 0.625rem; }
+.checkbox-label input { width: auto; }
+
+.admin-form { display: flex; flex-direction: column; gap: 1.125rem; max-width: 40rem; }
+.admin-subsection-title { margin-top: 2.5rem; }
+.quiz-form { display: flex; flex-direction: column; gap: 1.25rem; max-width: 45rem; }
+.quiz-question legend { white-space: normal; font-size: 1rem; color: var(--color-text); }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1.125rem; }
+.form-actions { display: flex; gap: 0.75rem; }
+@media (max-width: 560px) { .form-row { grid-template-columns: 1fr; } }
+
+.form-fieldset {
+  border: 0.0625rem solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 0.875rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+.form-fieldset legend { padding: 0 0.375rem; font-size: 0.9rem; font-weight: 600; color: var(--color-text-muted); }
+.promo-course-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  max-height: 13.75rem;
+  overflow-y: auto;
+  padding-top: 0.25rem;
+}
+
+/* Login / signup */
+.auth-container { max-width: 26.25rem; }
+.btn-google {
+  background: var(--color-surface);
+  color: var(--color-text);
+  border: 0.0625rem solid var(--color-border);
+  gap: 0.625rem;
+  width: 100%;
+}
+.btn-google:hover { border-color: var(--color-accent); background: var(--color-surface-2); }
+.auth-tabs { display: flex; gap: 0.25rem; background: var(--color-surface-2); border-radius: var(--radius-sm); padding: 0.25rem; margin-bottom: 1.5rem; }
+.auth-tab {
+  flex: 1;
+  background: none;
+  border: none;
+  padding: 0.625rem;
+  border-radius: calc(var(--radius-sm) - 0.125rem);
+  font-weight: 600;
+  color: var(--color-text-muted);
+  font-size: 0.92rem;
+}
+.auth-tab.active { background: var(--color-surface); color: var(--color-text); box-shadow: var(--shadow-sm); }
+.auth-form { display: flex; flex-direction: column; gap: 1rem; }
+.auth-form[hidden] { display: none; }
+
+.alert { padding: 0.875rem 1.125rem; border-radius: var(--radius-sm); margin-bottom: 1.5rem; font-size: 0.92rem; }
+.alert-success { background: var(--color-success-bg); color: var(--color-success-text); }
+.alert-error { background: var(--color-error-bg); color: var(--color-error-text); }
+
+.reschedule-notice {
+  padding: 1rem 1.25rem;
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-alt);
+  border: 0.0625rem solid var(--color-border);
+  margin-bottom: 1rem;
+}
+.reschedule-notice p { margin: 0 0 0.75rem; }
+.reschedule-notice-actions { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+
+.message-list { display: flex; flex-direction: column; gap: 0.875rem; }
+.message-card {
+  padding: 1rem 1.25rem;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  border: 0.0625rem solid var(--color-border);
+}
+.message-when { font-size: 0.8rem; color: var(--color-text-faint); margin: 0 0 0.5rem; }
+.message-body { margin: 0; white-space: pre-wrap; line-height: 1.6; }
+
+/* ---------------------------------------------------------------------
+   Admin console — vertical sidebar shell
+--------------------------------------------------------------------- */
+.admin-body { background: var(--color-bg-alt); }
+.admin-shell { display: flex; min-height: 100vh; }
+
+.admin-sidebar {
+  width: 14.5rem;
+  flex-shrink: 0;
+  background: var(--color-surface);
+  border-right: 0.0625rem solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+}
+.admin-sidebar-brand {
+  display: flex;
+  flex-direction: column;
+  padding: 1.375rem 1.25rem 1.125rem;
+  font-family: var(--font-serif);
+  font-weight: 600;
+  font-size: 1.15rem;
+  color: var(--color-text);
+  border-bottom: 0.0625rem solid var(--color-border);
+}
+.admin-sidebar-brand span {
+  font-family: var(--font-sans);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-primary-strong);
+  margin-top: 0.125rem;
+}
+.admin-sidebar-nav { display: flex; flex-direction: column; gap: 0.125rem; padding: 0.875rem 0.75rem; flex-grow: 1; overflow-y: auto; }
+.admin-sidebar-nav a {
+  display: flex;
+  align-items: center;
+  gap: 0.6875rem;
+  padding: 0.625rem 0.75rem;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-muted);
+  font-size: 0.92rem;
+  font-weight: 500;
+}
+.admin-sidebar-nav a svg { width: 1.0625rem; height: 1.0625rem; flex-shrink: 0; opacity: 0.8; }
+.admin-sidebar-nav a:hover { background: var(--color-surface-2); color: var(--color-text); }
+.admin-sidebar-nav a.active { background: var(--color-surface-2); color: var(--color-primary-strong); font-weight: 600; }
+.admin-sidebar-nav a.active svg { opacity: 1; }
+.admin-sidebar-logout { padding: 0.875rem 1.25rem; border-top: 0.0625rem solid var(--color-border); }
+.admin-sidebar-logout button {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--color-text-faint);
+  font-size: 0.86rem;
+  font-family: var(--font-sans);
+  cursor: pointer;
+}
+.admin-sidebar-logout button:hover { color: var(--color-text); }
+.admin-sidebar-backdrop { display: none; }
+
+.admin-main { flex-grow: 1; min-width: 0; display: flex; flex-direction: column; }
+.admin-topbar {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  height: 3.5rem;
+  padding: 0 1.5rem;
+  background: var(--color-surface);
+  border-bottom: 0.0625rem solid var(--color-border);
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+.admin-topbar-title { font-weight: 600; font-size: 0.95rem; color: var(--color-text); }
+.admin-topbar-preview { margin-left: auto; font-size: 0.85rem; color: var(--color-text-muted); }
+.admin-topbar-preview:hover { color: var(--color-accent); }
+.admin-topbar-view-site { font-size: 0.85rem; color: var(--color-text-muted); }
+.admin-topbar-view-site:hover { color: var(--color-accent); }
+.admin-sidebar-toggle { display: none; flex-direction: column; gap: 0.25rem; background: none; border: none; padding: 0.25rem; cursor: pointer; }
+.admin-sidebar-toggle span { width: 1.25rem; height: 0.125rem; background: var(--color-text); border-radius: 0.125rem; }
+
+.admin-content { flex-grow: 1; padding: 2rem 1.5rem 3.5rem; }
+.admin-content .container { max-width: 68.75rem; margin: 0; padding: 0; }
+.admin-content h1 { margin-bottom: 1.5rem; }
+
+@media (max-width: 860px) {
+  .admin-sidebar-toggle { display: flex; }
+  .admin-sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    z-index: 30;
+    transform: translateX(-100%);
+    transition: transform 0.2s ease;
+    box-shadow: 0.5rem 0 1.5rem rgba(0, 0, 0, 0.18);
+  }
+  .admin-sidebar.open { transform: translateX(0); }
+  .admin-sidebar-backdrop:not([hidden]) {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    z-index: 25;
+  }
+  .admin-content { padding: 1.5rem 1rem 3rem; }
+}
+
+.stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: 1rem; margin-bottom: 3rem; }
+.stat-card { text-align: center; }
+.stat-number { display: block; font-size: 2rem; font-weight: 700; color: var(--color-primary-strong); }
+.stat-label { color: var(--color-text-muted); font-size: 0.88rem; }
+
+.table-scroll { overflow-x: auto; margin-bottom: 1.5rem; }
+.table-scroll .admin-table { margin-bottom: 0; }
+.admin-table { width: 100%; border-collapse: collapse; margin-bottom: 1.5rem; }
+.admin-table th, .admin-table td {
+  text-align: left;
+  padding: 0.75rem 0.875rem;
+  border-bottom: 0.0625rem solid var(--color-border);
+  font-size: 0.92rem;
+}
+.admin-table th { color: var(--color-text-faint); font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em; }
+.admin-table-actions { display: flex; gap: 0.875rem; align-items: center; }
+.booking-message { max-width: 15rem; color: var(--color-text-muted); }
+
+.status-badge {
+  padding: 0.1875rem 0.625rem;
+  border-radius: 62.4375rem;
+  font-size: 0.76rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.status-pending_payment { background: rgba(161, 98, 7, 0.16); color: var(--color-primary-strong); }
+.status-confirmed { background: rgba(34, 197, 94, 0.16); color: #15803d; }
+.status-cancelled { background: rgba(220, 38, 38, 0.14); color: #dc2626; }
+
+/* ---------------------------------------------------------------------
+   Theme toggle
+--------------------------------------------------------------------- */
+.theme-toggle {
+  background: var(--color-surface-2);
+  border: 0.0625rem solid var(--color-border);
+  color: var(--color-text);
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: var(--radius-sm);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+}
+.theme-toggle:hover { border-color: var(--color-accent); }
+
+/* ---------------------------------------------------------------------
+   Search
+--------------------------------------------------------------------- */
+.search-form { display: flex; gap: 0.75rem; max-width: 30rem; margin-top: 1.25rem; }
+.search-form input { flex: 1; }
+.search-results { display: flex; flex-direction: column; gap: 1rem; margin-bottom: 2rem; }
+.search-results li { list-style: none; }
+.search-results a { font-weight: 700; font-size: 1.05rem; color: var(--color-accent); }
+.search-results p { color: var(--color-text-muted); margin-top: 0.25rem; }
+
+/* ---------------------------------------------------------------------
+   Legal pages
+--------------------------------------------------------------------- */
+.legal-content { max-width: 47.5rem; }
+.legal-content h2 { font-size: 1.2rem; margin: 2rem 0 0.625rem; }
+.legal-content h2:first-child { margin-top: 0; }
+.legal-content p { color: var(--color-text-muted); margin-bottom: 0.75rem; line-height: 1.7; }
+.legal-content ul { margin: 0 0 0.75rem; padding-left: 1.25rem; list-style: disc; }
+.legal-content li { color: var(--color-text-muted); margin-bottom: 0.375rem; line-height: 1.6; }
+.legal-content a { color: var(--color-accent); }
+.legal-content code {
+  background: var(--color-surface-2);
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.25rem;
+  font-size: 0.9em;
+}
+
+/* ---------------------------------------------------------------------
+   Cookie banner
+--------------------------------------------------------------------- */
+.cookie-banner {
+  position: fixed;
+  left: 1rem;
+  right: 1rem;
+  bottom: 1rem;
+  max-width: 40rem;
+  margin: 0 auto;
+  background: var(--color-surface);
+  border: 0.0625rem solid var(--color-border);
+  box-shadow: var(--shadow-md);
+  border-radius: var(--radius-md);
+  padding: 1.125rem 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  z-index: 80;
+}
+.cookie-banner[hidden] { display: none; }
+.cookie-banner p { margin: 0; font-size: 0.88rem; color: var(--color-text-muted); flex: 1; min-width: 13.75rem; }
+.cookie-banner a { color: var(--color-accent); }
+.btn-sm { padding: 0.5rem 1rem; font-size: 0.86rem; }
+
+/* ---------------------------------------------------------------------
+   Scroll progress, back-to-top
+--------------------------------------------------------------------- */
+.scroll-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 0.1875rem;
+  width: 0%;
+  background: var(--color-accent);
+  z-index: 100;
+  transition: width 0.1s linear;
+}
+
+.back-to-top {
+  position: fixed;
+  right: 1.25rem;
+  bottom: 1.25rem;
+  width: 2.625rem;
+  height: 2.625rem;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  border: 0.0625rem solid var(--color-border);
+  color: var(--color-text);
+  font-size: 1.1rem;
+  box-shadow: var(--shadow-sm);
+  z-index: 70;
+}
+.back-to-top[hidden] { display: none; }
+.back-to-top:hover { border-color: var(--color-accent); }
+
+/* ---------------------------------------------------------------------
+   FAQ
+--------------------------------------------------------------------- */
+.faq-list { display: flex; flex-direction: column; gap: 0.25rem; max-width: 47.5rem; }
+.faq-item {
+  border-bottom: 0.0625rem solid var(--color-border);
+  padding: 1rem 0;
+}
+.faq-item summary {
+  font-weight: 600;
+  font-size: 1.02rem;
+  list-style: none;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.faq-item summary::-webkit-details-marker { display: none; }
+.faq-item summary::after {
+  content: "+";
+  font-size: 1.3rem;
+  color: var(--color-accent);
+  margin-left: 1rem;
+  transition: transform var(--transition-fast);
+}
+.faq-item[open] summary::after { transform: rotate(45deg); }
+.faq-item p { color: var(--color-text-muted); margin-top: 0.75rem; }
+.faq-item a { color: var(--color-accent); }
+
+/* ---------------------------------------------------------------------
+   Password visibility toggle, copy buttons, loading state
+--------------------------------------------------------------------- */
+.password-field { position: relative; display: flex; }
+.password-field input { flex: 1; padding-right: 4.375rem; }
+.password-toggle {
+  position: absolute;
+  right: 0.375rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: var(--color-accent);
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 0.375rem 0.5rem;
+}
+
+.copy-btn.copied { border-color: var(--color-accent); color: var(--color-accent); }
+
+.btn[data-loading-text][aria-busy="true"] { opacity: 0.75; pointer-events: none; }
+
+/* ---------------------------------------------------------------------
+   Paid course purchase box
+--------------------------------------------------------------------- */
+.purchase-box {
+  max-width: 26.25rem;
+  background: var(--color-surface);
+  border: 0.0625rem solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 1.5rem;
+  margin-top: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+}
+.purchase-box-title { font-weight: 700; font-size: 1.1rem; }
+.purchase-box-sub { color: var(--color-text-muted); font-size: 0.88rem; margin-top: -0.5rem; }
+
+/* ---------------------------------------------------------------------
+   Consultancy pricing tiers
+--------------------------------------------------------------------- */
+.pricing-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(17.5rem, 1fr));
+  gap: 1.5rem;
+  /* Stretch, not start: now that every tier publishes a full "what's
+     included" outline the three differ a lot in length, and equal-height
+     cards with their CTAs on one line is what makes them comparable at a
+     glance instead of looking like three unrelated blocks. */
+  align-items: stretch;
+}
+.pricing-card {
+  background: var(--color-surface);
+  border: 0.0625rem solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 1.75rem;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  color: inherit;
+  text-decoration: none;
+}
+.pricing-card:hover { border-color: var(--color-accent); }
+.pricing-card:focus-visible {
+  outline: 0.125rem solid var(--color-accent);
+  outline-offset: 0.125rem;
+}
+.pricing-card-badge {
+  align-self: flex-start;
+  background: var(--color-primary);
+  color: var(--color-primary-ink);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  padding: 0.25rem 0.625rem;
+  border-radius: 999px;
+}
+.pricing-card-title { font-size: 1.25rem; margin: 0; }
+.pricing-card-price { font-size: 1.5rem; font-weight: 700; margin: 0; }
+.pricing-card-price-note { font-size: 0.85rem; font-weight: 500; color: var(--color-text-muted); }
+.pricing-card-sub { color: var(--color-text-muted); font-size: 0.92rem; margin: 0; }
+/* A quieter badge than .pricing-card-badge's solid accent fill, for a tier
+   that needs labelling without competing with the featured one. */
+.pricing-card-badge-muted {
+  background: var(--color-surface-2);
+  color: var(--color-text-muted);
+  border: 0.0625rem solid var(--color-border);
+}
+.pricing-card-list { display: flex; flex-direction: column; gap: 0.5rem; padding-left: 1.125rem; list-style: disc; color: var(--color-text-muted); font-size: 0.9rem; }
+.pricing-card-list li { padding-left: 0.125rem; }
+/* The "what's included" outline leads each line with its own label
+   (Scope / You get / Cadence / Price) so a tier is scannable without
+   having to email first to find out what it covers. */
+.pricing-card-list strong { color: var(--color-text); font-weight: 600; }
+/* Pins each tier's CTA to the bottom of its (now equal-height) card. */
+.pricing-card > .btn { margin-top: auto; }
+.pricing-card .purchase-box { max-width: none; margin-top: 0.25rem; }
+
+/* ---------------------------------------------------------------------
+   Print
+--------------------------------------------------------------------- */
+@media print {
+  .site-header, .site-footer, .cookie-banner,
+  .back-to-top, .scroll-progress, .no-print, .theme-toggle, .nav-toggle,
+  .side-panel, .side-panel-backdrop, .page-loader {
+    display: none !important;
+  }
+  body { background: #fff; color: #000; }
+  a { color: #000; text-decoration: underline; }
+  .section { padding: 1rem 0; }
+  /* On paper there's no hover, no tap and no Expand all button, so every
+     skill's summary has to be in the flow and visible — otherwise a
+     printed About page loses it. The panel keeps its own heading here
+     because the card face it would duplicate is hidden. */
+  .skills-toolbar { display: none !important; }
+  .skills-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .skill-card-toggle, .skill-tags-preview { display: none !important; }
+  .skill-card { min-height: 0; }
+  .skill-card-detail {
+    position: static;
+    height: auto;
+    min-height: 0;
+    opacity: 1;
+    visibility: visible;
+    border: 0;
+    box-shadow: none;
+  }
+}

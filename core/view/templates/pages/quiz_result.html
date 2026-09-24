@@ -1,0 +1,27 @@
+{{define "content"}}
+<section class="section page-hero">
+  <div class="container">
+    <p class="eyebrow"><a href="/courses/{{.Course.Slug}}/learn">← Back to course</a></p>
+    <h1>{{if .Attempt.Passed}}You passed!{{else}}Not quite there yet{{end}}</h1>
+    <p class="hero-subtitle">{{.Course.Title}} — you scored {{.Attempt.CorrectAnswers}} / {{.Attempt.TotalQuestions}} ({{.Attempt.ScorePercent}}%). A score of 70% or higher earns a completion certificate.</p>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    {{if .Attempt.Passed}}
+    <div class="alert alert-success">Congratulations — your completion certificate is ready.</div>
+    <div class="form-actions">
+      <a class="btn btn-primary" href="/courses/{{.Course.Slug}}/certificate">Download Certificate (PDF)</a>
+      <a class="btn btn-secondary" href="/courses/{{.Course.Slug}}/learn">Back to course</a>
+    </div>
+    {{else}}
+    <div class="alert alert-error">You didn't reach 70% this time — review the course and give it another go whenever you're ready.</div>
+    <div class="form-actions">
+      <a class="btn btn-primary" href="/courses/{{.Course.Slug}}/quiz">Retake the Quiz</a>
+      <a class="btn btn-secondary" href="/courses/{{.Course.Slug}}/learn">Back to course</a>
+    </div>
+    {{end}}
+  </div>
+</section>
+{{end}}

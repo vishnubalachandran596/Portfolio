@@ -1,0 +1,40 @@
+{{define "content"}}
+<section class="section">
+  <div class="container">
+    <h1>{{if .IsNew}}Add Experience{{else}}Edit Experience{{end}}</h1>
+    {{if .Error}}<div class="alert alert-error">{{.Error}}</div>{{end}}
+    <form method="POST" action="{{if .IsNew}}/admin/experience/new{{else}}/admin/experience/{{.Experience.ID}}/edit{{end}}" class="admin-form">
+      <div class="form-row">
+        <label>Company
+          <input type="text" name="company" value="{{.Experience.Company}}" required>
+        </label>
+        <label>Role
+          <input type="text" name="role" value="{{.Experience.Role}}" required>
+        </label>
+      </div>
+      <label>Location <span class="optional">optional</span>
+        <input type="text" name="location" value="{{.Experience.Location}}">
+      </label>
+      <div class="form-row">
+        <label>Start date <span class="optional">e.g. "Jan 2022"</span>
+          <input type="text" name="start_date" value="{{.Experience.StartDate}}">
+        </label>
+        <label>End date <span class="optional">leave blank for "Present"</span>
+          <input type="text" name="end_date" value="{{.Experience.EndDate}}">
+        </label>
+      </div>
+      <label>Bullets <span class="optional">one per line</span>
+        <textarea name="bullets" rows="6">{{range $i, $b := .Experience.Bullets}}{{if $i}}
+{{end}}{{$b}}{{end}}</textarea>
+      </label>
+      <label>Sort order
+        <input type="number" name="sort_order" value="{{.Experience.SortOrder}}">
+      </label>
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary" data-loading-text="Saving…">Save Experience</button>
+        <a class="btn btn-secondary" href="/admin/experience">Cancel</a>
+      </div>
+    </form>
+  </div>
+</section>
+{{end}}

@@ -1,0 +1,83 @@
+{{define "content"}}
+<section class="section">
+  <div class="container">
+    <h1>{{if .IsNew}}New Course{{else}}Edit Course{{end}}</h1>
+    {{if .Error}}<div class="alert alert-error">{{.Error}}</div>{{end}}
+    <form method="POST" enctype="multipart/form-data" action="{{if .IsNew}}/admin/courses/new{{else}}/admin/courses/{{.Course.ID}}/edit{{end}}" class="admin-form">
+      <label>Title
+        <input type="text" name="title" value="{{.Course.Title}}" required>
+      </label>
+      <label>Slug <span class="optional">(leave blank to auto-generate)</span>
+        <input type="text" name="slug" value="{{.Course.Slug}}">
+      </label>
+      <label>Summary <span class="optional">(one line, shown in listings)</span>
+        <input type="text" name="summary" value="{{.Course.Summary}}" maxlength="240">
+      </label>
+      <label>Description <span class="optional">(separate paragraphs with a blank line)</span>
+        <textarea name="description" rows="8">{{.Course.Description}}</textarea>
+      </label>
+      <div class="form-row">
+        <label>Level
+          <input type="text" name="level" value="{{.Course.Level}}" placeholder="Beginner / Intermediate / Advanced">
+        </label>
+        <label>Duration
+          <input type="text" name="duration" value="{{.Course.Duration}}" placeholder="e.g. 4 weeks">
+        </label>
+      </div>
+      <div class="form-row">
+        <label>Price (cents) <span class="optional">(legacy fixed price, 0 = free — unused when "Paid course" below is checked)</span>
+          <input type="number" name="price_cents" value="{{.Course.PriceCents}}" min="0">
+        </label>
+        <label>Currency
+          <input type="text" name="currency" value="{{if .Course.Currency}}{{.Course.Currency}}{{else}}USD{{end}}" maxlength="3">
+        </label>
+      </div>
+      <label>Image URL
+        <input type="url" name="image_url" value="{{.Course.ImageURL}}">
+      </label>
+      <label>Sort order
+        <input type="number" name="sort_order" value="{{.Course.SortOrder}}">
+      </label>
+      <label class="checkbox-label">
+        <input type="checkbox" name="is_published" {{if or .IsNew .Course.IsPublished}}checked{{end}}>
+        Published (visible on the public site)
+      </label>
+
+      <hr class="admin-form-divider">
+      <h2 class="admin-form-subhead">Pricing &amp; payment</h2>
+      <label class="checkbox-label">
+        <input type="checkbox" name="is_paid" {{if .Course.IsPaid}}checked{{end}}>
+        Contribute-as-you-like (shows a Razorpay contribution box; free access if the amount is left at 0)
+      </label>
+      <div class="form-row">
+        <label>Minimum contribution, USD (cents) <span class="optional">0 = fully free, e.g. 1200 = $12 minimum</span>
+          <input type="number" name="min_price_cents" value="{{.Course.MinPriceCents}}" min="0">
+        </label>
+        <label>Minimum contribution, India (paise) <span class="optional">0 = fully free, e.g. 100000 = ₹1,000 minimum</span>
+          <input type="number" name="min_price_cents_inr" value="{{.Course.MinPriceCentsINR}}" min="0">
+        </label>
+      </div>
+
+      <hr class="admin-form-divider">
+      <h2 class="admin-form-subhead">Course content</h2>
+      {{if .Course.ContentObject}}<p class="admin-form-note">This course already has a private lesson file ({{.Course.ContentObject}}). Upload a file below only if you want to replace it.</p>{{end}}
+      <label>Upload course HTML <span class="optional">(a single self-contained .html file, stored privately — leave empty to keep existing content)</span>
+        <input type="file" name="content_file" accept=".html,.htm">
+      </label>
+
+      {{if not .IsNew}}
+      <hr class="admin-form-divider">
+      <h2 class="admin-form-subhead">Notify buyers</h2>
+      <label>What changed <span class="optional">(optional — leave blank to save silently. Filling this in sends every paid buyer of this course a message, e.g. "Added a new section on X, fixed a typo in the Y example.")</span>
+        <textarea name="update_note" rows="3" placeholder="e.g. Added a new section on X, fixed a typo in the Y example."></textarea>
+      </label>
+      {{end}}
+
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary" data-loading-text="Saving…">Save Course</button>
+        <a class="btn btn-secondary" href="/admin/courses">Cancel</a>
+      </div>
+    </form>
+  </div>
+</section>
+{{end}}

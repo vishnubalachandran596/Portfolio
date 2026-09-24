@@ -1,0 +1,58 @@
+Copyright (c) 2026 Vishnu Balachandran. All rights reserved.
+
+PROPRIETARY SOURCE — VIEWING PERMITTED FOR EVALUATION ONLY
+
+This repository is published so that prospective employers, clients and
+collaborators can read and evaluate the author's work. It is not open source,
+and publication here grants no licence beyond what is stated below.
+
+GRANT
+
+You are permitted to view, read and clone this repository for the sole purpose
+of evaluating the author's engineering ability — for example as part of a
+hiring, contracting or partnership assessment. You may quote short excerpts
+when discussing the author's work, with attribution.
+
+RESTRICTIONS
+
+Except with the author's prior written permission, you may not:
+
+  1. use this software, or any part of it, for any purpose other than the
+     evaluation described above — including any personal, internal, academic,
+     commercial or production use;
+  2. copy, reproduce or redistribute this software, or any part of it, in
+     source or compiled form, by any means or on any medium;
+  3. modify, adapt, translate or create derivative works from it;
+  4. deploy, host, publish or otherwise make it (or anything derived from it)
+     available to any third party or on any network;
+  5. sell, licence, sublicence, rent, lease or otherwise transfer it, with or
+     without charge;
+  6. remove, obscure or alter this notice or any copyright, authorship or
+     attribution notice it contains;
+  7. use it to train, fine-tune or evaluate a machine-learning model, or
+     include it in any dataset used for that purpose.
+
+The written content in this repository and on the site it builds — articles,
+course material, profile and biographical text, and all associated copy — is
+likewise the author's, and is covered by the same restrictions.
+
+THIRD-PARTY COMPONENTS
+
+Dependencies declared in `go.mod` and `go.sum` are the property of their
+respective authors and remain governed by their own licences. Nothing above
+applies to them.
+
+NO WARRANTY
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHOR BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+WITH THE SOFTWARE OR ITS USE.
+
+PERMISSIONS
+
+To request any use beyond evaluation, contact Vishnu Balachandran through the
+contact form at https://www.vishnubalachandran.com/contact or the email address
+published on that site.

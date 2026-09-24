@@ -1,0 +1,193 @@
+# Functionality Reference — vishnubalachandran.com
+
+**Purpose of this document:** a complete, current inventory of every feature on this site — what a visitor, a logged-in user, and an admin can each do, and the business rules behind each flow. Written so a fresh AI agent (or a new human contributor) can read this one file and understand *what the product does* without having to read every handler first. For *how it's built* (packages, schema, request flow, deployment), see `docs/ARCHITECTURE.md`.
+
+**Keep this updated.** Whenever a route, model field, or user-facing flow changes, update the relevant section here in the same commit — this document is only useful if it stays true.
+
+---
+
+## 1. Site identity
+
+A personal site for Vishnu Balachandran — technical consultant, Java/event-driven-systems architect, 8+ years in banking/fintech (Zafin: pricing & billing platforms). Three revenue lines: **consultancy** (Architecture Review / retainer / hourly), **courses** (contribute-as-you-like), and (implicitly) **inbound credibility** from **articles/blog**. Built as a single Go binary, server-rendered, no JS framework, deployed as one Vercel serverless function, Postgres (Supabase) as the only datastore.
+
+**All visitor-facing content lives in Postgres**, edited through `/admin`, never in the git repo. A fresh clone plus migrations is an empty schema; recovering content means loading the `portfolio_seed_data.sql` snapshot from the Google Drive folder named `Portfolio` (see `docs/ARCHITECTURE.md` §11). UI labels, headings and nav stay in code.
+
+Domain: `vishnubalachandran.com`, canonical host `www.vishnubalachandran.com`. `https://www.vishnubalachandran.com/` returns 200 and is never redirected; the apex and `home.` 301 once to that www URL (HTTP and HTTPS). A page-group subdomain scheme also exists (`about.`, `courses.`, `consultancy.`, `articles.`, `contact.`, `admin.`) — see `core/middleware/domain.go` — active whenever the `DOMAIN` env var is set; www remains the path-based canonical host even then. A bare path-based site otherwise.
+
+---
+
+## 2. Public (unauthenticated visitor) functionality
+
+### Home (`GET /`)
+Hero (headshot from `Profile.PhotoURL`, name, title, subtitle) with a deliberate **three-rung CTA ladder** — "Work With Me" → Consultancy as the one primary button, "Background & Resume" → About as the secondary (the recruiter path), and a plain text link to Courses third — followed by a **"Previously at" strip** of every employer's name straight from `experiences`, so a visitor registers the credibility without clicking through to About.
+
+Then "What I bring": the professional summary (`Profile.Summary`, the same field About renders — not hardcoded copy) followed immediately by the skills grid. Nothing else sits in that section: no proof-point cards, no extra lead paragraphs, no "what I do" tiles. The heading row still carries a "Full background" link to About. The "Previously at" strip stays in the hero, not here.
+
+Below that, a CTA block into Consultancy/Courses and a "Technical writing" teaser of the latest published blog posts linking to `/articles`.
+
+**Login is deliberately not in the primary nav** — it's in the header's account menu and in the footer, and only shows when signed out. Almost no visitor needs it, and it was competing for attention with Consultancy.
+
+### About (`GET /about`)
+Full bio, headshot, skill groups, work experience, education, a downloadable PDF resume (`GET /resume.pdf`, generated in-process from live profile/skills/experience/education data — never drifts from what's on the page), a GitHub link, and published testimonials (only ones an admin has approved — see §4). The tagline and bio share a single intro section so they read as consecutive paragraphs — they are not split across two `.section` blocks (that split reserved a blank band between them). Two further sections, **Certifications** and **Speaking & publications**, are built and admin-editable but currently hold no rows; each renders nothing at all until it has at least one published entry (see §4) — no heading over empty space. The page's seven independent lookups run concurrently under an `errgroup`, in the same round-trip wave as the shared chrome (see `docs/ARCHITECTURE.md` §4) — a missing testimonials row fails the page; a missing footer LinkedIn link does not.
+
+### The skills grid (rendered identically on Home and About)
+One shared template partial (`core/view/templates/layout/skills_grid.html`, invoked as `{{template "skills_grid" .Skills}}`) drives both pages, so the two can't drift apart. The grid is **three cards per row** on desktop (a clean 3×3 at nine skills), two per row on tablet, one on mobile. Content is entirely DB-driven — add, edit, reorder, or remove a skill at `/admin/skills` and both pages follow.
+
+It has **two display modes**, and they use different layout techniques on purpose:
+
+- **Collapsed** (default). A card shows its `skill_groups.category`, `level`, and the **first four of those items** as tag chips — first four in the stored order, which is the curated authoring order, never re-sorted. Four is a hard cap rather than "as many as fit", because letting each card show its own number is what made the nine read as nine unrelated boxes. Directly after the fourth chip sits an **"and N more"** control (N = the remainder; a group of four or fewer shows no control at all), which opens that card exactly as the card's own face does.
+  The **achievement summary is not on the card at rest** — not as a paragraph, not as "N focus areas", not behind a "Show the detail" placeholder. Hover and click reveal the **summary plus the full tag list** in a panel over the card: **hover (or keyboard focus) is a transient preview that must not leave the summary in the resting layout or change card height, a click pins the card open, and a second click unpins it.** On a touchscreen, where there is no hover, the click toggle is the only reveal of the summary. Escape closes whatever is showing, a click outside the grid closes a pinned card, and opening one card unpins any other — as does tabbing into one. Both of a card's controls carry `aria-expanded`/`aria-controls` for the one panel and are kept in step; "and N more" gets visually-hidden text so its accessible name names its card ("and 5 more focus areas in Databases & Caching") rather than leaving "and 5 more" to stand alone. Like "Expand all", it ships hidden and `main.js` unhides it, so with JS off it is not dead UI — the CSS hover/focus reveal still works.
+  Reveal never changes the page's layout: the panel is absolutely positioned over its own card and drawn above its siblings, so no card resizes, no row re-flows, and the scroll position never jumps.
+- **Expanded** — pinning one card (click or "and N more") shows that card's achievement summary plus every tag in the overlay. An **"Expand all"** button above the grid (inline SVG fullscreen glyph plus a text label, both of which change with state) shows every card's summary and tags at once, and overrides the four-chip cap: the preview and every "and N more" control disappear, because the panel below them now lists everything. "Collapse all" puts the four chips and the controls back and clears any individually pinned card, so pinning a card and then expanding and collapsing ends in a clean resting state with no summaries on the face. This is a genuine second mode rather than the per-card toggle fired nine times, because absolute positioning cannot do nine panels at once: they would overlap each other and spill out of the grid while every card kept its collapsed height. The modifier class returns the panels to normal flow and lets the cards size to their content, with CSS Grid equalising every card in a row. The button is keyboard-operable, carries `aria-expanded`/`aria-controls`, and announces the change through a live region; it ships hidden and `main.js` unhides it, so it is never dead UI with JS disabled. Escape leaves the mode.
+
+**Every card is the same size** — same width and height at rest, unchanged when one is revealed, and equal within a row when all nine are expanded. At rest that comes from the four-chip cap plus equal grid rows (`grid-auto-rows: 1fr`, which sizes all three rows to the tallest rather than each row to its own tallest card), so the nine footprints are identical at every width without a fixed height to guess at — how many lines four chips need depends on the card's width. It is also partly content: the nine live skill groups were rebalanced from a 2-to-13 item spread down to 5-to-9 and the most verbose labels shortened, which is what stops one expanded card towering over a near-empty one. Every skill's summary prints in the flow on paper, where there is no hover, tap, or button — the four-chip preview is left out there, since the printed panel carries the full list.
+
+### Courses list (`GET /courses`)
+Opens with a **"Where to start" learning path** before the flat catalogue, because uniform pricing means price carries no signal about relative depth — the level does. Every published course is bucketed onto one of three rungs by `models.Course.Track()`, derived from its own `level` string: *Start here* (level begins "Beginner"), *Then* (anything else, including a course with no level set), and *Go deep* (level begins "Advanced"). Nothing is stored in a second column, so a course added or re-levelled at `/admin/courses` lands on the right rung automatically, and a rung with no courses renders nothing at all.
+
+Below the path, every published course as a card: title, level, duration, and a pricing line. **Every course is "contribute as you like"** — `Course.RegionalPriceDisplay()` renders "Contribute as you like to support" when no minimum is set, or the same plus `*min $X` when the course does have a floor (admin-configurable per course, defaults to 0 for all courses as of Sept 2026). The hero says outright that contribute-as-you-like is a decision about access rather than a statement about depth, so a free price isn't read as a cheap course.
+
+### Course detail (`GET /courses/{slug}`)
+Full description, level/duration, and — when the course has quiz questions — a line advertising the **completion certificate before the enrol decision** rather than only after it, quoting the real pass threshold (`models.QuizPassPercent`, the same constant the scoring compares against). Then either:
+- **No access yet:** a "Get access" box. Email (skipped if logged in — pulled from the session), an optional contribution amount (defaults to the course's minimum, which is usually 0), an optional promo code, and a button that reads "Get Free Access" (amount = 0) or "Continue" (amount > 0).
+- **Has access:** "Open Course" + (if the course has a quiz) "Take the Final Quiz".
+
+**Checkout flow (`POST /courses/{slug}/checkout/order` → `POST /courses/{slug}/checkout/verify`):**
+1. Server resolves the visitor's region (`core/geo`) and the course's minimum for that region; a client-submitted amount below the minimum is silently floored — never trusted below that floor.
+2. A promo code (if any) is validated and its discount subtracted.
+3. **If the final amount is $0:** no Razorpay involved at all — a `purchases` row is written straight to `paid` status (with a synthetic `razorpay_order_id` of `"free-"+token`), the access cookie is set immediately, and the response tells the client to redirect straight to `/courses/{slug}/learn`.
+4. **If the final amount is > $0:** a real Razorpay order is created, the client opens Razorpay's Checkout.js modal, and only after `/checkout/verify` confirms the HMAC signature server-side does access actually get granted.
+
+Either way, access is proven going forward by an opaque bearer token (`access_token`) set as an `HttpOnly` cookie (`ca_{courseID}`) — the same token also works as a `?token=` query-string "magic link" (e.g. for emailing a buyer their access without them being logged in), and gets re-set as a cookie the first time it's used that way.
+
+### Course content (`GET /courses/{slug}/learn`) — gated
+Requires `courseAccess()` to pass: an authenticated admin (unless previewing-as-visitor), or a valid access token. Streams the lesson from a **private Supabase Storage** object (`courses.content_object`, bucket `course-content`) and injects a **watermark script** identifying the viewer (their email, or "Admin preview") just before `</body>`. The browser receives HTML from this handler only — never a Storage URL. `noindex`ed — never in search results.
+
+### Quiz & certificate (`GET/POST /courses/{slug}/quiz`, `GET /courses/{slug}/certificate`) — gated
+If a course has quiz questions, a purchaser (or previewing admin) can take a multiple-choice final quiz. Passing (`QuizPassPercent = 70%`) unlocks a downloadable PDF completion certificate, looked up by a unique `certificate_code` generated on that passing attempt. Re-attempts are allowed; `BestPassingAttempt` is what the certificate download resolves against.
+
+### Consultancy (`GET /consultancy`) — three tiers, no payment gateway anywhere here
+1. **Architecture Review** — scoped on a call, not self-checkout. Shows an indicative reference price ($3,000 USD / ₹1,50,000 INR, region-resolved via `AuditRegionalPriceDisplay`) with a "Discuss an Architecture Review" CTA to `/contact` — that figure is display-only, never charged. A paid self-checkout version of this existed briefly and was fully removed (handlers, routes, JS, Razorpay calls) rather than just disabled, since payment integration isn't being pursued further for now. The `audit_requests` table and `AuditRequestRepo.ListAll` remain, read-only, only so the admin payments ledger can still show the real historical purchases from when it was live — nothing writes to that table anymore.
+2. **Fractional Advisory (retainer)** — a *display-only* price range ($4,000–8,000/month), links to `/contact`. Never had self-checkout: retainers are scoped on a call.
+3. **Hourly session / "Schedule a Call"** — always free, no price displayed at all, links to `/booking`.
+
+**Every tier publishes a "what's included" outline** — scope, deliverable, how it runs, typical length, and how the price is arrived at — so a prospect can evaluate a $3,000 review or a $4,000–8,000/month retainer without having to email first. The contact step exists to customise a quote, not to unlock basic information.
+
+**The free call is positioned as the scoping step for all three tiers, not a fourth product.** The hero, the free tier's own card, the FAQ, and the closing CTA all say the same thing ("not sure which fits? start with a free call"). None of the three cards is pre-selected: there is no "Most common paid engagement" badge and no featured border. Each whole card is one link (the visible control is a span, so it is not a link nested inside a link), and all three use the same filled button style.
+
+The page also carries a **six-question FAQ** (`<details>`/`<summary>`, reusing the existing `.faq-item` styles) covering how this differs from hiring a full-time architect, what a review actually delivers, what a retainer week looks like, what it costs (rendered from the same region-resolved `RetainerRangeDisplay`/`AuditPriceDisplay` values as the tiers, so the two can't disagree), how NDAs are handled, and whether talking first costs anything. The availability note is framed as a scheduling capability across US/UK/EU/IST hours with a direct link to `/booking`, rather than as an IST constraint.
+
+### Booking (`GET /booking`, requires login) — free hourly consultancy call
+A calendar of available slots computed from `availability_rules` minus already-booked slots (`core/scheduler`). Pick a slot, give a **contact number** (required — `bookings.phone`, so a scheduled call is actually reachable) and an optional note, then confirm (`POST /booking/confirm`) — reserves it and confirms it immediately, no payment step, no Razorpay involved at all. Internally still goes through `BookingRepo.CreatePending` → `MarkPaid` (the same pair a paid booking would have used) purely to reuse the slot-race protection (`status=pending_payment` the moment the slot is reserved, then flipped to `confirmed`); the unique constraint on `slot_start` is the backstop. A Telegram notification (including the phone number, if given) fires on confirmation.
+
+### Blog (`GET /articles`, `GET /articles/{slug}` — nav/footer label "Blog")
+Vishnu's original writing, hosted here — nothing else. An article *is* a body; there is no second kind. The site used to also carry **curated link-outs** (a pasted source URL plus a short take, no body of its own), and the schema carried `source_url`/`source_name` for them. That feature is **gone**: migration 040 deletes any remaining link-only rows and drops both columns, and the admin form now requires a body, so there is no longer any way to enter an external link as an article. `models.Article.IsOriginal()` went with it — every article is original, so the distinction had nothing left to express. The list page opens with a **visible topic nav** — every tag any published article carries, heaviest first, each as a real `<a href="/articles?tag=…">` with the number of articles under it (`ArticleRepo.ListAllTags` returns `[]models.ArticleTag{Name, Count}`). This is the blog's topic structure made legible: it was previously reachable only through a `<select>`, which no reader could see into and no crawler could follow. The search/sort form beside it carries the active topic forward in a hidden `tag` input, so searching inside a topic stays inside it. The list still supports search (`?q=`), tag filter (`?tag=`), and sort (`newest` / `oldest` / `most thumbs-up`), paginated; the page's two queries (the filtered page of articles, and the topic list) run concurrently under an `errgroup`, and the filtered page itself runs its count and its rows concurrently rather than as two sequential round trips. List queries omit `body` — only the article's own page fetches it. Each article has its own permanent URL. A post's body can be **plain text** (blank-line-separated paragraphs, auto-escaped) or **full HTML** (headings, links, lists, images — detected by the body *starting* with a tag) — see `articleBody` in `core/view/view.go`. As of the twelve-article content pass, **every** article is HTML: `what-actually-breaks-at-5-million-requests-a-day` was the last plain-text one and was converted wholly (a half-conversion renders the markup as visible escaped text, since the raw-HTML path only triggers on the body *starting* with a tag). An optional cover image shows atop the post and as a list thumbnail; all twelve currently leave it empty, so the list renders without thumbnails.
+
+**Twelve articles, three pages.** `articlesPageSize` is 5, so the archive fills exactly three pages. Two conventions hold across all twelve and are worth keeping:
+
+- **Inline citations, not source links.** A well-researched post links the Resilience4j docs, the Kafka design page, an RFC. Those are ordinary `<a href … target="_blank" rel="noopener">` elements *inside the body* — they are **not** the removed curated-link feature and are not a reason to bring `source_url`/`source_name` back. Every cited URL is verified to resolve rather than recalled.
+- **Diagrams are inline SVG.** There is no image pipeline here, and more importantly an `<img src>` to an `.svg` file is an isolated document that never sees this page's CSS custom properties — so it cannot follow the light/dark theme toggle. Inline in the body, a diagram draws in `currentColor` and the design tokens and inverts with the theme like everything else. Styling hooks live in `.article-diagram` in `web/static/css/style.css` (`dg-box`, `dg-box-accent`, `dg-line`, `dg-arrow`, `dg-strong`, `dg-accent-text`); each diagram carries `role="img"` plus a `<title>` and `<desc>`.
+
+**One controlled tag vocabulary** spans all twelve, because `ListAllTags` now drives the topic nav and a tag is navigation rather than decoration. Sixteen tags, three to five per article, and **every tag lands on at least two articles** so no topic is a dead end of one: System Design (8), Engineering Practice (5), Java & Spring (5), Kafka (4), Cloud & Kubernetes (3), Data Engineering (3), Distributed Systems (3), Observability (3), Performance (3), Resilience (3), AI Engineering (2), API Gateway (2), Banking & Fintech (2), CI/CD (2), Career & Leadership (2), Security (2). Near-duplicates from the earlier ad-hoc set were consolidated into these — `Architecture` folded into System Design, `Cloud`/`Kubernetes`/`Azure` into Cloud & Kubernetes, `Resilience4j` into Resilience, `Prometheus`/`Site Reliability` into Observability, `OAuth2` into Security, `Documentation`/`Developer Tools` into Engineering Practice. Thumbs-up (`POST /articles/{slug}/thumbs-up`): a logged-in visitor votes directly with their real account. A signed-out visitor gets an optional name/email form instead of a login wall — both fields optional, submittable blank. Giving an email reuses or creates a lightweight "guest" account for that email (`users.is_guest = true`, same table as a real account, just never signed in) — email is the unique identity, so a second vote from the same email de-dupes exactly like a logged-in vote (via the `article_thumbs_up(article_id, user_id)` unique constraint). A name with no email (or nothing at all) has no stable identity, so it's stored directly on the vote row (`article_thumbs_up.guest_name`) and never de-dupes — every such submission counts as a new vote, same as the site behaved before any identity capture existed. If a guest's email later signs in for real via Google OAuth, `is_guest` flips to false on that same row (`auth.go`'s `GoogleLoginCallback`) — their vote history carries over, they're just no longer labeled "not signed up." The vote widget appears both above the body and below it, with a "Found this useful? Give it a thumbs up for more of these contents" line near the bottom one — both widgets point at the same vote and stay in sync client-side. The admin article edit page lists every voter: name/email (with a "not signed up" tag for guest accounts), name-only, or "Anonymous visitor" when nothing was given.
+
+### Contact (`GET /contact`, `POST /contact`)
+Email (with copy-to-clipboard), LinkedIn link, and a CTA into Consultancy — plus a real submittable form: name, email, an optional **contact number**, and a message. No login required. On submit (`ContactSubmit`), the message is recorded in `contact_messages` and a Telegram notification fires (same mechanism as bookings/purchases); the page redirects back to itself with `?sent=1` (or `?error=1` if name/email/message were missing or the email looked invalid) for a plain server-rendered success/error banner, no JS needed. **There is no transactional email provider anywhere in this codebase** (no `smtp`/Resend/SendGrid — the only outbound notification channel is Telegram, to the admin), so the sender gets *no* confirmation email; that success banner is the only send confirmation they receive, which is why it also offers `/booking` as the faster route rather than leaving someone unsure whether to submit again.
+
+### Search (`GET /search`)
+Simple substring search across published courses and a small hardcoded index of static pages.
+
+### Legal pages
+`/privacy`, `/terms`, `/refund`, `/cookies` — static content pages, plus a cookie-consent banner (no third-party tracking; only a consent-preference cookie and, once logged in, a session cookie).
+
+### SEO/meta endpoints (all served dynamically from live data, never static files)
+- `GET /sitemap.xml` — every static page + all published courses + all published articles, with `lastmod`.
+- `GET /robots.txt` — allows everything except `/admin/`, references the sitemap.
+- `GET /llms.txt` — a plain-text site summary (profile + courses) for AI answer engines.
+- `GET /{indexNowKey}.txt` + IndexNow submission — pushes "this URL changed" directly to Bing/Yandex.
+- `GET /favicon.ico`, `/static/img/apple-touch-icon.png`, `/static/img/favicon.svg`.
+
+---
+
+## 3. User (logged-in visitor) functionality
+
+Login is separate from admin auth (see §5 of `ARCHITECTURE.md`) and is **Google-only** (`GET /login` shows a single "Sign in with Google" button → `GET /login/google` → `/login/google/callback`) — no password to set up or lose. A user account exists purely to tie purchases/bookings/testimonials to a person across visits.
+
+### Account page (`GET /account`, login required)
+Four sections in one page (`#courses`, `#bookings`, `#payments`, `#messages`), plus a testimonial section:
+- **My Courses** — every paid course, linking straight into `/courses/{slug}/learn`.
+- **My Bookings** — upcoming/past consultancy hours, status badges, and (for a rescheduled booking the visitor hasn't acknowledged yet) a reschedule notice with "that works for me" / "pick a different time" actions.
+- **Payments** — every payment (course or consultancy), each with a **PDF receipt download** (`/account/bookings/{id}/receipt.pdf`, `/account/purchases/{id}/receipt.pdf`, generated in-process, sequential receipt numbers `CNS-…` / `CRS-…`).
+- **Messages** — one-off notes an admin sent this specific account (see §4), shown here and in the header's notification bell until read.
+- **Share your experience** — submit a testimonial (name, title, quote). **Always created unpublished** (`is_published=false`) regardless of what's submitted — it only appears on `/about` after an admin explicitly approves it. One submission per account; the form shows "pending review" / "live" instead of re-submitting once one exists.
+
+### Booking self-service
+- Acknowledge a reschedule (`POST /account/bookings/{id}/acknowledge`).
+- Pick a new slot for a booking that's still `pending_payment`-eligible for reschedule (`GET/POST /account/bookings/{id}/reschedule`).
+
+---
+
+## 4. Admin functionality
+
+Admin auth is a **separate** session/cookie from user auth (`portfolio_admin_session` vs `portfolio_session`) — an email can hold both an admin and a user account simultaneously, and logging in as one doesn't imply the other. Every `/admin/*` route is `noindex`ed and behind `RequireAdmin`.
+
+### Dashboard (`GET /admin`)
+At-a-glance counts/summary across the site.
+
+### Courses (`/admin/courses`)
+Full CRUD. Fields: title, summary, description, level, duration, image URL, published toggle, sort order, "contribute-as-you-like" toggle (`is_paid`) with an optional per-region minimum (USD cents / INR paise — 0 means fully free), and **course content**: upload a single self-contained `.html` file (≤8MB). The file is stored in the private `course-content` bucket at `courses/{slug}.html` and the path is saved on `courses.content_object`. `/courses/{slug}/learn` streams that object (plus a watermark) after the purchase check. A "what changed" note on save writes a `course_updates` row, which a Postgres trigger automatically fans out to every paid buyer as an `admin_messages` entry — no app-level loop needed.
+
+### Quiz questions (`/admin/courses/{courseID}/quiz`)
+Per-course CRUD of multiple-choice questions (4 options, one correct, sort order) — this is what powers §2's quiz/certificate flow.
+
+### Bookings (`/admin/bookings`)
+List all bookings, change status, and **admin-initiated reschedule** (`/admin/bookings/{id}/reschedule`) — sets `previous_slot_start`/`rescheduled_at` and flips `reschedule_acknowledged` to false, which is what surfaces the "your booking was rescheduled" notice to the visitor.
+
+### Purchases (`/admin/purchases`) & Payments (`/admin/payments`)
+Purchases lists raw course-purchase rows. **Payments is the combined ledger** — every actually-paid course purchase, merged with the historical Architecture Review purchases from before self-checkout was removed there, into one chronological list with a running total per currency (`core/handlers/admin_payments.go`). Consultancy bookings never appear here anymore — they're always free, so there's nothing to list as a payment.
+
+### Contact Messages (`/admin/contact-messages`)
+Read-only list of every `/contact` form submission (name, email, phone if given, message, when), newest first, with a "Mark read" action per row (`is_read` on `contact_messages`). No reply-from-admin feature — the admin follows up at the email address the visitor gave.
+
+### Users (`/admin/users`)
+List all user accounts; per-user detail page (their bookings/purchases/messages); promote/demote a user to/from admin; **send a one-off message** to a specific user (shows on their `/account` page and notification bell).
+
+### Skills / Experience (`/admin/skills`, `/admin/experience`)
+CRUD for the About page's skill groups and work-experience entries.
+
+### Testimonials (`/admin/testimonials`)
+Full CRUD, plus **Approve** (one click, for a visitor-submitted testimonial still pending) that flips `is_published=true` without needing to open the full edit form. The list distinguishes admin-authored vs. visitor-submitted entries.
+
+### Certifications (`/admin/certifications`) and Speaking & Publications (`/admin/publications`)
+Full CRUD for the two About-page sections of the same names. Certification fields: name (required), issuer, issued-on and expires-on (both optional — a blank expiry means "does not expire", which is why they are nullable rather than defaulted), a credential URL for verification, published toggle, sort order. Publication fields: title (required), kind (free text, with a datalist of the common ones — "Conference talk", "Podcast", "Guest article"…), venue, link, date, one-line summary, published toggle, sort order. A link typed without a scheme gets `https://` prepended.
+
+**Both ship with zero rows and no seeded examples**, and the public About page renders **nothing at all** for a section with no published rows — no heading, no empty shell, no "coming soon". The content is real credentials and real talks, which only Vishnu can supply; inventing a placeholder would be worse than the section not existing. Speaking & Publications is specifically for work published *elsewhere* — his own posts on this site are Articles.
+
+### Promo codes (`/admin/promo-codes`)
+CRUD for percentage-off codes, each scoped to exactly one product (`course` or `consultancy`), optionally to specific courses (`promo_code_courses` join table) or all of them, with an expiry, a redemption cap (0 = unlimited), and an active toggle. Redeemed at course/booking checkout via `resolvePromoCode()`.
+
+### Blog / articles (`/admin/articles`)
+Full CRUD — see §2's Blog section for the content model (original posts only; the curated link-out feature is gone). Fields: title, summary, **body (required** — plain text or HTML), cover image URL, tags, slug (auto-generated from title if left blank), published date, published toggle, sort order. The body textarea previously rendered empty when editing an existing article, which silently blanked the post on save; it is now populated from the row. The edit page (existing articles only) also lists everyone who thumbs-up'd the post, newest first — see §2's Thumbs-up paragraph for the three display states.
+
+### Availability (`/admin/availability`)
+CRUD for the weekly recurring rules (weekday, start/end time, slot length in minutes, active toggle) that `core/scheduler` expands into bookable hourly slots for §2's Booking page.
+
+### Profile (`/admin/profile`)
+Edit the single `profile` row: name, title, tagline, hero subtitle, summary, location, email, LinkedIn/GitHub/resume URLs, photo URL, years of experience.
+
+### Preview as visitor (`GET /admin/preview-visitor` / `GET /exit-preview`)
+Lets a logged-in admin browse the site exactly as a normal visitor would (no Admin Console tab, no automatic gated-content access) without actually logging out — a cookie flag, not a session change.
+
+---
+
+## 5. Cross-cutting systems (touch both admin and visitor sides)
+
+- **Notifications** — the header's bell aggregates, at request time, two live sources: any unacknowledged booking reschedule, and any unread `admin_messages` row for that user. No dedicated "notifications" table — see `userNotifications()` in `core/handlers/app.go`.
+- **PDF generation** (resume, receipts, certificates) — all generated in-process with `github.com/go-pdf/fpdf`, from live DB data, no external service. A Vercel serverless function can't shell out to a headless-Chrome-style renderer, so this is a deliberate constraint, not an oversight.
+- **Telegram notifications** — fires on a paid course purchase and a confirmed (free) consultancy booking (`core/notify`), straight to the admin's own chat. Optional — silently a no-op if unconfigured.
+- **Regional pricing** — course contribution and the Architecture Review's display-only reference figure resolve currency/amount from the visitor's detected country (`core/geo`): India gets its own INR figure, everyone else gets the USD one. Consultancy hourly has no price to resolve — it's always free.
+- **Security headers** — a baseline CSP + `X-Content-Type-Options`/`X-Frame-Options`/`Referrer-Policy` on every response (`core/middleware/security.go`), allowlisting only Razorpay's checkout origin and Google Fonts.
+- **IndexNow** — a `submitIndexNow(host, paths)` helper can push changed-URL batches directly to Bing/Yandex; not yet wired to fire automatically on every admin save (a manual/future enhancement), but the key-file route and submission capability are live.
+
+---
+
+*Last updated: September 2026, alongside the course pricing / consultancy 3-tier / articles-blog / SEO work described in the project's git history. If you're an AI agent reading this to get oriented on the codebase, `docs/ARCHITECTURE.md` is the companion doc — read both before making changes.*

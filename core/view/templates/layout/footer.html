@@ -1,0 +1,31 @@
+{{define "footer"}}
+<footer class="site-footer">
+  <div class="container footer-inner">
+    <p>&copy; {{currentYear}} {{.SiteName}}. All rights reserved.</p>
+    <nav class="footer-nav">
+      <a href="{{.Nav.About}}">About Me</a>
+      <a href="{{.Nav.Courses}}">Courses</a>
+      <a href="{{.Nav.Consultancy}}">Consultancy</a>
+      <a href="{{.Nav.Articles}}">Blog</a>
+      <a href="{{.Nav.Contact}}">Contact Me</a>
+      <a href="{{.Nav.Search}}">Search</a>
+    </nav>
+    <nav class="footer-nav footer-nav-legal">
+      <a href="{{.Nav.Privacy}}">Privacy</a>
+      <a href="{{.Nav.Terms}}">Terms</a>
+      <a href="{{.Nav.Refund}}">Refund Policy</a>
+      <a href="{{.Nav.Cookies}}">Cookies</a>
+      {{/* Login lives here and in the header's account menu, never in the
+           primary nav — signing in is an affordance almost no visitor
+           needs, and it was taking attention from Consultancy. */}}
+      {{if not .IsLoggedIn}}<a href="{{.Nav.Login}}">Login</a>{{end}}
+      {{if .IsAdmin}}<a href="{{.Nav.Admin}}">Admin</a>{{end}}
+    </nav>
+  </div>
+</footer>
+
+<div id="cookie-banner" class="cookie-banner" hidden>
+  <p>This site uses only essential cookies (a consent preference, and a session cookie once you log in) — no third-party tracking. See our <a href="{{.Nav.Cookies}}">Cookie Policy</a>.</p>
+  <button type="button" id="cookie-accept" class="btn btn-primary btn-sm">Got it</button>
+</div>
+{{end}}

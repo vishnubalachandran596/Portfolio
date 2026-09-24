@@ -1,0 +1,316 @@
+# Portfolio
+
+An end-to-end portfolio site for Vishnu Balachandran, built with a Go
+backend: a public site (home, about, courses, book-a-session) plus a
+password-protected admin portal to manage courses, bookings, weekly
+availability, and profile/about content — all backed by Postgres
+(Supabase-compatible), deployable to Vercel as a Go serverless function.
+
+## Licence
+
+Proprietary — **all rights reserved**. The source is published so it can be
+read and evaluated; it is not open source. Viewing for evaluation is permitted,
+and nothing else is: no use, copying, modification, redistribution or
+deployment without written permission. See **[`LICENSE`](./LICENSE)**.
+
+## Working on this repo? Read this first
+
+Before making a change — human or AI agent — read:
+- **[`CLAUDE.md`](./CLAUDE.md)** — architecture rules, extensibility pattern, and the "never commit secrets" policy. Cursor users: the same rules also live in `.cursor/rules/architecture.mdc` (auto-loaded) and `.cursorrules`. Codex users: see **[`AGENTS.md`](./AGENTS.md)**.
+- **[`docs/FUNCTIONALITY.md`](./docs/FUNCTIONALITY.md)** — every feature, what a visitor/user/admin can do, and the business rules behind each flow.
+- **[`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md)** — package layout, full ER diagram, auth model, payment flows, deployment.
+
+These files are kept up to date in the same commit as whatever they describe — treat them as the current source of truth, not just onboarding reading.
+
+## Stack
+
+- **Backend:** Go 1.24, standard library `net/http` (Go 1.22+ pattern-based
+  `ServeMux`), `html/template` for server-rendered pages — no JS framework
+  or build step.
+- **Database:** PostgreSQL via `pgx` (works with Supabase, or any Postgres).
+- **Auth:** bcrypt password hashing + JWT session in an HttpOnly cookie
+  (`golang-jwt/jwt`), one admin-protected route tree.
+- **Deployment target:** Vercel's Go runtime (`api/index.go` as a catch-all
+  serverless function), or any host that can run a Go binary (`cmd/server`)
+  — e.g. Fly.io, Render, a VM.
+
+## Project layout
+
+```
+cmd/server/       Local dev entrypoint (long-lived HTTP server)
+api/index.go      Vercel serverless entrypoint (wraps the same app)
+core/app/         Shared bootstrap: config, DB connect+migrate, wiring
+core/config/      Env var loading
+core/db/          Postgres connection + embedded SQL migrations
+core/models/      Domain types
+core/repo/        Database queries per entity
+core/middleware/  Admin session auth (JWT cookie), domain routing, logging
+core/authutil/    Password hashing
+core/scheduler/   Turns weekly availability rules into bookable slots
+core/handlers/    HTTP handlers (public site + admin portal) + routing + SEO
+core/view/        html/template renderer + all page templates
+web/              Embedded static assets (CSS/JS/SVG/OG image) served at /static
+vercel.json       Vercel rewrite (all routes → api/index) + function config
+```
+
+(Package names avoid Go's `internal/` convention on purpose — Vercel's Go
+builder compiles `api/index.go` as a standalone file outside the normal
+module package graph, which trips Go's internal-package visibility rule
+even for code inside the same module.)
+
+## Local development
+
+Requires Go 1.24+ and a Postgres database.
+
+```bash
+cp .env.example .env
+# edit .env: DATABASE_URL, JWT_SECRET, ADMIN_BOOTSTRAP_EMAIL/PASSWORD
+
+export $(grep -v '^#' .env | xargs)   # or use direnv / a dotenv tool
+go run ./cmd/server
+```
+
+The app auto-applies its SQL migrations (schema + seed content) on
+startup and, if `ADMIN_BOOTSTRAP_EMAIL`/`ADMIN_BOOTSTRAP_PASSWORD` are set
+and no admin exists yet, creates the first admin account. Visit
+`http://localhost:8080`, and log in at `/admin/login`.
+
+**Change the bootstrap admin password after first login** — there's no
+in-app password-change form yet; rotate it directly:
+
+```sql
+-- generate a bcrypt hash for the new password with any bcrypt tool, then:
+UPDATE admins SET password_hash = '<new-bcrypt-hash>' WHERE email = 'admin@example.com';
+```
+
+### Running tests / checks
+
+```bash
+go build ./...
+go vet ./...
+gofmt -l .   # should print nothing
+```
+
+## Deploying: Supabase (database) + Vercel (app)
+
+### 1. Create a Supabase Postgres database
+
+1. Create a project at [supabase.com](https://supabase.com).
+2. In **Project Settings → Database → Connection string**, copy the
+   **Connection pooling** string (port `6543`, mode `transaction`) — not
+   the direct connection. The app runs as a Vercel serverless function, so
+   many short-lived instances may connect concurrently; the pooler avoids
+   exhausting Postgres' connection limit. Append `?sslmode=require`.
+
+### 2. Deploy to Vercel
+
+1. Push this repo to GitHub (see below) and import it in Vercel, or run
+   `vercel` from the repo root.
+2. Vercel auto-detects `api/index.go` as a Go serverless function via
+   `vercel.json`, which also rewrites every path to it so the Go router
+   handles all site routes (`/`, `/about`, `/courses/...`, `/admin/...`).
+3. Set these Environment Variables in the Vercel project (Production, and
+   Preview if you want preview deploys to work):
+   - `DATABASE_URL` — the Supabase pooled connection string from step 1
+   - `JWT_SECRET` — a random secret (`openssl rand -hex 32`)
+   - `APP_ENV=production`
+   - `SITE_NAME` — display name
+   - `SITE_URL` — your production URL
+   - `ADMIN_BOOTSTRAP_EMAIL` / `ADMIN_BOOTSTRAP_PASSWORD` — creates the
+     first admin on the next cold start; safe to leave set (it's a no-op
+     once an admin exists), but consider removing after first login.
+4. Deploy. On the function's first invocation it applies migrations and
+   bootstraps the admin account automatically.
+
+### Alternative: a single Go binary
+
+`cmd/server` runs the exact same app as one process — no Vercel-specific
+code required. `go build ./cmd/server` and run the resulting binary
+anywhere with the same environment variables (Fly.io, Render, a VM,
+Docker, etc.), pointed at any Postgres database (Supabase or otherwise).
+
+## Content model & the admin portal
+
+All visitor-facing content lives in Postgres and is edited from `/admin`
+after logging in. The git repo carries schema and code only — a fresh
+database from the migration chain has no profile, skills, articles or
+courses until you load `portfolio_seed_data.sql` from the Google Drive
+folder named `Portfolio` (see `docs/ARCHITECTURE.md` §11) or enter the
+rows yourself. Everything below is editable from `/admin`:
+
+- **Profile** (`/admin/profile`) — name, title, hero tagline/subtitle,
+  about summary, links, photo.
+- **Courses** (`/admin/courses`) — create/edit/delete/publish courses
+  shown on `/courses`.
+- **Bookings** (`/admin/bookings`) — view every consultancy booking and
+  its payment status (pending payment/confirmed/cancelled).
+- **Availability** (`/admin/availability`) — the weekly recurring rules
+  (day, time window, slot length) that generate the bookable slots shown
+  on `/booking`. The chosen slot is re-validated server-side against
+  these rules on every checkout, and a unique DB constraint on the slot
+  start time means two visitors can never both pay for the same slot.
+
+Booking a consultancy session or buying a course requires an account
+(`/login`, email + password — `core/repo/users.go`). Logging in with the
+email/password that matches the `admins` table opens the admin dashboard
+*and* a matching visitor session in one step, so the site owner can browse
+the rest of the site (buy/preview courses, book sessions) exactly like any
+other logged-in visitor.
+
+Skills, experience, education, certifications, publications, articles,
+and quiz questions are all admin-editable at `/admin/skills`,
+`/admin/experience`, `/admin/certifications`, `/admin/publications`,
+`/admin/articles`, and `/admin/courses/{id}/quiz`. There is no seed data
+in the repo to edit instead.
+
+## Paid courses (Razorpay)
+
+Every published course is paid, priced by depth/advancement rather than a
+flat rate — a `min_price_cents`/`min_price_cents_inr` floor per course
+(the visitor can pay more, never less): Java Fundamentals (₹500/$6) →
+Technical Architecture & Design (₹1,000/$12) → System Design & Deployment
+(₹1,000/$12) → Java SSE Ultimate Guide, the advanced DSA/LLD/HLD
+interview-prep course (₹750/$9) → Kafka/Messaging/Caching with Redis
+(₹1,500/$18) → Resiliency & High-Scale Design, the advanced capstone
+(₹2,000/$24). The visitor picks any amount at or above that minimum ("pay
+what you want"), pays via Razorpay Checkout, and is redirected to
+`/courses/<slug>/learn`.
+
+- **Payment flow:** `POST /courses/<slug>/checkout/order` creates a
+  Razorpay order and a `purchases` row (`core/payments`, `core/repo/purchases.go`).
+  Razorpay's Checkout.js widget collects card details directly — this app
+  never sees or stores them. `POST /courses/<slug>/checkout/verify` is the
+  step that actually matters: it recomputes the HMAC-SHA256 signature
+  server-side and only marks the purchase "paid" if it matches
+  (`core/payments/razorpay.go`). Access is never granted from the
+  client-side "success" callback alone.
+- **Access:** a per-course HttpOnly cookie (`ca_<courseID>`) holding an
+  opaque access token, set once payment is verified. Logged-in admins
+  always have access, for previewing paid content.
+- **Content:** paid course content is a full, self-contained HTML
+  document (its own layout/CSS/JS — not run through the site's own
+  templates). The file lives in a private Supabase Storage bucket and
+  is streamed by the `/courses/<slug>/learn` handler after the purchase
+  check, never from `/static` or the sitemap, and never via a Storage
+  URL the browser could request on its own. A new lesson is uploaded
+  from the admin course form.
+- **On "no one can copy the content":** be realistic about this — nothing
+  rendered in a browser can be made impossible to copy (view-source,
+  screenshots, and devtools always exist). What's actually implemented:
+  the content is never at a public URL, it's sent with `Cache-Control:
+  no-store`, right-click/copy are discouraged (not blocked — that's not
+  really possible either), and **every page is watermarked with the
+  purchaser's email**, which is the actually-effective deterrent — a
+  leaked copy is traceable back to whoever shared it.
+- **Setup:** set `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` (start with
+  Razorpay's test-mode keys) and optionally `CHECKOUT_CURRENCY`. The
+  purchase button is hidden until both are set. See `/admin/purchases`
+  for a log of every order and its status.
+
+### Notifying buyers when a course is updated
+
+Course content updates (rewriting/extending a lesson) are done by uploading
+a new HTML file on the course edit form, which replaces the private
+Storage object. To let every paid buyer of that course know what
+changed, insert one row into `course_updates` (`course_id`, `note`); a
+Postgres trigger (`core/db/migrations/026_course_updates.sql`) fans it out
+automatically to an `admin_messages` row per paid buyer — the same table
+and mechanism that already powers the notification bell and
+`/account#messages`, contact-email signature included. Nothing else to
+run or remember:
+
+```sql
+INSERT INTO course_updates (course_id, note)
+VALUES ((SELECT id FROM courses WHERE slug = 'payment-integration-razorpay'),
+        'Added a real production bug walkthrough and a promo-code section.');
+```
+
+The same thing is also exposed in the admin portal: the course edit form
+(`/admin/courses/<id>/edit`) has an optional "What changed" field that,
+when filled in, calls the identical `CourseUpdateRepo.Create` under the
+hood. Leaving it blank saves the course silently.
+
+## Consultancy (paid 1:1 booking)
+
+`/consultancy` is the only page with a "Book Now" call to action; it links
+to `/booking`, which requires login and shows the price up front (₹3,000/hr
+India, $40/hr elsewhere — `models.ConsultancyRegionalPrice`, the same
+geo-header-driven regional pricing pattern as courses) before any slot is
+picked. Picking a slot reserves it (`status='pending_payment'`) the moment
+a Razorpay order is created — the same unique-slot-start constraint used
+for the old free flow now doubles as the anti-double-booking guarantee
+during checkout — and confirms it once the payment signature verifies
+(`core/handlers/consultancy.go`). An abandoned checkout frees the slot
+automatically 20 minutes later; no cleanup job needed.
+
+## Domain architecture (www canonical, optional page-group subdomains)
+
+The public canonical host is `www.yourdomain.com`. The bare apex and the
+old `home.` host 301 to www with the same path; www itself is never
+redirected (a canonical homepage that 3xxs is not indexed). Set
+`DOMAIN=yourdomain.com` (no scheme, no `www`) to also pin optional
+page-group subdomains:
+
+| Host | Serves |
+|---|---|
+| `www.yourdomain.com` | The full path-based site (canonical; never redirected) |
+| `about.yourdomain.com` | About Me |
+| `courses.yourdomain.com` | Courses list/detail, checkout, and gated paid-course content |
+| `consultancy.yourdomain.com` | The consultancy page and the (login-required) booking/checkout flow |
+| `contact.yourdomain.com` | Contact |
+| `admin.yourdomain.com` | The admin portal |
+
+`/static/*`, `/sitemap.xml`, and `/robots.txt` are exempt from host
+redirects and served identically on every subdomain (since pages reference
+`/static/...` with relative paths). Canonical tags, OG URLs, and the
+sitemap prefer `SITE_URL` (www). See `core/middleware/canonical.go`,
+`core/middleware/domain.go`, and `core/handlers/seo.go` (`pageURL`).
+
+Leaving `DOMAIN` unset (e.g. on a raw `*.vercel.app` preview URL) disables
+the page-group redirects — no-op passthrough — while `CanonicalHost` still
+301s apex/`home.` to www whenever `SITE_URL` is the www origin.
+
+## SEO, legal, and UX checklist status
+
+Implemented:
+- **SEO:** `/sitemap.xml`, `/robots.txt`, per-page canonical tags,
+  Open Graph + Twitter Card meta (including a generated `og-image.png`),
+  JSON-LD (`Person`/`WebSite` on the home page, `Course` on course pages),
+  `X-Robots-Tag: noindex` on the entire admin portal, single `<h1>` per
+  page, clean URL slugs, mobile-responsive layout, no third-party scripts
+  to slow down Core Web Vitals.
+- **Legal/compliance:** `/privacy`, `/terms`, `/refund`, `/cookies` with
+  real content (data collected, retention, deletion requests, children's
+  data, no dark patterns/hidden fees), footer links, a minimal cookie
+  consent banner.
+- **UX:** dark/light theme toggle (persisted), full-site search (`/search`),
+  expandable FAQ, password-visibility toggle on admin login, loading state
+  on form submit, copy-to-clipboard (email), print stylesheet, scroll
+  progress bar, back-to-top button, floating "Book time" CTA, sticky
+  header, mobile menu, skip-to-content link, confirmation dialogs on
+  destructive admin actions.
+
+Explicitly **not** implemented (each needs an infrastructure/account
+decision this repo can't make on its own):
+- **Newsletter signup** — needs an email service (Resend, etc.) and a
+  double opt-in/unsubscribe flow for compliance; no email provider is
+  wired up yet.
+- **UTM tracking** — added when you share links externally, not something
+  to bake into internal navigation.
+- **Google Search Console verification / sitemap submission** — a manual
+  step in Google's dashboard once the site is live on a real domain.
+- **Backlink strategy** — an ongoing external activity, not a code change.
+- **SPF/DKIM/DMARC, `mail.`/`news.` email subdomains** — no transactional
+  or marketing email is sent by the app yet, so there's nothing to
+  authenticate; revisit if/when booking confirmation emails are added.
+
+## Notes on scope
+
+- **CSRF:** admin forms rely on the session cookie's `SameSite=Lax`
+  attribute (blocks cross-site POSTs) rather than a separate CSRF token —
+  a reasonable simplification for a single-admin site; add token-based
+  CSRF protection if that assumption changes.
+- **OpenRouter:** used during the build of this site (not wired into the
+  running app) to help draft the About page copy and homepage feature
+  blurbs from Vishnu's real resume facts — no AI chat widget ships on the
+  site itself, per explicit direction.

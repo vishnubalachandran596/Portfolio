@@ -1,0 +1,38 @@
+{{define "content"}}
+<section class="section">
+  <div class="container">
+    <h1>{{if .IsNew}}Add Certification{{else}}Edit Certification{{end}}</h1>
+    {{if .Error}}<div class="alert alert-error">{{.Error}}</div>{{end}}
+    <form method="POST" action="{{if .IsNew}}/admin/certifications/new{{else}}/admin/certifications/{{.Certification.ID}}/edit{{end}}" class="admin-form">
+      <label>Name
+        <input type="text" name="name" value="{{.Certification.Name}}" required placeholder="e.g. AWS Certified Solutions Architect – Associate">
+      </label>
+      <label>Issuer <span class="optional">e.g. "Amazon Web Services", "Microsoft"</span>
+        <input type="text" name="issuer" value="{{.Certification.Issuer}}">
+      </label>
+      <div class="form-row">
+        <label>Issued on <span class="optional">(optional — leave blank if there's no date on the credential)</span>
+          <input type="date" name="issued_on" value="{{if .Certification.IssuedOn}}{{.Certification.IssuedOn.Format "2006-01-02"}}{{end}}">
+        </label>
+        <label>Expires on <span class="optional">(optional — leave blank if it doesn't expire)</span>
+          <input type="date" name="expires_on" value="{{if .Certification.ExpiresOn}}{{.Certification.ExpiresOn.Format "2006-01-02"}}{{end}}">
+        </label>
+      </div>
+      <label>Credential URL <span class="optional">(optional — the issuer's verification page, so the claim is checkable)</span>
+        <input type="url" name="credential_url" value="{{.Certification.CredentialURL}}" placeholder="https://...">
+      </label>
+      <label class="checkbox-label">
+        <input type="checkbox" name="is_published" {{if or .IsNew .Certification.IsPublished}}checked{{end}}>
+        Published (visible on the About page)
+      </label>
+      <label>Sort order
+        <input type="number" name="sort_order" value="{{.Certification.SortOrder}}">
+      </label>
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary" data-loading-text="Saving…">Save Certification</button>
+        <a class="btn btn-secondary" href="/admin/certifications">Cancel</a>
+      </div>
+    </form>
+  </div>
+</section>
+{{end}}

@@ -1,0 +1,72 @@
+{{define "header"}}
+{{if .PreviewingAsVisitor}}
+<div class="preview-banner">
+  Previewing as a visitor — admin-only links and content access are hidden.
+  <a href="/exit-preview">Exit preview →</a>
+</div>
+{{end}}
+<header class="site-header">
+  <div class="container header-inner">
+    <a class="brand{{if eq .Active "home"}} active{{end}}" href="{{.Nav.Home}}" aria-label="{{.SiteName}} — Home">
+      <span class="brand-full">{{.SiteName}}</span>
+      <span class="brand-mark" aria-hidden="true">VB</span>
+    </a>
+
+    <nav class="primary-nav" aria-label="Primary">
+      <a href="{{.Nav.About}}" class="{{if eq .Active "about"}}active{{end}}">About Me</a>
+      <a href="{{.Nav.Courses}}" class="{{if eq .Active "courses"}}active{{end}}">Courses</a>
+      <a href="{{.Nav.Consultancy}}" class="{{if eq .Active "consultancy"}}active{{end}}">Consultancy</a>
+      <a href="{{.Nav.Articles}}" class="{{if eq .Active "articles"}}active{{end}}">Blog</a>
+    </nav>
+
+    <div class="header-actions">
+      <button type="button" id="theme-toggle" class="icon-btn" aria-label="Toggle dark or light theme">
+        <span class="theme-toggle-icon" aria-hidden="true">◐</span>
+      </button>
+
+      {{if .IsUser}}
+      <div class="header-menu">
+        <button type="button" class="icon-btn" id="notif-toggle" aria-haspopup="true" aria-expanded="false" aria-controls="notif-panel" aria-label="Notifications">
+          <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M5 8a5 5 0 0 1 10 0c0 3 1 4 1.5 4.5h-13C4 12 5 11 5 8Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M8 15.5a2 2 0 0 0 4 0" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          {{if .UnreadNotifCount}}<span class="menu-badge">{{.UnreadNotifCount}}</span>{{end}}
+        </button>
+        <div class="header-dropdown" id="notif-panel" hidden>
+          {{if .Notifications}}
+          {{range .Notifications}}
+          <a class="header-dropdown-item{{if .Unread}} unread{{end}}" href="{{.URL}}">{{.Text}}</a>
+          {{end}}
+          {{else}}
+          <p class="header-dropdown-empty">No notifications right now.</p>
+          {{end}}
+        </div>
+      </div>
+      {{end}}
+
+      <div class="header-menu">
+        <button type="button" class="icon-btn" id="profile-toggle" aria-haspopup="true" aria-expanded="false" aria-controls="profile-panel" aria-label="Account menu">
+          <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="10" cy="6.5" r="3" stroke="currentColor" stroke-width="1.5"/><path d="M3.5 17c1-3.5 4-5 6.5-5s5.5 1.5 6.5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </button>
+        <div class="header-dropdown header-dropdown-right" id="profile-panel" hidden>
+          {{if .IsUser}}
+          <a class="header-dropdown-item" href="/account#bookings">My Bookings</a>
+          <a class="header-dropdown-item" href="/account#courses">My Courses</a>
+          <a class="header-dropdown-item" href="/account#payments">Payments</a>
+          <a class="header-dropdown-item" href="/account#messages">Messages{{if .UnreadNotifCount}} <span class="badge-inline">{{.UnreadNotifCount}}</span>{{end}}</a>
+          {{end}}
+          {{if .IsAdmin}}
+          <a class="header-dropdown-item" href="{{.Nav.Admin}}">Admin Console</a>
+          {{end}}
+          <a class="header-dropdown-item" href="{{.Nav.Contact}}">Contact Me</a>
+          {{if .IsLoggedIn}}
+          <div class="header-dropdown-divider"></div>
+          <form method="POST" action="/logout"><button type="submit" class="header-dropdown-item header-dropdown-button">Log Out</button></form>
+          {{else}}
+          <div class="header-dropdown-divider"></div>
+          <a class="header-dropdown-item header-dropdown-item-accent" href="{{.Nav.Login}}">Login</a>
+          {{end}}
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+{{end}}

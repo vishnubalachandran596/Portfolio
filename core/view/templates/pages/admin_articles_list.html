@@ -1,0 +1,33 @@
+{{define "content"}}
+<section class="section">
+  <div class="container">
+    <div class="section-header-row">
+      <h1>Articles</h1>
+      <a class="btn btn-primary" href="/admin/articles/new">Add Article</a>
+    </div>
+    {{if .Articles}}
+    <table class="admin-table">
+      <thead><tr><th>Title</th><th>Tags</th><th>Published</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+        {{range .Articles}}
+        <tr>
+          <td><a href="/articles/{{.Slug}}" target="_blank" rel="noopener">{{.Title}} ↗</a></td>
+          <td>{{if .Tags}}{{range .Tags}}<span class="tag-chip">{{.}}</span> {{end}}{{else}}<span class="admin-table-subtext">none</span>{{end}}</td>
+          <td>{{formatDateOptional .PublishedDate}}</td>
+          <td><span class="status-badge {{if .IsPublished}}status-confirmed{{else}}status-cancelled{{end}}">{{if .IsPublished}}Published{{else}}Hidden{{end}}</span></td>
+          <td class="admin-table-actions">
+            <a class="link-button" href="/admin/articles/{{.ID}}/edit">Edit</a>
+            <form method="POST" action="/admin/articles/{{.ID}}/delete" onsubmit="return confirm('Delete this article?');">
+              <button type="submit" class="link-button danger">Delete</button>
+            </form>
+          </td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+    {{else}}
+    <p class="empty-state">No articles yet.</p>
+    {{end}}
+  </div>
+</section>
+{{end}}

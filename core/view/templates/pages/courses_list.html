@@ -1,0 +1,78 @@
+{{define "content"}}
+<section class="section page-hero">
+  <div class="container">
+    <p class="eyebrow">Courses</p>
+    <h1>Learn what I've shipped in production</h1>
+    <p class="hero-subtitle">Practical, no-fluff courses on architecture, backend engineering, and technical leadership.</p>
+    <p class="hero-tertiary">Every one of them is contribute-as-you-like. That's a decision about access, not a statement about depth — the <strong>level</strong> on each card is the real difficulty signal, and it's the same material I draw on for paid <a href="{{.Nav.Consultancy}}">consulting work</a>.</p>
+  </div>
+</section>
+
+{{if .Courses}}
+<section class="section">
+  <div class="container">
+    <h2 class="section-title">Where to start</h2>
+    <p class="section-lead">The order matters more than the catalogue does. Pick the rung that matches where you are now, rather than starting at the top of the list.</p>
+
+    {{if .TrackStart}}
+    <div class="track">
+      <div class="track-head">
+        <p class="track-step">Start here</p>
+        <h3>New to backend architecture</h3>
+        <p>Opens at beginner level and builds up — start here if you want the foundations laid properly rather than a tour of buzzwords.</p>
+      </div>
+      <ul class="track-list">
+        {{range .TrackStart}}<li><a href="/courses/{{.Slug}}">{{.Title}}</a> <span class="track-level">{{.Level}}</span></li>{{end}}
+      </ul>
+    </div>
+    {{end}}
+
+    {{if .TrackBuild}}
+    <div class="track">
+      <div class="track-head">
+        <p class="track-step">Then</p>
+        <h3>You've shipped backends, now design them</h3>
+        <p>Assumes you can already write the code and want the architecture, design, and delivery layer on top of it.</p>
+      </div>
+      <ul class="track-list">
+        {{range .TrackBuild}}<li><a href="/courses/{{.Slug}}">{{.Title}}</a> <span class="track-level">{{.Level}}</span></li>{{end}}
+      </ul>
+    </div>
+    {{end}}
+
+    {{if .TrackDeep}}
+    <div class="track">
+      <div class="track-head">
+        <p class="track-step">Go deep</p>
+        <h3>Already senior</h3>
+        <p>Advanced throughout, and the right entry point if you've already operated systems at scale and want the hard parts rather than the overview.</p>
+      </div>
+      <ul class="track-list">
+        {{range .TrackDeep}}<li><a href="/courses/{{.Slug}}">{{.Title}}</a> <span class="track-level">{{.Level}}</span></li>{{end}}
+      </ul>
+    </div>
+    {{end}}
+  </div>
+</section>
+{{end}}
+
+<section class="section section-alt">
+  <div class="container">
+    <h2 class="section-title">Every course</h2>
+    {{if .Courses}}
+    <div class="course-grid">
+      {{range .Courses}}
+      <a class="course-card" href="/courses/{{.Slug}}">
+        <span class="course-level">{{.Level}}</span>
+        <h3>{{.Title}}</h3>
+        <p>{{.Summary}}</p>
+        <span class="course-price">{{.RegionalPriceDisplay $.Country}}{{if .Duration}} <span class="course-duration">· {{.Duration}}</span>{{end}}</span>
+      </a>
+      {{end}}
+    </div>
+    {{else}}
+    <p class="empty-state">No courses published yet — check back soon.</p>
+    {{end}}
+  </div>
+</section>
+{{end}}

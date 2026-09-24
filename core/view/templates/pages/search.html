@@ -1,0 +1,37 @@
+{{define "content"}}
+<section class="section page-hero">
+  <div class="container">
+    <p class="eyebrow">Search</p>
+    <h1>Search this site</h1>
+    <form method="GET" action="/search" class="search-form" role="search">
+      <input type="search" name="q" value="{{.Query}}" placeholder="Search courses, pages…" aria-label="Search">
+      <button type="submit" class="btn btn-primary">Search</button>
+    </form>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    {{if .Query}}
+      {{if or .Courses .Pages}}
+        {{if .Courses}}
+        <h2 class="section-title">Courses</h2>
+        <ul class="search-results">
+          {{range .Courses}}<li><a href="{{$.Nav.Courses}}/{{.Slug}}">{{.Title}}</a><p>{{.Summary}}</p></li>{{end}}
+        </ul>
+        {{end}}
+        {{if .Pages}}
+        <h2 class="section-title">Pages</h2>
+        <ul class="search-results">
+          {{range .Pages}}<li><a href="{{.Path}}">{{.Title}}</a><p>{{.Desc}}</p></li>{{end}}
+        </ul>
+        {{end}}
+      {{else}}
+      <p class="empty-state">No results for "{{.Query}}".</p>
+      {{end}}
+    {{else}}
+    <p class="empty-state">Enter a search term above.</p>
+    {{end}}
+  </div>
+</section>
+{{end}}

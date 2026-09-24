@@ -1,0 +1,85 @@
+{{define "jsonld"}}<script type="application/ld+json">{{.JSONLD}}</script>{{end}}
+{{define "content"}}
+<section class="hero hero-simple">
+  <div class="container hero-inner{{if .Profile.PhotoURL}} hero-inner-with-photo{{end}}">
+    {{if .Profile.PhotoURL}}<img class="hero-photo" src="{{.Profile.PhotoURL}}" alt="{{.Profile.Name}}" width="176" height="176">{{end}}
+    <div class="hero-copy">
+      <h1>{{.Profile.Name}}</h1>
+      <p class="hero-title">{{.Profile.Title}}</p>
+      <p class="hero-subtitle">{{.Profile.HeroSubtitle}}</p>
+      <div class="hero-actions">
+        <a class="btn btn-primary btn-lg" href="{{.Nav.Consultancy}}">Work With Me</a>
+        <a class="btn btn-secondary" href="{{.Nav.About}}">Background &amp; Resume</a>
+      </div>
+      <p class="hero-tertiary">Learning on your own? <a href="{{.Nav.Courses}}">Browse the courses</a> — contribute as you like.</p>
+      {{if .Companies}}
+      {{/* Spacing separates the names rather than a punctuation character:
+           any separator drawn between them either orphans at the end of a
+           wrapped line or leads the next one, and neither survives a narrow
+           screen. .hero-provenance is a wrapping flex row (see style.css). */}}
+      <p class="hero-provenance">
+        <span class="hero-provenance-label">Previously at</span>
+        {{range .Companies}}<span class="hero-provenance-item">{{.}}</span>{{end}}
+      </p>
+      {{end}}
+    </div>
+  </div>
+</section>
+
+{{if or .Profile.Summary .Skills}}
+<section class="section">
+  <div class="container">
+    <div class="section-header-row">
+      <h2 class="section-title">What I bring</h2>
+      <a class="link-arrow" href="{{.Nav.About}}">Full background →</a>
+    </div>
+
+    {{if .Profile.Summary}}
+    <div class="home-bring-summary">
+      {{range $p := splitLines .Profile.Summary}}<p>{{$p}}</p>{{end}}
+    </div>
+    {{end}}
+
+    {{if .Skills}}
+    {{template "skills_grid" .Skills}}
+    {{end}}
+  </div>
+</section>
+{{end}}
+
+<section class="section section-alt">
+  <div class="container cta-inner">
+    <h2>From the same work I do for clients</h2>
+    <p>The courses below teach the same patterns I use on real banking and fintech systems, distilled into something you can work through on your own. If your problem is more specific than a course can cover, that's what 1:1 consultancy is for.</p>
+    <div class="hero-actions">
+      <a class="btn btn-primary" href="{{.Nav.Consultancy}}">View Consultancy</a>
+      <a class="btn btn-secondary" href="{{.Nav.Courses}}">Browse Courses</a>
+    </div>
+  </div>
+</section>
+
+{{if .Articles}}
+<section class="section">
+  <div class="container">
+    <div class="section-header-row">
+      <h2 class="section-title">Technical writing</h2>
+      <a class="link-arrow" href="{{.Nav.Articles}}">Read the blog →</a>
+    </div>
+    <p class="section-lead">Where I work through the architecture decisions behind real production systems — event-driven design, resiliency, and the trade-offs that only show up at scale.</p>
+    <div class="article-grid">
+      {{range .Articles}}
+      <a class="article-card" href="/articles/{{.Slug}}">
+        <div class="article-card-body">
+          <h3>{{.Title}}</h3>
+          <p>{{.Summary}}</p>
+        </div>
+        <div class="article-card-meta">
+          <span>Read the post →</span>
+        </div>
+      </a>
+      {{end}}
+    </div>
+  </div>
+</section>
+{{end}}
+{{end}}

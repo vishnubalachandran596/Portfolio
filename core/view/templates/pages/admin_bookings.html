@@ -1,0 +1,38 @@
+{{define "content"}}
+<section class="section">
+  <div class="container">
+    <h1>Bookings</h1>
+    {{if .Bookings}}
+    <table class="admin-table">
+      <thead><tr><th>When</th><th>Name</th><th>Email</th><th>Phone</th><th>Amount</th><th>Promo</th><th>Message</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+        {{range .Bookings}}
+        <tr>
+          <td>{{formatDateTime .SlotStart}}</td>
+          <td>{{.Name}}</td>
+          <td>{{.Email}}</td>
+          <td>{{if .Phone}}{{.Phone}}{{else}}—{{end}}</td>
+          <td>{{if .AmountCents}}{{money .AmountCents .Currency}}{{else}}—{{end}}</td>
+          <td>{{if .PromoCode}}{{.PromoCode}} (-{{money .DiscountCents .Currency}}){{else}}—{{end}}</td>
+          <td class="booking-message">{{.Message}}</td>
+          <td><span class="status-badge status-{{.Status}}">{{.Status}}</span></td>
+          <td class="admin-table-actions">
+            <form method="POST" action="/admin/bookings/{{.ID}}/status">
+              <select name="status" onchange="this.form.submit()">
+                <option value="pending_payment" {{if eq .Status "pending_payment"}}selected{{end}}>Pending payment</option>
+                <option value="confirmed" {{if eq .Status "confirmed"}}selected{{end}}>Confirmed</option>
+                <option value="cancelled" {{if eq .Status "cancelled"}}selected{{end}}>Cancelled</option>
+              </select>
+            </form>
+            {{if eq .Status "confirmed"}}<a class="link-button" href="/admin/bookings/{{.ID}}/reschedule">Reschedule</a>{{end}}
+          </td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+    {{else}}
+    <p class="empty-state">No bookings yet.</p>
+    {{end}}
+  </div>
+</section>
+{{end}}

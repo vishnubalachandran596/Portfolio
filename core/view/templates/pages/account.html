@@ -1,0 +1,142 @@
+{{define "content"}}
+<section class="section page-hero page-hero-narrow">
+  <div class="container">
+    <p class="eyebrow">Account</p>
+    <h1>My Account</h1>
+    <p class="hero-subtitle">Your consultancy bookings, purchased courses, payments, and messages, in one place.</p>
+  </div>
+</section>
+
+<section id="courses" class="section">
+  <div class="container">
+    <h2 class="section-title">My Courses</h2>
+    {{if .Courses}}
+    <div class="course-grid">
+      {{range .Courses}}
+      <a class="course-card" href="/courses/{{.CourseSlug}}/learn">
+        <h3>{{.CourseTitle}}</h3>
+        <p>Purchased {{if .PaidAt}}{{.PaidAt}}{{else}}recently{{end}}{{if .Amount}} · {{.Amount}}{{end}}</p>
+        <span class="link-arrow">Continue learning →</span>
+      </a>
+      {{end}}
+    </div>
+    {{else}}
+    <p class="empty-state">No courses yet — <a href="/courses">browse the catalog</a>.</p>
+    {{end}}
+  </div>
+</section>
+
+<section id="bookings" class="section section-alt">
+  <div class="container">
+    <h2 class="section-title">My Bookings</h2>
+    {{if .Bookings}}
+    {{range .Bookings}}
+    {{if .WasRescheduled}}
+    <div class="reschedule-notice">
+      <p><strong>Your booking was rescheduled.</strong> Was {{.PreviousWhen}} — now <strong>{{.When}}</strong>.</p>
+      <div class="reschedule-notice-actions">
+        <form method="POST" action="/account/bookings/{{.ID}}/acknowledge">
+          <button type="submit" class="btn btn-secondary btn-sm">That works for me</button>
+        </form>
+        <a class="btn btn-primary btn-sm" href="/account/bookings/{{.ID}}/reschedule">Pick a different time</a>
+      </div>
+    </div>
+    {{end}}
+    {{end}}
+    <div class="table-scroll">
+    <table class="admin-table">
+      <thead><tr><th>When</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+        {{range .Bookings}}
+        <tr>
+          <td>{{.When}}</td>
+          <td><span class="status-badge status-{{.Status}}">{{.Status}}</span></td>
+          <td>{{if eq .Status "confirmed"}}<a class="link-button" href="/account/bookings/{{.ID}}/reschedule">Reschedule</a>{{end}}</td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+    </div>
+    {{else}}
+    <p class="empty-state">No bookings yet — <a href="/consultancy">book a session</a>.</p>
+    {{end}}
+  </div>
+</section>
+
+<section id="payments" class="section">
+  <div class="container">
+    <h2 class="section-title">Payments</h2>
+    {{if .Payments}}
+    <div class="table-scroll">
+    <table class="admin-table">
+      <thead><tr><th>When</th><th>Description</th><th>Amount</th><th></th></tr></thead>
+      <tbody>
+        {{range .Payments}}
+        <tr>
+          <td>{{.When}}</td>
+          <td>{{.Description}}</td>
+          <td>{{.Amount}}</td>
+          <td class="admin-table-actions">{{if .ReceiptURL}}<a class="link-button" href="{{.ReceiptURL}}">Receipt</a>{{end}}</td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+    </div>
+    {{else}}
+    <p class="empty-state">No payments yet.</p>
+    {{end}}
+  </div>
+</section>
+
+<section id="messages" class="section section-alt">
+  <div class="container">
+    <h2 class="section-title">Messages</h2>
+    {{if .Messages}}
+    <div class="message-list">
+      {{range .Messages}}
+      <div class="message-card">
+        <p class="message-when">{{.When}}</p>
+        <p class="message-body">{{.Body}}</p>
+      </div>
+      {{end}}
+    </div>
+    {{else}}
+    <p class="empty-state">No messages yet.</p>
+    {{end}}
+  </div>
+</section>
+
+<section id="testimonial" class="section">
+  <div class="container">
+    <h2 class="section-title">Share your experience</h2>
+    {{if eq .Testimonial.Status "published"}}
+    <p class="empty-state">Thanks — your testimonial is live on the <a href="/about">About page</a>.</p>
+    {{else if eq .Testimonial.Status "pending"}}
+    <p class="admin-form-note">Submitted — it'll show up on the About page once reviewed.</p>
+    <blockquote class="testimonial-card">
+      <p>&ldquo;{{.Testimonial.Body}}&rdquo;</p>
+      <cite>{{.Testimonial.AuthorName}}{{if .Testimonial.AuthorTitle}}<span>{{.Testimonial.AuthorTitle}}</span>{{end}}</cite>
+    </blockquote>
+    {{else}}
+    {{if $.Error}}<div class="alert alert-error">{{$.Error}}</div>{{end}}
+    <p class="hero-subtitle">Worked with me, taken a course, or booked a session? A short honest testimonial helps other people decide whether to reach out — it goes live only after a quick review.</p>
+    <form method="POST" action="/account/testimonials" class="admin-form">
+      <div class="form-row">
+        <label>Your name
+          <input type="text" name="author_name" value="{{.Testimonial.AuthorName}}" required>
+        </label>
+        <label>Title / how you know me <span class="optional">e.g. "Engineering Manager, Zafin"</span>
+          <input type="text" name="author_title" value="{{.Testimonial.AuthorTitle}}">
+        </label>
+      </div>
+      <label>Your testimonial
+        <textarea name="body" rows="4" required>{{.Testimonial.Body}}</textarea>
+      </label>
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary" data-loading-text="Submitting…">Submit for Review</button>
+      </div>
+    </form>
+    {{end}}
+  </div>
+</section>
+{{end}}

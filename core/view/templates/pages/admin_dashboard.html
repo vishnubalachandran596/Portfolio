@@ -1,0 +1,37 @@
+{{define "content"}}
+<section class="section">
+  <div class="container">
+    <h1>Dashboard</h1>
+    <div class="stat-grid">
+      <div class="stat-card"><span class="stat-number">{{.CourseCount}}</span><span class="stat-label">Total courses</span></div>
+      <div class="stat-card"><span class="stat-number">{{.PublishedCourses}}</span><span class="stat-label">Published</span></div>
+      <div class="stat-card"><span class="stat-number">{{.ConfirmedBookings}}</span><span class="stat-label">Confirmed bookings</span></div>
+      <div class="stat-card"><span class="stat-number">{{.PendingBookings}}</span><span class="stat-label">Pending payment</span></div>
+      <div class="stat-card"><span class="stat-number">{{.PaidPurchases}}</span><span class="stat-label">Course purchases</span></div>
+      <div class="stat-card"><span class="stat-number">{{.TotalPurchases}}</span><span class="stat-label">Total checkout attempts</span></div>
+      <div class="stat-card"><span class="stat-number">{{.ArticleCount}}</span><span class="stat-label">Total articles</span></div>
+      <div class="stat-card"><span class="stat-number">{{.PublishedArticles}}</span><span class="stat-label">Published articles</span></div>
+    </div>
+
+    <h2 class="section-title">Upcoming bookings</h2>
+    {{if .UpcomingBookings}}
+    <table class="admin-table">
+      <thead><tr><th>When</th><th>Name</th><th>Email</th><th>Status</th></tr></thead>
+      <tbody>
+        {{range .UpcomingBookings}}
+        <tr>
+          <td>{{formatDateTime .SlotStart}}</td>
+          <td>{{.Name}}</td>
+          <td>{{.Email}}</td>
+          <td><span class="status-badge status-{{.Status}}">{{.Status}}</span></td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+    <p><a class="link-arrow" href="/admin/bookings">Manage all bookings →</a></p>
+    {{else}}
+    <p class="empty-state">No upcoming bookings yet.</p>
+    {{end}}
+  </div>
+</section>
+{{end}}

@@ -1,0 +1,33 @@
+{{define "content"}}
+<section class="section">
+  <div class="container">
+    <div class="section-header-row">
+      <h1>Skills</h1>
+      <a class="btn btn-primary" href="/admin/skills/new">Add Skill</a>
+    </div>
+    {{if .Skills}}
+    <table class="admin-table">
+      <thead><tr><th>Category</th><th>Level</th><th>Items</th><th>Sort</th><th></th></tr></thead>
+      <tbody>
+        {{range .Skills}}
+        <tr>
+          <td>{{.Category}}</td>
+          <td>{{.Level}}</td>
+          <td>{{range $i, $item := .Items}}{{if $i}}, {{end}}{{$item}}{{end}}</td>
+          <td>{{.SortOrder}}</td>
+          <td class="admin-table-actions">
+            <a class="link-button" href="/admin/skills/{{.ID}}/edit">Edit</a>
+            <form method="POST" action="/admin/skills/{{.ID}}/delete" onsubmit="return confirm('Delete this skill?');">
+              <button type="submit" class="link-button danger">Delete</button>
+            </form>
+          </td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+    {{else}}
+    <p class="empty-state">No skills yet.</p>
+    {{end}}
+  </div>
+</section>
+{{end}}

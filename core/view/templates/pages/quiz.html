@@ -1,0 +1,28 @@
+{{define "content"}}
+<section class="section page-hero">
+  <div class="container">
+    <p class="eyebrow"><a href="/courses/{{.Course.Slug}}/learn">← Back to course</a></p>
+    <h1>Final Quiz</h1>
+    <p class="hero-subtitle">{{.Course.Title}} — answer all {{len .Questions}} questions and score at least 70% to earn your completion certificate.</p>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <form method="POST" action="/courses/{{.Course.Slug}}/quiz" class="quiz-form">
+      {{range $i, $q := .Questions}}
+      <fieldset class="form-fieldset quiz-question">
+        <legend>{{add1 $i}}. {{$q.Question}}</legend>
+        <label class="checkbox-label"><input type="radio" name="q{{$q.ID}}" value="A" required> {{$q.OptionA}}</label>
+        <label class="checkbox-label"><input type="radio" name="q{{$q.ID}}" value="B"> {{$q.OptionB}}</label>
+        <label class="checkbox-label"><input type="radio" name="q{{$q.ID}}" value="C"> {{$q.OptionC}}</label>
+        <label class="checkbox-label"><input type="radio" name="q{{$q.ID}}" value="D"> {{$q.OptionD}}</label>
+      </fieldset>
+      {{end}}
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary" data-loading-text="Grading…">Submit Quiz</button>
+      </div>
+    </form>
+  </div>
+</section>
+{{end}}

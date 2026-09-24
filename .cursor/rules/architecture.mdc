@@ -1,0 +1,48 @@
+---
+description: Architecture, scalability, extensibility, and security rules for this repo — always apply
+globs:
+alwaysApply: true
+---
+
+# Rules for this repo (Portfolio — Go, Postgres, Vercel serverless)
+
+Read `docs/FUNCTIONALITY.md` and `docs/ARCHITECTURE.md` before making any change. They're the living reference for what the product does and how it's built — more authoritative than re-deriving it from the source tree. `CLAUDE.md` at the repo root carries the same rules in full detail; this file is the Cursor-native mirror of it so the rules load automatically regardless of which tool is being used.
+
+**Update `docs/FUNCTIONALITY.md` / `docs/ARCHITECTURE.md` in the same commit as any change that makes them inaccurate.** Not a follow-up task — part of finishing the change.
+
+## Core rules
+
+1. **Reuse existing utilities — search before writing a new one.** This repo had a real bug from skipping this: a duplicate currency-formatting function in a template FuncMap silently disagreed with the canonical `models.FormatMoney`. Deleted, replaced with a direct reference. The same pass also found `crypto/rand`+`hex.EncodeToString` token generation duplicated across four handler files — consolidated into `authutil.RandomHex(n)`. One canonical implementation per concern, always.
+
+2. **Follow the layered pattern for anything new:** `models` (struct + business rules) → `repo` (all SQL, one file per aggregate) → `handlers` (wires repo into `App`) → `view/templates/pages` (HTML) → `routes.go`. A new feature should be additive — new files at each layer — not threaded through unrelated existing code. Reference example: `core/repo/audit_requests.go` + `consultancy.go`'s Audit checkout handlers — a fourth paid product added without touching the course or booking checkout code.
+
+3. **Design for horizontal scale.** Stateless serverless function, any number of concurrent instances — no in-process state expected to survive between requests except the pooled DB connection. Independent DB lookups on a hot path (anything in `App.base()`, which runs on every page) should run concurrently (`sync.WaitGroup` for best-effort/swallow-errors, `errgroup` when an error must propagate — match the existing behavior, don't default to one blindly).
+
+4. **Every migration must be idempotent — this caused a real production outage.** `core/db/db.go`'s `Migrate()` re-runs every un-recorded `.sql` file on *every cold start*, and `Bootstrap()` treats a migration error as fatal for the entire app, not just the feature it belongs to. `CREATE TABLE IF NOT EXISTS` / `ADD COLUMN IF NOT EXISTS` are safe as-is. `ADD CONSTRAINT` has **no** `IF NOT EXISTS` form in Postgres — wrap it:
+   ```sql
+   DO $$ BEGIN
+       IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'your_constraint_name') THEN
+           ALTER TABLE t ADD CONSTRAINT your_constraint_name ...;
+       END IF;
+   END $$;
+   ```
+   Applying a migration manually (e.g. via an MCP tool) to unblock work mid-session does **not** make the checked-in file safe — it still runs for real on the next cold start, and re-running a non-idempotent `ADD CONSTRAINT` is exactly what caused the outage (migration 034, hotfixed in `7601c8a`).
+
+5. **Never commit secrets.** `.env`/`.env.local` stay gitignored. `.env.example` only ever holds placeholders. Before pushing anything config-adjacent, check the diff for a real-looking credential and stop if you find one instead of pushing it.
+
+6. **Payment/access confirmation is server-side only** — HMAC-verify before granting anything, never trust a client-reported success.
+
+7. **Stay consistent with the existing stack:** Go stdlib `net/http` (no framework), server-rendered `html/template` (no JS framework), plain CSS with existing design tokens (no Tailwind/CSS-in-JS), raw SQL via `database/sql` (no ORM), rem units for anything visual.
+
+8. **Keep project memory current — write it down as you go.** Agents working here share no conversation history, so record in Mem0 (via the Mem0 MCP server), at the moment you learn it: decisions *and their rationale*, constraints and traps discovered the hard way, corrections to earlier assumptions (keep both the wrong answer and the right one), and requirement changes including what was explicitly ruled out and why. `docs/FUNCTIONALITY.md` and `docs/ARCHITECTURE.md` say what the product *is*; memory says what was *decided* and what *bit us*. Prefer several specific memories over one long one — they surface independently on search. Batching memory to the end of a session is how it gets lost when the session is cut short.
+
+9. **The repo is CODE ONLY — no content data, no profile-row exception.** Migrations carry **schema only**: `CREATE`/`ALTER`/index/constraint/function. No content `INSERT` and no content-editing `UPDATE` for *any* table, including the `profile` identity row. UI chrome (labels, headings, nav, button copy) stays in code. Content lives in the live database; an idempotent snapshot `portfolio_seed_data.sql` is kept in a Google Drive folder named **`Portfolio`**. Refer to that folder by name only — never a URL. **Direction of truth:** edit in the admin console, then regenerate the snapshot from the live database (`core/db/gen_bootstrap_data.sql`). The snapshot is a bootstrap copy, not an authoring surface. A new feature ships DDL only; rows are added through admin, then the snapshot is regenerated. The repo alone cannot rebuild content — disaster recovery depends on the snapshot. See `docs/ARCHITECTURE.md`.
+
+## Before finishing any task in this repo
+
+- Did this change make either doc stale? Update it now.
+- Did I reuse an existing helper/pattern instead of writing a near-duplicate?
+- Does a new feature follow the models→repo→handlers→templates→routes layering as its own additive piece?
+- Any new/changed `.sql` migration — is it safe to run twice? (See rule 4.)
+- Any real secret in the diff? Check, don't assume.
+- `go build ./... && go vet ./...` clean?

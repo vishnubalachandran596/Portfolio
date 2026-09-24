@@ -1,0 +1,32 @@
+{{define "content"}}
+<section class="section">
+  <div class="container">
+    <h1>{{if .IsNew}}Add Testimonial{{else}}Edit Testimonial{{end}}</h1>
+    {{if .Error}}<div class="alert alert-error">{{.Error}}</div>{{end}}
+    <form method="POST" action="{{if .IsNew}}/admin/testimonials/new{{else}}/admin/testimonials/{{.Testimonial.ID}}/edit{{end}}" class="admin-form">
+      <div class="form-row">
+        <label>Author name
+          <input type="text" name="author_name" value="{{.Testimonial.AuthorName}}" required>
+        </label>
+        <label>Author title <span class="optional">e.g. "Engineering Manager, Zafin"</span>
+          <input type="text" name="author_title" value="{{.Testimonial.AuthorTitle}}">
+        </label>
+      </div>
+      <label>Quote <span class="optional">use their own words — a real quote, not paraphrased marketing copy</span>
+        <textarea name="body" rows="5" required>{{.Testimonial.Body}}</textarea>
+      </label>
+      <label class="checkbox-label">
+        <input type="checkbox" name="is_published" {{if or .IsNew .Testimonial.IsPublished}}checked{{end}}>
+        Published (visible on the About page)
+      </label>
+      <label>Sort order
+        <input type="number" name="sort_order" value="{{.Testimonial.SortOrder}}">
+      </label>
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary" data-loading-text="Saving…">Save Testimonial</button>
+        <a class="btn btn-secondary" href="/admin/testimonials">Cancel</a>
+      </div>
+    </form>
+  </div>
+</section>
+{{end}}
