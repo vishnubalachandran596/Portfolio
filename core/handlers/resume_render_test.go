@@ -73,6 +73,30 @@ func TestAboutRendersRoleResumeSelect(t *testing.T) {
 	if !strings.Contains(body, "multipart/form-data") || !strings.Contains(body, `name="resume_file"`) {
 		t.Fatal("experience form missing resume upload")
 	}
+	if strings.Contains(body, "/admin/resumes/") {
+		t.Fatal("new experience should not offer a resume preview")
+	}
+
+	rec = httptest.NewRecorder()
+	r.Render(rec, 200, "admin_experience_form", AdminExperienceFormData{
+		BaseData: base,
+		Experience: models.Experience{
+			ID:      1,
+			Company: "Zafin",
+			Role:    "Lead Product Engineer I",
+		},
+		Resume: models.RoleResume{
+			RoleKey:    "zafin-lead-product-engineer-i",
+			ObjectPath: "resumes/zafin-lead-product-engineer-i.pdf",
+		},
+	})
+	body = rec.Body.String()
+	if strings.Contains(body, "<!-- render error:") {
+		t.Fatal(body)
+	}
+	if !strings.Contains(body, `href="/admin/resumes/zafin-lead-product-engineer-i"`) {
+		t.Fatal("experience form missing role resume preview")
+	}
 
 	rec = httptest.NewRecorder()
 	r.Render(rec, 200, "admin_profile", AdminProfileData{
@@ -86,6 +110,25 @@ func TestAboutRendersRoleResumeSelect(t *testing.T) {
 	}
 	if !strings.Contains(body, "multipart/form-data") || !strings.Contains(body, `name="resume_file"`) || !strings.Contains(body, "A default resume is already stored") {
 		t.Fatal("profile form missing default resume upload")
+	}
+	if !strings.Contains(body, `href="/admin/resumes/default"`) {
+		t.Fatal("profile form missing default resume preview")
+	}
+
+	rec = httptest.NewRecorder()
+	r.Render(rec, 200, "admin_experience_list", AdminExperienceListData{
+		BaseData: base,
+		Experience: []AdminExperienceRow{{
+			Experience: models.Experience{ID: 1, Company: "Zafin", Role: "Lead Product Engineer I"},
+			ResumeKey:  "zafin-lead-product-engineer-i",
+		}},
+	})
+	body = rec.Body.String()
+	if strings.Contains(body, "<!-- render error:") {
+		t.Fatal(body)
+	}
+	if !strings.Contains(body, `href="/admin/resumes/zafin-lead-product-engineer-i"`) || !strings.Contains(body, "Zafin") {
+		t.Fatal("experience list missing resume preview")
 	}
 }
 

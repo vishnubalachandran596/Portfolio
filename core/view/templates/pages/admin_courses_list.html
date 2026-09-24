@@ -16,6 +16,7 @@
           <td>{{.PriceDisplay}}</td>
           <td>{{if .IsPublished}}Yes{{else}}No{{end}}</td>
           <td class="admin-table-actions">
+            {{if .ContentObject}}<a class="link-button" href="/admin/courses/{{.ID}}/preview" target="_blank" rel="noopener">Preview</a>{{end}}
             <a href="/admin/courses/{{.ID}}/edit">Edit</a>
             <a class="link-button" href="/admin/courses/{{.ID}}/quiz">Quiz</a>
             <form method="POST" action="/admin/courses/{{.ID}}/delete" onsubmit="return confirm('Delete this course?');">

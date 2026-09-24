@@ -57,6 +57,9 @@
       {{end}}
       <div class="form-actions">
         <button type="submit" class="btn btn-primary">Save Profile</button>
+        {{if .HasDefaultResume}}
+        <a class="btn btn-secondary" href="/admin/resumes/default" target="_blank" rel="noopener">Preview resume</a>
+        {{end}}
       </div>
     </form>
   </div>

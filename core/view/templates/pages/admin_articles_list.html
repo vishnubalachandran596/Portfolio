@@ -16,6 +16,7 @@
           <td>{{formatDateOptional .PublishedDate}}</td>
           <td><span class="status-badge {{if .IsPublished}}status-confirmed{{else}}status-cancelled{{end}}">{{if .IsPublished}}Published{{else}}Hidden{{end}}</span></td>
           <td class="admin-table-actions">
+            <a class="link-button" href="/admin/articles/{{.ID}}/preview" target="_blank" rel="noopener">Preview</a>
             <a class="link-button" href="/admin/articles/{{.ID}}/edit">Edit</a>
             <form method="POST" action="/admin/articles/{{.ID}}/delete" onsubmit="return confirm('Delete this article?');">
               <button type="submit" class="link-button danger">Delete</button>
