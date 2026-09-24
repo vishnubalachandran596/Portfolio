@@ -118,6 +118,7 @@ func (a *App) Sitemap(w http.ResponseWriter, r *http.Request) {
 	}{
 		{"/", "1.0"},
 		{"/about", "0.9"},
+		{"/resume.pdf", "0.5"},
 		{"/courses", "0.9"},
 		{"/consultancy", "0.8"},
 		{"/articles", "0.6"},
@@ -183,11 +184,17 @@ func (a *App) LLMsTxt(w http.ResponseWriter, r *http.Request) {
 	}
 
 	b.WriteString("## Pages\n\n")
+	fmt.Fprintf(&b, "- [Home](%s/): Overview, current work, and primary ways to engage\n", base)
 	fmt.Fprintf(&b, "- [About](%s/about): Background, skills, and experience\n", base)
+	fmt.Fprintf(&b, "- [Resume PDF](%s/resume.pdf): Downloadable resume generated from the live profile\n", base)
 	fmt.Fprintf(&b, "- [Consultancy](%s/consultancy): Fixed-price architecture reviews, fractional advisory retainers, and hourly sessions\n", base)
 	fmt.Fprintf(&b, "- [Courses](%s/courses): Practical courses on Java, architecture, system design, and distributed systems\n", base)
 	fmt.Fprintf(&b, "- [Articles](%s/articles): Original writing on software architecture, distributed systems, and engineering careers\n", base)
-	fmt.Fprintf(&b, "- [Contact](%s/contact): Get in touch\n\n", base)
+	fmt.Fprintf(&b, "- [Contact](%s/contact): Get in touch\n", base)
+	fmt.Fprintf(&b, "- [Privacy Policy](%s/privacy): How data is collected, used, and deleted\n", base)
+	fmt.Fprintf(&b, "- [Terms of Service](%s/terms): Terms governing use of this site\n", base)
+	fmt.Fprintf(&b, "- [Refund Policy](%s/refund): Refund terms for paid courses\n", base)
+	fmt.Fprintf(&b, "- [Cookie Policy](%s/cookies): How cookies are used on this site\n\n", base)
 
 	if len(courses) > 0 {
 		b.WriteString("## Courses\n\n")

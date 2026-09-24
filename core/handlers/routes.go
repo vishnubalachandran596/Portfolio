@@ -34,14 +34,14 @@ func (a *App) Routes() http.Handler {
 	mux.Handle("POST /courses/{slug}/quiz", noindex(http.HandlerFunc(a.QuizSubmit)))
 	mux.Handle("GET /courses/{slug}/certificate", noindex(http.HandlerFunc(a.CertificateDownload)))
 	mux.HandleFunc("GET /consultancy", a.ConsultancyPage)
-	mux.Handle("GET /booking", a.Auth.RequireUser(http.HandlerFunc(a.BookingPage)))
+	mux.Handle("GET /booking", noindex(a.Auth.RequireUser(http.HandlerFunc(a.BookingPage))))
 	mux.HandleFunc("POST /booking/confirm", a.BookingConfirm)
 	mux.HandleFunc("GET /articles", a.ArticlesPage)
 	mux.HandleFunc("GET /articles/{slug}", a.ArticleDetailPage)
 	mux.HandleFunc("POST /articles/{slug}/thumbs-up", a.ArticleThumbsUp)
 	mux.HandleFunc("GET /contact", a.ContactPage)
 	mux.HandleFunc("POST /contact", a.ContactSubmit)
-	mux.HandleFunc("GET /search", a.Search)
+	mux.Handle("GET /search", noindex(http.HandlerFunc(a.Search)))
 	mux.Handle("GET /account", noindex(a.Auth.RequireUser(http.HandlerFunc(a.AccountPage))))
 	mux.Handle("GET /account/bookings/{id}/receipt.pdf", a.Auth.RequireUser(http.HandlerFunc(a.AccountBookingReceipt)))
 	mux.Handle("GET /account/purchases/{id}/receipt.pdf", a.Auth.RequireUser(http.HandlerFunc(a.AccountPurchaseReceipt)))
@@ -51,10 +51,10 @@ func (a *App) Routes() http.Handler {
 	mux.Handle("POST /account/bookings/{id}/reschedule", a.Auth.RequireUser(http.HandlerFunc(a.AccountRescheduleSubmit)))
 
 	// Visitor auth.
-	mux.HandleFunc("GET /exit-preview", a.ExitVisitorPreview)
-	mux.HandleFunc("GET /login", a.LoginPage)
-	mux.HandleFunc("GET /login/google", a.GoogleLoginStart)
-	mux.HandleFunc("GET /login/google/callback", a.GoogleLoginCallback)
+	mux.Handle("GET /exit-preview", noindex(http.HandlerFunc(a.ExitVisitorPreview)))
+	mux.Handle("GET /login", noindex(http.HandlerFunc(a.LoginPage)))
+	mux.Handle("GET /login/google", noindex(http.HandlerFunc(a.GoogleLoginStart)))
+	mux.Handle("GET /login/google/callback", noindex(http.HandlerFunc(a.GoogleLoginCallback)))
 	mux.HandleFunc("POST /logout", a.UserLogout)
 
 	// SEO.
@@ -170,7 +170,8 @@ func (a *App) Routes() http.Handler {
 }
 
 // noindex tags every response under a handler as non-indexable — used for
-// the admin portal, which should never appear in search results.
+// admin, auth, account, search, and gated flows that should never appear in
+// search results.
 func noindex(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("X-Robots-Tag", "noindex, nofollow")

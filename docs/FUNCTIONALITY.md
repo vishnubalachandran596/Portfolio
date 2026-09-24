@@ -94,17 +94,19 @@ Vishnu's original writing, hosted here — nothing else. An article *is* a body;
 Email (with copy-to-clipboard), LinkedIn link, and a CTA into Consultancy — plus a real submittable form: name, email, an optional **contact number**, and a message. No login required. On submit (`ContactSubmit`), the message is recorded in `contact_messages` and a Telegram notification fires (same mechanism as bookings/purchases); the page redirects back to itself with `?sent=1` (or `?error=1` if name/email/message were missing or the email looked invalid) for a plain server-rendered success/error banner, no JS needed. **There is no transactional email provider anywhere in this codebase** (no `smtp`/Resend/SendGrid — the only outbound notification channel is Telegram, to the admin), so the sender gets *no* confirmation email; that success banner is the only send confirmation they receive, which is why it also offers `/booking` as the faster route rather than leaving someone unsure whether to submit again.
 
 ### Search (`GET /search`)
-Simple substring search across published courses and a small hardcoded index of static pages.
+Simple substring search across published courses and a small hardcoded index of static pages. Search is an internal utility route and is `noindex`ed rather than listed in the sitemap; the actual landing pages and detail pages it links to are what search engines should index.
 
 ### Legal pages
 `/privacy`, `/terms`, `/refund`, `/cookies` — static content pages, plus a cookie-consent banner (no third-party tracking; only a consent-preference cookie and, once logged in, a session cookie).
 
 ### SEO/meta endpoints (all served dynamically from live data, never static files)
-- `GET /sitemap.xml` — every static page + all published courses + all published articles, with `lastmod`.
+- `GET /sitemap.xml` — every indexable static route (home, about, generated resume PDF, courses, consultancy, articles, contact, and legal pages) + all published courses + all published articles, with `lastmod` on course/article detail URLs.
 - `GET /robots.txt` — allows everything except `/admin/`, references the sitemap.
-- `GET /llms.txt` — a plain-text site summary (profile + courses) for AI answer engines.
+- `GET /llms.txt` — a plain-text site summary (profile + every indexable public page + courses) for AI answer engines.
 - `GET /{indexNowKey}.txt` + IndexNow submission — pushes "this URL changed" directly to Bing/Yandex.
 - `GET /favicon.ico`, `/static/img/apple-touch-icon.png`, `/static/img/favicon.svg`.
+
+Utility/gated routes are deliberately excluded from the sitemap and marked `noindex` where they can render HTML: `/search`, `/login`, `/booking`, `/account`, admin pages, and gated course learn/quiz/certificate routes.
 
 ---
 
