@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"io"
 	"log"
 	"net/http"
@@ -541,8 +542,10 @@ func (a *App) AdminAvailabilityToggle(w http.ResponseWriter, r *http.Request) {
 
 type AdminProfileData struct {
 	BaseData
-	Profile models.Profile
-	Saved   bool
+	Profile          models.Profile
+	HasDefaultResume bool
+	Saved            bool
+	Error            string
 }
 
 func (a *App) AdminProfilePage(w http.ResponseWriter, r *http.Request) {
@@ -551,15 +554,21 @@ func (a *App) AdminProfilePage(w http.ResponseWriter, r *http.Request) {
 		a.serverError(w, "load profile", err)
 		return
 	}
+	hasDefault, err := a.hasDefaultResume(r.Context())
+	if err != nil {
+		a.serverError(w, "load resume", err)
+		return
+	}
 	a.View.Render(w, http.StatusOK, "admin_profile", AdminProfileData{
-		BaseData: a.base(r, "Profile — Admin", "", "admin"),
-		Profile:  profile,
-		Saved:    r.URL.Query().Get("saved") == "1",
+		BaseData:         a.base(r, "Profile — Admin", "", "admin"),
+		Profile:          profile,
+		HasDefaultResume: hasDefault,
+		Saved:            r.URL.Query().Get("saved") == "1",
 	})
 }
 
 func (a *App) AdminProfileSave(w http.ResponseWriter, r *http.Request) {
-	if err := r.ParseForm(); err != nil {
+	if err := r.ParseMultipartForm(maxCourseUploadBytes); err != nil {
 		http.Error(w, "invalid form", http.StatusBadRequest)
 		return
 	}
@@ -578,11 +587,59 @@ func (a *App) AdminProfileSave(w http.ResponseWriter, r *http.Request) {
 		PhotoURL:        strings.TrimSpace(r.FormValue("photo_url")),
 		YearsExperience: years,
 	}
+	pdf, pdfErr := readResumeUpload(r)
+	if pdfErr != "" || (len(pdf) > 0 && a.CourseStorage == nil) {
+		msg := pdfErr
+		if msg == "" {
+			msg = "Storage is not configured, so the resume cannot be saved."
+		}
+		hasDefault, _ := a.hasDefaultResume(r.Context())
+		a.View.Render(w, http.StatusUnprocessableEntity, "admin_profile", AdminProfileData{
+			BaseData:         a.base(r, "Profile — Admin", "", "admin"),
+			Profile:          profile,
+			HasDefaultResume: hasDefault,
+			Error:            msg,
+		})
+		return
+	}
 	if err := a.Profile.Update(r.Context(), profile); err != nil {
 		a.serverError(w, "save profile", err)
 		return
 	}
+	if len(pdf) > 0 {
+		if err := a.replaceDefaultResume(r.Context(), pdf); err != nil {
+			a.serverError(w, "save resume", err)
+			return
+		}
+	}
 	http.Redirect(w, r, "/admin/profile?saved=1", http.StatusSeeOther)
+}
+
+func (a *App) hasDefaultResume(ctx context.Context) (bool, error) {
+	row, err := a.Resumes.Get(ctx, models.DefaultResumeKey)
+	if err == repo.ErrNotFound {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return row.ObjectPath != "", nil
+}
+
+func (a *App) replaceDefaultResume(ctx context.Context, pdf []byte) error {
+	path, err := storage.ResumeObject(models.DefaultResumeKey)
+	if err != nil {
+		return err
+	}
+	if err := a.CourseStorage.Put(ctx, path, "application/pdf", pdf); err != nil {
+		return err
+	}
+	return a.Resumes.Upsert(ctx, models.RoleResume{
+		RoleKey:    models.DefaultResumeKey,
+		Label:      "Resume",
+		ObjectPath: path,
+		SortOrder:  0,
+	})
 }
 
 // --- helpers ---------------------------------------------------------------

@@ -162,13 +162,43 @@ var roleKeyPattern = regexp.MustCompile(`^[a-z0-9]+(?:-[a-z0-9]+)*$`)
 const defaultResumeFilename = "Resume_Vishnu_balachandran.pdf"
 
 // resumeFileName is the download title. The default file is
-// Resume_Vishnu_balachandran.pdf. A role-specific file adds the role
-// key before the extension.
-func resumeFileName(roleKey string) string {
-	if roleKey == "" || roleKey == models.DefaultResumeKey {
+// Resume_Vishnu_balachandran.pdf. A role-specific file is
+// Resume-Vishnu-Balachandran-<role name>.pdf, with the role's own
+// letter case kept and spaces turned into hyphens.
+func resumeFileName(row models.RoleResume) string {
+	if row.RoleKey == "" || row.RoleKey == models.DefaultResumeKey {
 		return defaultResumeFilename
 	}
-	return "Resume_Vishnu_balachandran_" + roleKey + ".pdf"
+	token := filenameToken(roleNameFromLabel(row.Label))
+	if token == "" {
+		token = row.RoleKey
+	}
+	return "Resume-Vishnu-Balachandran-" + token + ".pdf"
+}
+
+func roleNameFromLabel(label string) string {
+	if i := strings.Index(label, " · "); i >= 0 {
+		return strings.TrimSpace(label[:i])
+	}
+	return strings.TrimSpace(label)
+}
+
+func filenameToken(s string) string {
+	var b strings.Builder
+	lastDash := false
+	for _, r := range strings.TrimSpace(s) {
+		switch {
+		case r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9':
+			b.WriteRune(r)
+			lastDash = false
+		default:
+			if !lastDash && b.Len() > 0 {
+				b.WriteByte('-')
+				lastDash = true
+			}
+		}
+	}
+	return strings.Trim(b.String(), "-")
 }
 
 func roleSpecificResumes(list []models.RoleResume) []models.RoleResume {
@@ -265,7 +295,7 @@ func (a *App) writeStoredResume(w http.ResponseWriter, r *http.Request, row mode
 		return
 	}
 	w.Header().Set("Content-Type", "application/pdf")
-	w.Header().Set("Content-Disposition", `inline; filename="`+resumeFileName(row.RoleKey)+`"`)
+	w.Header().Set("Content-Disposition", `inline; filename="`+resumeFileName(row)+`"`)
 	w.Header().Set("Cache-Control", "private, max-age=0")
 	w.Write(raw)
 }

@@ -3,7 +3,8 @@
   <div class="container">
     <h1>Profile</h1>
     {{if .Saved}}<div class="alert alert-success">Profile saved.</div>{{end}}
-    <form method="POST" action="/admin/profile" class="admin-form">
+    {{if .Error}}<div class="alert alert-error">{{.Error}}</div>{{end}}
+    <form method="POST" action="/admin/profile" class="admin-form" enctype="multipart/form-data">
       <div class="form-row">
         <label>Name
           <input type="text" name="name" value="{{.Profile.Name}}" required>
@@ -46,6 +47,14 @@
       <label>Photo URL
         <input type="url" name="photo_url" value="{{.Profile.PhotoURL}}">
       </label>
+      <label>Default resume PDF <span class="optional">optional — replaces the main download</span>
+        <input type="file" name="resume_file" accept=".pdf,application/pdf">
+      </label>
+      {{if .HasDefaultResume}}
+      <p class="admin-form-note">A default resume is already stored. Leave the file empty to keep it. A new PDF replaces that download.</p>
+      {{else}}
+      <p class="admin-form-note">Upload the PDF offered by Download Resume. Role-specific files stay on each experience.</p>
+      {{end}}
       <div class="form-actions">
         <button type="submit" class="btn btn-primary">Save Profile</button>
       </div>

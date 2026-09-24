@@ -73,17 +73,34 @@ func TestAboutRendersRoleResumeSelect(t *testing.T) {
 	if !strings.Contains(body, "multipart/form-data") || !strings.Contains(body, `name="resume_file"`) {
 		t.Fatal("experience form missing resume upload")
 	}
+
+	rec = httptest.NewRecorder()
+	r.Render(rec, 200, "admin_profile", AdminProfileData{
+		BaseData:         base,
+		HasDefaultResume: true,
+		Profile:          models.Profile{Name: "Vishnu Balachandran"},
+	})
+	body = rec.Body.String()
+	if strings.Contains(body, "<!-- render error:") {
+		t.Fatal(body)
+	}
+	if !strings.Contains(body, "multipart/form-data") || !strings.Contains(body, `name="resume_file"`) || !strings.Contains(body, "A default resume is already stored") {
+		t.Fatal("profile form missing default resume upload")
+	}
 }
 
 func TestResumeFileName(t *testing.T) {
-	if got := resumeFileName(""); got != "Resume_Vishnu_balachandran.pdf" {
+	if got := resumeFileName(models.RoleResume{}); got != "Resume_Vishnu_balachandran.pdf" {
 		t.Fatalf("default name %s", got)
 	}
-	if got := resumeFileName(models.DefaultResumeKey); got != "Resume_Vishnu_balachandran.pdf" {
+	if got := resumeFileName(models.RoleResume{RoleKey: models.DefaultResumeKey}); got != "Resume_Vishnu_balachandran.pdf" {
 		t.Fatalf("default key name %s", got)
 	}
-	got := resumeFileName("zafin-lead-product-engineer-i")
-	if got != "Resume_Vishnu_balachandran_zafin-lead-product-engineer-i.pdf" {
+	got := resumeFileName(models.RoleResume{
+		RoleKey: "zafin-lead-product-engineer-i",
+		Label:   "Lead Product Engineer I · Zafin",
+	})
+	if got != "Resume-Vishnu-Balachandran-Lead-Product-Engineer-I.pdf" {
 		t.Fatalf("role name %s", got)
 	}
 }
