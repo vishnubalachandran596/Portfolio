@@ -39,14 +39,14 @@ func Open(databaseURL string) (*sql.DB, error) {
 
 	// A Vercel Go instance serves one request at a time, so the pool only
 	// has to cover the widest concurrent fan-out inside a single request —
-	// not the request rate. That widest point is the About page: seven
+	// not the request rate. That widest point is the About page: eight
 	// page lookups in its errgroup plus the two the shared chrome runs for
-	// a signed-in visitor, nine in one wave. The pool must not be smaller
+	// a signed-in visitor, ten in one wave. The pool must not be smaller
 	// than that: the surplus goroutines would block waiting for a
 	// connection and one concurrent wave would quietly become two, which
 	// is a latency bug that looks like nothing in the code. If the fan-out
 	// grows again, this has to grow with it.
-	const widestRequestFanOut = 9
+	const widestRequestFanOut = 10
 	conn.SetMaxOpenConns(widestRequestFanOut + 1)
 
 	// Idle connections are the difference between a fast warm invocation

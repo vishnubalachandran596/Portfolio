@@ -1,6 +1,7 @@
-// Package storage streams private HTML from a Supabase Storage bucket.
+// Package storage streams private objects from Supabase Storage.
 // Paid lessons are read after the purchase check. Article HTML uploaded
-// from the admin console is read when the article page renders. The
+// from the admin console is read when the article page renders. A role
+// resume PDF is read when someone downloads that role's resume. The
 // browser never receives an object URL.
 package storage
 
@@ -25,11 +26,16 @@ const (
 	Bucket = "course-content"
 	// ArticleBucket is the private bucket shown in Storage for blog HTML.
 	ArticleBucket = "articles"
+	// ResumeBucket is the private bucket for role-keyed resume PDFs.
+	ResumeBucket = "resumes"
 )
 
 // objectPath is courses/{slug}.html or articles/{slug}.html. Slugs come
 // from slugify, so this is the only shape the server will send to Storage.
 var objectPath = regexp.MustCompile(`^(?:courses|articles)/[a-z0-9]+(?:-[a-z0-9]+)*\.html$`)
+
+// resumePath is resumes/{role_key}.pdf. The role key is slugify(company + role).
+var resumePath = regexp.MustCompile(`^resumes/[a-z0-9]+(?:-[a-z0-9]+)*\.pdf$`)
 
 // CourseObject is the private-bucket path for a course slug.
 func CourseObject(slug string) (string, error) {
@@ -39,6 +45,15 @@ func CourseObject(slug string) (string, error) {
 // ArticleObject is the private-bucket path for an article slug.
 func ArticleObject(slug string) (string, error) {
 	return objectFor("articles", slug)
+}
+
+// ResumeObject is the private-bucket path for a role key.
+func ResumeObject(roleKey string) (string, error) {
+	path := "resumes/" + roleKey + ".pdf"
+	if !resumePath.MatchString(path) {
+		return "", fmt.Errorf("invalid storage object path %q", path)
+	}
+	return path, nil
 }
 
 func objectFor(prefix, slug string) (string, error) {
@@ -96,7 +111,7 @@ func New(cfg *config.Config) *Client {
 
 // Open streams one object. The caller closes the body.
 func (c *Client) Open(ctx context.Context, path string) (io.ReadCloser, error) {
-	if !objectPath.MatchString(path) {
+	if !allowedObject(path) {
 		return nil, fmt.Errorf("refusing storage path %q", path)
 	}
 	resp, err := c.do(ctx, http.MethodGet, path, nil, "")
@@ -112,7 +127,7 @@ func (c *Client) Open(ctx context.Context, path string) (io.ReadCloser, error) {
 
 // Put writes an object, replacing any object already at that path.
 func (c *Client) Put(ctx context.Context, path, contentType string, body []byte) error {
-	if !objectPath.MatchString(path) {
+	if !allowedObject(path) {
 		return fmt.Errorf("refusing storage path %q", path)
 	}
 	resp, err := c.do(ctx, http.MethodPost, path, body, contentType)
@@ -131,7 +146,7 @@ func (c *Client) Delete(ctx context.Context, path string) error {
 	if path == "" {
 		return nil
 	}
-	if !objectPath.MatchString(path) {
+	if !allowedObject(path) {
 		return fmt.Errorf("refusing storage path %q", path)
 	}
 	resp, err := c.do(ctx, http.MethodDelete, path, nil, "")
@@ -178,13 +193,20 @@ func (c *Client) objectURL(path string) string {
 	return c.base + "/storage/v1/object/" + url.PathEscape(bucketFor(path)) + "/" + strings.Join(parts, "/")
 }
 
-// bucketFor sends article objects to the articles bucket and lesson
-// objects to the course-content bucket.
+func allowedObject(path string) bool {
+	return objectPath.MatchString(path) || resumePath.MatchString(path)
+}
+
+// bucketFor sends each object prefix to its own private bucket.
 func bucketFor(path string) string {
-	if strings.HasPrefix(path, "articles/") {
+	switch {
+	case strings.HasPrefix(path, "articles/"):
 		return ArticleBucket
+	case strings.HasPrefix(path, "resumes/"):
+		return ResumeBucket
+	default:
+		return Bucket
 	}
-	return Bucket
 }
 
 func (c *Client) authorize(ctx context.Context) (apiKey, bearer string, err error) {

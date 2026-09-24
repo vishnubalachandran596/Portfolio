@@ -3,7 +3,7 @@
   <div class="container">
     <h1>{{if .IsNew}}Add Experience{{else}}Edit Experience{{end}}</h1>
     {{if .Error}}<div class="alert alert-error">{{.Error}}</div>{{end}}
-    <form method="POST" action="{{if .IsNew}}/admin/experience/new{{else}}/admin/experience/{{.Experience.ID}}/edit{{end}}" class="admin-form">
+    <form method="POST" action="{{if .IsNew}}/admin/experience/new{{else}}/admin/experience/{{.Experience.ID}}/edit{{end}}" class="admin-form" enctype="multipart/form-data">
       <div class="form-row">
         <label>Company
           <input type="text" name="company" value="{{.Experience.Company}}" required>
@@ -30,6 +30,14 @@
       <label>Sort order
         <input type="number" name="sort_order" value="{{.Experience.SortOrder}}">
       </label>
+      <label>Resume PDF <span class="optional">optional — the file offered for this role</span>
+        <input type="file" name="resume_file" accept=".pdf,application/pdf">
+      </label>
+      {{if .Resume.ObjectPath}}
+      <p class="admin-form-note">A resume is already stored for this role ({{.Resume.RoleKey}}). Leave the file empty to keep it. Changing the company or role moves it to the new key.</p>
+      {{else}}
+      <p class="admin-form-note">Stored under a key from the company and role, so the About page can offer one resume per role.</p>
+      {{end}}
       <div class="form-actions">
         <button type="submit" class="btn btn-primary" data-loading-text="Saving…">Save Experience</button>
         <a class="btn btn-secondary" href="/admin/experience">Cancel</a>
