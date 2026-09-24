@@ -234,6 +234,10 @@ func (a *App) AdminExperienceSave(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	newKey := experienceRoleKey(exp.Company, exp.Role)
+	if newKey == models.DefaultResumeKey {
+		a.renderExperienceForm(w, r, exp, id == 0, "That company and role would use the default resume key. Change the wording so this file stays tied to the role.")
+		return
+	}
 	if len(pdf) > 0 && newKey == "" {
 		a.renderExperienceForm(w, r, exp, id == 0, "Company and role need letters or numbers so a resume can be keyed to them.")
 		return

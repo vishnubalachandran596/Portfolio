@@ -52,9 +52,14 @@ type Experience struct {
 	SortOrder int
 }
 
-// RoleResume is one downloadable PDF keyed to a role. The bytes live in
-// the private resumes bucket; this row is only the key, the label shown
-// in the About page's role select, and the object path.
+// DefaultResumeKey is the role_resumes row for the main download. It is
+// not a job, so the About page does not list it in the role select.
+const DefaultResumeKey = "default"
+
+// RoleResume is one downloadable PDF. RoleKey DefaultResumeKey is the
+// resume served for every download that is not a stored role-specific
+// file. Any other key is one role, shown in the select only when that
+// file exists. The bytes live in the private resumes bucket.
 type RoleResume struct {
 	RoleKey    string
 	Label      string
