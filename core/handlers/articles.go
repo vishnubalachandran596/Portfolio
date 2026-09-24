@@ -1,7 +1,11 @@
 package handlers
 
 import (
+	"context"
+	"fmt"
 	"html/template"
+	"io"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -12,6 +16,7 @@ import (
 	"github.com/vishnubalachandran596/portfolio/core/authutil"
 	"github.com/vishnubalachandran596/portfolio/core/models"
 	"github.com/vishnubalachandran596/portfolio/core/repo"
+	"github.com/vishnubalachandran596/portfolio/core/storage"
 )
 
 const articlesPageSize = 5
@@ -131,6 +136,10 @@ func (a *App) ArticleDetailPage(w http.ResponseWriter, r *http.Request) {
 			a.serverError(w, "check article vote", err)
 			return
 		}
+	}
+	if err := a.loadArticleHTML(r.Context(), &article); err != nil {
+		a.serverError(w, "load article html", err)
+		return
 	}
 	base := a.baseFrom(r, pf, article.Title+" — "+a.Cfg.SiteName, article.Summary, "articles")
 	a.View.Render(w, http.StatusOK, "article_detail", ArticleDetailData{
@@ -281,15 +290,17 @@ func (a *App) AdminArticleEditPage(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// AdminArticleSave handles both create and edit: paste a link, write a
-// short summary, done — that's the whole "add an article" flow.
+// AdminArticleSave handles both create and edit. A typed body stays in
+// Postgres. An uploaded HTML file goes to the private Storage bucket and
+// the article page reads it back from there.
 func (a *App) AdminArticleSave(w http.ResponseWriter, r *http.Request) {
-	if err := r.ParseForm(); err != nil {
+	if err := r.ParseMultipartForm(maxCourseUploadBytes); err != nil {
 		http.Error(w, "invalid form", http.StatusBadRequest)
 		return
 	}
 
 	var id int64
+	isEdit := false
 	if idStr := r.PathValue("id"); idStr != "" {
 		var err error
 		id, err = strconv.ParseInt(idStr, 10, 64)
@@ -297,6 +308,7 @@ func (a *App) AdminArticleSave(w http.ResponseWriter, r *http.Request) {
 			a.NotFound(w, r)
 			return
 		}
+		isEdit = true
 	}
 
 	sortOrder, _ := strconv.Atoi(r.FormValue("sort_order"))
@@ -320,39 +332,158 @@ func (a *App) AdminArticleSave(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// An article is original writing hosted here, so a body is required —
-	// there is no longer a second, link-only kind of article that could
-	// stand in for one (see migration 040).
-	if article.Title == "" || article.Summary == "" || article.Body == "" {
-		formData := AdminArticleFormData{
-			BaseData: a.base(r, "Article — Admin", "", "admin"),
-			Article:  article,
-			IsNew:    id == 0,
-			Error:    "Title, summary, and a body are all required — an article is original writing hosted on this site.",
+	var previous models.Article
+	if isEdit {
+		existing, err := a.Articles.GetByID(r.Context(), id)
+		if err != nil {
+			if err == repo.ErrNotFound {
+				a.NotFound(w, r)
+				return
+			}
+			a.serverError(w, "load article", err)
+			return
 		}
-		a.View.Render(w, http.StatusUnprocessableEntity, "admin_article_form", formData)
+		previous = existing
+		article.ContentObject = existing.ContentObject
+	}
+
+	var uploaded []byte
+	if file, header, ferr := r.FormFile("content_file"); ferr == nil {
+		defer file.Close()
+		name := strings.ToLower(header.Filename)
+		if !strings.HasSuffix(name, ".html") && !strings.HasSuffix(name, ".htm") {
+			a.renderArticleForm(w, r, article, id == 0, "Article content must be an .html file.")
+			return
+		}
+		b, rerr := io.ReadAll(io.LimitReader(file, maxCourseUploadBytes+1))
+		if rerr != nil {
+			a.serverError(w, "read uploaded article", rerr)
+			return
+		}
+		if len(b) == 0 {
+			a.renderArticleForm(w, r, article, id == 0, "The HTML file is empty.")
+			return
+		}
+		if len(b) > maxCourseUploadBytes {
+			a.renderArticleForm(w, r, article, id == 0, "Article content must be 8MB or smaller.")
+			return
+		}
+		uploaded = b
+		if a.CourseStorage == nil {
+			a.renderArticleForm(w, r, article, id == 0, "Article storage is not configured on this server.")
+			return
+		}
+		article.Body = ""
+	}
+
+	// A post is original writing hosted here. That writing is either the
+	// typed body, a file just uploaded, or an HTML file already in Storage.
+	if article.Title == "" || article.Summary == "" || (article.Body == "" && len(uploaded) == 0 && article.ContentObject == "") {
+		a.renderArticleForm(w, r, article, id == 0, "Title, summary, and a body or HTML file are required — an article is original writing hosted on this site.")
 		return
 	}
 
 	ctx := r.Context()
+	dropPath := ""
+	if len(uploaded) > 0 {
+		path, perr := storage.ArticleObject(article.Slug)
+		if perr != nil {
+			a.serverError(w, "article object path", perr)
+			return
+		}
+		if err := a.CourseStorage.Put(ctx, path, "text/html", uploaded); err != nil {
+			a.serverError(w, "store article html", err)
+			return
+		}
+		article.ContentObject = path
+		if previous.ContentObject != "" && previous.ContentObject != path {
+			dropPath = previous.ContentObject
+		}
+	} else if article.Body != "" && previous.ContentObject != "" {
+		article.ContentObject = ""
+		dropPath = previous.ContentObject
+	} else if previous.ContentObject != "" {
+		path, perr := storage.ArticleObject(article.Slug)
+		if perr != nil {
+			a.serverError(w, "article object path", perr)
+			return
+		}
+		article.Body = ""
+		if path != previous.ContentObject {
+			raw, rerr := a.readArticleObject(ctx, previous.ContentObject)
+			if rerr != nil {
+				a.serverError(w, "read article html", rerr)
+				return
+			}
+			if err := a.CourseStorage.Put(ctx, path, "text/html", raw); err != nil {
+				a.serverError(w, "move article html", err)
+				return
+			}
+			article.ContentObject = path
+			dropPath = previous.ContentObject
+		}
+	}
+
 	var err error
 	if id == 0 {
-		_, err = a.Articles.Create(ctx, article)
+		id, err = a.Articles.Create(ctx, article)
 	} else {
 		err = a.Articles.Update(ctx, article)
 	}
 	if err != nil {
-		formData := AdminArticleFormData{
-			BaseData: a.base(r, "Article — Admin", "", "admin"),
-			Article:  article,
-			IsNew:    id == 0,
-			Error:    "Could not save article — the URL slug may already be in use.",
-		}
-		a.View.Render(w, http.StatusUnprocessableEntity, "admin_article_form", formData)
+		log.Printf("save article: %v", err)
+		a.renderArticleForm(w, r, article, id == 0, "Could not save article — the URL slug may already be in use.")
 		return
+	}
+	if dropPath != "" && a.CourseStorage != nil {
+		if err := a.CourseStorage.Delete(ctx, dropPath); err != nil {
+			log.Printf("delete article object %s: %v", dropPath, err)
+		}
 	}
 
 	http.Redirect(w, r, "/admin/articles", http.StatusSeeOther)
+}
+
+func (a *App) renderArticleForm(w http.ResponseWriter, r *http.Request, article models.Article, isNew bool, msg string) {
+	a.View.Render(w, http.StatusUnprocessableEntity, "admin_article_form", AdminArticleFormData{
+		BaseData: a.base(r, "Article — Admin", "", "admin"),
+		Article:  article,
+		IsNew:    isNew,
+		Error:    msg,
+	})
+}
+
+// loadArticleHTML replaces Body with the Storage object when one is set.
+// Posts that still live in the body column are left alone.
+func (a *App) loadArticleHTML(ctx context.Context, article *models.Article) error {
+	if article.ContentObject == "" {
+		return nil
+	}
+	raw, err := a.readArticleObject(ctx, article.ContentObject)
+	if err != nil {
+		return err
+	}
+	article.Body = storage.ArticleHTML(raw)
+	return nil
+}
+
+func (a *App) readArticleObject(ctx context.Context, path string) ([]byte, error) {
+	if a.CourseStorage == nil {
+		return nil, fmt.Errorf("article storage is not configured")
+	}
+	rc, err := a.CourseStorage.Open(ctx, path)
+	if err != nil {
+		return nil, err
+	}
+	defer rc.Close()
+	raw, err := io.ReadAll(io.LimitReader(rc, maxCourseUploadBytes+1))
+	if err != nil {
+		return nil, err
+	}
+	if len(raw) > maxCourseUploadBytes {
+		return nil, fmt.Errorf("article %s exceeds %d bytes", path, maxCourseUploadBytes)
+	}
+	return raw, nil
 }
 
 // parseTags splits a comma-separated tags input into a trimmed, non-empty
@@ -373,6 +504,11 @@ func (a *App) AdminArticleDelete(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		a.NotFound(w, r)
 		return
+	}
+	if existing, gerr := a.Articles.GetByID(r.Context(), id); gerr == nil && existing.ContentObject != "" && a.CourseStorage != nil {
+		if err := a.CourseStorage.Delete(r.Context(), existing.ContentObject); err != nil {
+			log.Printf("delete article object %s: %v", existing.ContentObject, err)
+		}
 	}
 	if err := a.Articles.Delete(r.Context(), id); err != nil {
 		a.serverError(w, "delete article", err)
