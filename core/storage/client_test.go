@@ -111,6 +111,23 @@ func TestOpenSignsInThenDownloads(t *testing.T) {
 	}
 }
 
+func TestPutArticleUsesArticlesBucket(t *testing.T) {
+	var path string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		path = r.URL.Path
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+
+	c := New(&config.Config{SupabaseURL: srv.URL, SupabaseSecretKey: "s"})
+	if err := c.Put(context.Background(), "articles/kafka-notes.html", "text/html", []byte("<p>hi</p>")); err != nil {
+		t.Fatal(err)
+	}
+	if path != "/storage/v1/object/articles/articles/kafka-notes.html" {
+		t.Fatalf("path %s", path)
+	}
+}
+
 func TestPutSendsUpsert(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {

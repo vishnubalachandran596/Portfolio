@@ -33,7 +33,7 @@ type Config struct {
 	// Private Supabase Storage for paid lesson HTML. SecretKey is the
 	// service-role (or sb_secret_) key and is enough on its own. Without
 	// it, the anon key plus the dedicated storage-reader login is used.
-	// That login is limited by a storage policy to the course-content bucket.
+	// That login is limited by storage policies to the course-content and articles buckets.
 	SupabaseURL             string
 	SupabaseSecretKey       string
 	SupabaseAnonKey         string

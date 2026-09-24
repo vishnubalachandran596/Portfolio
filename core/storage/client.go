@@ -20,7 +20,12 @@ import (
 	"github.com/vishnubalachandran596/portfolio/core/config"
 )
 
-const Bucket = "course-content"
+const (
+	// Bucket holds paid lesson HTML.
+	Bucket = "course-content"
+	// ArticleBucket is the private bucket shown in Storage for blog HTML.
+	ArticleBucket = "articles"
+)
 
 // objectPath is courses/{slug}.html or articles/{slug}.html. Slugs come
 // from slugify, so this is the only shape the server will send to Storage.
@@ -49,9 +54,8 @@ func objectFor(prefix, slug string) (string, error) {
 // and caches that access token on the warm instance; losing the cache
 // only means the next call signs in again.
 type Client struct {
-	base   string
-	bucket string
-	http   *http.Client
+	base string
+	http *http.Client
 
 	secretKey string
 	anonKey   string
@@ -75,7 +79,6 @@ func New(cfg *config.Config) *Client {
 	}
 	c := &Client{
 		base:      base,
-		bucket:    Bucket,
 		http:      &http.Client{Timeout: 60 * time.Second},
 		secretKey: strings.TrimSpace(cfg.SupabaseSecretKey),
 		anonKey:   strings.TrimSpace(cfg.SupabaseAnonKey),
@@ -172,7 +175,16 @@ func (c *Client) objectURL(path string) string {
 	for i, p := range parts {
 		parts[i] = url.PathEscape(p)
 	}
-	return c.base + "/storage/v1/object/" + url.PathEscape(c.bucket) + "/" + strings.Join(parts, "/")
+	return c.base + "/storage/v1/object/" + url.PathEscape(bucketFor(path)) + "/" + strings.Join(parts, "/")
+}
+
+// bucketFor sends article objects to the articles bucket and lesson
+// objects to the course-content bucket.
+func bucketFor(path string) string {
+	if strings.HasPrefix(path, "articles/") {
+		return ArticleBucket
+	}
+	return Bucket
 }
 
 func (c *Client) authorize(ctx context.Context) (apiKey, bearer string, err error) {
