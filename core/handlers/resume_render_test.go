@@ -31,8 +31,11 @@ func TestAboutRendersRoleResumeSelect(t *testing.T) {
 	if strings.Contains(body, "<!-- render error:") {
 		t.Fatal(body)
 	}
+	if !strings.Contains(body, `href="/resume.pdf"`) {
+		t.Fatal("default download link missing")
+	}
 	if !strings.Contains(body, `action="/resume.pdf"`) || !strings.Contains(body, `name="role"`) {
-		t.Fatal("about page missing resume download form")
+		t.Fatal("about page missing role resume select")
 	}
 	if !strings.Contains(body, `value="zafin-lead-product-engineer-i"`) || !strings.Contains(body, "Lead Product Engineer I · Zafin") {
 		t.Fatal("role option missing")
@@ -69,5 +72,32 @@ func TestAboutRendersRoleResumeSelect(t *testing.T) {
 	}
 	if !strings.Contains(body, "multipart/form-data") || !strings.Contains(body, `name="resume_file"`) {
 		t.Fatal("experience form missing resume upload")
+	}
+}
+
+func TestResumeFileName(t *testing.T) {
+	if got := resumeFileName(""); got != "Resume_Vishnu_balachandran.pdf" {
+		t.Fatalf("default name %s", got)
+	}
+	if got := resumeFileName(models.DefaultResumeKey); got != "Resume_Vishnu_balachandran.pdf" {
+		t.Fatalf("default key name %s", got)
+	}
+	got := resumeFileName("zafin-lead-product-engineer-i")
+	if got != "Resume_Vishnu_balachandran_zafin-lead-product-engineer-i.pdf" {
+		t.Fatalf("role name %s", got)
+	}
+}
+
+func TestRoleSpecificResumesOmitsDefault(t *testing.T) {
+	got := roleSpecificResumes([]models.RoleResume{
+		{RoleKey: models.DefaultResumeKey, ObjectPath: "resumes/default.pdf"},
+		{RoleKey: "zafin-lead-product-engineer-i", ObjectPath: "resumes/zafin-lead-product-engineer-i.pdf"},
+		{RoleKey: "way-technical-lead"},
+	})
+	if len(got) != 1 || got[0].RoleKey != "zafin-lead-product-engineer-i" {
+		t.Fatalf("got %+v", got)
+	}
+	if roleSpecificResumes(nil) != nil {
+		t.Fatal("no role resumes should stay empty")
 	}
 }

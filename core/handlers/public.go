@@ -104,8 +104,9 @@ type AboutData struct {
 	// bare heading. See migration 046.
 	Certifications []models.Certification
 	Publications   []models.Publication
-	// Resumes is every stored role PDF, in sort order. Empty means the
-	// download link still points at the generated fallback.
+	// Resumes is every role-specific PDF, in sort order. The default
+	// resume is not included. Empty means About shows only the direct
+	// download, which serves the default file.
 	Resumes []models.RoleResume
 }
 
@@ -151,50 +152,62 @@ func (a *App) About(w http.ResponseWriter, r *http.Request) {
 		Testimonials:   testimonials,
 		Certifications: certs,
 		Publications:   pubs,
-		Resumes:        resumes,
+		Resumes:        roleSpecificResumes(resumes),
 	})
 }
 
 // roleKeyPattern matches the slug stored as role_resumes.role_key.
 var roleKeyPattern = regexp.MustCompile(`^[a-z0-9]+(?:-[a-z0-9]+)*$`)
 
-// Resume streams the PDF stored for a role. With no role query it serves
-// the first stored resume. With no stored resume at all it still generates
-// one from the live profile, skills, experience, and education.
+const defaultResumeFilename = "Resume_Vishnu_balachandran.pdf"
+
+// resumeFileName is the download title. The default file is
+// Resume_Vishnu_balachandran.pdf. A role-specific file adds the role
+// key before the extension.
+func resumeFileName(roleKey string) string {
+	if roleKey == "" || roleKey == models.DefaultResumeKey {
+		return defaultResumeFilename
+	}
+	return "Resume_Vishnu_balachandran_" + roleKey + ".pdf"
+}
+
+func roleSpecificResumes(list []models.RoleResume) []models.RoleResume {
+	var out []models.RoleResume
+	for _, row := range list {
+		if row.RoleKey == models.DefaultResumeKey || row.ObjectPath == "" {
+			continue
+		}
+		out = append(out, row)
+	}
+	return out
+}
+
+// Resume serves the uploaded default PDF. A role query serves that role's
+// file only when one has been stored. Every other request serves the
+// default. With no default file stored, it still generates a PDF from the
+// live profile, skills, experience, and education.
 func (a *App) Resume(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	role := strings.TrimSpace(r.URL.Query().Get("role"))
-
-	var stored models.RoleResume
-	switch {
-	case role != "":
-		if !roleKeyPattern.MatchString(role) {
-			a.NotFound(w, r)
-			return
-		}
+	if role != "" && role != models.DefaultResumeKey && roleKeyPattern.MatchString(role) {
 		row, err := a.Resumes.Get(ctx, role)
-		if err == repo.ErrNotFound {
-			a.NotFound(w, r)
-			return
-		}
-		if err != nil {
+		if err != nil && err != repo.ErrNotFound {
 			a.serverError(w, "load resume", err)
 			return
 		}
-		stored = row
-	default:
-		list, err := a.Resumes.List(ctx)
-		if err != nil {
-			a.serverError(w, "load resumes", err)
+		if err == nil && row.ObjectPath != "" {
+			a.writeStoredResume(w, r, row)
 			return
-		}
-		if len(list) > 0 {
-			stored = list[0]
 		}
 	}
 
-	if stored.ObjectPath != "" {
-		a.writeStoredResume(w, r, stored)
+	row, err := a.Resumes.Get(ctx, models.DefaultResumeKey)
+	if err != nil && err != repo.ErrNotFound {
+		a.serverError(w, "load resume", err)
+		return
+	}
+	if err == nil && row.ObjectPath != "" {
+		a.writeStoredResume(w, r, row)
 		return
 	}
 
@@ -226,7 +239,7 @@ func (a *App) Resume(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/pdf")
-	w.Header().Set("Content-Disposition", `inline; filename="vishnu-balachandran-resume.pdf"`)
+	w.Header().Set("Content-Disposition", `inline; filename="`+defaultResumeFilename+`"`)
 	w.Header().Set("Cache-Control", "public, max-age=3600")
 	w.Write(pdfBytes)
 }
@@ -252,7 +265,7 @@ func (a *App) writeStoredResume(w http.ResponseWriter, r *http.Request, row mode
 		return
 	}
 	w.Header().Set("Content-Type", "application/pdf")
-	w.Header().Set("Content-Disposition", `inline; filename="vishnu-balachandran-`+row.RoleKey+`.pdf"`)
+	w.Header().Set("Content-Disposition", `inline; filename="`+resumeFileName(row.RoleKey)+`"`)
 	w.Header().Set("Cache-Control", "private, max-age=0")
 	w.Write(raw)
 }
