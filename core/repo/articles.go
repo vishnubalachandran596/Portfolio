@@ -17,7 +17,7 @@ type ArticleRepo struct{ db *sql.DB }
 
 func NewArticleRepo(db *sql.DB) *ArticleRepo { return &ArticleRepo{db: db} }
 
-const articleColumns = `id, slug, title, summary, body, cover_image_url, tags, thumbs_up_count, published_date, is_published, sort_order, created_at`
+const articleColumns = `id, slug, title, summary, body, content_object, cover_image_url, tags, thumbs_up_count, published_date, is_published, sort_order, created_at`
 
 // articleListColumns is articleColumns without body. Only the article's own
 // page renders a body; every list — /articles, the home page teaser, the
@@ -33,7 +33,7 @@ func scanArticle(row interface{ Scan(...any) error }) (models.Article, error) {
 	var a models.Article
 	var published sql.NullTime
 	var tags []string
-	err := row.Scan(&a.ID, &a.Slug, &a.Title, &a.Summary, &a.Body, &a.CoverImageURL, pq.Array(&tags),
+	err := row.Scan(&a.ID, &a.Slug, &a.Title, &a.Summary, &a.Body, &a.ContentObject, &a.CoverImageURL, pq.Array(&tags),
 		&a.ThumbsUpCount, &published, &a.IsPublished, &a.SortOrder, &a.CreatedAt)
 	a.Tags = tags
 	if published.Valid {
@@ -220,18 +220,18 @@ func (r *ArticleRepo) GetBySlug(ctx context.Context, slug string) (models.Articl
 func (r *ArticleRepo) Create(ctx context.Context, a models.Article) (int64, error) {
 	var id int64
 	err := r.db.QueryRowContext(ctx, `
-		INSERT INTO articles (slug, title, summary, body, cover_image_url, tags, published_date, is_published, sort_order)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id`,
-		a.Slug, a.Title, a.Summary, a.Body, a.CoverImageURL, pq.Array(a.Tags), a.PublishedDate, a.IsPublished, a.SortOrder,
+		INSERT INTO articles (slug, title, summary, body, content_object, cover_image_url, tags, published_date, is_published, sort_order)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id`,
+		a.Slug, a.Title, a.Summary, a.Body, a.ContentObject, a.CoverImageURL, pq.Array(a.Tags), a.PublishedDate, a.IsPublished, a.SortOrder,
 	).Scan(&id)
 	return id, err
 }
 
 func (r *ArticleRepo) Update(ctx context.Context, a models.Article) error {
 	_, err := r.db.ExecContext(ctx, `
-		UPDATE articles SET slug=$1, title=$2, summary=$3, body=$4, cover_image_url=$5, tags=$6, published_date=$7, is_published=$8, sort_order=$9
-		WHERE id=$10`,
-		a.Slug, a.Title, a.Summary, a.Body, a.CoverImageURL, pq.Array(a.Tags), a.PublishedDate, a.IsPublished, a.SortOrder, a.ID,
+		UPDATE articles SET slug=$1, title=$2, summary=$3, body=$4, content_object=$5, cover_image_url=$6, tags=$7, published_date=$8, is_published=$9, sort_order=$10
+		WHERE id=$11`,
+		a.Slug, a.Title, a.Summary, a.Body, a.ContentObject, a.CoverImageURL, pq.Array(a.Tags), a.PublishedDate, a.IsPublished, a.SortOrder, a.ID,
 	)
 	return err
 }

@@ -1,6 +1,7 @@
-// Package storage streams paid lesson HTML from a private Supabase
-// Storage bucket. The browser never receives an object URL; the learn
-// handler copies the object onto the response after the purchase check.
+// Package storage streams private HTML from a Supabase Storage bucket.
+// Paid lessons are read after the purchase check. Article HTML uploaded
+// from the admin console is read when the article page renders. The
+// browser never receives an object URL.
 package storage
 
 import (
@@ -21,15 +22,24 @@ import (
 
 const Bucket = "course-content"
 
-// objectPath is courses/{slug}.html. Slugs come from slugify, so this is
-// the only shape the server will send to Storage.
-var objectPath = regexp.MustCompile(`^courses/[a-z0-9]+(?:-[a-z0-9]+)*\.html$`)
+// objectPath is courses/{slug}.html or articles/{slug}.html. Slugs come
+// from slugify, so this is the only shape the server will send to Storage.
+var objectPath = regexp.MustCompile(`^(?:courses|articles)/[a-z0-9]+(?:-[a-z0-9]+)*\.html$`)
 
 // CourseObject is the private-bucket path for a course slug.
 func CourseObject(slug string) (string, error) {
-	path := "courses/" + slug + ".html"
+	return objectFor("courses", slug)
+}
+
+// ArticleObject is the private-bucket path for an article slug.
+func ArticleObject(slug string) (string, error) {
+	return objectFor("articles", slug)
+}
+
+func objectFor(prefix, slug string) (string, error) {
+	path := prefix + "/" + slug + ".html"
 	if !objectPath.MatchString(path) {
-		return "", fmt.Errorf("invalid course object path %q", path)
+		return "", fmt.Errorf("invalid storage object path %q", path)
 	}
 	return path, nil
 }

@@ -2,9 +2,9 @@
 <section class="section">
   <div class="container">
     <h1>{{if .IsNew}}Add Article{{else}}Edit Article{{end}}</h1>
-    <p class="admin-form-note">An article is your own writing, hosted here — title, a one-line summary for the listings, and the body. Plain text or full HTML both work; see the body field for which is which.</p>
+    <p class="admin-form-note">An article is your own writing, hosted here — title, a one-line summary for the listings, and the body. Type the body below, or upload an HTML file. An uploaded file is stored privately and shown on the article page.</p>
     {{if .Error}}<div class="alert alert-error">{{.Error}}</div>{{end}}
-    <form method="POST" action="{{if .IsNew}}/admin/articles/new{{else}}/admin/articles/{{.Article.ID}}/edit{{end}}" class="admin-form">
+    <form method="POST" enctype="multipart/form-data" action="{{if .IsNew}}/admin/articles/new{{else}}/admin/articles/{{.Article.ID}}/edit{{end}}" class="admin-form">
       <label>Title
         <input type="text" name="title" value="{{.Article.Title}}" required>
       </label>
@@ -14,8 +14,12 @@
       <label>Cover image URL <span class="optional">(optional — shown at the top of the post and as a thumbnail in the articles list)</span>
         <input type="url" name="cover_image_url" value="{{.Article.CoverImageURL}}" placeholder="https://...">
       </label>
-      <label>Body <span class="optional">(required. Plain paragraphs: separate with a blank line. Full HTML — headings, links, lists, bold/italic, inline SVG diagrams — is also supported, but the body must then *start* with a tag, e.g. &lt;p&gt;, so it's detected as HTML.)</span>
-        <textarea name="body" rows="18" required placeholder="Plain text example:&#10;First paragraph.&#10;&#10;Second paragraph.&#10;&#10;— or start with a tag for full HTML: &lt;h2&gt;A heading&lt;/h2&gt;&#10;&lt;p&gt;A paragraph with &lt;strong&gt;bold&lt;/strong&gt; text and a &lt;a href=&quot;https://example.com&quot;&gt;link&lt;/a&gt;.&lt;/p&gt;">{{.Article.Body}}</textarea>
+      <label>Body <span class="optional">(plain paragraphs separated by a blank line, or HTML that starts with a tag. Leave this empty when the post is an uploaded file.)</span>
+        <textarea name="body" rows="18" placeholder="Plain text example:&#10;First paragraph.&#10;&#10;Second paragraph.&#10;&#10;— or start with a tag for full HTML: &lt;h2&gt;A heading&lt;/h2&gt;&#10;&lt;p&gt;A paragraph with &lt;strong&gt;bold&lt;/strong&gt; text and a &lt;a href=&quot;https://example.com&quot;&gt;link&lt;/a&gt;.&lt;/p&gt;">{{.Article.Body}}</textarea>
+      </label>
+      {{if .Article.ContentObject}}<p class="admin-form-note">This article already has a private HTML file ({{.Article.ContentObject}}). Upload a file below only to replace it. Leave the body empty to keep that file. Typing a body replaces the file.</p>{{end}}
+      <label>HTML file <span class="optional">(optional .html or .htm, 8MB or smaller — stored privately and shown on the article page)</span>
+        <input type="file" name="content_file" accept=".html,.htm">
       </label>
       <label>Published date <span class="optional">(optional)</span>
         <input type="date" name="published_date" value="{{if .Article.PublishedDate}}{{.Article.PublishedDate.Format "2006-01-02"}}{{end}}">

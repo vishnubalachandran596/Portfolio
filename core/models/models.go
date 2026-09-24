@@ -383,6 +383,7 @@ type Article struct {
 	Title         string
 	Summary       string
 	Body          string
+	ContentObject string // private Storage path, articles/{slug}.html; empty means Body is the post
 	CoverImageURL string
 	Tags          []string
 	ThumbsUpCount int

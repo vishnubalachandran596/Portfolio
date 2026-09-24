@@ -1313,7 +1313,17 @@ a, button, .slot-btn, .faq-item summary { cursor: pointer; }
 /* ---------------------------------------------------------------------
    Consultancy / Contact
 --------------------------------------------------------------------- */
-.article-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(16.25rem, 1fr)); gap: 1.25rem; }
+/* Three equal columns across the content width, same as .course-grid.
+   auto-fit at 16.25rem fitted four cards into the 70rem container. */
+.article-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.25rem;
+}
+@media (max-width: 52.5rem) {
+  .article-grid { grid-template-columns: minmax(0, 1fr); }
+}
+.article-archive { margin-bottom: 2rem; }
 .article-card {
   display: flex;
   flex-direction: column;
@@ -1330,8 +1340,23 @@ a, button, .slot-btn, .faq-item summary { cursor: pointer; }
 .article-card h3 { font-size: 1.05rem; margin-bottom: 0.5rem; }
 .article-card-body p { color: var(--color-text-muted); font-size: 0.92rem; }
 .article-card-meta { color: var(--color-primary-strong); font-size: 0.82rem; font-weight: 600; }
+.article-card-link {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+}
+.article-card-cover {
+  width: 100%;
+  height: 9rem;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+}
+.article-card-votes { margin-top: auto; }
 
-/* Articles listing: search/filter/sort bar, a vertical list (not a grid),
+/* Articles listing: search/filter/sort bar, a three-column card grid,
    pagination, and per-article tags + thumbs-up count. */
 .article-filters {
   display: flex;
