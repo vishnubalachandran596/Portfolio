@@ -4,6 +4,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -39,35 +40,40 @@ type Config struct {
 	SupabaseAnonKey         string
 	SupabaseStorageEmail    string
 	SupabaseStoragePassword string
+
+	// LocalContentDir, when set, is the directory of article HTML, course
+	// HTML, and resume PDFs. Those files use the same object paths as
+	// Supabase Storage. Production leaves this empty.
+	LocalContentDir string
 }
 
 func Load() (*Config, error) {
-	dbURL := os.Getenv("DATABASE_URL")
+	dbURL := getenv("DATABASE_URL")
 	if dbURL == "" {
 		return nil, fmt.Errorf("DATABASE_URL is required")
 	}
 
-	secret := os.Getenv("JWT_SECRET")
+	secret := getenv("JWT_SECRET")
 	if secret == "" {
 		return nil, fmt.Errorf("JWT_SECRET is required")
 	}
 
-	port := os.Getenv("PORT")
+	port := getenv("PORT")
 	if port == "" {
 		port = "8080"
 	}
 
-	env := os.Getenv("APP_ENV")
+	env := getenv("APP_ENV")
 	if env == "" {
 		env = "development"
 	}
 
-	siteName := os.Getenv("SITE_NAME")
+	siteName := getenv("SITE_NAME")
 	if siteName == "" {
 		siteName = "Vishnu Balachandran"
 	}
 
-	checkoutCurrency := os.Getenv("CHECKOUT_CURRENCY")
+	checkoutCurrency := getenv("CHECKOUT_CURRENCY")
 	if checkoutCurrency == "" {
 		checkoutCurrency = "USD"
 	}
@@ -77,30 +83,40 @@ func Load() (*Config, error) {
 		DatabaseURL:   dbURL,
 		JWTSecret:     []byte(secret),
 		SessionTTL:    7 * 24 * time.Hour,
-		AdminEmail:    os.Getenv("ADMIN_BOOTSTRAP_EMAIL"),
-		AdminPassword: os.Getenv("ADMIN_BOOTSTRAP_PASSWORD"),
+		AdminEmail:    getenv("ADMIN_BOOTSTRAP_EMAIL"),
+		AdminPassword: getenv("ADMIN_BOOTSTRAP_PASSWORD"),
 		SiteName:      siteName,
-		SiteURL:       os.Getenv("SITE_URL"),
-		Domain:        os.Getenv("DOMAIN"),
+		SiteURL:       getenv("SITE_URL"),
+		Domain:        getenv("DOMAIN"),
 		Environment:   env,
 
-		RazorpayKeyID:     os.Getenv("RAZORPAY_KEY_ID"),
-		RazorpayKeySecret: os.Getenv("RAZORPAY_KEY_SECRET"),
+		RazorpayKeyID:     getenv("RAZORPAY_KEY_ID"),
+		RazorpayKeySecret: getenv("RAZORPAY_KEY_SECRET"),
 		CheckoutCurrency:  checkoutCurrency,
 
-		TelegramBotToken: os.Getenv("TELEGRAM_BOT_TOKEN"),
-		TelegramChatID:   os.Getenv("TELEGRAM_CHAT_ID"),
+		TelegramBotToken: getenv("TELEGRAM_BOT_TOKEN"),
+		TelegramChatID:   getenv("TELEGRAM_CHAT_ID"),
 
-		GoogleClientID:     os.Getenv("GOOGLE_CLIENT_ID"),
-		GoogleClientSecret: os.Getenv("GOOGLE_CLIENT_SECRET"),
-		GoogleRedirectURL:  os.Getenv("GOOGLE_REDIRECT_URL"),
+		GoogleClientID:     getenv("GOOGLE_CLIENT_ID"),
+		GoogleClientSecret: getenv("GOOGLE_CLIENT_SECRET"),
+		GoogleRedirectURL:  getenv("GOOGLE_REDIRECT_URL"),
 
-		SupabaseURL:             os.Getenv("SUPABASE_URL"),
-		SupabaseSecretKey:       os.Getenv("SUPABASE_SECRET_KEY"),
-		SupabaseAnonKey:         os.Getenv("SUPABASE_ANON_KEY"),
-		SupabaseStorageEmail:    os.Getenv("SUPABASE_STORAGE_EMAIL"),
-		SupabaseStoragePassword: os.Getenv("SUPABASE_STORAGE_PASSWORD"),
+		SupabaseURL:             getenv("SUPABASE_URL"),
+		SupabaseSecretKey:       getenv("SUPABASE_SECRET_KEY"),
+		SupabaseAnonKey:         getenv("SUPABASE_ANON_KEY"),
+		SupabaseStorageEmail:    getenv("SUPABASE_STORAGE_EMAIL"),
+		SupabaseStoragePassword: getenv("SUPABASE_STORAGE_PASSWORD"),
+
+		LocalContentDir: getenv("LOCAL_CONTENT_DIR"),
 	}, nil
+}
+
+// getenv trims spaces and a trailing carriage return. A .env saved by
+// Windows Notepad is CRLF; Compose on Docker Desktop usually strips that,
+// and this keeps a host `go run` on Windows from seeing the CR as part of
+// the value.
+func getenv(key string) string {
+	return strings.TrimSpace(os.Getenv(key))
 }
 
 func (c *Config) IsProduction() bool {

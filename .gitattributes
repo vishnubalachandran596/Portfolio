@@ -1,0 +1,8 @@
+# Docker Desktop on Windows checks out text as CRLF unless these stay LF.
+# The image also strips CR from the entrypoint, and these attributes keep
+# the Compose file and the admin SQL stable on Mac and Windows.
+docker/entrypoint.sh text eol=lf
+Dockerfile text eol=lf
+docker-compose.yml text eol=lf
+docker/*.sql text eol=lf
+.env.example text eol=lf

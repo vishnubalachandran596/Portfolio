@@ -10,7 +10,7 @@
 
 A personal site for Vishnu Balachandran — technical consultant, Java/event-driven-systems architect, 8+ years in banking/fintech (Zafin: pricing & billing platforms). Three revenue lines: **consultancy** (Architecture Review / retainer / hourly), **courses** (contribute-as-you-like), and (implicitly) **inbound credibility** from **articles/blog**. Built as a single Go binary, server-rendered, no JS framework, deployed as one Vercel serverless function, Postgres (Supabase) as the only datastore.
 
-**All visitor-facing content lives in Postgres**, edited through `/admin`, never in the git repo. A fresh clone plus migrations is an empty schema; recovering content means loading the `portfolio_seed_data.sql` snapshot from the Google Drive folder named `Portfolio` (see `docs/ARCHITECTURE.md` §11). UI labels, headings and nav stay in code.
+**All visitor-facing content lives in Postgres**, edited through `/admin`, never in the git repo. `docker compose up --build` (after copying `.env.example` to `.env`) applies that empty schema to the Postgres service in `docker-compose.yml` and serves the site. A missing profile row still renders; saving **Admin → Profile** inserts it. The local placeholder admin is `docker/local-admin.sql` (same email and password as `ADMIN_BOOTSTRAP_EMAIL` / `ADMIN_BOOTSTRAP_PASSWORD` in `.env.example`). That file is not a migration. Recovering the live rows means loading the `portfolio_seed_data.sql` snapshot from the Google Drive folder named `Portfolio` (see `docs/ARCHITECTURE.md` §11). Article HTML, course HTML, and resume PDFs for local work live in `LOCAL_CONTENT_DIR` (default `../portfolio-local-content`, outside the repo), at the same object paths production uses in Storage: `articles/{slug}.html`, `courses/{slug}.html`, `resumes/default.pdf`, `resumes/{role-key}.pdf`. Compose mounts that directory at `/content`. Production leaves `LOCAL_CONTENT_DIR` unset. UI labels, headings and nav stay in code.
 
 Domain: `vishnubalachandran.com`, canonical host `www.vishnubalachandran.com`. `https://www.vishnubalachandran.com/` returns 200 and is never redirected; the apex and `home.` 301 once to that www URL (HTTP and HTTPS). A page-group subdomain scheme also exists (`about.`, `courses.`, `consultancy.`, `articles.`, `contact.`, `admin.`) — see `core/middleware/domain.go` — active whenever the `DOMAIN` env var is set; www remains the path-based canonical host even then. A bare path-based site otherwise.
 
@@ -110,7 +110,7 @@ Simple substring search across published courses and a small hardcoded index of 
 
 ## 3. User (logged-in visitor) functionality
 
-Login is separate from admin auth (see §5 of `ARCHITECTURE.md`) and is **Google-only** (`GET /login` shows a single "Sign in with Google" button → `GET /login/google` → `/login/google/callback`) — no password to set up or lose. A user account exists purely to tie purchases/bookings/testimonials to a person across visits.
+Login is separate from admin auth (see §5 of `ARCHITECTURE.md`) and is **Google-only** (`GET /login` shows a single "Sign in with Google" button → `GET /login/google` → `/login/google/callback`) — no password to set up or lose. A user account exists purely to tie purchases/bookings/testimonials to a person across visits. Locally, `.env.example` sets `GOOGLE_REDIRECT_URL` to the placeholder `http://localhost:8080/login/google/callback` and `SITE_URL` to `http://localhost:8080`. The button stays disabled until `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` are pasted, and that redirect URL is registered on the OAuth client.
 
 ### Account page (`GET /account`, login required)
 Four sections in one page (`#courses`, `#bookings`, `#payments`, `#messages`), plus a testimonial section:
@@ -172,7 +172,7 @@ Full CRUD — see §2's Blog section for the content model (original posts only;
 CRUD for the weekly recurring rules (weekday, start/end time, slot length in minutes, active toggle) that `core/scheduler` expands into bookable hourly slots for §2's Booking page.
 
 ### Profile (`/admin/profile`)
-Edit the single `profile` row: name, title, tagline, hero subtitle, summary, location, email, LinkedIn/GitHub/resume URLs, photo URL, years of experience. The same form accepts a PDF that replaces the default resume (`resumes/default.pdf`). Leaving the file empty keeps the current default. Role-specific PDFs are uploaded on the experience form, not here.
+Edit the single `profile` row: name, title, tagline, hero subtitle, summary, location, email, LinkedIn/GitHub/resume URLs, photo URL, years of experience. A database with no profile row opens this form empty, and saving inserts the row. The same form accepts a PDF that replaces the default resume (`resumes/default.pdf`). Leaving the file empty keeps the current default. Role-specific PDFs are uploaded on the experience form, not here. Locally, with `LOCAL_CONTENT_DIR` set, those uploads are written into that directory instead of Supabase Storage.
 
 ### Preview as visitor (`GET /admin/preview-visitor` / `GET /exit-preview`)
 Lets a logged-in admin browse the site exactly as a normal visitor would (no Admin Console tab, no automatic gated-content access) without actually logging out — a cookie flag, not a session change.

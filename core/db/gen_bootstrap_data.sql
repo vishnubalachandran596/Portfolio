@@ -97,6 +97,9 @@ SELECT '-- portfolio_seed_data.sql'
     || E'\n-- the private Supabase Storage bucket course-content (courses/<slug>.html).'
     || E'\n-- courses.content_html is a legacy column and stays empty. Restoring these'
     || E'\n-- rows does not restore the lesson bytes; those live only in the bucket.'
+    || E'\n-- Article HTML is the same: articles.content_object is articles/<slug>.html'
+    || E'\n-- in the private articles bucket, and the bytes are not in this file.'
+    || E'\n-- Locally those files live under LOCAL_CONTENT_DIR at the same paths.'
     || E'\n--'
     || E'\n-- DIRECTION OF TRUTH: the live database is authoritative. Content is edited in'
     || E'\n-- the admin console, and this file is regenerated from the database afterwards.'
@@ -249,21 +252,22 @@ FROM courses ORDER BY sort_order, id;
 
 -- articles: natural key is `slug`. thumbs_up_count is deliberately omitted --
 -- it is a running tally of visitor activity, not content, and the matching
--- article_thumbs_up rows are not emitted either.
+-- article_thumbs_up rows are not emitted either. content_object is the
+-- Storage path (articles/{slug}.html). The HTML bytes are not in this file.
 SELECT E'\n-- articles ------------------------------------------------------------';
 SELECT format($f$
-WITH v (slug, title, summary, body, cover_image_url, tags, published_date, is_published, sort_order) AS (
-  VALUES (%L::text, %L::text, %L::text, %L::text, %L::text, %L::text[], %s::date, %L::boolean, %s::int)
+WITH v (slug, title, summary, body, content_object, cover_image_url, tags, published_date, is_published, sort_order) AS (
+  VALUES (%L::text, %L::text, %L::text, %L::text, %L::text, %L::text, %L::text[], %s::date, %L::boolean, %s::int)
 ), upd AS (
   UPDATE articles a SET title = v.title, summary = v.summary, body = v.body,
-      cover_image_url = v.cover_image_url, tags = v.tags,
+      content_object = v.content_object, cover_image_url = v.cover_image_url, tags = v.tags,
       published_date = v.published_date, is_published = v.is_published,
       sort_order = v.sort_order
     FROM v WHERE a.slug = v.slug RETURNING 1
 )
-INSERT INTO articles (slug, title, summary, body, cover_image_url, tags, published_date, is_published, sort_order)
+INSERT INTO articles (slug, title, summary, body, content_object, cover_image_url, tags, published_date, is_published, sort_order)
 SELECT v.* FROM v WHERE NOT EXISTS (SELECT 1 FROM articles a WHERE a.slug = v.slug);$f$,
-  slug, title, summary, body, cover_image_url, tags::text,
+  slug, title, summary, body, content_object, cover_image_url, tags::text,
   coalesce(quote_literal(published_date::text), 'NULL'), is_published, sort_order)
 FROM articles ORDER BY published_date DESC NULLS LAST, id;
 

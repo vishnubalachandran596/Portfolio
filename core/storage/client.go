@@ -13,6 +13,8 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"sync"
@@ -77,6 +79,10 @@ type Client struct {
 	email     string
 	password  string
 
+	// localDir, when set, is used instead of Supabase. Docker Compose
+	// points it at the mounted content directory.
+	localDir string
+
 	mu       sync.Mutex
 	token    string
 	tokenExp time.Time
@@ -84,9 +90,14 @@ type Client struct {
 
 // New returns nil when Storage is not configured, so the rest of the
 // site still boots. Lesson pages fail closed until it is set.
+// A local content directory takes over Open, Put, and Delete even when
+// Supabase credentials are also present.
 func New(cfg *config.Config) *Client {
 	if cfg == nil {
 		return nil
+	}
+	if dir := strings.TrimSpace(cfg.LocalContentDir); dir != "" {
+		return &Client{localDir: dir}
 	}
 	base := strings.TrimRight(strings.TrimSpace(cfg.SupabaseURL), "/")
 	if base == "" {
@@ -111,6 +122,9 @@ func New(cfg *config.Config) *Client {
 
 // Open streams one object. The caller closes the body.
 func (c *Client) Open(ctx context.Context, path string) (io.ReadCloser, error) {
+	if c.localDir != "" {
+		return c.openLocal(path)
+	}
 	if !allowedObject(path) {
 		return nil, fmt.Errorf("refusing storage path %q", path)
 	}
@@ -127,6 +141,9 @@ func (c *Client) Open(ctx context.Context, path string) (io.ReadCloser, error) {
 
 // Put writes an object, replacing any object already at that path.
 func (c *Client) Put(ctx context.Context, path, contentType string, body []byte) error {
+	if c.localDir != "" {
+		return c.putLocal(path, body)
+	}
 	if !allowedObject(path) {
 		return fmt.Errorf("refusing storage path %q", path)
 	}
@@ -143,6 +160,9 @@ func (c *Client) Put(ctx context.Context, path, contentType string, body []byte)
 
 // Delete removes an object. A missing object is not an error.
 func (c *Client) Delete(ctx context.Context, path string) error {
+	if c.localDir != "" {
+		return c.deleteLocal(path)
+	}
 	if path == "" {
 		return nil
 	}
@@ -195,6 +215,68 @@ func (c *Client) objectURL(path string) string {
 
 func allowedObject(path string) bool {
 	return objectPath.MatchString(path) || resumePath.MatchString(path)
+}
+
+func (c *Client) openLocal(path string) (io.ReadCloser, error) {
+	full, err := c.localFile(path)
+	if err != nil {
+		return nil, err
+	}
+	f, err := os.Open(full)
+	if err != nil {
+		return nil, fmt.Errorf("open %s: %w", path, err)
+	}
+	return f, nil
+}
+
+func (c *Client) putLocal(path string, body []byte) error {
+	full, err := c.localFile(path)
+	if err != nil {
+		return err
+	}
+	// 0777/0666 so a file written in the container can be replaced from
+	// the Windows or Mac host, and a file the host drops in can be
+	// overwritten by the app user after the entrypoint chmod.
+	if err := os.MkdirAll(filepath.Dir(full), 0o777); err != nil {
+		return fmt.Errorf("put %s: %w", path, err)
+	}
+	if err := os.WriteFile(full, body, 0o666); err != nil {
+		return fmt.Errorf("put %s: %w", path, err)
+	}
+	return nil
+}
+
+func (c *Client) deleteLocal(path string) error {
+	if path == "" {
+		return nil
+	}
+	full, err := c.localFile(path)
+	if err != nil {
+		return err
+	}
+	if err := os.Remove(full); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("delete %s: %w", path, err)
+	}
+	return nil
+}
+
+// localFile resolves an object path under localDir. allowedObject rejects
+// anything that is not an article, course, or resume key, and filepath.Rel
+// rejects a path that would leave the directory.
+func (c *Client) localFile(object string) (string, error) {
+	if !allowedObject(object) {
+		return "", fmt.Errorf("refusing storage path %q", object)
+	}
+	root, err := filepath.Abs(c.localDir)
+	if err != nil {
+		return "", err
+	}
+	full := filepath.Join(root, filepath.FromSlash(object))
+	rel, err := filepath.Rel(root, full)
+	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+		return "", fmt.Errorf("refusing storage path %q", object)
+	}
+	return full, nil
 }
 
 // bucketFor sends each object prefix to its own private bucket.

@@ -5,6 +5,8 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -34,6 +36,9 @@ func TestNewRequiresCredentials(t *testing.T) {
 	}
 	if New(&config.Config{SupabaseURL: "https://example.supabase.co", SupabaseSecretKey: "secret"}) == nil {
 		t.Fatal("secret key should configure the client")
+	}
+	if New(&config.Config{LocalContentDir: t.TempDir()}) == nil {
+		t.Fatal("a local content directory should configure the client")
 	}
 }
 
@@ -215,6 +220,70 @@ type authCapture struct {
 	apiKey string
 	auth   string
 	signIn bool
+}
+
+func TestLocalContentDirRoundTrip(t *testing.T) {
+	dir := t.TempDir()
+	hits := 0
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hits++
+		http.Error(w, "supabase should not be called", http.StatusInternalServerError)
+	}))
+	defer srv.Close()
+
+	c := New(&config.Config{
+		LocalContentDir:   dir,
+		SupabaseURL:       srv.URL,
+		SupabaseSecretKey: "secret",
+	})
+	ctx := context.Background()
+	const article = "articles/local-note.html"
+	const course = "courses/local-lesson.html"
+	const resume = "resumes/default.pdf"
+	body := []byte("<p>LOCAL_CONTENT_MARKER</p>")
+	if err := c.Put(ctx, article, "text/html", body); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.Put(ctx, course, "text/html", []byte("<p>lesson</p>")); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.Put(ctx, resume, "application/pdf", []byte("%PDF-local")); err != nil {
+		t.Fatal(err)
+	}
+	got, err := os.ReadFile(filepath.Join(dir, "articles", "local-note.html"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(got) != string(body) {
+		t.Fatalf("on disk %q", got)
+	}
+	rc, err := c.Open(ctx, article)
+	if err != nil {
+		t.Fatal(err)
+	}
+	read, _ := io.ReadAll(rc)
+	rc.Close()
+	if string(read) != string(body) {
+		t.Fatalf("opened %q", read)
+	}
+	if _, err := c.Open(ctx, "articles/../../etc/passwd"); err == nil {
+		t.Fatal("expected a path outside the content directory to be refused")
+	}
+	if _, err := c.Open(ctx, "courses/../articles/local-note.html"); err == nil {
+		t.Fatal("expected a dotted object path to be refused")
+	}
+	if err := c.Delete(ctx, article); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := c.Open(ctx, article); err == nil {
+		t.Fatal("expected a deleted object to be missing")
+	}
+	if err := c.Delete(ctx, article); err != nil {
+		t.Fatal("deleting a missing object should be fine")
+	}
+	if hits != 0 {
+		t.Fatalf("supabase calls=%d", hits)
+	}
 }
 
 func (a *authCapture) record(r *http.Request) {

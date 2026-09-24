@@ -1,0 +1,53 @@
+# Postgres and the site. Copy .env.example to .env first, then:
+#   docker compose up --build
+#
+# The app reads DATABASE_URL from .env. That URL's user, password, database,
+# and host must match this file: user portfolio, password portfolio, database
+# portfolio, host db (this service name). The published host port defaults to
+# 5432 and does not change the URL the app uses inside the Compose network.
+#
+# Article HTML, course HTML, and resume PDFs stay outside the repo.
+# LOCAL_CONTENT_DIR in .env is the host path (default ../portfolio-local-content,
+# a sibling of this directory). Use forward slashes if you override it
+# (C:/Users/you/portfolio-local-content on Windows). The app container always
+# sees that mount at /content. This file is the same on Docker Desktop for
+# Windows and for Mac. Production does not set LOCAL_CONTENT_DIR.
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: portfolio
+      POSTGRES_PASSWORD: portfolio
+      POSTGRES_DB: portfolio
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - portfolio_pgdata:/var/lib/postgresql/data
+      # Applied by hand after migrations. Not an init script: the admins
+      # table does not exist until the app has started.
+      - ./docker/local-admin.sql:/local-admin.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U portfolio -d portfolio"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+      start_period: 5s
+    restart: unless-stopped
+
+  app:
+    build: .
+    env_file: .env
+    environment:
+      LOCAL_CONTENT_DIR: /content
+    volumes:
+      - ${LOCAL_CONTENT_DIR:-../portfolio-local-content}:/content
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "${PORT:-8080}:${PORT:-8080}"
+    restart: unless-stopped
+
+volumes:
+  portfolio_pgdata:
