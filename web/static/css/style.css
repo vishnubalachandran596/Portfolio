@@ -675,10 +675,21 @@ a, button, .slot-btn, .faq-item summary { cursor: pointer; }
 /* ---------------------------------------------------------------------
    Feature / course cards
 --------------------------------------------------------------------- */
-.feature-grid, .course-grid {
+.feature-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
   gap: 1.25rem;
+}
+
+/* Three equal columns across the content width. auto-fit at 15rem
+   fitted four cards into the 70rem container and left them cramped. */
+.course-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.25rem;
+}
+@media (max-width: 52.5rem) {
+  .course-grid { grid-template-columns: minmax(0, 1fr); }
 }
 
 .feature-card, .course-card, .skill-card, .stat-card, .contact-card {
