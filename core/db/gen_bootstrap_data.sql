@@ -176,6 +176,23 @@ SELECT v.* FROM v WHERE NOT EXISTS (
   company, role, location, start_date, end_date, bullets, sort_order)
 FROM experiences ORDER BY sort_order, id;
 
+-- role_resumes: natural key is role_key. The PDF bytes are not in this
+-- snapshot; object_path points at the private resumes bucket.
+SELECT E'\n-- role_resumes ---------------------------------------------------------';
+SELECT format($f$
+WITH v (role_key, label, object_path, sort_order) AS (
+  VALUES (%L::text, %L::text, %L::text, %s::int)
+), upd AS (
+  UPDATE role_resumes r SET label = v.label, object_path = v.object_path,
+      sort_order = v.sort_order
+    FROM v WHERE r.role_key = v.role_key RETURNING 1
+)
+INSERT INTO role_resumes (role_key, label, object_path, sort_order)
+SELECT v.* FROM v WHERE NOT EXISTS (
+  SELECT 1 FROM role_resumes r WHERE r.role_key = v.role_key);$f$,
+  role_key, label, object_path, sort_order)
+FROM role_resumes ORDER BY sort_order, role_key;
+
 -- education: natural key is (institution, degree, field). start_year/end_year
 -- are nullable, so %s with a coalesce to the bare NULL keyword rather than %L.
 SELECT E'\n-- education -----------------------------------------------------------';

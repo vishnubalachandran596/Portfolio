@@ -1,9 +1,13 @@
 package handlers
 
 import (
+	"fmt"
 	"html/template"
+	"io"
 	"log"
 	"net/http"
+	"regexp"
+	"strings"
 	"time"
 
 	"golang.org/x/sync/errgroup"
@@ -100,6 +104,9 @@ type AboutData struct {
 	// bare heading. See migration 046.
 	Certifications []models.Certification
 	Publications   []models.Publication
+	// Resumes is every stored role PDF, in sort order. Empty means the
+	// download link still points at the generated fallback.
+	Resumes []models.RoleResume
 }
 
 func (a *App) About(w http.ResponseWriter, r *http.Request) {
@@ -113,6 +120,7 @@ func (a *App) About(w http.ResponseWriter, r *http.Request) {
 		testimonials []models.Testimonial
 		certs        []models.Certification
 		pubs         []models.Publication
+		resumes      []models.RoleResume
 	)
 	// This is the widest fan-out in the app, and the page that suffered
 	// most from the chrome's lookups being a second wave behind it: the
@@ -127,6 +135,7 @@ func (a *App) About(w http.ResponseWriter, r *http.Request) {
 	g.Go(func() (err error) { testimonials, err = a.Testimonials.ListPublished(gctx); return })
 	g.Go(func() (err error) { certs, err = a.Certifications.ListPublished(gctx); return })
 	g.Go(func() (err error) { pubs, err = a.Publications.ListPublished(gctx); return })
+	g.Go(func() (err error) { resumes, err = a.Resumes.List(gctx); return })
 	if err := g.Wait(); err != nil {
 		a.serverError(w, "load about page data", err)
 		return
@@ -142,14 +151,52 @@ func (a *App) About(w http.ResponseWriter, r *http.Request) {
 		Testimonials:   testimonials,
 		Certifications: certs,
 		Publications:   pubs,
+		Resumes:        resumes,
 	})
 }
 
-// Resume renders a PDF resume generated in-process from the same profile,
-// skills, experience, and education data shown on the About page — always
-// in sync with the live site, no separate file to keep updated by hand.
+// roleKeyPattern matches the slug stored as role_resumes.role_key.
+var roleKeyPattern = regexp.MustCompile(`^[a-z0-9]+(?:-[a-z0-9]+)*$`)
+
+// Resume streams the PDF stored for a role. With no role query it serves
+// the first stored resume. With no stored resume at all it still generates
+// one from the live profile, skills, experience, and education.
 func (a *App) Resume(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	role := strings.TrimSpace(r.URL.Query().Get("role"))
+
+	var stored models.RoleResume
+	switch {
+	case role != "":
+		if !roleKeyPattern.MatchString(role) {
+			a.NotFound(w, r)
+			return
+		}
+		row, err := a.Resumes.Get(ctx, role)
+		if err == repo.ErrNotFound {
+			a.NotFound(w, r)
+			return
+		}
+		if err != nil {
+			a.serverError(w, "load resume", err)
+			return
+		}
+		stored = row
+	default:
+		list, err := a.Resumes.List(ctx)
+		if err != nil {
+			a.serverError(w, "load resumes", err)
+			return
+		}
+		if len(list) > 0 {
+			stored = list[0]
+		}
+	}
+
+	if stored.ObjectPath != "" {
+		a.writeStoredResume(w, r, stored)
+		return
+	}
 
 	var (
 		profile models.Profile
@@ -182,6 +229,32 @@ func (a *App) Resume(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Disposition", `inline; filename="vishnu-balachandran-resume.pdf"`)
 	w.Header().Set("Cache-Control", "public, max-age=3600")
 	w.Write(pdfBytes)
+}
+
+func (a *App) writeStoredResume(w http.ResponseWriter, r *http.Request, row models.RoleResume) {
+	if a.CourseStorage == nil {
+		a.serverError(w, "resume storage", fmt.Errorf("storage is not configured"))
+		return
+	}
+	rc, err := a.CourseStorage.Open(r.Context(), row.ObjectPath)
+	if err != nil {
+		a.serverError(w, "open resume", err)
+		return
+	}
+	defer rc.Close()
+	raw, err := io.ReadAll(io.LimitReader(rc, maxCourseUploadBytes+1))
+	if err != nil {
+		a.serverError(w, "read resume", err)
+		return
+	}
+	if len(raw) > maxCourseUploadBytes {
+		a.serverError(w, "read resume", fmt.Errorf("resume exceeds %d bytes", maxCourseUploadBytes))
+		return
+	}
+	w.Header().Set("Content-Type", "application/pdf")
+	w.Header().Set("Content-Disposition", `inline; filename="vishnu-balachandran-`+row.RoleKey+`.pdf"`)
+	w.Header().Set("Cache-Control", "private, max-age=0")
+	w.Write(raw)
 }
 
 type CoursesListData struct {

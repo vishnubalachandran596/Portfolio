@@ -32,6 +32,7 @@ type App struct {
 	Profile         *repo.ProfileRepo
 	Skills          *repo.SkillGroupRepo
 	Experience      *repo.ExperienceRepo
+	Resumes         *repo.RoleResumeRepo
 	Education       *repo.EducationRepo
 	Features        *repo.HomeFeatureRepo
 	Courses         *repo.CourseRepo
@@ -131,6 +132,7 @@ func New(cfg *config.Config, db *sql.DB, renderer *view.Renderer) *App {
 		Profile:         repo.NewProfileRepo(db),
 		Skills:          repo.NewSkillGroupRepo(db),
 		Experience:      repo.NewExperienceRepo(db),
+		Resumes:         repo.NewRoleResumeRepo(db),
 		Education:       repo.NewEducationRepo(db),
 		Features:        repo.NewHomeFeatureRepo(db),
 		Courses:         repo.NewCourseRepo(db),

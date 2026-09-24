@@ -52,6 +52,16 @@ type Experience struct {
 	SortOrder int
 }
 
+// RoleResume is one downloadable PDF keyed to a role. The bytes live in
+// the private resumes bucket; this row is only the key, the label shown
+// in the About page's role select, and the object path.
+type RoleResume struct {
+	RoleKey    string
+	Label      string
+	ObjectPath string
+	SortOrder  int
+}
+
 type Education struct {
 	ID          int64
 	Institution string

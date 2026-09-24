@@ -20,7 +20,17 @@
         <div class="about-links">
           {{if .Profile.LinkedInURL}}<a class="btn btn-secondary" href="{{.Profile.LinkedInURL}}" target="_blank" rel="noopener">LinkedIn</a>{{end}}
           {{if .Profile.GitHubURL}}<a class="btn btn-secondary" href="{{.Profile.GitHubURL}}" target="_blank" rel="noopener">GitHub</a>{{end}}
+          {{if .Resumes}}
+          <form class="resume-download no-print" method="GET" action="/resume.pdf">
+            <label class="sr-only" for="resume-role">Resume for role</label>
+            <select class="article-select" id="resume-role" name="role">
+              {{range .Resumes}}<option value="{{.RoleKey}}">{{if .Label}}{{.Label}}{{else}}{{.RoleKey}}{{end}}</option>{{end}}
+            </select>
+            <button type="submit" class="btn btn-secondary">Download Resume</button>
+          </form>
+          {{else}}
           <a class="btn btn-secondary no-print" href="/resume.pdf">Download Resume</a>
+          {{end}}
           {{if .Profile.Email}}<button type="button" class="btn btn-secondary copy-btn" data-copy="{{.Profile.Email}}">Copy email</button>{{end}}
           <a class="btn btn-primary no-print" href="{{.Nav.Consultancy}}">Work With Me</a>
         </div>

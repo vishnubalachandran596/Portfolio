@@ -128,6 +128,46 @@ func TestPutArticleUsesArticlesBucket(t *testing.T) {
 	}
 }
 
+func TestResumeObject(t *testing.T) {
+	got, err := ResumeObject("zafin-lead-product-engineer-i")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != "resumes/zafin-lead-product-engineer-i.pdf" {
+		t.Fatalf("got %s", got)
+	}
+	if _, err := ResumeObject("../etc/passwd"); err == nil {
+		t.Fatal("expected invalid role key to fail")
+	}
+	if _, err := ResumeObject("zafin/lead"); err == nil {
+		t.Fatal("expected a slash in the role key to fail")
+	}
+}
+
+func TestPutResumeUsesResumesBucket(t *testing.T) {
+	var path, contentType string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		path = r.URL.Path
+		contentType = r.Header.Get("Content-Type")
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+
+	c := New(&config.Config{SupabaseURL: srv.URL, SupabaseSecretKey: "s"})
+	if err := c.Put(context.Background(), "resumes/zafin-lead-product-engineer-i.pdf", "application/pdf", []byte("%PDF-1.4")); err != nil {
+		t.Fatal(err)
+	}
+	if path != "/storage/v1/object/resumes/resumes/zafin-lead-product-engineer-i.pdf" {
+		t.Fatalf("path %s", path)
+	}
+	if contentType != "application/pdf" {
+		t.Fatalf("content type %s", contentType)
+	}
+	if _, err := c.Open(context.Background(), "resumes/not a pdf.html"); err == nil {
+		t.Fatal("expected html in the resumes prefix to be refused")
+	}
+}
+
 func TestPutSendsUpsert(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
