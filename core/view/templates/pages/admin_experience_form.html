@@ -40,6 +40,9 @@
       {{end}}
       <div class="form-actions">
         <button type="submit" class="btn btn-primary" data-loading-text="Saving…">Save Experience</button>
+        {{if .Resume.ObjectPath}}
+        <a class="btn btn-secondary" href="/admin/resumes/{{.Resume.RoleKey}}" target="_blank" rel="noopener">Preview resume</a>
+        {{end}}
         <a class="btn btn-secondary" href="/admin/experience">Cancel</a>
       </div>
     </form>

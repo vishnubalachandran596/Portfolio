@@ -59,7 +59,23 @@ func TestArticleTemplatesRenderStorageAndGrid(t *testing.T) {
 	if !strings.Contains(body, "articles/kafka-notes.html") || !strings.Contains(body, `name="content_file"`) {
 		t.Fatal("admin article form missing storage upload")
 	}
+	if !strings.Contains(body, `href="/admin/articles/4/preview"`) {
+		t.Fatal("admin article form missing preview link")
+	}
 	if !strings.Contains(body, "multipart/form-data") {
 		t.Fatal("article form is not multipart")
+	}
+
+	rec = httptest.NewRecorder()
+	r.Render(rec, 200, "admin_articles_list", AdminArticlesListData{
+		BaseData: base,
+		Articles: []models.Article{{ID: 4, Slug: "kafka-notes", Title: "Kafka notes", ContentObject: "articles/kafka-notes.html"}},
+	})
+	body = rec.Body.String()
+	if strings.Contains(body, "<!-- render error:") {
+		t.Fatal(body)
+	}
+	if !strings.Contains(body, `href="/admin/articles/4/preview"`) {
+		t.Fatal("admin article list missing preview link")
 	}
 }

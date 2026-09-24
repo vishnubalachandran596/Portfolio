@@ -60,7 +60,7 @@
 
       <hr class="admin-form-divider">
       <h2 class="admin-form-subhead">Course content</h2>
-      {{if .Course.ContentObject}}<p class="admin-form-note">This course already has a private lesson file ({{.Course.ContentObject}}). Upload a file below only if you want to replace it.</p>{{end}}
+      {{if .Course.ContentObject}}<p class="admin-form-note">This course already has a private lesson file ({{.Course.ContentObject}}). Upload a file below only if you want to replace it. Preview opens that file. Visitors still see the watermarked lesson.</p>{{end}}
       <label>Upload course HTML <span class="optional">(a single self-contained .html file, stored privately — leave empty to keep existing content)</span>
         <input type="file" name="content_file" accept=".html,.htm">
       </label>
@@ -75,6 +75,9 @@
 
       <div class="form-actions">
         <button type="submit" class="btn btn-primary" data-loading-text="Saving…">Save Course</button>
+        {{if and (not .IsNew) .Course.ContentObject}}
+        <a class="btn btn-secondary" href="/admin/courses/{{.Course.ID}}/preview" target="_blank" rel="noopener">Preview</a>
+        {{end}}
         <a class="btn btn-secondary" href="/admin/courses">Cancel</a>
       </div>
     </form>
