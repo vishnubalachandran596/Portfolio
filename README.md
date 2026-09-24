@@ -190,18 +190,20 @@ what you want"), pays via Razorpay Checkout, and is redirected to
 - **Content:** paid course content is a full, self-contained HTML
   document (its own layout/CSS/JS — not run through the site's own
   templates). The file lives in a private Supabase Storage bucket and
-  is streamed by the `/courses/<slug>/learn` handler after the purchase
+  is read by the `/courses/<slug>/learn` handler after the purchase
   check, never from `/static` or the sitemap, and never via a Storage
-  URL the browser could request on its own. A new lesson is uploaded
+  URL the browser could request on its own. The response is a shell, so
+  view-source does not show the lesson markup. A new lesson is uploaded
   from the admin course form.
 - **On "no one can copy the content":** be realistic about this — nothing
-  rendered in a browser can be made impossible to copy (view-source,
-  screenshots, and devtools always exist). What's actually implemented:
-  the content is never at a public URL, it's sent with `Cache-Control:
-  no-store`, right-click/copy are discouraged (not blocked — that's not
-  really possible either), and **every page is watermarked with the
-  purchaser's email**, which is the actually-effective deterrent — a
-  leaked copy is traceable back to whoever shared it.
+  rendered in a browser can be made impossible to copy (screenshots and
+  devtools still exist, and the shell payload can be decoded). What's
+  actually implemented: the content is never at a public URL, it's sent
+  with `Cache-Control: no-store`, the lesson tags stay out of view-source,
+  right-click is discouraged, copied text is stamped with the purchaser's
+  email throughout, and **that email is tiled across the whole lesson**,
+  which is the actually-effective deterrent — a leaked copy is traceable
+  back to whoever shared it.
 - **Setup:** set `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` (start with
   Razorpay's test-mode keys) and optionally `CHECKOUT_CURRENCY`. The
   purchase button is hidden until both are set. See `/admin/purchases`

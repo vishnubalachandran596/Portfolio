@@ -2,7 +2,7 @@ package handlers
 
 import (
 	"fmt"
-	"html"
+	"io"
 	"log"
 	"net/http"
 
@@ -17,17 +17,18 @@ import (
 // own html/template layout, which would nest two <html> documents.
 //
 // The bytes come from a private Supabase Storage object. This handler
-// opens that object only after courseAccess passes, then copies the
-// stream onto the response. The browser never receives a Storage URL.
+// opens that object only after courseAccess passes. The response is a
+// shell: the lesson markup is not in the page source. The shell decodes
+// it and writes the document, which carries the viewer's identity tiled
+// across the whole viewport. The browser never receives a Storage URL.
 //
 // On protection: nothing served to a browser can be made 100% impossible
-// to copy — view-source, screenshots, and browser devtools always exist.
-// What this does is keep the content off any public/guessable URL (it's
-// never in /static or the sitemap, and this handler requires a verified
-// purchase or admin session), send it with no-store caching, add a basic
-// right-click/text-selection deterrent, and — the actually-effective
-// measure — visibly watermark every page with the viewer's identity, so a
-// leaked copy is traceable back to whoever shared it.
+// to copy — screenshots and devtools still exist, and someone who decodes
+// the payload can recover the lesson. What this does is keep the content
+// off any public URL, leave the lesson tags out of view-source, send
+// no-store caching, discourage right-click, stamp copied text with the
+// viewer's identity throughout, and tile that identity over every
+// screenful so a leak is traceable.
 func (a *App) CourseLearn(w http.ResponseWriter, r *http.Request) {
 	slug := r.PathValue("slug")
 	course, err := a.Courses.GetBySlug(r.Context(), slug)
@@ -54,29 +55,26 @@ func (a *App) CourseLearn(w http.ResponseWriter, r *http.Request) {
 	}
 	defer body.Close()
 
+	raw, err := io.ReadAll(io.LimitReader(body, maxCourseUploadBytes+1))
+	if err != nil {
+		a.serverError(w, "read course content", err)
+		return
+	}
+	if len(raw) > maxCourseUploadBytes {
+		a.serverError(w, "read course content", fmt.Errorf("lesson %q exceeds %d bytes", slug, maxCourseUploadBytes))
+		return
+	}
+	page, err := storage.PrepareLesson(raw, watermark)
+	if err != nil {
+		a.serverError(w, "prepare course content", err)
+		return
+	}
+
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-store, private")
 	w.Header().Set("X-Robots-Tag", "noindex, nofollow")
 	w.Header().Set("X-Frame-Options", "DENY")
-
-	if err := storage.WriteWatermarked(w, body, watermarkScript(watermark)); err != nil {
+	if _, err := w.Write(page); err != nil {
 		log.Printf("write course content %s: %v", slug, err)
 	}
-}
-
-func watermarkScript(identity string) string {
-	safe := html.EscapeString(identity)
-	return `
-<div id="__access_watermark" style="position:fixed;bottom:10px;right:14px;z-index:99999;font:11px -apple-system,sans-serif;color:rgba(255,255,255,.28);pointer-events:none;user-select:none;">Licensed to ` + safe + `</div>
-<style>#__access_watermark{mix-blend-mode:difference}</style>
-<script>
-document.addEventListener('contextmenu', function (e) { e.preventDefault(); });
-document.addEventListener('copy', function (e) {
-  try {
-    var note = "\n\n— from a purchased copy, licensed to ` + safe + ` —";
-    e.clipboardData.setData('text/plain', (window.getSelection().toString() || '') + note);
-    e.preventDefault();
-  } catch (err) {}
-});
-</script>`
 }
