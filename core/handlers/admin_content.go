@@ -133,9 +133,16 @@ func (a *App) AdminSkillDelete(w http.ResponseWriter, r *http.Request) {
 
 // --- Experience ------------------------------------------------------------
 
+// AdminExperienceRow is one experience plus the role-resume key when a
+// PDF is stored for it. ResumeKey is empty when that role has no file.
+type AdminExperienceRow struct {
+	models.Experience
+	ResumeKey string
+}
+
 type AdminExperienceListData struct {
 	BaseData
-	Experience []models.Experience
+	Experience []AdminExperienceRow
 }
 
 func (a *App) AdminExperienceList(w http.ResponseWriter, r *http.Request) {
@@ -144,9 +151,28 @@ func (a *App) AdminExperienceList(w http.ResponseWriter, r *http.Request) {
 		a.serverError(w, "load experience", err)
 		return
 	}
+	resumes, err := a.Resumes.List(r.Context())
+	if err != nil {
+		a.serverError(w, "load resumes", err)
+		return
+	}
+	stored := make(map[string]bool, len(resumes))
+	for _, row := range resumes {
+		if row.RoleKey != models.DefaultResumeKey && row.ObjectPath != "" {
+			stored[row.RoleKey] = true
+		}
+	}
+	rows := make([]AdminExperienceRow, len(exp))
+	for i, item := range exp {
+		key := experienceRoleKey(item.Company, item.Role)
+		if !stored[key] {
+			key = ""
+		}
+		rows[i] = AdminExperienceRow{Experience: item, ResumeKey: key}
+	}
 	a.View.Render(w, http.StatusOK, "admin_experience_list", AdminExperienceListData{
 		BaseData:   a.base(r, "Experience — Admin", "", "admin"),
-		Experience: exp,
+		Experience: rows,
 	})
 }
 

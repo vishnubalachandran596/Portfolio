@@ -38,6 +38,8 @@ These files are kept up to date in the same commit as whatever they describe —
 
 ```
 cmd/server/       Local dev entrypoint (long-lived HTTP server)
+Dockerfile        Image for that entrypoint
+docker-compose.yml  Local Postgres (`db`) plus the app
 api/index.go      Vercel serverless entrypoint (wraps the same app)
 core/app/         Shared bootstrap: config, DB connect+migrate, wiring
 core/config/      Env var loading
@@ -60,20 +62,73 @@ even for code inside the same module.)
 
 ## Local development
 
-Requires Go 1.24+ and a Postgres database.
+Docker Desktop on Windows and on Mac uses the same `docker-compose.yml`.
+Copy `.env.example` to `.env`, set `JWT_SECRET` (and change the bootstrap
+admin password), then start the stack. Save `.env` as UTF-8. If you
+override `LOCAL_CONTENT_DIR`, use forward slashes
+(`C:/Users/you/portfolio-local-content` on Windows).
+`DATABASE_URL` in `.env.example` already points at the database Compose
+creates (`postgres://portfolio:portfolio@db:5432/portfolio?sslmode=disable`).
+Leave that line as-is unless you also change `POSTGRES_USER`,
+`POSTGRES_PASSWORD`, and `POSTGRES_DB` in `docker-compose.yml`.
 
 ```bash
 cp .env.example .env
-# edit .env: DATABASE_URL, JWT_SECRET, ADMIN_BOOTSTRAP_EMAIL/PASSWORD
-
-export $(grep -v '^#' .env | xargs)   # or use direnv / a dotenv tool
-go run ./cmd/server
+# set JWT_SECRET, and change ADMIN_BOOTSTRAP_PASSWORD
+docker compose up --build
 ```
 
-The app auto-applies its SQL migrations (schema + seed content) on
-startup and, if `ADMIN_BOOTSTRAP_EMAIL`/`ADMIN_BOOTSTRAP_PASSWORD` are set
-and no admin exists yet, creates the first admin account. Visit
-`http://localhost:8080`, and log in at `/admin/login`.
+The app applies its SQL migrations on startup. Those migrations create the
+schema only. If `ADMIN_BOOTSTRAP_EMAIL` and `ADMIN_BOOTSTRAP_PASSWORD` are
+set and no admin exists yet, it creates the first admin account. The same
+placeholder account is in `docker/local-admin.sql` (`admin@example.com` /
+`change-this-password`). That file is not a migration. After the stack has
+started once, apply it with the same command in PowerShell, Command
+Prompt, and Mac Terminal:
+
+```bash
+docker compose exec -T db psql -U portfolio -d portfolio -f /local-admin.sql
+```
+
+Git Bash on Windows rewrites `/local-admin.sql`. Prefix that command with
+`MSYS_NO_PATHCONV=1` there.
+
+Running it again leaves an existing admin row alone. Visit
+`http://localhost:8080`, and log in at `/admin/login` with that email and
+password. A fresh database has no profile, articles, or courses. Pages
+still render. Saving **Admin → Profile** inserts the profile row. Load
+`portfolio_seed_data.sql` from the Google Drive folder named `Portfolio`
+when you want the live rows locally.
+
+Article HTML, course HTML, and resume PDFs are not in that SQL and not in
+the repo. Put them in the directory `LOCAL_CONTENT_DIR` names (default
+`../portfolio-local-content`, next to the repo). Compose mounts it at
+`/content`. Use the same paths Storage uses:
+
+```text
+../portfolio-local-content/articles/{slug}.html
+../portfolio-local-content/courses/{slug}.html
+../portfolio-local-content/resumes/default.pdf
+../portfolio-local-content/resumes/{role-key}.pdf
+```
+
+A database row's `content_object` or `object_path` has to match the file
+name. Do not set `LOCAL_CONTENT_DIR` in production. On Mac, Docker Desktop
+needs that folder shared if it sits outside the default file-sharing list.
+On Windows, keep the folder on a drive Docker Desktop can mount.
+
+Visitor Google sign-in reads `.env`, not the database.
+`GOOGLE_REDIRECT_URL` in `.env.example` is the local placeholder
+`http://localhost:8080/login/google/callback`. Add that exact URL as an
+authorized redirect URI on the OAuth client, and paste
+`GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`. Until those two are set,
+the login page says Google is not configured. `SITE_URL` in the example
+is `http://localhost:8080`.
+
+To run the Go process on the host instead of in Compose, start only the
+database (`docker compose up db`) and point `DATABASE_URL` at `localhost`
+instead of `db`, then `go run ./cmd/server`. Leave `LOCAL_CONTENT_DIR` as
+the host path. That path needs Go 1.24+.
 
 **Change the bootstrap admin password after first login** — there's no
 in-app password-change form yet; rotate it directly:

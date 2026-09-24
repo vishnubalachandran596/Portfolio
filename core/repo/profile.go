@@ -22,6 +22,11 @@ func (r *ProfileRepo) Get(ctx context.Context) (models.Profile, error) {
 		&p.Name, &p.Title, &p.Tagline, &p.HeroSubtitle, &p.Summary, &p.Location, &p.Email,
 		&p.LinkedInURL, &p.GitHubURL, &p.ResumeURL, &p.PhotoURL, &p.YearsExperience, &p.UpdatedAt,
 	)
+	// A fresh database has the table and no row. Pages still render; the
+	// admin profile form inserts the row on save. Content is not seeded here.
+	if errors.Is(err, sql.ErrNoRows) {
+		return models.Profile{}, nil
+	}
 	return p, err
 }
 

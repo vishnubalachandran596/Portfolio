@@ -18,6 +18,8 @@ Before any change: read `docs/FUNCTIONALITY.md` (what the product does) and `doc
 
 9. **The repo is CODE ONLY — no content data, no profile-row exception.** Migrations carry schema only (`CREATE`/`ALTER`/index/constraint/function). No `INSERT` of content and no content-editing `UPDATE` for *any* table, including the `profile` identity row. UI chrome (labels, headings, nav, button copy) stays in code. Content lives in the live database; an idempotent snapshot `portfolio_seed_data.sql` is kept in a Google Drive folder named **`Portfolio`**. Refer to that folder by name only — never a URL. **Direction of truth:** edit in the admin console, then regenerate the snapshot from the live database (`core/db/gen_bootstrap_data.sql`). The snapshot is a bootstrap copy, not an authoring surface. A new feature ships DDL only; rows are added through admin, then the snapshot is regenerated. The repo alone cannot rebuild content — disaster recovery depends on the snapshot.
 
+10. **Docker Compose is the local stack, and it stays paired with `.env.example`.** `docker compose up --build` is the same on Docker Desktop for Windows and for Mac. It starts Postgres (service `db`, user/password/database `portfolio`) and the app. `.env.example`'s `DATABASE_URL` is `postgres://portfolio:portfolio@db:5432/portfolio?sslmode=disable`. Host `db` and those credentials match `docker-compose.yml`. Compose mounts `LOCAL_CONTENT_DIR` (default `../portfolio-local-content`, forward slashes) at `/content`. `docker/local-admin.sql` is the placeholder admin and is not a migration. `.env.example` sets `GOOGLE_REDIRECT_URL=http://localhost:8080/login/google/callback` and `SITE_URL=http://localhost:8080`. A change to any of these updates `.env.example`, `README.md`, `docs/ARCHITECTURE.md`, and Mem0 in the same piece of work.
+
 ## Before finishing any task in this repo
 
 - Did this change make `docs/FUNCTIONALITY.md` or `docs/ARCHITECTURE.md` stale? Update it now.
@@ -26,5 +28,6 @@ Before any change: read `docs/FUNCTIONALITY.md` (what the product does) and `doc
 - Any new/changed `.sql` migration — is it safe to run twice? (See rule 4.)
 - Any real secret in the diff? Check, don't assume.
 - `go build ./... && go vet ./...` clean? Any changed template smoke-tested?
+- If Docker, Compose, the local content directory, the local admin SQL, the local Google redirect URL, or the local `DATABASE_URL` changed, do `.env.example`, `README.md`, `docs/ARCHITECTURE.md`, and Mem0 still describe the same local stack?
 
 Full detail and rationale live in `CLAUDE.md` and `.cursor/rules/architecture.mdc` — read those for the complete picture.

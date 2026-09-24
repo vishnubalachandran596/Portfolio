@@ -104,6 +104,14 @@ When a new feature seems to need seed rows: it doesn't. Ship the DDL in a migrat
 
 The repo alone cannot rebuild the site. Disaster recovery depends on the Drive snapshot (or a backup of the live database). That is a deliberate trade-off, not an oversight — see `docs/ARCHITECTURE.md`.
 
+### 9. Local Docker Compose and `.env.example` stay paired
+
+`docker compose up --build` is how this repo runs locally, on Docker Desktop for Windows and for Mac, from the same `docker-compose.yml`. `docker-compose.yml` starts Postgres (service `db`, user/password/database `portfolio`) and the app image from `Dockerfile`. `.env.example`'s `DATABASE_URL` is `postgres://portfolio:portfolio@db:5432/portfolio?sslmode=disable`. The host `db` is that service name. The user, password, and database name are the same values as `POSTGRES_USER`, `POSTGRES_PASSWORD`, and `POSTGRES_DB`. Changing one without the others makes Compose fail at startup.
+
+Compose bind-mounts `LOCAL_CONTENT_DIR` (default `../portfolio-local-content`, outside the repo; forward slashes if overridden) at `/content` and sets `LOCAL_CONTENT_DIR=/content` inside the app container. Files there use the Storage object paths: `articles/{slug}.html`, `courses/{slug}.html`, `resumes/default.pdf`, `resumes/{role-key}.pdf`. Production leaves `LOCAL_CONTENT_DIR` unset. `docker/local-admin.sql` inserts only the placeholder admin from `.env.example` and is not a migration. Apply it with `docker compose exec -T db psql -U portfolio -d portfolio -f /local-admin.sql` (Git Bash on Windows needs `MSYS_NO_PATHCONV=1` in front). `.env.example` sets `GOOGLE_REDIRECT_URL` to the local placeholder `http://localhost:8080/login/google/callback` and `SITE_URL` to `http://localhost:8080`. Google client id and secret stay empty until pasted. Shell scripts and the Compose file stay LF (`.gitattributes`); the image also strips CR from the entrypoint.
+
+When any of those change — service name, credentials, published port, the image, the content directory, the local admin SQL, the local Google redirect URL, or the local `DATABASE_URL` — update `.env.example`, `README.md`, and `docs/ARCHITECTURE.md` in the same commit, and write the new values into Mem0. The next agent does not inherit this conversation.
+
 ---
 
 ## Before every push (checklist)
@@ -114,5 +122,6 @@ The repo alone cannot rebuild the site. Disaster recovery depends on the Drive s
 4. **Any new/changed `.sql` migration — is it safe to run twice?** `CREATE ... IF NOT EXISTS` and `ADD COLUMN IF NOT EXISTS` are fine as-is; `ADD CONSTRAINT` and anything else without a native guard needs a `DO $$ ... IF NOT EXISTS ...` wrapper (see rule 4 above). This one caused a real production outage — don't skip it.
 5. Is there anything resembling a real secret in the diff? (`git diff` it, don't assume.)
 6. `go build ./... && go vet ./...` clean? CSS valid (no stray syntax errors)? Any new/changed template smoke-tested (a throwaway Go program calling `view.New()` + `Renderer.Render()` is the established pattern in this project's history — cheap, catches template errors before deploy)?
+7. If Docker, Compose, the local content directory, the local admin SQL, the local Google redirect URL, or the local `DATABASE_URL` changed, do `.env.example`, `README.md`, `docs/ARCHITECTURE.md`, and Mem0 describe the same local stack?
 
 This file, `docs/FUNCTIONALITY.md`, and `docs/ARCHITECTURE.md` are meant to be read together, every session, by whichever agent — Claude Code, Cursor, or a human — picks up work on this repo next.

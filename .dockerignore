@@ -1,0 +1,8 @@
+.git
+.env
+.env.local
+.vercel
+*.md
+Dockerfile
+docker-compose.yml
+portfolio-local-content

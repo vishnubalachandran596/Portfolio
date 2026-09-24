@@ -39,6 +39,9 @@
       </label>
       <div class="form-actions">
         <button type="submit" class="btn btn-primary" data-loading-text="Saving…">Save Article</button>
+        {{if not .IsNew}}
+        <a class="btn btn-secondary" href="/admin/articles/{{.Article.ID}}/preview" target="_blank" rel="noopener">Preview</a>
+        {{end}}
         <a class="btn btn-secondary" href="/admin/articles">Cancel</a>
       </div>
     </form>
