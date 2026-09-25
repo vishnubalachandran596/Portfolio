@@ -46,6 +46,7 @@
 <section class="section">
   <div class="container course-description">
     <p><strong>{{.Article.Summary}}</strong></p>
+    {{if .ArticleStyles}}<style>{{.ArticleStyles}}</style>{{end}}
     <div class="article-body">{{articleBody .Article.Body}}</div>
 
     <p class="article-thumbs-cta">Found this useful? Give it a thumbs up for more of these contents.</p>

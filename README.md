@@ -248,7 +248,9 @@ what you want"), pays via Razorpay Checkout, and is redirected to
   is read by the `/courses/<slug>/learn` handler after the purchase
   check, never from `/static` or the sitemap, and never via a Storage
   URL the browser could request on its own. The response is a shell, so
-  view-source does not show the lesson markup. A new lesson is uploaded
+  view-source does not show the lesson markup. The page around it is the
+  site chrome; the lesson's own CSS is scoped so it cannot restyle the
+  header. A new lesson is uploaded
   from the admin course form.
 - **On "no one can copy the content":** be realistic about this — nothing
   rendered in a browser can be made impossible to copy (screenshots and
@@ -256,7 +258,8 @@ what you want"), pays via Razorpay Checkout, and is redirected to
   actually implemented: the content is never at a public URL, it's sent
   with `Cache-Control: no-store`, the lesson tags stay out of view-source,
   right-click is discouraged, copied text is stamped with the purchaser's
-  email throughout, and **that email is tiled across the whole lesson**,
+  email throughout, and **that email is drawn once as a light diagonal
+  across the viewport**,
   which is the actually-effective deterrent — a leaked copy is traceable
   back to whoever shared it.
 - **Setup:** set `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` (start with

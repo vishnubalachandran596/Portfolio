@@ -1,0 +1,43 @@
+{{define "content"}}
+<section class="section page-hero page-hero-narrow lesson-page-hero">
+  <div class="container">
+    <p class="eyebrow"><a href="/courses/{{.Course.Slug}}">← {{.Course.Title}}</a></p>
+    <h1>{{.Course.Title}}</h1>
+    {{if .HasQuiz}}
+    <div class="hero-actions">
+      <a class="btn btn-secondary" href="/courses/{{.Course.Slug}}/quiz">Take the Final Quiz</a>
+    </div>
+    {{end}}
+  </div>
+</section>
+
+<section class="section lesson-page">
+  <div class="container lesson-page-container">
+    {{if .LessonStyles}}<style>{{.LessonStyles}}</style>{{end}}
+    <div id="lesson-root" class="lesson-embed"></div>
+  </div>
+</section>
+
+<script>
+(function () {
+  var b = "{{.LessonPayload}}";
+  var bin = atob(b);
+  var bytes = new Uint8Array(bin.length);
+  for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  var html = new TextDecoder("utf-8").decode(bytes);
+  var root = document.getElementById("lesson-root");
+  if (!root) return;
+  root.innerHTML = html;
+  var scripts = root.querySelectorAll("script");
+  for (var i = 0; i < scripts.length; i++) {
+    var old = scripts[i];
+    var s = document.createElement("script");
+    for (var j = 0; j < old.attributes.length; j++) {
+      s.setAttribute(old.attributes[j].name, old.attributes[j].value);
+    }
+    s.text = old.text;
+    old.parentNode.replaceChild(s, old);
+  }
+})();
+</script>
+{{end}}

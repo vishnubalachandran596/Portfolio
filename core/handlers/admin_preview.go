@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"html/template"
 	"net/http"
 	"strconv"
 	"strings"
@@ -52,23 +53,24 @@ func (a *App) AdminArticlePreview(w http.ResponseWriter, r *http.Request) {
 		a.NotFound(w, r)
 		return
 	}
-	if err := a.loadArticleHTML(r.Context(), &article); err != nil {
+	styles, err := a.loadArticleHTML(r.Context(), &article)
+	if err != nil {
 		a.serverError(w, "load article html", err)
 		return
 	}
 	w.Header().Set("Cache-Control", "no-store, private")
 	base := a.base(r, article.Title+" — Preview", article.Summary, "articles")
 	a.View.Render(w, http.StatusOK, "article_detail", ArticleDetailData{
-		BaseData: base,
-		Article:  article,
-		JSONLD:   articleJSONLD(article, base.CanonicalURL, a.Cfg.SiteName),
+		BaseData:      base,
+		Article:       article,
+		ArticleStyles: template.CSS(styles),
+		JSONLD:        articleJSONLD(article, base.CanonicalURL, a.Cfg.SiteName),
 	})
 }
 
-// AdminCoursePreview writes the stored lesson HTML for a logged-in admin.
-// Visitors still receive the watermarked shell from CourseLearn; this
-// route shows the uploaded file so the lesson can be checked before it
-// is published. The browser never receives a Storage URL.
+// AdminCoursePreview renders the stored lesson the way a purchaser sees
+// it: site chrome around a scoped, watermarked embed. The browser never
+// receives a Storage URL.
 func (a *App) AdminCoursePreview(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
 	if err != nil {
@@ -88,13 +90,5 @@ func (a *App) AdminCoursePreview(w http.ResponseWriter, r *http.Request) {
 		a.NotFound(w, r)
 		return
 	}
-	raw, err := a.readArticleObject(r.Context(), course.ContentObject)
-	if err != nil {
-		a.serverError(w, "load course html", err)
-		return
-	}
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.Header().Set("Cache-Control", "no-store, private")
-	w.Header().Set("X-Frame-Options", "DENY")
-	w.Write(raw)
+	a.writeCourseLesson(w, r, course, "Admin preview")
 }

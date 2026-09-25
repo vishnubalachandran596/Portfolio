@@ -33,3 +33,16 @@ func TestArticleHTMLKeepsFragment(t *testing.T) {
 		t.Fatalf("got %q", got)
 	}
 }
+
+func TestExtractStylesAndScopeCSS(t *testing.T) {
+	raw := []byte(`<html><head><style>:root{--x:1} html, body{margin:0}</style></head><body><p>Hi</p></body></html>`)
+	css := ExtractStyles(raw)
+	if css == "" {
+		t.Fatal("expected style contents")
+	}
+	scoped := ScopeCSS(css, ".article-body")
+	want := ".article-body{--x:1} .article-body, .article-body{margin:0}"
+	if scoped != want {
+		t.Fatalf("got %q", scoped)
+	}
+}

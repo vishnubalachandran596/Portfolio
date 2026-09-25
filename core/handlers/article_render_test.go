@@ -79,3 +79,38 @@ func TestArticleTemplatesRenderStorageAndGrid(t *testing.T) {
 		t.Fatal("admin article list missing preview link")
 	}
 }
+
+func TestCourseLearnTemplateUsesSiteChrome(t *testing.T) {
+	r, err := view.New()
+	if err != nil {
+		t.Fatalf("view.New: %v", err)
+	}
+	rec := httptest.NewRecorder()
+	r.Render(rec, 200, "course_learn", CourseLearnData{
+		BaseData: BaseData{
+			SiteName: "Vishnu Balachandran", Title: "Java Fundamentals — Lesson",
+			Active: "courses", AssetVersion: "test",
+			Nav: NavLinks{Home: "/", Courses: "/courses", Articles: "/articles"},
+		},
+		Course:        models.Course{Slug: "java-fundamentals", Title: "Java Fundamentals"},
+		HasQuiz:       true,
+		LessonStyles:  ".lesson-embed{color:red}",
+		LessonPayload: "ZmFrZQ==",
+	})
+	body := rec.Body.String()
+	if strings.Contains(body, "<!-- render error:") {
+		t.Fatal(body)
+	}
+	if !strings.Contains(body, `id="lesson-root"`) || !strings.Contains(body, "class=\"lesson-embed\"") {
+		t.Fatal("lesson embed missing")
+	}
+	if !strings.Contains(body, "ZmFrZQ==") {
+		t.Fatal("payload missing")
+	}
+	if !strings.Contains(body, `href="/courses/java-fundamentals/quiz"`) {
+		t.Fatal("quiz link missing")
+	}
+	if !strings.Contains(body, `class="site-header"`) && !strings.Contains(body, "<header") {
+		t.Fatal("site chrome missing")
+	}
+}

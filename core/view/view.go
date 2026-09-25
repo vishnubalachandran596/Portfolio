@@ -110,6 +110,7 @@ func New() (*Renderer, error) {
 		"templates/pages/about.html",
 		"templates/pages/courses_list.html",
 		"templates/pages/course_detail.html",
+		"templates/pages/course_learn.html",
 		"templates/pages/consultancy.html",
 		"templates/pages/booking.html",
 		"templates/pages/articles_list.html",

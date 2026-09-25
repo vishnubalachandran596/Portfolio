@@ -736,6 +736,15 @@ a, button, .slot-btn, .faq-item summary { cursor: pointer; }
 .course-description { max-width: 47.5rem; }
 .course-description p { color: var(--color-text-muted); margin-bottom: 1rem; }
 
+.lesson-page-hero { padding-bottom: 0; }
+.lesson-page { padding-top: 1.25rem; }
+.lesson-page-container { max-width: 60rem; }
+.lesson-embed {
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  min-height: 20rem;
+}
+
 /* ---------------------------------------------------------------------
    Blog: cover image, list thumbnails, and rich (HTML) post bodies
 --------------------------------------------------------------------- */

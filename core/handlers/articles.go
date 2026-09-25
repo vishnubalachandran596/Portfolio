@@ -105,9 +105,10 @@ func (a *App) ArticlesPage(w http.ResponseWriter, r *http.Request) {
 
 type ArticleDetailData struct {
 	BaseData
-	Article models.Article
-	Voted   bool
-	JSONLD  template.JS
+	Article       models.Article
+	ArticleStyles template.CSS
+	Voted         bool
+	JSONLD        template.JS
 }
 
 // ArticleDetailPage is the article's own internal page — summary, tags,
@@ -137,16 +138,18 @@ func (a *App) ArticleDetailPage(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	if err := a.loadArticleHTML(r.Context(), &article); err != nil {
+	styles, err := a.loadArticleHTML(r.Context(), &article)
+	if err != nil {
 		a.serverError(w, "load article html", err)
 		return
 	}
 	base := a.baseFrom(r, pf, article.Title+" — "+a.Cfg.SiteName, article.Summary, "articles")
 	a.View.Render(w, http.StatusOK, "article_detail", ArticleDetailData{
-		BaseData: base,
-		Article:  article,
-		Voted:    voted,
-		JSONLD:   articleJSONLD(article, base.CanonicalURL, a.Cfg.SiteName),
+		BaseData:      base,
+		Article:       article,
+		ArticleStyles: template.CSS(styles),
+		Voted:         voted,
+		JSONLD:        articleJSONLD(article, base.CanonicalURL, a.Cfg.SiteName),
 	})
 }
 
@@ -454,17 +457,19 @@ func (a *App) renderArticleForm(w http.ResponseWriter, r *http.Request, article 
 }
 
 // loadArticleHTML replaces Body with the Storage object when one is set.
-// Posts that still live in the body column are left alone.
-func (a *App) loadArticleHTML(ctx context.Context, article *models.Article) error {
+// Posts that still live in the body column are left alone. A full
+// uploaded document also contributes its <style> blocks, scoped to
+// .article-body so they cannot restyle the site chrome.
+func (a *App) loadArticleHTML(ctx context.Context, article *models.Article) (string, error) {
 	if article.ContentObject == "" {
-		return nil
+		return "", nil
 	}
 	raw, err := a.readArticleObject(ctx, article.ContentObject)
 	if err != nil {
-		return err
+		return "", err
 	}
 	article.Body = storage.ArticleHTML(raw)
-	return nil
+	return storage.ScopeCSS(storage.ExtractStyles(raw), ".article-body"), nil
 }
 
 func (a *App) readArticleObject(ctx context.Context, path string) ([]byte, error) {
