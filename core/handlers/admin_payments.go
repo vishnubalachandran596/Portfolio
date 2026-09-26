@@ -10,7 +10,7 @@ import (
 type adminPaymentRow struct {
 	When        string
 	whenSort    int64
-	Type        string // "Course" or "Consultancy"
+	Type        string // "Course", "Consultancy", "Audit", or "Article"
 	Description string
 	Email       string
 	Amount      string
@@ -45,6 +45,11 @@ func (a *App) AdminPaymentsList(w http.ResponseWriter, r *http.Request) {
 	auditRequests, err := a.AuditRequests.ListAll(ctx)
 	if err != nil {
 		a.serverError(w, "load audit requests", err)
+		return
+	}
+	articleContribs, err := a.ArticleContributions.ListAll(ctx)
+	if err != nil {
+		a.serverError(w, "load article contributions", err)
 		return
 	}
 
@@ -115,20 +120,32 @@ func (a *App) AdminPaymentsList(w http.ResponseWriter, r *http.Request) {
 		})
 		totalCents[aud.Currency] += aud.AmountCents
 	}
+	for _, c := range articleContribs {
+		if c.Status != models.ContributionStatusPaid || c.PaidAt == nil {
+			continue
+		}
+		article, aerr := a.Articles.GetByID(ctx, c.ArticleID)
+		title := "(article removed)"
+		if aerr == nil {
+			title = article.Title
+		}
+		rows = append(rows, adminPaymentRow{
+			When:        c.PaidAt.In(a.Timezone).Format("Jan 2, 2006 · 3:04 PM"),
+			whenSort:    c.PaidAt.Unix(),
+			Type:        "Article",
+			Description: title,
+			Email:       c.Email,
+			Amount:      models.FormatMoney(c.AmountCents, c.Currency),
+			PaymentID:   c.RazorpayPaymentID,
+		})
+		totalCents[c.Currency] += c.AmountCents
+	}
 
 	sort.Slice(rows, func(i, j int) bool { return rows[i].whenSort > rows[j].whenSort })
 
-	var totalParts []string
-	for currency, cents := range totalCents {
-		totalParts = append(totalParts, models.FormatMoney(cents, currency))
-	}
-	sort.Strings(totalParts)
-	total := "$0"
-	if len(totalParts) > 0 {
-		total = totalParts[0]
-		for _, p := range totalParts[1:] {
-			total += " + " + p
-		}
+	total := models.FormatMoneyTotals(totalCents)
+	if total == "" {
+		total = "$0"
 	}
 
 	a.View.Render(w, http.StatusOK, "admin_payments_list", AdminPaymentsListData{

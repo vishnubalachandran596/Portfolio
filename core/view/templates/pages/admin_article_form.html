@@ -47,8 +47,24 @@
     </form>
 
     {{if not .IsNew}}
-    <h2 class="section-title admin-subsection-title">Thumbs up ({{.Article.ThumbsUpCount}})</h2>
+    <div class="stat-grid admin-engagement-stats">
+      <div class="stat-card">
+        <span class="stat-number">{{.Article.ThumbsUpCount}}</span>
+        <span class="stat-label"><a href="#thumbs">Thumbs up</a></span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-number">{{.PaidCount}}</span>
+        <span class="stat-label"><a href="#contributions">Paid contributions</a></span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-number">{{if .ContributionTotal}}{{.ContributionTotal}}{{else}}—{{end}}</span>
+        <span class="stat-label">Received</span>
+      </div>
+    </div>
+
+    <h2 id="thumbs" class="section-title admin-subsection-title">Thumbs up ({{.Article.ThumbsUpCount}})</h2>
     {{if .Votes}}
+    <div class="table-scroll">
     <table class="admin-table">
       <thead><tr><th>When</th><th>Voter</th></tr></thead>
       <tbody>
@@ -65,8 +81,32 @@
         {{end}}
       </tbody>
     </table>
+    </div>
     {{else}}
     <p class="empty-state">No thumbs up yet.</p>
+    {{end}}
+
+    <h2 id="contributions" class="section-title admin-subsection-title">Contributions{{if .PaidCount}} ({{.PaidCount}} paid{{if .ContributionTotal}} · {{.ContributionTotal}}{{end}}){{end}}</h2>
+    <p class="admin-form-note">Each paid row is its own payment. The same person can contribute more than once.</p>
+    {{if .Contributions}}
+    <div class="table-scroll">
+    <table class="admin-table">
+      <thead><tr><th>When</th><th>Contributor</th><th>Amount</th><th>Status</th><th>Payment ID</th></tr></thead>
+      <tbody>
+        {{range .Contributions}}
+        <tr>
+          <td>{{.When}}</td>
+          <td>{{if .UserID}}<a href="/admin/users/{{.UserID}}">{{.Email}}</a>{{else}}{{.Email}}{{end}}</td>
+          <td class="admin-metric">{{.Amount}}</td>
+          <td><span class="status-badge status-{{if eq .Status "paid"}}confirmed{{else if eq .Status "failed"}}cancelled{{else}}pending_payment{{end}}">{{.Status}}</span></td>
+          <td>{{if .PaymentID}}{{.PaymentID}}{{else}}<span class="admin-table-subtext">—</span>{{end}}</td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+    </div>
+    {{else}}
+    <p class="empty-state">No contributions yet.</p>
     {{end}}
     {{end}}
   </div>

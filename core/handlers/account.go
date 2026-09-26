@@ -86,6 +86,11 @@ func (a *App) AccountPage(w http.ResponseWriter, r *http.Request) {
 		a.serverError(w, "load purchases", err)
 		return
 	}
+	contribs, err := a.ArticleContributions.ListPaidByUserID(ctx, uid)
+	if err != nil {
+		a.serverError(w, "load article contributions", err)
+		return
+	}
 	messages, err := a.AdminMessages.ListByUserID(ctx, uid)
 	if err != nil {
 		a.serverError(w, "load messages", err)
@@ -140,6 +145,23 @@ func (a *App) AccountPage(w http.ResponseWriter, r *http.Request) {
 			Description: "Course: " + course.Title,
 			Amount:      models.FormatMoney(p.AmountCents, p.Currency),
 			ReceiptURL:  "/account/purchases/" + strconv.FormatInt(p.ID, 10) + "/receipt.pdf",
+		})
+	}
+	for _, c := range contribs {
+		article, err := a.Articles.GetByID(ctx, c.ArticleID)
+		title := "(article removed)"
+		if err == nil {
+			title = article.Title
+		}
+		paidAt := c.CreatedAt.In(a.Timezone).Format("Jan 2, 2006")
+		if c.PaidAt != nil {
+			paidAt = c.PaidAt.In(a.Timezone).Format("Jan 2, 2006")
+		}
+		data.Payments = append(data.Payments, AccountPayment{
+			When:        paidAt,
+			Description: "Article: " + title,
+			Amount:      models.FormatMoney(c.AmountCents, c.Currency),
+			ReceiptURL:  "/account/articles/" + strconv.FormatInt(c.ID, 10) + "/receipt.pdf",
 		})
 	}
 	for _, m := range messages {
@@ -265,6 +287,63 @@ func (a *App) AccountPurchaseReceipt(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/pdf")
 	w.Header().Set("Content-Disposition", `attachment; filename="receipt-`+receipt.ReceiptNoForPurchase(p.ID)+`.pdf"`)
+	w.Write(pdfBytes)
+}
+
+// AccountArticleReceipt streams a PDF receipt for one of the logged-in
+// visitor's own paid article contributions.
+func (a *App) AccountArticleReceipt(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	uid, ok := a.Auth.UserID(r)
+	if !ok {
+		http.Redirect(w, r, "/login?next="+r.URL.Path, http.StatusSeeOther)
+		return
+	}
+	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	if err != nil {
+		a.NotFound(w, r)
+		return
+	}
+	c, err := a.ArticleContributions.GetByID(ctx, id)
+	if err != nil {
+		if err == repo.ErrNotFound {
+			a.NotFound(w, r)
+			return
+		}
+		a.serverError(w, "load article contribution", err)
+		return
+	}
+	if c.UserID != uid || c.Status != models.ContributionStatusPaid {
+		a.NotFound(w, r)
+		return
+	}
+	article, err := a.Articles.GetByID(ctx, c.ArticleID)
+	title := "(article removed)"
+	if err == nil {
+		title = article.Title
+	}
+	issuedAt := c.CreatedAt
+	if c.PaidAt != nil {
+		issuedAt = *c.PaidAt
+	}
+
+	pdfBytes, err := receipt.Generate(receipt.Data{
+		ReceiptNo:   receipt.ReceiptNoForArticleContribution(c.ID),
+		IssuedAt:    issuedAt,
+		PayerEmail:  c.Email,
+		Description: "Article contribution: " + title,
+		AmountCents: c.AmountCents,
+		Currency:    c.Currency,
+		PaymentID:   c.RazorpayPaymentID,
+		SiteName:    a.Cfg.SiteName,
+		IssuerName:  a.issuerName(ctx),
+	})
+	if err != nil {
+		a.serverError(w, "generate receipt", err)
+		return
+	}
+	w.Header().Set("Content-Type", "application/pdf")
+	w.Header().Set("Content-Disposition", `attachment; filename="receipt-`+receipt.ReceiptNoForArticleContribution(c.ID)+`.pdf"`)
 	w.Write(pdfBytes)
 }
 

@@ -72,7 +72,9 @@ func TestArticleTemplatesRenderStorageAndList(t *testing.T) {
 	rec = httptest.NewRecorder()
 	r.Render(rec, 200, "admin_articles_list", AdminArticlesListData{
 		BaseData: base,
-		Articles: []models.Article{{ID: 4, Slug: "kafka-notes", Title: "Kafka notes", ContentObject: "articles/kafka-notes.html"}},
+		Articles: []AdminArticleListRow{{
+			Article: models.Article{ID: 4, Slug: "kafka-notes", Title: "Kafka notes", ContentObject: "articles/kafka-notes.html"},
+		}},
 	})
 	body = rec.Body.String()
 	if strings.Contains(body, "<!-- render error:") {

@@ -3,6 +3,7 @@ package models
 
 import (
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -261,6 +262,29 @@ func FormatMoney(cents int, currency string) string {
 	return symbol + strconv.Itoa(whole) + fmt.Sprintf(".%02d", remainder)
 }
 
+// FormatMoneyTotals joins per-currency totals the way the admin ledger
+// does ("$12 + ₹500"). Empty or all-zero maps return "".
+func FormatMoneyTotals(totals map[string]int) string {
+	if len(totals) == 0 {
+		return ""
+	}
+	currencies := make([]string, 0, len(totals))
+	for currency, cents := range totals {
+		if cents > 0 {
+			currencies = append(currencies, currency)
+		}
+	}
+	sort.Strings(currencies)
+	if len(currencies) == 0 {
+		return ""
+	}
+	parts := make([]string, 0, len(currencies))
+	for _, currency := range currencies {
+		parts = append(parts, FormatMoney(totals[currency], currency))
+	}
+	return strings.Join(parts, " + ")
+}
+
 const (
 	BookingStatusPendingPayment = "pending_payment"
 	BookingStatusConfirmed      = "confirmed"
@@ -441,6 +465,46 @@ type ArticleVote struct {
 // IsAnonymous reports whether this vote came with no name or email at
 // all — the visitor left both fields on the vote form blank.
 func (v ArticleVote) IsAnonymous() bool { return v.UserEmail == "" && v.UserName == "" }
+
+const (
+	ContributionStatusCreated = "created"
+	ContributionStatusPaid    = "paid"
+	ContributionStatusFailed  = "failed"
+	// ArticleContributeMinCents is the smallest charge Razorpay will take
+	// (one whole currency unit). The box is optional — a visitor who does
+	// not want to pay just leaves it.
+	ArticleContributeMinCents = 100
+)
+
+// ArticleContribution is one optional payment on an article. The same
+// visitor may contribute more than once; each row is its own payment
+// with its own paid_at.
+type ArticleContribution struct {
+	ID                int64
+	ArticleID         int64
+	UserID            int64
+	Email             string
+	AmountCents       int
+	Currency          string
+	Status            string
+	RazorpayOrderID   string
+	RazorpayPaymentID string
+	CreatedAt         time.Time
+	PaidAt            *time.Time
+}
+
+// ContributionCurrency is the checkout currency for optional article
+// support: INR for India, otherwise the site's configured fallback
+// (CHECKOUT_CURRENCY, usually USD).
+func ContributionCurrency(country, fallback string) string {
+	if country == "IN" {
+		return "INR"
+	}
+	if fallback == "" {
+		return "USD"
+	}
+	return fallback
+}
 
 type AvailabilityRule struct {
 	ID          int64

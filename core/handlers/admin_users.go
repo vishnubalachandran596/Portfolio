@@ -67,14 +67,23 @@ type adminUserMessage struct {
 	Body string
 }
 
+type adminUserContribution struct {
+	ArticleTitle string
+	ArticleID    int64
+	Amount       string
+	Status       string
+	When         string
+}
+
 type AdminUserDetailData struct {
 	BaseData
-	User      models.User
-	IsAdmin   bool
-	CanDemote bool
-	Bookings  []adminUserBooking
-	Purchases []adminUserPurchase
-	Messages  []adminUserMessage
+	User          models.User
+	IsAdmin       bool
+	CanDemote     bool
+	Bookings      []adminUserBooking
+	Purchases     []adminUserPurchase
+	Contributions []adminUserContribution
+	Messages      []adminUserMessage
 }
 
 // AdminUserDetail shows one visitor's bookings and course purchases, plus
@@ -121,6 +130,11 @@ func (a *App) AdminUserDetail(w http.ResponseWriter, r *http.Request) {
 		a.serverError(w, "load messages", err)
 		return
 	}
+	contribs, err := a.ArticleContributions.ListByUserID(ctx, id)
+	if err != nil {
+		a.serverError(w, "load article contributions", err)
+		return
+	}
 
 	data := AdminUserDetailData{
 		BaseData:  a.base(r, user.Name+" — Admin", "", "admin"),
@@ -155,6 +169,24 @@ func (a *App) AdminUserDetail(w http.ResponseWriter, r *http.Request) {
 		data.Messages = append(data.Messages, adminUserMessage{
 			When: m.CreatedAt.In(a.Timezone).Format("Mon, Jan 2 2006 · 3:04 PM"),
 			Body: m.Body,
+		})
+	}
+	for _, c := range contribs {
+		article, aerr := a.Articles.GetByID(ctx, c.ArticleID)
+		title := "(article removed)"
+		if aerr == nil {
+			title = article.Title
+		}
+		when := c.CreatedAt.In(a.Timezone).Format("Jan 2, 2006 · 3:04 PM")
+		if c.PaidAt != nil {
+			when = c.PaidAt.In(a.Timezone).Format("Jan 2, 2006 · 3:04 PM")
+		}
+		data.Contributions = append(data.Contributions, adminUserContribution{
+			ArticleTitle: title,
+			ArticleID:    c.ArticleID,
+			Amount:       models.FormatMoney(c.AmountCents, c.Currency),
+			Status:       c.Status,
+			When:         when,
 		})
 	}
 

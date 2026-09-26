@@ -7,18 +7,20 @@
     </div>
     {{if .Articles}}
     <table class="admin-table">
-      <thead><tr><th>Title</th><th>Tags</th><th>Published</th><th>Status</th><th></th></tr></thead>
+      <thead><tr><th>Title</th><th>Tags</th><th>Published</th><th>Status</th><th>Thumbs</th><th>Received</th><th></th></tr></thead>
       <tbody>
         {{range .Articles}}
         <tr>
-          <td><a href="/articles/{{.Slug}}" target="_blank" rel="noopener">{{.Title}} ↗</a></td>
-          <td>{{if .Tags}}{{range .Tags}}<span class="tag-chip">{{.}}</span> {{end}}{{else}}<span class="admin-table-subtext">none</span>{{end}}</td>
-          <td>{{formatDateOptional .PublishedDate}}</td>
-          <td><span class="status-badge {{if .IsPublished}}status-confirmed{{else}}status-cancelled{{end}}">{{if .IsPublished}}Published{{else}}Hidden{{end}}</span></td>
+          <td><a href="/articles/{{.Article.Slug}}" target="_blank" rel="noopener">{{.Article.Title}} ↗</a></td>
+          <td>{{if .Article.Tags}}{{range .Article.Tags}}<span class="tag-chip">{{.}}</span> {{end}}{{else}}<span class="admin-table-subtext">none</span>{{end}}</td>
+          <td>{{formatDateOptional .Article.PublishedDate}}</td>
+          <td><span class="status-badge {{if .Article.IsPublished}}status-confirmed{{else}}status-cancelled{{end}}">{{if .Article.IsPublished}}Published{{else}}Hidden{{end}}</span></td>
+          <td class="admin-metric"><a href="/admin/articles/{{.Article.ID}}/edit#thumbs">{{.Article.ThumbsUpCount}}</a></td>
+          <td class="admin-metric">{{if .PaidContributions}}<a href="/admin/articles/{{.Article.ID}}/edit#contributions">{{.PaidContributions}} · {{.ContributionTotal}}</a>{{else}}<span class="admin-table-subtext">—</span>{{end}}</td>
           <td class="admin-table-actions">
-            <a class="link-button" href="/admin/articles/{{.ID}}/preview" target="_blank" rel="noopener">Preview</a>
-            <a class="link-button" href="/admin/articles/{{.ID}}/edit">Edit</a>
-            <form method="POST" action="/admin/articles/{{.ID}}/delete" onsubmit="return confirm('Delete this article?');">
+            <a class="link-button" href="/admin/articles/{{.Article.ID}}/preview" target="_blank" rel="noopener">Preview</a>
+            <a class="link-button" href="/admin/articles/{{.Article.ID}}/edit">Edit</a>
+            <form method="POST" action="/admin/articles/{{.Article.ID}}/delete" onsubmit="return confirm('Delete this article?');">
               <button type="submit" class="link-button danger">Delete</button>
             </form>
           </td>

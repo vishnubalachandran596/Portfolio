@@ -52,6 +52,25 @@
     <p class="empty-state">No course purchases yet.</p>
     {{end}}
 
+    <h2>Article contributions</h2>
+    {{if .Contributions}}
+    <table class="admin-table">
+      <thead><tr><th>Article</th><th>Amount</th><th>Status</th><th>When</th></tr></thead>
+      <tbody>
+        {{range .Contributions}}
+        <tr>
+          <td>{{if .ArticleID}}<a href="/admin/articles/{{.ArticleID}}/edit#contributions">{{.ArticleTitle}}</a>{{else}}{{.ArticleTitle}}{{end}}</td>
+          <td>{{.Amount}}</td>
+          <td><span class="status-badge status-{{if eq .Status "paid"}}confirmed{{else if eq .Status "failed"}}cancelled{{else}}pending_payment{{end}}">{{.Status}}</span></td>
+          <td>{{.When}}</td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+    {{else}}
+    <p class="empty-state">No article contributions yet.</p>
+    {{end}}
+
     <h2>Send a message</h2>
     <form method="POST" action="/admin/users/{{.User.ID}}/messages" class="admin-form">
       <label>Message <span class="optional">a signature pointing them to your email is added automatically</span>

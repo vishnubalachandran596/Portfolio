@@ -91,7 +91,9 @@ type AdminDashboardData struct {
 	PendingBookings   int
 	ConfirmedBookings int
 	TotalPurchases    int
-	PaidPurchases     int
+	PaidPurchases            int
+	ArticleThumbs            int
+	PaidArticleContributions int
 }
 
 func (a *App) AdminDashboard(w http.ResponseWriter, r *http.Request) {
@@ -146,18 +148,28 @@ func (a *App) AdminDashboard(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	publishedArticles := 0
+	articleThumbs := 0
 	for _, art := range articles {
 		if art.IsPublished {
 			publishedArticles++
 		}
+		articleThumbs += art.ThumbsUpCount
+	}
+
+	paidArticleContributions, err := a.ArticleContributions.CountPaid(ctx)
+	if err != nil {
+		a.serverError(w, "count article contributions", err)
+		return
 	}
 
 	a.View.Render(w, http.StatusOK, "admin_dashboard", AdminDashboardData{
-		BaseData:          a.base(r, "Admin Dashboard", "", "admin"),
-		CourseCount:       len(courses),
-		PublishedCourses:  published,
-		ArticleCount:      len(articles),
-		PublishedArticles: publishedArticles,
+		BaseData:                 a.base(r, "Admin Dashboard", "", "admin"),
+		CourseCount:              len(courses),
+		PublishedCourses:         published,
+		ArticleCount:             len(articles),
+		PublishedArticles:        publishedArticles,
+		ArticleThumbs:            articleThumbs,
+		PaidArticleContributions: paidArticleContributions,
 		UpcomingBookings:  upcoming,
 		PendingBookings:   pending,
 		ConfirmedBookings: confirmed,

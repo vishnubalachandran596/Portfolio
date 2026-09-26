@@ -118,3 +118,6 @@ func receiptNo(prefix string, id int64) string {
 // on the same receipt number even if their row IDs happen to match.
 func ReceiptNoForBooking(id int64) string  { return receiptNo("CNS", id) }
 func ReceiptNoForPurchase(id int64) string { return receiptNo("CRS", id) }
+func ReceiptNoForArticleContribution(id int64) string {
+	return receiptNo("ART", id)
+}

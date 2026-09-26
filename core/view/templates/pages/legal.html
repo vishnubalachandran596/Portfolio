@@ -20,13 +20,14 @@
       <li><strong>Account information:</strong> the name, email address, and a securely hashed password (never stored in plain text) you provide when creating an account — required to book consultancy or purchase a course.</li>
       <li><strong>Consultancy bookings:</strong> the time slot you selected, an optional message, and payment status (pending/confirmed), tied to your account.</li>
       <li><strong>Course purchases:</strong> the email address and amount you enter when unlocking a paid course, and payment status (paid/failed). We never see or store your card details — payment is handled entirely by Razorpay's own checkout, which runs in its own secure window and passes us only a payment confirmation.</li>
+      <li><strong>Article contributions:</strong> the email address and amount you enter when optionally supporting an article, with payment status and the time it was paid, tied to your account (or a guest account created from that email). We never see or store your card details — same Razorpay checkout as courses.</li>
       <li><strong>Admin account:</strong> if you're the site administrator, your email and a securely hashed password.</li>
       <li><strong>Cookies:</strong> a cookie-consent preference, your login session cookie, a per-course access token (only if you've purchased a paid course), and — for the administrator only — a separate admin session cookie. See our <a href="{{.Nav.Cookies}}">Cookie Policy</a> for details.</li>
     </ul>
-    <p>Third-party processors we use, and why: <strong>Razorpay</strong> processes course and consultancy payments (they receive your card/payment details directly; we never do), <strong>Supabase</strong> hosts our database, and <strong>Vercel</strong> hosts the application. We don't use any third-party advertising or analytics trackers.</p>
+    <p>Third-party processors we use, and why: <strong>Razorpay</strong> processes course and optional article-contribution payments (they receive your card/payment details directly; we never do), <strong>Supabase</strong> hosts our database, and <strong>Vercel</strong> hosts the application. We don't use any third-party advertising or analytics trackers.</p>
 
     <h2>How we use it</h2>
-    <p>Account and booking information is used solely to authenticate you, schedule and follow up on the session you booked, and grant access to courses you've purchased. It is not sold, rented, or used for marketing without your separate consent.</p>
+    <p>Account and booking information is used solely to authenticate you, schedule and follow up on the session you booked, grant access to courses you've purchased, and record optional article contributions. It is not sold, rented, or used for marketing without your separate consent.</p>
 
     <h2>Where it's stored</h2>
     <p>Data is stored in a managed PostgreSQL database (hosted by Supabase) and served by an application hosted on Vercel. Both providers process data on our behalf under their own security and privacy commitments.</p>
@@ -54,6 +55,9 @@
     <h2>Courses</h2>
     <p>Course listings describe content, level, and duration as accurately as possible. Course availability and content may change; we'll do our best to communicate material changes in advance. For a paid course, access is personal to the account that unlocked it — please don't share your access link or re-post the course content elsewhere; it's licensed to you, not for redistribution.</p>
 
+    <h2>Article contributions</h2>
+    <p>Articles on this site are free to read. An optional contribution at the end of a post does not unlock extra content — it is a voluntary payment. You may contribute more than once.</p>
+
     <h2>Acceptable use</h2>
     <p>Don't misuse this site: no attempts to disrupt or scrape it at scale, no automated bulk-copying of paid course content, no submitting false booking or payment information, and no using the site for unlawful purposes.</p>
 
@@ -74,6 +78,9 @@
 
     <h2>Consultancy bookings</h2>
     <p>Consultancy is a paid, hourly 1:1 session — the price shown before you pay is exactly what's charged. If you cancel or need to reschedule with reasonable notice (at least 24 hours before your slot), we'll move your session to another open slot at no extra cost, or refund it in full. Cancellations with less notice, or a no-show, are non-refundable, since the slot was held for you and couldn't be offered to someone else. If a session can't go ahead for a reason on our side, it's rescheduled or refunded in full.</p>
+
+    <h2>Article contributions</h2>
+    <p>Optional support on an article does not grant access to anything extra — the post is already free. Those contributions are <strong>non-refundable</strong>, except where a charge went through in error or the payment was duplicated through a fault on our side. In that case, contact us and we'll make it right.</p>
 
     <h2>Free courses</h2>
     <p>Any course without a listed price is free to access — there's nothing to refund.</p>

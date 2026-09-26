@@ -51,9 +51,10 @@ type App struct {
 	Certifications  *repo.CertificationRepo
 	Publications    *repo.PublicationRepo
 	AuditRequests   *repo.AuditRequestRepo
-	ArticleVotes    *repo.ArticleVoteRepo
-	ContactMessages *repo.ContactMessageRepo
-	CourseStorage   *storage.Client
+	ArticleVotes         *repo.ArticleVoteRepo
+	ArticleContributions *repo.ArticleContributionRepo
+	ContactMessages      *repo.ContactMessageRepo
+	CourseStorage        *storage.Client
 
 	Razorpay *payments.Razorpay
 	Telegram *notify.Telegram
@@ -151,8 +152,9 @@ func New(cfg *config.Config, db *sql.DB, renderer *view.Renderer) *App {
 		Certifications:  repo.NewCertificationRepo(db),
 		Publications:    repo.NewPublicationRepo(db),
 		AuditRequests:   repo.NewAuditRequestRepo(db),
-		ArticleVotes:    repo.NewArticleVoteRepo(db),
-		ContactMessages: repo.NewContactMessageRepo(db),
+		ArticleVotes:         repo.NewArticleVoteRepo(db),
+		ArticleContributions: repo.NewArticleContributionRepo(db),
+		ContactMessages:      repo.NewContactMessageRepo(db),
 		CourseStorage:   storage.New(cfg),
 		Razorpay:        payments.NewRazorpay(cfg.RazorpayKeyID, cfg.RazorpayKeySecret),
 		Telegram:        notify.NewTelegram(cfg.TelegramBotToken, cfg.TelegramChatID),

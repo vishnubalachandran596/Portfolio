@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestPrepareLessonHidesMarkupAndDropsUploadedStyles(t *testing.T) {
+func TestPrepareLessonHidesMarkupAndKeepsLessonStyles(t *testing.T) {
 	raw := []byte(`<!DOCTYPE html><html><head><title>Java</title><style>:root{--x:1}body{color:red}</style></head><body><p>Secret lesson body about heap internals</p><script>window.__lab=1</script></body></html>`)
 	got, err := PrepareLesson(raw, "buyer@example.com", "/static/css/style.css?v=test")
 	if err != nil {
@@ -19,8 +19,8 @@ func TestPrepareLessonHidesMarkupAndDropsUploadedStyles(t *testing.T) {
 	if !strings.Contains(decoded, "Secret lesson body about heap internals") {
 		t.Fatal("decoded lesson lost the body")
 	}
-	if strings.Contains(decoded, "color:red") {
-		t.Fatal("uploaded styles must be stripped so the site typography wins")
+	if !strings.Contains(decoded, "color:red") {
+		t.Fatal("lesson <style> must stay so compilers and animations still run")
 	}
 	if !strings.Contains(decoded, `href="/static/css/style.css?v=test"`) {
 		t.Fatal("iframe document must load the site stylesheet")

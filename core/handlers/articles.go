@@ -13,7 +13,6 @@ import (
 
 	"golang.org/x/sync/errgroup"
 
-	"github.com/vishnubalachandran596/portfolio/core/authutil"
 	"github.com/vishnubalachandran596/portfolio/core/models"
 	"github.com/vishnubalachandran596/portfolio/core/repo"
 	"github.com/vishnubalachandran596/portfolio/core/storage"
@@ -105,10 +104,15 @@ func (a *App) ArticlesPage(w http.ResponseWriter, r *http.Request) {
 
 type ArticleDetailData struct {
 	BaseData
-	Article   models.Article
-	Watermark template.HTML
-	Voted     bool
-	JSONLD    template.JS
+	Article            models.Article
+	Watermark          template.HTML
+	Voted              bool
+	JSONLD             template.JS
+	PaymentsEnabled    bool
+	ContributeCurrency string
+	ContributeMinCents int
+	ContributeMinWhole int
+	Contributed        bool
 }
 
 // ArticleDetailPage is the article's own internal page — summary, tags,
@@ -143,12 +147,18 @@ func (a *App) ArticleDetailPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	base := a.baseFrom(r, pf, article.Title+" — "+a.Cfg.SiteName, article.Summary, "articles")
+	currency := models.ContributionCurrency(base.Country, a.Cfg.CheckoutCurrency)
 	a.View.Render(w, http.StatusOK, "article_detail", ArticleDetailData{
-		BaseData:  base,
-		Article:   article,
-		Watermark: template.HTML(storage.WatermarkScript(storage.WatermarkLabel, "")),
-		Voted:     voted,
-		JSONLD:    articleJSONLD(article, base.CanonicalURL, a.Cfg.SiteName),
+		BaseData:           base,
+		Article:            article,
+		Watermark:          template.HTML(storage.WatermarkScript(storage.WatermarkLabel, "")),
+		Voted:              voted,
+		JSONLD:             articleJSONLD(article, base.CanonicalURL, a.Cfg.SiteName),
+		PaymentsEnabled:    a.Razorpay.Enabled(),
+		ContributeCurrency: currency,
+		ContributeMinCents: models.ArticleContributeMinCents,
+		ContributeMinWhole: models.ArticleContributeMinCents / 100,
+		Contributed:        r.URL.Query().Get("contributed") == "1",
 	})
 }
 
@@ -194,17 +204,7 @@ func (a *App) ArticleThumbsUp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	randomPassword, err := authutil.RandomHex(32)
-	if err != nil {
-		a.serverError(w, "provision guest voter", err)
-		return
-	}
-	hash, err := authutil.HashPassword(randomPassword)
-	if err != nil {
-		a.serverError(w, "provision guest voter", err)
-		return
-	}
-	userID, err := a.Users.GetOrCreateGuest(r.Context(), email, hash, name)
+	userID, err := a.guestUserForEmail(r, email, name)
 	if err != nil {
 		a.serverError(w, "provision guest voter", err)
 		return
@@ -232,29 +232,64 @@ func (a *App) recordArticleVote(w http.ResponseWriter, r *http.Request, article 
 
 // --- Admin -----------------------------------------------------------
 
+type AdminArticleListRow struct {
+	Article             models.Article
+	PaidContributions   int
+	ContributionTotal   string
+}
+
 type AdminArticlesListData struct {
 	BaseData
-	Articles []models.Article
+	Articles []AdminArticleListRow
 }
 
 func (a *App) AdminArticlesList(w http.ResponseWriter, r *http.Request) {
-	articles, err := a.Articles.ListAll(r.Context())
-	if err != nil {
+	ctx := r.Context()
+	var (
+		articles  []models.Article
+		summaries map[int64]repo.ArticlePaidSummary
+	)
+	g, gctx := errgroup.WithContext(ctx)
+	g.Go(func() (err error) { articles, err = a.Articles.ListAll(gctx); return })
+	g.Go(func() (err error) { summaries, err = a.ArticleContributions.SummarizePaidByArticle(gctx); return })
+	if err := g.Wait(); err != nil {
 		a.serverError(w, "load articles", err)
 		return
 	}
+
+	rows := make([]AdminArticleListRow, 0, len(articles))
+	for _, art := range articles {
+		row := AdminArticleListRow{Article: art}
+		if s, ok := summaries[art.ID]; ok {
+			row.PaidContributions = s.PaidCount
+			row.ContributionTotal = models.FormatMoneyTotals(s.Totals)
+		}
+		rows = append(rows, row)
+	}
 	a.View.Render(w, http.StatusOK, "admin_articles_list", AdminArticlesListData{
 		BaseData: a.base(r, "Articles — Admin", "", "admin"),
-		Articles: articles,
+		Articles: rows,
 	})
+}
+
+type adminArticleContribution struct {
+	When      string
+	Email     string
+	UserID    int64
+	Amount    string
+	Status    string
+	PaymentID string
 }
 
 type AdminArticleFormData struct {
 	BaseData
-	Article models.Article
-	IsNew   bool
-	Error   string
-	Votes   []models.ArticleVote
+	Article           models.Article
+	IsNew             bool
+	Error             string
+	Votes             []models.ArticleVote
+	Contributions     []adminArticleContribution
+	PaidCount         int
+	ContributionTotal string
 }
 
 func (a *App) AdminArticleNewPage(w http.ResponseWriter, r *http.Request) {
@@ -280,15 +315,47 @@ func (a *App) AdminArticleEditPage(w http.ResponseWriter, r *http.Request) {
 		a.serverError(w, "load article", err)
 		return
 	}
-	votes, err := a.ArticleVotes.ListByArticle(r.Context(), article.ID)
-	if err != nil {
-		a.serverError(w, "load article votes", err)
+	var (
+		votes   []models.ArticleVote
+		contrib []models.ArticleContribution
+	)
+	g, gctx := errgroup.WithContext(r.Context())
+	g.Go(func() (err error) { votes, err = a.ArticleVotes.ListByArticle(gctx, article.ID); return })
+	g.Go(func() (err error) { contrib, err = a.ArticleContributions.ListByArticle(gctx, article.ID); return })
+	if err := g.Wait(); err != nil {
+		a.serverError(w, "load article engagement", err)
 		return
 	}
+
+	paidCount := 0
+	totals := map[string]int{}
+	rows := make([]adminArticleContribution, 0, len(contrib))
+	for _, c := range contrib {
+		when := c.CreatedAt.In(a.Timezone).Format("Jan 2, 2006 · 3:04 PM")
+		if c.PaidAt != nil {
+			when = c.PaidAt.In(a.Timezone).Format("Jan 2, 2006 · 3:04 PM")
+		}
+		if c.Status == models.ContributionStatusPaid {
+			paidCount++
+			totals[c.Currency] += c.AmountCents
+		}
+		rows = append(rows, adminArticleContribution{
+			When:      when,
+			Email:     c.Email,
+			UserID:    c.UserID,
+			Amount:    models.FormatMoney(c.AmountCents, c.Currency),
+			Status:    c.Status,
+			PaymentID: c.RazorpayPaymentID,
+		})
+	}
+
 	a.View.Render(w, http.StatusOK, "admin_article_form", AdminArticleFormData{
-		BaseData: a.base(r, "Edit Article — Admin", "", "admin"),
-		Article:  article,
-		Votes:    votes,
+		BaseData:          a.base(r, "Edit Article — Admin", "", "admin"),
+		Article:           article,
+		Votes:             votes,
+		Contributions:     rows,
+		PaidCount:         paidCount,
+		ContributionTotal: models.FormatMoneyTotals(totals),
 	})
 }
 

@@ -19,12 +19,18 @@ type PreparedLesson struct {
 // WatermarkLabel is the visible mark on gated lessons and article pages.
 const WatermarkLabel = "vishnubalachandran.com"
 
-// PrepareLesson extracts the document body, drops uploaded <style>
-// blocks so the site typography wins, wraps the fragment in a document
-// that loads stylesheet, and injects the watermark. identity is stamped
-// onto copied text inside the iframe.
+// PrepareLesson extracts the document body, wraps it in a document that
+// loads the site stylesheet, keeps the lesson's own <style> and
+// <script> (labs, compilers, and animations live there), and injects
+// the watermark. identity is stamped onto copied text inside the iframe.
+// Uploaded CSS is stripped on articles only — a lesson iframe is
+// unique-origin, so its styles cannot wipe the site chrome around it.
 func PrepareLesson(raw []byte, identity, stylesheet string) (PreparedLesson, error) {
-	body := StripStyleTags(ArticleHTML(raw))
+	body := ArticleHTML(raw)
+	// ArticleHTML keeps the <body> only. Compilers, labs, and
+	// keyframe animations live in <style> in the document <head>, so
+	// those rules have to be copied into the iframe or they never run.
+	lessonCSS := ExtractStyles(raw)
 	var b strings.Builder
 	b.WriteString("<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"utf-8\">")
 	b.WriteString("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">")
@@ -38,7 +44,13 @@ func PrepareLesson(raw []byte, identity, stylesheet string) (PreparedLesson, err
 	b.WriteString(`body{padding:1.25rem 1.5rem 2rem;}`)
 	b.WriteString(`html{-webkit-user-select:none;user-select:none;}`)
 	b.WriteString(`textarea,input,select,.lab-editor{-webkit-user-select:text;user-select:text;}`)
-	b.WriteString(`</style></head><body class="html-content article-body">`)
+	b.WriteString(`</style>`)
+	if lessonCSS != "" {
+		b.WriteString("<style>\n")
+		b.WriteString(lessonCSS)
+		b.WriteString("\n</style>")
+	}
+	b.WriteString(`</head><body class="html-content article-body">`)
 	b.WriteString(body)
 	b.WriteString(WatermarkScript(WatermarkLabel, identity))
 	b.WriteString("</body></html>")

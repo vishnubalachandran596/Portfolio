@@ -48,6 +48,26 @@
     </article>
     </div>
   </div>
+  {{if .PaymentsEnabled}}
+  <div class="article-contribute-wrap">
+    <div class="purchase-box article-contribute">
+      {{if .Contributed}}<div class="alert alert-success">Thank you — your contribution is recorded.</div>{{end}}
+      <p class="purchase-box-title">Contribute</p>
+      <p class="purchase-box-sub">Optional. The article stays free. If it was useful, you can support more writing like this.</p>
+      <div id="contribute-error" class="alert alert-error" hidden></div>
+      {{if not .IsUser}}
+      <label>Email
+        <input type="email" id="contribute-email" required autocomplete="email">
+      </label>
+      {{end}}
+      <label>Amount ({{.ContributeCurrency}})
+        <input type="number" id="contribute-amount" min="{{.ContributeMinWhole}}" step="1" value="5">
+      </label>
+      <button type="button" class="btn btn-primary" id="contribute-btn" data-slug="{{.Article.Slug}}" data-min-cents="{{.ContributeMinCents}}">Contribute</button>
+    </div>
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+  </div>
+  {{end}}
 </div>
 {{.Watermark}}
 

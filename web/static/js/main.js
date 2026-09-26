@@ -324,6 +324,105 @@
     });
   }
 
+  // --- Optional article contribution (Razorpay) --------------------------
+  var contributeBtn = document.getElementById("contribute-btn");
+  if (contributeBtn) {
+    contributeBtn.addEventListener("click", function () {
+      var slug = contributeBtn.getAttribute("data-slug");
+      var minCents = parseInt(contributeBtn.getAttribute("data-min-cents"), 10) || 100;
+      var emailInput = document.getElementById("contribute-email");
+      var amountInput = document.getElementById("contribute-amount");
+      var errorBox = document.getElementById("contribute-error");
+
+      function showError(msg) {
+        if (errorBox) {
+          errorBox.textContent = msg;
+          errorBox.hidden = false;
+        }
+      }
+
+      var email = emailInput ? emailInput.value.trim() : "";
+      if (emailInput && (!email || email.indexOf("@") === -1)) {
+        showError("Please enter a valid email.");
+        return;
+      }
+      var amount = Math.round(parseFloat(amountInput ? amountInput.value : "0") * 100);
+      if (isNaN(amount) || amount < minCents) {
+        showError("Enter an amount of at least " + (minCents / 100) + ".");
+        return;
+      }
+
+      if (errorBox) errorBox.hidden = true;
+      contributeBtn.disabled = true;
+      contributeBtn.textContent = "Starting checkout…";
+
+      var form = new FormData();
+      form.append("email", email);
+      form.append("amount_cents", String(amount));
+
+      fetch("/articles/" + slug + "/checkout/order", { method: "POST", body: form })
+        .then(function (res) {
+          return res.json().then(function (data) {
+            if (!res.ok) throw new Error(data.error || "Could not start checkout.");
+            return data;
+          });
+        })
+        .then(function (order) {
+          var rzp = new Razorpay({
+            key: order.key_id,
+            amount: order.amount,
+            currency: order.currency,
+            name: order.article_title,
+            description: "Article contribution",
+            order_id: order.order_id,
+            prefill: { email: order.email },
+            handler: function (response) {
+              fetch("/articles/" + slug + "/checkout/verify", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  razorpay_order_id: response.razorpay_order_id,
+                  razorpay_payment_id: response.razorpay_payment_id,
+                  razorpay_signature: response.razorpay_signature,
+                }),
+              })
+                .then(function (res) {
+                  return res.json();
+                })
+                .then(function (result) {
+                  if (result.redirect) {
+                    window.location.href = result.redirect;
+                  } else {
+                    showError(result.error || "Payment could not be verified.");
+                    contributeBtn.disabled = false;
+                    contributeBtn.textContent = "Contribute";
+                  }
+                })
+                .catch(function () {
+                  showError("Payment could not be verified. Contact support with your payment ID.");
+                  contributeBtn.disabled = false;
+                  contributeBtn.textContent = "Contribute";
+                });
+            },
+            modal: {
+              ondismiss: function () {
+                contributeBtn.disabled = false;
+                contributeBtn.textContent = "Contribute";
+              },
+            },
+          });
+          rzp.open();
+          contributeBtn.disabled = false;
+          contributeBtn.textContent = "Contribute";
+        })
+        .catch(function (err) {
+          showError(err.message || "Could not start checkout.");
+          contributeBtn.disabled = false;
+          contributeBtn.textContent = "Contribute";
+        });
+    });
+  }
+
   // --- Consultancy booking: pick a slot, confirm — free, no payment step -
   var bookingContact = document.getElementById("booking-contact");
   var selectedLabel = document.getElementById("selected-slot-label");
