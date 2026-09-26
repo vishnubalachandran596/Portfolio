@@ -43,22 +43,20 @@
 
     {{if .Articles}}
     <p class="article-result-count">{{.Total}} article{{if ne .Total 1}}s{{end}}</p>
-    <div class="article-grid article-archive">
+    <div class="article-list article-archive">
       {{range .Articles}}
-      <article class="article-card">
-        <a class="article-card-link" href="/articles/{{.Slug}}">
-          {{if .CoverImageURL}}<img class="article-card-cover" src="{{.CoverImageURL}}" alt="" loading="lazy">{{end}}
-          <div class="article-card-body">
+      <article class="article-row">
+        <a class="article-row-link" href="/articles/{{.Slug}}">
+          <div class="article-row-body">
             <h3>{{.Title}}</h3>
             <p>{{.Summary}}</p>
-          </div>
-          <div class="article-row-meta">
-            {{if .PublishedDate}}<span>{{formatDateOptional .PublishedDate}}</span>{{end}}
-            <span>By {{$.SiteName}}</span>
-            {{range .Tags}}<span class="tag-chip">{{.}}</span>{{end}}
+            <div class="article-row-meta">
+              {{if .PublishedDate}}<span>{{formatDateOptional .PublishedDate}}</span>{{end}}
+              <span>By {{$.SiteName}}</span>
+            </div>
           </div>
         </a>
-        <div class="article-card-votes">
+        <div class="article-row-votes">
           {{if $.IsUser}}
           <button type="button" class="thumbs-count" data-slug="{{.Slug}}">👍 <span class="thumbs-count-num">{{.ThumbsUpCount}}</span></button>
           {{else}}

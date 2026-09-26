@@ -1,74 +1,59 @@
 package storage
 
 import (
-	"bytes"
 	"encoding/base64"
 	"encoding/json"
-	"strings"
 )
 
-// PreparedLesson is the gated lesson ready to sit inside the site chrome.
-// Styles are the lesson's own CSS, rewritten so html/body/:root rules
-// apply only inside .lesson-embed and cannot restyle the header or
-// footer. Payload is a base64 document fragment: the lesson body plus
-// the watermark script. The learn page decodes it into #lesson-root, so
-// view-source shows the shell, not the lesson tags.
+// PreparedLesson is the gated lesson body (styles stripped) as a
+// base64 payload so view-source of the outer page does not contain
+// the lesson tags. The learn page injects it into the site-styled
+// scroll pane and runs any leftover scripts so labs still work.
 type PreparedLesson struct {
-	Styles  string
 	Payload string
 }
 
-// PrepareLesson returns the pieces for a gated lesson page. The lesson
-// markup is not in the HTTP body as HTML: it is inside Payload. The
-// decoded fragment carries a single light diagonal watermark, and copied
-// text is stamped with the same identity throughout.
+// WatermarkLabel is the visible mark on gated lessons and article pages.
+const WatermarkLabel = "vishnubalachandran.com"
+
+// PrepareLesson extracts the document body, drops uploaded <style>
+// blocks so the site typography wins, and base64-encodes the fragment.
+// identity is unused here — the page-level WatermarkScript stamps
+// copies with it — but kept so callers do not fork a second signature.
 func PrepareLesson(raw []byte, identity string) (PreparedLesson, error) {
-	styles := ScopeCSS(ExtractStyles(raw), ".lesson-embed")
-	body := stripStyleTags(ArticleHTML(raw))
-	if body == "" {
-		body = "<div></div>"
-	}
-	var marked bytes.Buffer
-	if err := WriteWatermarked(&marked, strings.NewReader(body), WatermarkScript("Licensed to "+identity)); err != nil {
-		return PreparedLesson{}, err
-	}
+	_ = identity
+	body := StripStyleTags(ArticleHTML(raw))
 	return PreparedLesson{
-		Styles:  styles,
-		Payload: base64.StdEncoding.EncodeToString(marked.Bytes()),
+		Payload: base64.StdEncoding.EncodeToString([]byte(body)),
 	}, nil
 }
 
 // WatermarkScript returns a self-contained <canvas>/<script> block that
-// draws label repeated along one rotated diagonal band across the
-// viewport — a single visible line, not a grid of tiles covering the
-// whole page (that made dense paragraphs unreadable: every tile's
-// mix-blend-mode:difference inverted the real text underneath it).
+// draws label at most three times along the viewport diagonal, from one
+// corner to the opposite. Font size scales with the diagonal; canvas
+// opacity stays low so the page underneath remains readable. A tiled
+// grid with mix-blend-mode:difference used to invert real text.
 //
-// The text is canvas-rendered pixels, not a DOM node holding the string:
-// there is no "<span>Licensed to ...</span>" for a one-line
-// document.querySelector(...).remove() to find and delete, and devtools'
-// "inspect element → delete node" only removes the empty <canvas> shell —
-// a MutationObserver notices it's gone and re-appends + redraws it
-// immediately. None of this makes the watermark impossible to strip (a
-// visitor who disables JavaScript entirely, or screenshots the page,
-// still gets a clean copy) — see the realism note in README.md — but it
-// raises the bar past the two one-line tricks that used to defeat it.
+// The text is canvas-rendered pixels, not a DOM node holding the string.
+// A MutationObserver re-appends the canvas if it is deleted. None of this
+// makes the watermark impossible to strip — see the realism note in
+// README.md — but it raises the bar past a one-line .remove().
 //
-// label is embedded via encoding/json, which HTML-escapes '<', '>', and
-// '&' by default — safe both inside the <script> tag (no "</script"
-// break-out) and as a canvas fillText argument (which never parses HTML
-// anyway, so injection isn't possible here regardless of escaping).
-func WatermarkScript(label string) string {
+// label and copyIdentity are embedded via encoding/json, which
+// HTML-escapes '<', '>', and '&' by default.
+func WatermarkScript(label, copyIdentity string) string {
 	labelJSON, _ := json.Marshal(label)
+	copyJSON, _ := json.Marshal(copyIdentity)
 	return `
-<canvas id="__access_watermark" aria-hidden="true" style="position:fixed;inset:0;z-index:2147483647;pointer-events:none;width:100%;height:100%;opacity:.2;"></canvas>
+<canvas id="__access_watermark" aria-hidden="true" style="position:fixed;inset:0;z-index:2147483647;pointer-events:none;width:100%;height:100%;opacity:.16;"></canvas>
 <style>
-@media print{ #__access_watermark{ opacity:.28; } }
+@media print{ #__access_watermark{ opacity:.24; } }
 </style>
 <script>
 (function () {
   var label = ` + string(labelJSON) + `;
-  var CSS = 'position:fixed;inset:0;z-index:2147483647;pointer-events:none;width:100%;height:100%;opacity:.2;';
+  var copyId = ` + string(copyJSON) + `;
+  var CSS = 'position:fixed;inset:0;z-index:2147483647;pointer-events:none;width:100%;height:100%;opacity:.16;';
 
   function canvasEl() { return document.getElementById('__access_watermark'); }
 
@@ -82,18 +67,29 @@ func WatermarkScript(label string) string {
     var ctx = c.getContext('2d');
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, w, h);
+    var diag = Math.hypot(w, h);
+    var fontSize = Math.max(15, Math.min(24, diag / 48));
+    var theme = document.documentElement.getAttribute('data-theme');
+    var dark = theme === 'dark' || (theme !== 'light' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
     ctx.save();
     ctx.translate(w / 2, h / 2);
-    ctx.rotate(-28 * Math.PI / 180);
-    ctx.fillStyle = '#a8a29e';
-    ctx.font = "600 20px system-ui, -apple-system, sans-serif";
+    ctx.rotate(-Math.atan2(h, w));
+    ctx.fillStyle = dark ? '#d6d3d1' : '#78716c';
+    ctx.font = '600 ' + fontSize + 'px system-ui, -apple-system, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    var gap = 420;
-    var span = (Math.abs(w) + Math.abs(h));
-    for (var x = -span; x <= span; x += gap) {
-      ctx.fillText(label, x, 0);
+    var textW = ctx.measureText(label).width;
+    if (textW * 3.5 > diag) {
+      fontSize = Math.max(12, fontSize * (diag / (textW * 3.5)));
+      ctx.font = '600 ' + fontSize + 'px system-ui, -apple-system, sans-serif';
+      textW = ctx.measureText(label).width;
     }
+    var inset = Math.min(textW / 2 + 16, diag / 2 - 8);
+    var start = -diag / 2 + inset;
+    var end = diag / 2 - inset;
+    ctx.fillText(label, start, 0);
+    ctx.fillText(label, 0, 0);
+    ctx.fillText(label, end, 0);
     ctx.restore();
   }
 
@@ -103,8 +99,6 @@ func WatermarkScript(label string) string {
     pending = requestAnimationFrame(function () { pending = null; draw(); });
   }
 
-  // Self-healing: if the <canvas> node is deleted (devtools "delete
-  // node", or a scraper's one-line .remove()), put it straight back.
   var mo = new MutationObserver(function () {
     if (!canvasEl()) {
       var el = document.createElement('canvas');
@@ -123,7 +117,9 @@ func WatermarkScript(label string) string {
   document.addEventListener('contextmenu', function (e) { e.preventDefault(); });
   document.addEventListener('copy', function (e) {
     try {
-      var mark = ' — ' + label + ' —';
+      var mark = ' — ' + label;
+      if (copyId) mark += ' / ' + copyId;
+      mark += ' —';
       var text = window.getSelection().toString() || '';
       var lines = text.split('\n');
       var out = [];

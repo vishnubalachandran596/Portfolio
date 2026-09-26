@@ -10,7 +10,7 @@ import (
 	"github.com/vishnubalachandran596/portfolio/core/view"
 )
 
-func TestArticleTemplatesRenderStorageAndGrid(t *testing.T) {
+func TestArticleTemplatesRenderStorageAndList(t *testing.T) {
 	r, err := view.New()
 	if err != nil {
 		t.Fatalf("view.New: %v", err)
@@ -38,8 +38,11 @@ func TestArticleTemplatesRenderStorageAndGrid(t *testing.T) {
 	if strings.Contains(body, "<!-- render error:") {
 		t.Fatal(body)
 	}
-	if !strings.Contains(body, "article-grid") || !strings.Contains(body, "Kafka notes") {
-		t.Fatal("article grid did not render")
+	if !strings.Contains(body, "article-list") || !strings.Contains(body, "article-row") || !strings.Contains(body, "Kafka notes") {
+		t.Fatal("article list did not render")
+	}
+	if !strings.Contains(body, "A short hook.") || !strings.Contains(body, "thumbs-count") {
+		t.Fatal("list row missing summary or thumbs-up")
 	}
 
 	rec = httptest.NewRecorder()
@@ -78,6 +81,28 @@ func TestArticleTemplatesRenderStorageAndGrid(t *testing.T) {
 	if !strings.Contains(body, `href="/admin/articles/4/preview"`) {
 		t.Fatal("admin article list missing preview link")
 	}
+
+	rec = httptest.NewRecorder()
+	r.Render(rec, 200, "article_detail", ArticleDetailData{
+		BaseData: base,
+		Article: models.Article{
+			Slug:    "kafka-notes",
+			Title:   "Kafka notes",
+			Summary: "A short hook.",
+			Body:    "<p>The post itself.</p>",
+		},
+		Watermark: "<!-- watermark -->",
+	})
+	body = rec.Body.String()
+	if strings.Contains(body, "<!-- render error:") {
+		t.Fatal(body)
+	}
+	if !strings.Contains(body, "article-renderer") || !strings.Contains(body, "<!-- watermark -->") {
+		t.Fatal("article renderer or watermark missing")
+	}
+	if !strings.Contains(body, "The post itself.") {
+		t.Fatal("article body is not in the page HTML")
+	}
 }
 
 func TestCourseLearnTemplateUsesSiteChrome(t *testing.T) {
@@ -94,15 +119,14 @@ func TestCourseLearnTemplateUsesSiteChrome(t *testing.T) {
 		},
 		Course:        models.Course{Slug: "java-fundamentals", Title: "Java Fundamentals"},
 		HasQuiz:       true,
-		LessonStyles:  ".lesson-embed{color:red}",
 		LessonPayload: "ZmFrZQ==",
 	})
 	body := rec.Body.String()
 	if strings.Contains(body, "<!-- render error:") {
 		t.Fatal(body)
 	}
-	if !strings.Contains(body, `id="lesson-root"`) || !strings.Contains(body, "class=\"lesson-embed\"") {
-		t.Fatal("lesson embed missing")
+	if !strings.Contains(body, `id="html-root"`) || !strings.Contains(body, "html-renderer") {
+		t.Fatal("scrollable lesson renderer missing")
 	}
 	if !strings.Contains(body, "ZmFrZQ==") {
 		t.Fatal("payload missing")

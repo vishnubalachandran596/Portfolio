@@ -57,9 +57,8 @@ func ExtractStyles(raw []byte) string {
 }
 
 // ScopeCSS rewrites :root / html / body selectors so they apply only
-// under root (e.g. ".lesson-embed" or ".article-body"). Lesson files
-// reset body and :root; without this those rules restyle the site
-// header and wipe the page chrome.
+// under root (e.g. ".article-body"). Full uploaded documents reset
+// body and :root; without this those rules restyle the site header.
 func ScopeCSS(css, root string) string {
 	if css == "" || root == "" {
 		return css
@@ -114,7 +113,10 @@ func isSelectorEnd(c byte) bool {
 	return false
 }
 
-func stripStyleTags(html string) string {
+// StripStyleTags drops every <style>…</style> block so uploaded
+// documents cannot override the site's typography and layout. Scripts
+// and markup stay; the page CSS restyles whatever tags remain.
+func StripStyleTags(html string) string {
 	s := html
 	var b strings.Builder
 	for {

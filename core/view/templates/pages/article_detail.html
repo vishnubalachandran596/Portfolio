@@ -20,43 +20,34 @@
 {{end}}
 
 {{define "content"}}
-<section class="section page-hero page-hero-narrow">
-  <div class="container">
-    <p class="eyebrow">Articles</p>
-    <h1>{{.Article.Title}}</h1>
-    <div class="article-row-meta">
-      {{if .Article.PublishedDate}}<span>{{formatDateOptional .Article.PublishedDate}}</span>{{end}}
-      <span>By {{.SiteName}}</span>
-      {{range .Article.Tags}}<a class="tag-chip" href="/articles?tag={{.}}">{{.}}</a>{{end}}
-    </div>
-    <div class="article-thumbs-top">
+<div class="lesson-shell">
+  <div class="lesson-toolbar">
+    <div class="container lesson-toolbar-inner">
+      <p class="eyebrow"><a href="/articles">← Blog</a></p>
       {{template "articleThumbsWidget" .}}
     </div>
   </div>
-</section>
-
-{{if .Article.CoverImageURL}}
-<section class="section article-cover-section">
-  <div class="container">
-    <img class="article-cover-image" src="{{.Article.CoverImageURL}}" alt="{{.Article.Title}}" loading="eager">
+  <div class="html-renderer article-renderer" id="html-renderer">
+    <article class="html-content article-renderer-inner">
+      <h1>{{.Article.Title}}</h1>
+      <div class="article-row-meta">
+        {{if .Article.PublishedDate}}<span>{{formatDateOptional .Article.PublishedDate}}</span>{{end}}
+        <span>By {{.SiteName}}</span>
+        {{range .Article.Tags}}<a class="tag-chip" href="/articles?tag={{.}}">{{.}}</a>{{end}}
+      </div>
+      {{if .Article.CoverImageURL}}
+      <img class="article-cover-image" src="{{.Article.CoverImageURL}}" alt="{{.Article.Title}}" loading="eager">
+      {{end}}
+      <p class="article-lede"><strong>{{.Article.Summary}}</strong></p>
+      <div class="article-body">{{articleBody .Article.Body}}</div>
+      <p class="article-thumbs-cta">Found this useful? Give it a thumbs up for more of these contents.</p>
+      <div class="article-detail-actions">
+        {{template "articleThumbsWidget" .}}
+      </div>
+    </article>
   </div>
-</section>
-{{end}}
-
-<section class="section">
-  <div class="container course-description">
-    <p><strong>{{.Article.Summary}}</strong></p>
-    {{if .ArticleStyles}}<style>{{.ArticleStyles}}</style>{{end}}
-    <div class="article-body">{{articleBody .Article.Body}}</div>
-
-    <p class="article-thumbs-cta">Found this useful? Give it a thumbs up for more of these contents.</p>
-    <div class="article-detail-actions">
-      {{template "articleThumbsWidget" .}}
-    </div>
-
-    <p class="hero-meta"><a href="/articles">← Back to all articles</a></p>
-  </div>
-</section>
+</div>
+{{.Watermark}}
 
 <script>
 (function () {

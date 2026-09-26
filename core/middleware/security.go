@@ -4,7 +4,7 @@ import "net/http"
 
 // SecurityHeaders sets a baseline of defensive HTTP headers on every
 // response. The CSP allows 'unsafe-inline' for scripts/styles because the
-// site's own templates and embedded course-content pages rely on inline
+// site's own templates and injected lesson/article scripts rely on inline
 // <script>/<style> blocks — it still blocks any *other* origin from
 // injecting script or style, which is the actual XSS-mitigation value, and
 // explicitly allowlists the external origins the site really loads from
@@ -16,7 +16,7 @@ func SecurityHeaders(next http.Handler) http.Handler {
 		"font-src 'self' https://fonts.gstatic.com; " +
 		"img-src 'self' data: https:; " +
 		"connect-src 'self' https://*.razorpay.com; " +
-		"frame-src https://*.razorpay.com; " +
+		"frame-src 'self' https://*.razorpay.com; " +
 		"object-src 'none'; " +
 		"base-uri 'self'; " +
 		"frame-ancestors 'none'"

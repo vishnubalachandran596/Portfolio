@@ -16,27 +16,26 @@ type CourseLearnData struct {
 	BaseData
 	Course        models.Course
 	HasQuiz       bool
-	LessonStyles  template.CSS
 	LessonPayload string
+	Watermark     template.HTML
 }
 
 // CourseLearn serves a paid course's gated content to a verified
-// purchaser (or a logged-in admin previewing it). The lesson is a
-// self-contained HTML document with its own CSS and JS (including an
-// in-browser code runner). Those styles are scoped to .lesson-embed so
-// they cannot restyle the site header or footer. The page itself is the
-// site chrome; the lesson markup is a base64 payload the page decodes
-// into #lesson-root. View-source therefore shows the shell, not the
-// course. The decoded fragment carries the viewer's identity along one
-// light diagonal. The browser never receives a Storage URL.
+// purchaser (or a logged-in admin previewing it). The lesson HTML is
+// accepted as-is (any tags), but uploaded <style> is stripped so the
+// site typography and layout win. The page is the site chrome; the
+// body lands in a 75vw × 75dvh pane that scrolls on its own while the
+// outer page still scrolls. The fragment is a base64 payload —
+// view-source of the outer page does not contain the lesson tags.
+// vishnubalachandran.com is drawn three times along the viewport
+// diagonal, corner to corner. The browser never receives a Storage URL.
 //
 // On protection: nothing served to a browser can be made 100% impossible
 // to copy — screenshots and devtools still exist, and someone who decodes
 // the payload can recover the lesson. What this does is keep the content
-// off any public URL, leave the lesson tags out of view-source, send
-// no-store caching, discourage right-click, stamp copied text with the
-// viewer's identity, and draw that identity once across the viewport so
-// a leak is still traceable.
+// off any public URL, leave the lesson tags out of the outer page source,
+// send no-store caching, discourage right-click, stamp copied text with
+// the viewer's identity, and mark the document with the site domain.
 func (a *App) CourseLearn(w http.ResponseWriter, r *http.Request) {
 	slug := r.PathValue("slug")
 	course, err := a.Courses.GetBySlug(r.Context(), slug)
@@ -102,7 +101,7 @@ func (a *App) writeCourseLesson(w http.ResponseWriter, r *http.Request, course m
 		BaseData:      a.base(r, course.Title+" — Lesson", course.Summary, "courses"),
 		Course:        course,
 		HasQuiz:       quizCount > 0,
-		LessonStyles:  template.CSS(prepared.Styles),
 		LessonPayload: prepared.Payload,
+		Watermark:     template.HTML(storage.WatermarkScript(storage.WatermarkLabel, watermark)),
 	})
 }

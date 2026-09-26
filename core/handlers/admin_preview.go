@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/vishnubalachandran596/portfolio/core/repo"
+	"github.com/vishnubalachandran596/portfolio/core/storage"
 )
 
 // AdminResumePreview streams one stored resume PDF for a logged-in admin.
@@ -53,24 +54,23 @@ func (a *App) AdminArticlePreview(w http.ResponseWriter, r *http.Request) {
 		a.NotFound(w, r)
 		return
 	}
-	styles, err := a.loadArticleHTML(r.Context(), &article)
-	if err != nil {
+	if err := a.loadArticleHTML(r.Context(), &article); err != nil {
 		a.serverError(w, "load article html", err)
 		return
 	}
 	w.Header().Set("Cache-Control", "no-store, private")
 	base := a.base(r, article.Title+" — Preview", article.Summary, "articles")
 	a.View.Render(w, http.StatusOK, "article_detail", ArticleDetailData{
-		BaseData:      base,
-		Article:       article,
-		ArticleStyles: template.CSS(styles),
-		JSONLD:        articleJSONLD(article, base.CanonicalURL, a.Cfg.SiteName),
+		BaseData:  base,
+		Article:   article,
+		Watermark: template.HTML(storage.WatermarkScript(storage.WatermarkLabel, "Admin preview")),
+		JSONLD:    articleJSONLD(article, base.CanonicalURL, a.Cfg.SiteName),
 	})
 }
 
 // AdminCoursePreview renders the stored lesson the way a purchaser sees
-// it: site chrome around a scoped, watermarked embed. The browser never
-// receives a Storage URL.
+// it: site chrome around a site-styled, watermarked scroll pane. The
+// browser never receives a Storage URL.
 func (a *App) AdminCoursePreview(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
 	if err != nil {
