@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"fmt"
-	"html/template"
 	"io"
 	"net/http"
 
@@ -10,6 +9,7 @@ import (
 
 	"github.com/vishnubalachandran596/portfolio/core/models"
 	"github.com/vishnubalachandran596/portfolio/core/storage"
+	"github.com/vishnubalachandran596/portfolio/web"
 )
 
 type CourseLearnData struct {
@@ -17,25 +17,25 @@ type CourseLearnData struct {
 	Course        models.Course
 	HasQuiz       bool
 	LessonPayload string
-	Watermark     template.HTML
 }
 
 // CourseLearn serves a paid course's gated content to a verified
 // purchaser (or a logged-in admin previewing it). The lesson HTML is
 // accepted as-is (any tags), but uploaded <style> is stripped so the
 // site typography and layout win. The page is the site chrome; the
-// body lands in a 75vw × 75dvh pane that scrolls on its own while the
-// outer page still scrolls. The fragment is a base64 payload —
+// lesson loads in a 75vw × 75dvh pane as a unique-origin iframe
+// (sandbox allow-scripts, no allow-same-origin) so the parent cannot
+// read the lesson DOM. The iframe document is a base64 payload —
 // view-source of the outer page does not contain the lesson tags.
-// vishnubalachandran.com is drawn three times along the viewport
-// diagonal, corner to corner. The browser never receives a Storage URL.
+// The watermark is drawn only inside that pane. The browser never
+// receives a Storage URL.
 //
 // On protection: nothing served to a browser can be made 100% impossible
-// to copy — screenshots and devtools still exist, and someone who decodes
-// the payload can recover the lesson. What this does is keep the content
-// off any public URL, leave the lesson tags out of the outer page source,
-// send no-store caching, discourage right-click, stamp copied text with
-// the viewer's identity, and mark the document with the site domain.
+// to copy — screenshots and decoding the payload still exist. What this
+// does is keep the content off any public URL, leave the lesson tags
+// out of the outer page source and out of the parent DOM (unique-origin
+// iframe), send no-store caching, discourage right-click, stamp copied
+// text with the viewer's identity, and mark only the renderer pane.
 func (a *App) CourseLearn(w http.ResponseWriter, r *http.Request) {
 	slug := r.PathValue("slug")
 	course, err := a.Courses.GetBySlug(r.Context(), slug)
@@ -89,7 +89,7 @@ func (a *App) writeCourseLesson(w http.ResponseWriter, r *http.Request, course m
 		return
 	}
 
-	prepared, err := storage.PrepareLesson(raw, watermark)
+	prepared, err := storage.PrepareLesson(raw, watermark, "/static/css/style.css?v="+web.AssetVersion)
 	if err != nil {
 		a.serverError(w, "prepare course content", err)
 		return
@@ -102,6 +102,5 @@ func (a *App) writeCourseLesson(w http.ResponseWriter, r *http.Request, course m
 		Course:        course,
 		HasQuiz:       quizCount > 0,
 		LessonPayload: prepared.Payload,
-		Watermark:     template.HTML(storage.WatermarkScript(storage.WatermarkLabel, watermark)),
 	})
 }

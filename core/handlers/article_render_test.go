@@ -125,8 +125,11 @@ func TestCourseLearnTemplateUsesSiteChrome(t *testing.T) {
 	if strings.Contains(body, "<!-- render error:") {
 		t.Fatal(body)
 	}
-	if !strings.Contains(body, `id="html-root"`) || !strings.Contains(body, "html-renderer") {
-		t.Fatal("scrollable lesson renderer missing")
+	if !strings.Contains(body, `id="lesson-frame"`) || !strings.Contains(body, `sandbox="allow-scripts"`) {
+		t.Fatal("sandboxed lesson renderer missing")
+	}
+	if strings.Contains(body, "allow-same-origin") {
+		t.Fatal("allow-same-origin would let the parent read the lesson DOM")
 	}
 	if !strings.Contains(body, "ZmFrZQ==") {
 		t.Fatal("payload missing")

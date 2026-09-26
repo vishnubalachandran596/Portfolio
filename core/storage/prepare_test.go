@@ -8,7 +8,7 @@ import (
 
 func TestPrepareLessonHidesMarkupAndDropsUploadedStyles(t *testing.T) {
 	raw := []byte(`<!DOCTYPE html><html><head><title>Java</title><style>:root{--x:1}body{color:red}</style></head><body><p>Secret lesson body about heap internals</p><script>window.__lab=1</script></body></html>`)
-	got, err := PrepareLesson(raw, "buyer@example.com")
+	got, err := PrepareLesson(raw, "buyer@example.com", "/static/css/style.css?v=test")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -19,11 +19,20 @@ func TestPrepareLessonHidesMarkupAndDropsUploadedStyles(t *testing.T) {
 	if !strings.Contains(decoded, "Secret lesson body about heap internals") {
 		t.Fatal("decoded lesson lost the body")
 	}
-	if strings.Contains(decoded, "<style>") || strings.Contains(decoded, "color:red") {
+	if strings.Contains(decoded, "color:red") {
 		t.Fatal("uploaded styles must be stripped so the site typography wins")
+	}
+	if !strings.Contains(decoded, `href="/static/css/style.css?v=test"`) {
+		t.Fatal("iframe document must load the site stylesheet")
 	}
 	if !strings.Contains(decoded, "window.__lab=1") {
 		t.Fatal("lesson scripts must stay so labs still run")
+	}
+	if !strings.Contains(decoded, `<canvas id="__access_watermark"`) {
+		t.Fatal("watermark must ship inside the iframe document")
+	}
+	if !strings.Contains(decoded, "buyer@example.com") {
+		t.Fatal("copy identity missing from the iframe document")
 	}
 }
 
@@ -33,7 +42,10 @@ func TestWatermarkScriptSpansDiagonal(t *testing.T) {
 		t.Fatal("visible watermark is not the site domain")
 	}
 	if !strings.Contains(got, "Math.atan2") || !strings.Contains(got, "Math.hypot") {
-		t.Fatal("watermark is not drawn corner-to-corner along the viewport diagonal")
+		t.Fatal("watermark is not drawn corner-to-corner along the host diagonal")
+	}
+	if !strings.Contains(got, "html-renderer") {
+		t.Fatal("watermark is not restricted to the renderer pane")
 	}
 	if strings.Count(got, "ctx.fillText(label") > 3 {
 		t.Fatalf("watermark draws more than 3 lines")

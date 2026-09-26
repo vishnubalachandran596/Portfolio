@@ -69,8 +69,8 @@ func (a *App) AdminArticlePreview(w http.ResponseWriter, r *http.Request) {
 }
 
 // AdminCoursePreview renders the stored lesson the way a purchaser sees
-// it: site chrome around a site-styled, watermarked scroll pane. The
-// browser never receives a Storage URL.
+// it: site chrome around a unique-origin, watermarked renderer iframe.
+// The browser never receives a Storage URL.
 func (a *App) AdminCoursePreview(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
 	if err != nil {

@@ -246,21 +246,23 @@ what you want"), pays via Razorpay Checkout, and is redirected to
   private Supabase Storage bucket and read by `/courses/<slug>/learn`
   after the purchase check, never from `/static` or the sitemap, and
   never via a Storage URL the browser could request on its own. The
-  response is the site chrome plus a 75vw × 75dvh scroll pane. Uploaded
-  `<style>` is stripped so any tags follow the site typography; leftover
-  scripts are re-run so labs still work. The body is a base64 payload, so
-  view-source of the outer page does not show the lesson markup. A new
-  lesson is uploaded from the admin course form. Articles use the same
-  pane and the same watermark; their HTML stays in the page so they can
-  be indexed.
+  response is the site chrome plus a 75vw × 75dvh pane. The lesson loads
+  in a unique-origin iframe (`sandbox="allow-scripts"`, no
+  `allow-same-origin`) so the parent cannot read the lesson DOM. Uploaded
+  `<style>` is stripped so any tags follow the site typography. The
+  document is a base64 payload, so view-source of the outer page does not
+  show the lesson markup. A new lesson is uploaded from the admin course
+  form. Articles use the same pane and a renderer-scoped watermark; their
+  HTML stays in the page so they can be indexed.
 - **On "no one can copy the content":** be realistic about this — nothing
   rendered in a browser can be made impossible to copy (screenshots and
   devtools still exist, and the shell payload can be decoded). What's
   actually implemented: the content is never at a public URL, it's sent
   with `Cache-Control: no-store`, the lesson tags stay out of view-source,
   right-click is discouraged, copied text is stamped with the purchaser's
-  email throughout, and **vishnubalachandran.com is drawn three times
-  along the viewport diagonal, corner to corner**,
+  email throughout, the parent cannot read the lesson iframe DOM, and
+  **vishnubalachandran.com is drawn three times along the renderer
+  diagonal, corner to corner**,
   which is the actually-effective deterrent — a leaked copy is traceable
   back to whoever shared it.
 - **Setup:** set `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` (start with

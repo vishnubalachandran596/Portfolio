@@ -28,6 +28,7 @@
     </div>
   </div>
   <div class="html-renderer article-renderer" id="html-renderer">
+    <div class="html-renderer-scroll">
     <article class="html-content article-renderer-inner">
       <h1>{{.Article.Title}}</h1>
       <div class="article-row-meta">
@@ -45,6 +46,7 @@
         {{template "articleThumbsWidget" .}}
       </div>
     </article>
+    </div>
   </div>
 </div>
 {{.Watermark}}

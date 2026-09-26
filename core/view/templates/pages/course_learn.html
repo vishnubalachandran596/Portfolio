@@ -7,10 +7,9 @@
     </div>
   </div>
   <div class="html-renderer lesson-renderer" id="html-renderer">
-    <div class="html-content article-body" id="html-root"></div>
+    <iframe id="lesson-frame" class="lesson-frame" title="{{.Course.Title}}" sandbox="allow-scripts" referrerpolicy="no-referrer"></iframe>
   </div>
 </div>
-{{.Watermark}}
 
 <script>
 (function () {
@@ -19,27 +18,22 @@
   var bytes = new Uint8Array(bin.length);
   for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
   var html = new TextDecoder("utf-8").decode(bytes);
-  var root = document.getElementById("html-root");
-  if (!root) return;
-  root.innerHTML = html;
-  var scripts = root.querySelectorAll("script");
-  for (var i = 0; i < scripts.length; i++) {
-    var old = scripts[i];
-    var s = document.createElement("script");
-    if (old.src) s.src = old.src;
-    else s.textContent = old.textContent;
-    old.parentNode.replaceChild(s, old);
+  var frame = document.getElementById("lesson-frame");
+  if (!frame) return;
+  function syncTheme() {
+    try {
+      frame.contentWindow.postMessage({
+        type: "site-theme",
+        theme: document.documentElement.getAttribute("data-theme") || ""
+      }, "*");
+    } catch (err) {}
   }
-  root.addEventListener("click", function (e) {
-    var a = e.target.closest("a[href^='#']");
-    if (!a) return;
-    var id = (a.getAttribute("href") || "").slice(1);
-    if (!id) return;
-    var el = root.querySelector("#" + (window.CSS && CSS.escape ? CSS.escape(id) : id));
-    if (!el) return;
-    e.preventDefault();
-    el.scrollIntoView({ block: "start" });
+  frame.addEventListener("load", syncTheme);
+  new MutationObserver(syncTheme).observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ["data-theme"]
   });
+  frame.srcdoc = html;
 })();
 </script>
 {{end}}

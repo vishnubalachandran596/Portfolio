@@ -761,6 +761,7 @@ a, button, .slot-btn, .faq-item summary { cursor: pointer; }
 .html-renderer,
 .lesson-renderer,
 .article-renderer {
+  position: relative;
   box-sizing: border-box;
   width: 75vw;
   height: 75vh;
@@ -773,11 +774,23 @@ a, button, .slot-btn, .faq-item summary { cursor: pointer; }
   max-height: 75dvh;
   margin: 0.75rem auto 1.5rem;
   padding: 0;
-  overflow: auto;
-  overscroll-behavior: auto;
+  overflow: hidden;
   border: 0.0625rem solid var(--color-border);
   border-radius: var(--radius-md);
   background: var(--color-surface);
+}
+.html-renderer-scroll {
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  overscroll-behavior: auto;
+}
+.lesson-frame {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: transparent;
 }
 .html-content,
 .article-renderer-inner {
@@ -2249,4 +2262,6 @@ input:focus, textarea:focus, select:focus {
     height: auto;
     overflow: visible;
   }
+  .html-renderer-scroll { overflow: visible; }
+  .lesson-frame { height: auto; min-height: 40rem; }
 }
