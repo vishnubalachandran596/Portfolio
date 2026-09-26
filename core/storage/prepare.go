@@ -40,10 +40,15 @@ func PrepareLesson(raw []byte, identity, stylesheet string) (PreparedLesson, err
 		b.WriteString(`">`)
 	}
 	b.WriteString(`<style>`)
-	b.WriteString(`html,body{margin:0;min-height:100%;background:var(--color-surface,#fff);color:var(--color-text,#1c1917);}`)
+	b.WriteString(`html,body{margin:0;min-height:100%;background:var(--color-surface,#fff);color:var(--color-text,#1c1917);word-spacing:normal;}`)
 	b.WriteString(`body{padding:1.25rem 1.5rem 2rem;}`)
 	b.WriteString(`html{-webkit-user-select:none;user-select:none;}`)
 	b.WriteString(`textarea,input,select,.lab-editor{-webkit-user-select:text;user-select:text;}`)
+	// The site stylesheet resets `ul { list-style: none }` for the nav.
+	// Inside the iframe that would flatten every lesson list. Restore
+	// readable prose; the lesson's own CSS can still override a lab.
+	b.WriteString(`p,li,h1,h2,h3,h4,h5,h6,td,th{word-spacing:normal;}`)
+	b.WriteString(`ul{list-style:disc;padding-left:1.25rem;}ol{list-style:decimal;padding-left:1.25rem;}`)
 	b.WriteString(`</style>`)
 	if lessonCSS != "" {
 		b.WriteString("<style>\n")

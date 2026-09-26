@@ -25,6 +25,12 @@ func TestPrepareLessonHidesMarkupAndKeepsLessonStyles(t *testing.T) {
 	if !strings.Contains(decoded, `href="/static/css/style.css?v=test"`) {
 		t.Fatal("iframe document must load the site stylesheet")
 	}
+	if !strings.Contains(decoded, "word-spacing:normal") {
+		t.Fatal("iframe must force normal word-spacing so site CSS cannot jam lesson words")
+	}
+	if !strings.Contains(decoded, "ul{list-style:disc") {
+		t.Fatal("iframe must restore list markers the site nav reset would remove")
+	}
 	if !strings.Contains(decoded, "window.__lab=1") {
 		t.Fatal("lesson scripts must stay so labs still run")
 	}

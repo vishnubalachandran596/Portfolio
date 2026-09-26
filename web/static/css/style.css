@@ -803,6 +803,7 @@ a, button, .slot-btn, .faq-item summary { cursor: pointer; }
   font-family: var(--font-sans);
   font-size: 1.05rem;
   line-height: 1.7;
+  word-spacing: normal;
 }
 .html-content h1,
 .article-renderer-inner h1 {
@@ -826,9 +827,11 @@ a, button, .slot-btn, .faq-item summary { cursor: pointer; }
 .html-content h2 { font-size: 1.6rem; }
 .html-content h3 { font-size: 1.3rem; }
 .html-content h4, .html-content h5, .html-content h6 { font-size: 1.1rem; }
-.html-content p { margin: 0 0 1rem; color: var(--color-text-muted); }
-.html-content ul, .html-content ol { margin: 0 0 1rem 1.25rem; }
-.html-content li { margin-bottom: 0.375rem; color: var(--color-text-muted); }
+.html-content p { margin: 0 0 1rem; color: var(--color-text-muted); word-spacing: normal; }
+.html-content ul, .html-content ol { margin: 0 0 1rem 1.25rem; padding-left: 1.25rem; }
+.html-content ul { list-style: disc; }
+.html-content ol { list-style: decimal; }
+.html-content li { margin-bottom: 0.375rem; color: var(--color-text-muted); word-spacing: normal; }
 .html-content a { color: var(--color-accent); text-decoration: underline; }
 .html-content img { max-width: 100%; height: auto; border-radius: var(--radius-md); margin: 1rem 0; display: block; }
 .html-content blockquote {
