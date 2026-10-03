@@ -83,14 +83,14 @@ func (a *App) ExitVisitorPreview(w http.ResponseWriter, r *http.Request) {
 
 type AdminDashboardData struct {
 	BaseData
-	CourseCount       int
-	PublishedCourses  int
-	ArticleCount      int
-	PublishedArticles int
-	UpcomingBookings  []models.Booking
-	PendingBookings   int
-	ConfirmedBookings int
-	TotalPurchases    int
+	CourseCount              int
+	PublishedCourses         int
+	ArticleCount             int
+	PublishedArticles        int
+	UpcomingBookings         []models.Booking
+	PendingBookings          int
+	ConfirmedBookings        int
+	TotalPurchases           int
 	PaidPurchases            int
 	ArticleThumbs            int
 	PaidArticleContributions int
@@ -170,11 +170,11 @@ func (a *App) AdminDashboard(w http.ResponseWriter, r *http.Request) {
 		PublishedArticles:        publishedArticles,
 		ArticleThumbs:            articleThumbs,
 		PaidArticleContributions: paidArticleContributions,
-		UpcomingBookings:  upcoming,
-		PendingBookings:   pending,
-		ConfirmedBookings: confirmed,
-		TotalPurchases:    len(purchases),
-		PaidPurchases:     paidPurchases,
+		UpcomingBookings:         upcoming,
+		PendingBookings:          pending,
+		ConfirmedBookings:        confirmed,
+		TotalPurchases:           len(purchases),
+		PaidPurchases:            paidPurchases,
 	})
 }
 

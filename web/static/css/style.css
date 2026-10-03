@@ -701,6 +701,8 @@ a, button, .slot-btn, .faq-item summary { cursor: pointer; }
 }
 .feature-card h3 { font-size: 1.05rem; margin-bottom: 0.5rem; }
 .feature-card p { color: var(--color-text-muted); font-size: 0.94rem; }
+.case-study-context { font-size: 0.85rem; color: var(--color-accent); margin-top: -0.25rem; }
+.case-study-card p strong { color: var(--color-text); }
 
 .course-card {
   display: flex;
@@ -1585,6 +1587,23 @@ a, button, .slot-btn, .faq-item summary { cursor: pointer; }
   font-family: var(--font-sans);
   font-size: 0.92rem;
 }
+
+/* Shared subscribe_form.html partial — a single email input plus button,
+   embedded on Home/Courses/Articles. */
+.subscribe-box { margin: 1.5rem 0; }
+.subscribe-form { display: flex; flex-wrap: wrap; gap: 0.625rem; max-width: 28rem; }
+.subscribe-form input[type="email"] {
+  flex: 1;
+  min-width: 11.25rem;
+  padding: 0.625rem 0.875rem;
+  border-radius: var(--radius-sm);
+  border: 0.0625rem solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  font-size: 0.92rem;
+}
+.subscribe-thanks { color: var(--color-accent); font-weight: 600; }
 .article-select {
   padding: 0.625rem 0.75rem;
   border-radius: var(--radius-sm);

@@ -1,0 +1,33 @@
+{{define "content"}}
+<section class="section">
+  <div class="container">
+    <div class="section-header-row">
+      <h1>Case Studies</h1>
+      <a class="btn btn-primary" href="/admin/case-studies/new">Add Case Study</a>
+    </div>
+    {{if .CaseStudies}}
+    <table class="admin-table">
+      <thead><tr><th>Title</th><th>Context</th><th>Status</th><th>Sort</th><th></th></tr></thead>
+      <tbody>
+        {{range .CaseStudies}}
+        <tr>
+          <td>{{.Title}}</td>
+          <td>{{if .ClientContext}}{{.ClientContext}}{{else}}<span class="admin-table-subtext">—</span>{{end}}</td>
+          <td><span class="status-badge status-{{if .IsPublished}}confirmed{{else}}cancelled{{end}}">{{if .IsPublished}}Published{{else}}Hidden{{end}}</span></td>
+          <td>{{.SortOrder}}</td>
+          <td class="admin-table-actions">
+            <a class="link-button" href="/admin/case-studies/{{.ID}}/edit">Edit</a>
+            <form method="POST" action="/admin/case-studies/{{.ID}}/delete" onsubmit="return confirm('Delete this case study?');">
+              <button type="submit" class="link-button danger">Delete</button>
+            </form>
+          </td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+    {{else}}
+    <p class="empty-state">No case studies yet. Until there's at least one published here, About and Consultancy both leave the section out entirely — no empty heading, nothing to explain. Add only real engagements, and only what you're free to describe (see the Consultancy FAQ's confidentiality answer before naming a client).</p>
+    {{end}}
+  </div>
+</section>
+{{end}}

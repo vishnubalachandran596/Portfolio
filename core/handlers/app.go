@@ -29,31 +29,33 @@ type App struct {
 	View *view.Renderer
 	Auth *middleware.Auth
 
-	Profile         *repo.ProfileRepo
-	Skills          *repo.SkillGroupRepo
-	Experience      *repo.ExperienceRepo
-	Resumes         *repo.RoleResumeRepo
-	Education       *repo.EducationRepo
-	Features        *repo.HomeFeatureRepo
-	Courses         *repo.CourseRepo
-	Bookings        *repo.BookingRepo
-	Availability    *repo.AvailabilityRepo
-	Admins          *repo.AdminRepo
-	Purchases       *repo.PurchaseRepo
-	Users           *repo.UserRepo
-	Articles        *repo.ArticleRepo
-	PromoCodes      *repo.PromoCodeRepo
-	QuizQuestions   *repo.QuizQuestionRepo
-	QuizAttempts    *repo.QuizAttemptRepo
-	AdminMessages   *repo.AdminMessageRepo
-	CourseUpdates   *repo.CourseUpdateRepo
-	Testimonials    *repo.TestimonialRepo
-	Certifications  *repo.CertificationRepo
-	Publications    *repo.PublicationRepo
-	AuditRequests   *repo.AuditRequestRepo
+	Profile              *repo.ProfileRepo
+	Skills               *repo.SkillGroupRepo
+	Experience           *repo.ExperienceRepo
+	Resumes              *repo.RoleResumeRepo
+	Education            *repo.EducationRepo
+	Features             *repo.HomeFeatureRepo
+	Courses              *repo.CourseRepo
+	Bookings             *repo.BookingRepo
+	Availability         *repo.AvailabilityRepo
+	Admins               *repo.AdminRepo
+	Purchases            *repo.PurchaseRepo
+	Users                *repo.UserRepo
+	Articles             *repo.ArticleRepo
+	PromoCodes           *repo.PromoCodeRepo
+	QuizQuestions        *repo.QuizQuestionRepo
+	QuizAttempts         *repo.QuizAttemptRepo
+	AdminMessages        *repo.AdminMessageRepo
+	CourseUpdates        *repo.CourseUpdateRepo
+	Testimonials         *repo.TestimonialRepo
+	Certifications       *repo.CertificationRepo
+	Publications         *repo.PublicationRepo
+	CaseStudies          *repo.CaseStudyRepo
+	AuditRequests        *repo.AuditRequestRepo
 	ArticleVotes         *repo.ArticleVoteRepo
 	ArticleContributions *repo.ArticleContributionRepo
 	ContactMessages      *repo.ContactMessageRepo
+	Subscribers          *repo.SubscriberRepo
 	CourseStorage        *storage.Client
 
 	Razorpay *payments.Razorpay
@@ -84,6 +86,15 @@ type BaseData struct {
 	Notifications       []NotificationItem
 	UnreadNotifCount    int
 	AssetVersion        string
+}
+
+// SubscribeFormData backs the shared subscribe_form partial embedded on
+// Home, Courses, and Articles — Source is the fixed label NewsletterSubscribe
+// switches on to pick a redirect target, and Subscribed drives the one-line
+// "thanks" banner after a successful POST /subscribe back to this page.
+type SubscribeFormData struct {
+	Source     string
+	Subscribed bool
 }
 
 // NotificationItem is one entry in the header's notification menu —
@@ -126,40 +137,42 @@ func New(cfg *config.Config, db *sql.DB, renderer *view.Renderer) *App {
 		loc = time.UTC
 	}
 	return &App{
-		Cfg:             cfg,
-		DB:              db,
-		View:            renderer,
-		Auth:            middleware.NewAuth(cfg.JWTSecret, cfg.SessionTTL, cfg.IsProduction()),
-		Profile:         repo.NewProfileRepo(db),
-		Skills:          repo.NewSkillGroupRepo(db),
-		Experience:      repo.NewExperienceRepo(db),
-		Resumes:         repo.NewRoleResumeRepo(db),
-		Education:       repo.NewEducationRepo(db),
-		Features:        repo.NewHomeFeatureRepo(db),
-		Courses:         repo.NewCourseRepo(db),
-		Bookings:        repo.NewBookingRepo(db),
-		Availability:    repo.NewAvailabilityRepo(db),
-		Admins:          repo.NewAdminRepo(db),
-		Purchases:       repo.NewPurchaseRepo(db),
-		Users:           repo.NewUserRepo(db),
-		Articles:        repo.NewArticleRepo(db),
-		PromoCodes:      repo.NewPromoCodeRepo(db),
-		QuizQuestions:   repo.NewQuizQuestionRepo(db),
-		QuizAttempts:    repo.NewQuizAttemptRepo(db),
-		AdminMessages:   repo.NewAdminMessageRepo(db),
-		CourseUpdates:   repo.NewCourseUpdateRepo(db),
-		Testimonials:    repo.NewTestimonialRepo(db),
-		Certifications:  repo.NewCertificationRepo(db),
-		Publications:    repo.NewPublicationRepo(db),
-		AuditRequests:   repo.NewAuditRequestRepo(db),
+		Cfg:                  cfg,
+		DB:                   db,
+		View:                 renderer,
+		Auth:                 middleware.NewAuth(cfg.JWTSecret, cfg.SessionTTL, cfg.IsProduction()),
+		Profile:              repo.NewProfileRepo(db),
+		Skills:               repo.NewSkillGroupRepo(db),
+		Experience:           repo.NewExperienceRepo(db),
+		Resumes:              repo.NewRoleResumeRepo(db),
+		Education:            repo.NewEducationRepo(db),
+		Features:             repo.NewHomeFeatureRepo(db),
+		Courses:              repo.NewCourseRepo(db),
+		Bookings:             repo.NewBookingRepo(db),
+		Availability:         repo.NewAvailabilityRepo(db),
+		Admins:               repo.NewAdminRepo(db),
+		Purchases:            repo.NewPurchaseRepo(db),
+		Users:                repo.NewUserRepo(db),
+		Articles:             repo.NewArticleRepo(db),
+		PromoCodes:           repo.NewPromoCodeRepo(db),
+		QuizQuestions:        repo.NewQuizQuestionRepo(db),
+		QuizAttempts:         repo.NewQuizAttemptRepo(db),
+		AdminMessages:        repo.NewAdminMessageRepo(db),
+		CourseUpdates:        repo.NewCourseUpdateRepo(db),
+		Testimonials:         repo.NewTestimonialRepo(db),
+		Certifications:       repo.NewCertificationRepo(db),
+		Publications:         repo.NewPublicationRepo(db),
+		CaseStudies:          repo.NewCaseStudyRepo(db),
+		AuditRequests:        repo.NewAuditRequestRepo(db),
 		ArticleVotes:         repo.NewArticleVoteRepo(db),
 		ArticleContributions: repo.NewArticleContributionRepo(db),
 		ContactMessages:      repo.NewContactMessageRepo(db),
-		CourseStorage:   storage.New(cfg),
-		Razorpay:        payments.NewRazorpay(cfg.RazorpayKeyID, cfg.RazorpayKeySecret),
-		Telegram:        notify.NewTelegram(cfg.TelegramBotToken, cfg.TelegramChatID),
-		Google:          oauth.NewGoogle(cfg.GoogleClientID, cfg.GoogleClientSecret, cfg.GoogleRedirectURL),
-		Timezone:        loc,
+		Subscribers:          repo.NewSubscriberRepo(db),
+		CourseStorage:        storage.New(cfg),
+		Razorpay:             payments.NewRazorpay(cfg.RazorpayKeyID, cfg.RazorpayKeySecret),
+		Telegram:             notify.NewTelegram(cfg.TelegramBotToken, cfg.TelegramChatID),
+		Google:               oauth.NewGoogle(cfg.GoogleClientID, cfg.GoogleClientSecret, cfg.GoogleRedirectURL),
+		Timezone:             loc,
 	}
 }
 

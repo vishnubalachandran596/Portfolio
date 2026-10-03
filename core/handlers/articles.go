@@ -34,6 +34,7 @@ type ArticlesData struct {
 	HasNext    bool
 	PrevPage   int
 	NextPage   int
+	Subscribe  SubscribeFormData
 }
 
 // ArticlesPage lists Vishnu's own blog posts — every article is original
@@ -99,6 +100,7 @@ func (a *App) ArticlesPage(w http.ResponseWriter, r *http.Request) {
 		HasNext:    page < totalPages,
 		PrevPage:   page - 1,
 		NextPage:   page + 1,
+		Subscribe:  SubscribeFormData{Source: "articles", Subscribed: q.Get("subscribed") == "1"},
 	})
 }
 
@@ -233,9 +235,9 @@ func (a *App) recordArticleVote(w http.ResponseWriter, r *http.Request, article 
 // --- Admin -----------------------------------------------------------
 
 type AdminArticleListRow struct {
-	Article             models.Article
-	PaidContributions   int
-	ContributionTotal   string
+	Article           models.Article
+	PaidContributions int
+	ContributionTotal string
 }
 
 type AdminArticlesListData struct {

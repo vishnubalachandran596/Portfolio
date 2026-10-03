@@ -194,6 +194,25 @@ erDiagram
         timestamptz created_at
         note "UNIQUE NULLS NOT DISTINCT (title, venue, published_on)"
     }
+    case_studies {
+        bigserial id PK
+        text title
+        text client_context "e.g. employer name — Vishnu's own, not third-party PII"
+        text problem
+        text approach
+        text result
+        bool is_published
+        int sort_order
+        timestamptz created_at
+        note "UNIQUE (title); ships empty like certifications/publications — migration 060"
+    }
+    subscribers {
+        bigserial id PK
+        text email UK
+        text source_page "home | courses | articles | other"
+        timestamptz created_at
+        note "pure visitor PII, never in the bootstrap-data snapshot — migration 061"
+    }
     home_features {
         serial id PK
         text title UK
@@ -398,7 +417,7 @@ erDiagram
 
 `handlers.App` (in `core/handlers/app.go`) is the one struct every handler is a method on. It holds:
 - `Cfg *config.Config`, `DB *sql.DB`, `View *view.Renderer`, `Auth *middleware.Auth`
-- One repo field per aggregate: `Profile, Skills, Experience, Resumes, Education, Features, Courses, Bookings, Availability, Admins, Purchases, Users, Articles, PromoCodes, QuizQuestions, QuizAttempts, AdminMessages, CourseUpdates, Testimonials, Certifications, Publications, AuditRequests, ArticleVotes, ContactMessages`, plus `CourseStorage` for the private buckets
+- One repo field per aggregate: `Profile, Skills, Experience, Resumes, Education, Features, Courses, Bookings, Availability, Admins, Purchases, Users, Articles, PromoCodes, QuizQuestions, QuizAttempts, AdminMessages, CourseUpdates, Testimonials, Certifications, Publications, CaseStudies, AuditRequests, ArticleVotes, ArticleContributions, ContactMessages, Subscribers`, plus `CourseStorage` for the private buckets
 - `Razorpay *payments.Razorpay`, `Telegram *notify.Telegram`, `Google *oauth.Google`, `Timezone *time.Location`
 
 Shared page chrome is assembled by `base` / `startBase` / `baseFrom` in `app.go`. `BaseData` carries site name, title, meta description, canonical URL, nav links, login/admin state, the footer's LinkedIn link, notifications, and `AssetVersion`. Every page-specific `*Data` struct embeds it.
@@ -414,11 +433,14 @@ Anonymous `/about` is therefore one wave of eight errgroup lookups. Anonymous `/
 Handler files, by area:
 | File | Covers |
 |---|---|
-| `public.go` | Home, About, Resume, CoursesList, CourseDetail, Sitemap-adjacent data |
+| `public.go` | Home (incl. subscribe-form data), About (incl. case studies), Resume, CoursesList (incl. subscribe-form data), CourseDetail, Sitemap-adjacent data |
 | `checkout.go` | Course purchase order/verify, `courseAccess()` gate |
-| `consultancy.go` | Consultancy page, Booking page/confirm (free, no payment gateway), Contact page/submit |
+| `consultancy.go` | Consultancy page (tiers, FAQ, case studies, JSON-LD), Booking page/confirm (free, no payment gateway), Contact page/submit |
 | `admin_contact.go` | Admin contact-messages list + mark-read |
-| `articles.go` | Public article list/detail/thumbs-up + Admin article CRUD |
+| `admin_credentials.go` | Admin CRUD for Certifications and Speaking & Publications |
+| `admin_case_studies.go` | Admin CRUD for Case Studies |
+| `newsletter.go` | Public `POST /subscribe` (capture only, no confirmation email) + admin subscribers list/delete |
+| `articles.go` | Public article list (incl. subscribe-form data)/detail/thumbs-up + Admin article CRUD |
 | `account.go` | `/account` page + PDF receipts + testimonial submission |
 | `booking_reschedule.go` | Both admin- and self-service booking reschedule flows |
 | `learn.go` | Gated course content serving inside the site chrome + watermark injection |
@@ -426,7 +448,7 @@ Handler files, by area:
 | `auth.go` | Login page, Google OAuth start/callback, logout |
 | `legal.go` | Generic static legal-page handler factory |
 | `seo.go` | `baseURL`/`pageURL` helpers, Sitemap, Robots, LLMsTxt, IndexNow key + submit, Search |
-| `schema.go` | JSON-LD builders (Person/Website/Service, Article, Course) |
+| `schema.go` | JSON-LD builders (Person/Website/Service on Home; ProfessionalService + FAQPage on Consultancy; Article; Course) |
 | `admin.go` | Admin login, dashboard, course CRUD, bookings, purchases, availability, profile, preview-as-visitor |
 | `admin_content.go` | Admin CRUD for skills, experience, testimonials |
 | `admin_users.go` | Admin user list/detail/promote/demote/message |

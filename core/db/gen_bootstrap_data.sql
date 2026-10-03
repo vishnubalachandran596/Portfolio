@@ -15,7 +15,8 @@
 -- Personal and transactional tables are deliberately NOT emitted either:
 -- admins, users, purchases, bookings, quiz_attempts, contact_messages,
 -- article_thumbs_up, testimonials, promo_codes, promo_code_courses,
--- admin_messages, course_updates, audit_requests. They are not content, they
+-- admin_messages, course_updates, audit_requests, subscribers,
+-- article_contributions. They are not content, they
 -- carry third-party PII, and a fresh install should not have them. The first
 -- admin account is created by Bootstrap() from ADMIN_BOOTSTRAP_EMAIL /
 -- ADMIN_BOOTSTRAP_PASSWORD -- see the generated header for the procedure. No
@@ -357,6 +358,25 @@ SELECT v.* FROM v WHERE NOT EXISTS (
   title, kind, venue, url, coalesce(quote_literal(published_on::text), 'NULL'),
   summary, is_published, sort_order)
 FROM publications ORDER BY sort_order, id;
+
+-- case_studies: natural key is `title` (migration 060's case_studies_title_uk).
+-- No third-party PII — client_context names Vishnu's own employer, the same
+-- kind of fact experiences already carries — so unlike testimonials this is
+-- emitted like any other content table.
+SELECT E'\n-- case_studies ---------------------------------------------------------';
+SELECT format($f$
+WITH v (title, client_context, problem, approach, result, is_published, sort_order) AS (
+  VALUES (%L::text, %L::text, %L::text, %L::text, %L::text, %L::boolean, %s::int)
+), upd AS (
+  UPDATE case_studies c SET client_context = v.client_context, problem = v.problem,
+      approach = v.approach, result = v.result, is_published = v.is_published,
+      sort_order = v.sort_order
+    FROM v WHERE c.title = v.title RETURNING 1
+)
+INSERT INTO case_studies (title, client_context, problem, approach, result, is_published, sort_order)
+SELECT v.* FROM v WHERE NOT EXISTS (SELECT 1 FROM case_studies c WHERE c.title = v.title);$f$,
+  title, client_context, problem, approach, result, is_published, sort_order)
+FROM case_studies ORDER BY sort_order, id;
 
 -- SERIAL sequences are left where the inserts put them; nothing above sets an
 -- id explicitly except profile's pinned id = 1, so no setval is needed.

@@ -1,0 +1,36 @@
+{{define "content"}}
+<section class="section">
+  <div class="container">
+    <h1>{{if .IsNew}}Add Case Study{{else}}Edit Case Study{{end}}</h1>
+    {{if .Error}}<div class="alert alert-error">{{.Error}}</div>{{end}}
+    <form method="POST" action="{{if .IsNew}}/admin/case-studies/new{{else}}/admin/case-studies/{{.CaseStudy.ID}}/edit{{end}}" class="admin-form">
+      <label>Title
+        <input type="text" name="title" value="{{.CaseStudy.Title}}" required placeholder="e.g. Cutting a batch pricing job from hours to minutes">
+      </label>
+      <label>Client / context <span class="optional">e.g. "Banking platform, via Zafin" — only name a client you're free to name</span>
+        <input type="text" name="client_context" value="{{.CaseStudy.ClientContext}}">
+      </label>
+      <label>Problem
+        <textarea name="problem" rows="3" required>{{.CaseStudy.Problem}}</textarea>
+      </label>
+      <label>Approach
+        <textarea name="approach" rows="3" required>{{.CaseStudy.Approach}}</textarea>
+      </label>
+      <label>Result <span class="optional">lead with the number, if there is one</span>
+        <textarea name="result" rows="3" required>{{.CaseStudy.Result}}</textarea>
+      </label>
+      <label class="checkbox-label">
+        <input type="checkbox" name="is_published" {{if or .IsNew .CaseStudy.IsPublished}}checked{{end}}>
+        Published (visible on About and Consultancy)
+      </label>
+      <label>Sort order
+        <input type="number" name="sort_order" value="{{.CaseStudy.SortOrder}}">
+      </label>
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary" data-loading-text="Saving…">Save Case Study</button>
+        <a class="btn btn-secondary" href="/admin/case-studies">Cancel</a>
+      </div>
+    </form>
+  </div>
+</section>
+{{end}}

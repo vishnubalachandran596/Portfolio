@@ -1,0 +1,28 @@
+{{define "content"}}
+<section class="section">
+  <div class="container">
+    <h1>Subscribers</h1>
+    {{if .Subscribers}}
+    <table class="admin-table">
+      <thead><tr><th>Email</th><th>Source</th><th>When</th><th></th></tr></thead>
+      <tbody>
+        {{range .Subscribers}}
+        <tr>
+          <td>{{.Email}}</td>
+          <td>{{.SourcePage}}</td>
+          <td>{{formatDateTime .CreatedAt}}</td>
+          <td class="admin-table-actions">
+            <form method="POST" action="/admin/subscribers/{{.ID}}/delete" onsubmit="return confirm('Remove this subscriber?');">
+              <button type="submit" class="link-button danger">Delete</button>
+            </form>
+          </td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+    {{else}}
+    <p class="empty-state">No subscribers yet.</p>
+    {{end}}
+  </div>
+</section>
+{{end}}

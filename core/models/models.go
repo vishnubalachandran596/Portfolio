@@ -118,6 +118,22 @@ type Publication struct {
 	CreatedAt   time.Time
 }
 
+// CaseStudy is one Problem -> Approach -> Result write-up shown on About
+// and Consultancy as proof of work, alongside Testimonials. See migration
+// 060: ships empty, no fabricated example, same reasoning as Certification
+// and Publication below.
+type CaseStudy struct {
+	ID            int64
+	Title         string
+	ClientContext string
+	Problem       string
+	Approach      string
+	Result        string
+	IsPublished   bool
+	SortOrder     int
+	CreatedAt     time.Time
+}
+
 type Testimonial struct {
 	ID          int64
 	UserID      int64 // 0 if admin-authored rather than submitted by a visitor
@@ -326,6 +342,18 @@ type ContactMessage struct {
 	Message   string
 	IsRead    bool
 	CreatedAt time.Time
+}
+
+// Subscriber is one email capture from Courses, Articles, or Home — a
+// visitor who wants to hear about new courses and posts. There is no
+// transactional email provider wired up anywhere in this codebase (see
+// Contact's own note in docs/FUNCTIONALITY.md), so nothing automated is
+// sent on signup; this is just the list Vishnu reaches out from manually.
+type Subscriber struct {
+	ID         int64
+	Email      string
+	SourcePage string
+	CreatedAt  time.Time
 }
 
 // Consultancy is three tiers, none of them self-checkout: a fixed-price

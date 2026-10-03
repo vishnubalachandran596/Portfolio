@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"fmt"
+	"html/template"
 	"net/http"
 	"strings"
 	"time"
@@ -15,6 +16,47 @@ type ConsultancyData struct {
 	BaseData
 	AuditPriceDisplay    string
 	RetainerRangeDisplay string
+	FAQ                  []FAQItem
+	// CaseStudies is the same published list About renders — one
+	// canonical source of proof-of-work for both pages. Empty until
+	// Vishnu adds a real one; see migration 060.
+	CaseStudies []models.CaseStudy
+	JSONLD      template.JS
+}
+
+// consultancyFAQ builds the six question/answer pairs the page's "Questions
+// people ask before they get in touch" section shows, parameterized on the
+// region-resolved price figures so the cost answer can never disagree with
+// the tier cards above it. This is the single source for both the visible
+// <details> accordion in consultancy.html and the FAQPage schema
+// (consultancyJSONLD in schema.go) — see FAQItem's doc comment.
+func consultancyFAQ(auditDisplay, retainerDisplay string) []FAQItem {
+	return []FAQItem{
+		{
+			Question: "How is this different from hiring a full-time architect?",
+			Answer:   "A full-time architect is a headcount decision — months of hiring, then a permanent cost whether or not there's an architecture-sized problem that quarter. This is the same judgement, bought by the decision or by the month. An Architecture Review gets you a senior opinion on one specific question in a couple of weeks; a retainer gets you that opinion continuously without the salary, the notice period, or the risk of hiring the wrong person for a role you only half need filled.",
+		},
+		{
+			Question: "What does an architecture review actually deliver?",
+			Answer:   "A written findings document, plus a call to walk through it. The document covers the risks I found in what you're building or planning, the trade-offs behind each one, and a specific recommendation — which option to take and why, not a list of things to consider. It's written to be forwarded: something you can put in front of an engineering team or a board without translating it first.",
+		},
+		{
+			Question: "What does a week actually look like on a retainer?",
+			Answer:   `Most weeks: a standing review call on whatever rhythm we agree, and async access in between for the questions that can't wait for it — a design doc you want read before it's circulated, a "are we about to regret this?" sanity check, a second opinion on a vendor or a database choice. Quiet weeks are quiet. Busy weeks are the point of having the access.`,
+		},
+		{
+			Question: "How much does a fractional technical advisor cost?",
+			Answer:   fmt.Sprintf("A Fractional Advisory retainer here runs %s, and a fixed-scope Architecture Review is typically around %s. Both are priced on outcome rather than hours logged, so there's no timesheet to argue about. A call to work out which one you need — or whether you need either — is free.", retainerDisplay, auditDisplay),
+		},
+		{
+			Question: "How do you handle confidentiality and NDAs?",
+			Answer:   "Send your standard mutual NDA with your first message and I'll sign it before we get into specifics. Nothing you share appears anywhere on this site — as a case study or otherwise — without your explicit written agreement. In the other direction: this consulting work sits entirely outside my day job and never touches my employer's clients, codebases, or confidential information.",
+		},
+		{
+			Question: "Do I have to pay anything to talk to you first?",
+			Answer:   "No. The free call is the front door for all three options, not a trimmed-down version of them — book a slot and we'll work out what you need. If that turns out to be an Architecture Review or a retainer, we'll scope it from there. If it turns out to be neither, that's a useful answer too.",
+		},
+	}
 }
 
 // ConsultancyPage is the informational page — three tiers, none of them
@@ -26,10 +68,24 @@ type ConsultancyData struct {
 func (a *App) ConsultancyPage(w http.ResponseWriter, r *http.Request) {
 	base := a.base(r, "Technical Consultant — Architecture Reviews & Fractional Advisory | "+a.Cfg.SiteName, "Hire a technical consultant for a fixed-price architecture review, an ongoing fractional advisory retainer, or a 1:1 hourly session — from an 8+ year banking and fintech platform architect.", "consultancy")
 
+	caseStudies, err := a.CaseStudies.ListPublished(r.Context())
+	if err != nil {
+		a.serverError(w, "load case studies", err)
+		return
+	}
+
+	auditDisplay := models.AuditRegionalPriceDisplay(base.Country)
+	retainerDisplay := models.RetainerRangeDisplay(base.Country)
+	faq := consultancyFAQ(auditDisplay, retainerDisplay)
+	description := "1:1 technical consultancy for architecture reviews, system design decisions, and fractional advisory, from a Java technical expert in banking and fintech platforms."
+
 	a.View.Render(w, http.StatusOK, "consultancy", ConsultancyData{
 		BaseData:             base,
-		AuditPriceDisplay:    models.AuditRegionalPriceDisplay(base.Country),
-		RetainerRangeDisplay: models.RetainerRangeDisplay(base.Country),
+		AuditPriceDisplay:    auditDisplay,
+		RetainerRangeDisplay: retainerDisplay,
+		FAQ:                  faq,
+		CaseStudies:          caseStudies,
+		JSONLD:               consultancyJSONLD(base.CanonicalURL, base.SiteName, description, retainerDisplay, faq),
 	})
 }
 

@@ -1,3 +1,4 @@
+{{define "jsonld"}}<script type="application/ld+json">{{.JSONLD}}</script>{{end}}
 {{define "content"}}
 <section class="section page-hero">
   <div class="container">
@@ -65,6 +66,25 @@
   </div>
 </section>
 
+{{if .CaseStudies}}
+<section class="section section-alt">
+  <div class="container">
+    <h2 class="section-title">Case studies</h2>
+    <div class="feature-grid">
+      {{range .CaseStudies}}
+      <div class="feature-card case-study-card">
+        <h3>{{.Title}}</h3>
+        {{if .ClientContext}}<p class="case-study-context">{{.ClientContext}}</p>{{end}}
+        <p><strong>Problem:</strong> {{.Problem}}</p>
+        <p><strong>Approach:</strong> {{.Approach}}</p>
+        <p><strong>Result:</strong> {{.Result}}</p>
+      </div>
+      {{end}}
+    </div>
+  </div>
+</section>
+{{end}}
+
 <section class="section section-alt">
   <div class="container">
     <h2 class="section-title">Worth knowing before you book</h2>
@@ -89,30 +109,12 @@
   <div class="container">
     <h2 class="section-title">Questions people ask before they get in touch</h2>
     <div class="faq-list">
+      {{range .FAQ}}
       <details class="faq-item">
-        <summary>How is this different from hiring a full-time architect?</summary>
-        <p>A full-time architect is a headcount decision — months of hiring, then a permanent cost whether or not there's an architecture-sized problem that quarter. This is the same judgement, bought by the decision or by the month. An Architecture Review gets you a senior opinion on one specific question in a couple of weeks; a retainer gets you that opinion continuously without the salary, the notice period, or the risk of hiring the wrong person for a role you only half need filled.</p>
+        <summary>{{.Question}}</summary>
+        <p>{{.Answer}}</p>
       </details>
-      <details class="faq-item">
-        <summary>What does an architecture review actually deliver?</summary>
-        <p>A written findings document, plus a call to walk through it. The document covers the risks I found in what you're building or planning, the trade-offs behind each one, and a specific recommendation — which option to take and why, not a list of things to consider. It's written to be forwarded: something you can put in front of an engineering team or a board without translating it first.</p>
-      </details>
-      <details class="faq-item">
-        <summary>What does a week actually look like on a retainer?</summary>
-        <p>Most weeks: a standing review call on whatever rhythm we agree, and async access in between for the questions that can't wait for it — a design doc you want read before it's circulated, a "are we about to regret this?" sanity check, a second opinion on a vendor or a database choice. Quiet weeks are quiet. Busy weeks are the point of having the access.</p>
-      </details>
-      <details class="faq-item">
-        <summary>How much does a fractional technical advisor cost?</summary>
-        <p>A Fractional Advisory retainer here runs {{.RetainerRangeDisplay}}, and a fixed-scope Architecture Review is typically around {{.AuditPriceDisplay}}. Both are priced on outcome rather than hours logged, so there's no timesheet to argue about. A call to work out which one you need — or whether you need either — is free.</p>
-      </details>
-      <details class="faq-item">
-        <summary>How do you handle confidentiality and NDAs?</summary>
-        <p>Send your standard mutual NDA with your first message and I'll sign it before we get into specifics. Nothing you share appears anywhere on this site — as a case study or otherwise — without your explicit written agreement. In the other direction: this consulting work sits entirely outside my day job and never touches my employer's clients, codebases, or confidential information.</p>
-      </details>
-      <details class="faq-item">
-        <summary>Do I have to pay anything to talk to you first?</summary>
-        <p>No. The free call is the front door for all three options, not a trimmed-down version of them — <a href="{{.Nav.Booking}}">book a slot</a> and we'll work out what you need. If that turns out to be an Architecture Review or a retainer, we'll scope it from there. If it turns out to be neither, that's a useful answer too.</p>
-      </details>
+      {{end}}
     </div>
   </div>
 </section>

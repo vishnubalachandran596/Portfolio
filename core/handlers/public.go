@@ -26,6 +26,7 @@ type HomeData struct {
 	// whether to click through to About at all.
 	Companies []string
 	Articles  []models.Article
+	Subscribe SubscribeFormData
 	JSONLD    template.JS
 }
 
@@ -88,6 +89,7 @@ func (a *App) Home(w http.ResponseWriter, r *http.Request) {
 		Skills:    skills,
 		Companies: companies,
 		Articles:  articles,
+		Subscribe: SubscribeFormData{Source: "home", Subscribed: r.URL.Query().Get("subscribed") == "1"},
 		JSONLD:    personAndWebsiteJSONLD(profile, base.CanonicalURL, imageURL, sameAs, skills),
 	})
 }
@@ -104,6 +106,10 @@ type AboutData struct {
 	// bare heading. See migration 046.
 	Certifications []models.Certification
 	Publications   []models.Publication
+	// CaseStudies is the same published list Consultancy renders — one
+	// canonical source of proof-of-work for both pages. Empty until
+	// Vishnu adds a real one; see migration 060.
+	CaseStudies []models.CaseStudy
 	// Resumes is every role-specific PDF, in sort order. The default
 	// resume is not included. Empty means About shows only the direct
 	// download, which serves the default file.
@@ -121,6 +127,7 @@ func (a *App) About(w http.ResponseWriter, r *http.Request) {
 		testimonials []models.Testimonial
 		certs        []models.Certification
 		pubs         []models.Publication
+		caseStudies  []models.CaseStudy
 		resumes      []models.RoleResume
 	)
 	// This is the widest fan-out in the app, and the page that suffered
@@ -136,6 +143,7 @@ func (a *App) About(w http.ResponseWriter, r *http.Request) {
 	g.Go(func() (err error) { testimonials, err = a.Testimonials.ListPublished(gctx); return })
 	g.Go(func() (err error) { certs, err = a.Certifications.ListPublished(gctx); return })
 	g.Go(func() (err error) { pubs, err = a.Publications.ListPublished(gctx); return })
+	g.Go(func() (err error) { caseStudies, err = a.CaseStudies.ListPublished(gctx); return })
 	g.Go(func() (err error) { resumes, err = a.Resumes.List(gctx); return })
 	if err := g.Wait(); err != nil {
 		a.serverError(w, "load about page data", err)
@@ -152,6 +160,7 @@ func (a *App) About(w http.ResponseWriter, r *http.Request) {
 		Testimonials:   testimonials,
 		Certifications: certs,
 		Publications:   pubs,
+		CaseStudies:    caseStudies,
 		Resumes:        roleSpecificResumes(resumes),
 	})
 }
@@ -311,6 +320,7 @@ type CoursesListData struct {
 	TrackStart []models.Course
 	TrackBuild []models.Course
 	TrackDeep  []models.Course
+	Subscribe  SubscribeFormData
 }
 
 func (a *App) CoursesList(w http.ResponseWriter, r *http.Request) {
@@ -329,8 +339,9 @@ func (a *App) CoursesList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	data := CoursesListData{
-		BaseData: a.baseFrom(r, pf, "Java, Architecture & System Design Courses — "+a.Cfg.SiteName, "Practical, production-grade courses on Java, technical architecture, system design, and distributed systems from a working technical consultant.", "courses"),
-		Courses:  courses,
+		BaseData:  a.baseFrom(r, pf, "Java, Architecture & System Design Courses — "+a.Cfg.SiteName, "Practical, production-grade courses on Java, technical architecture, system design, and distributed systems from a working technical consultant.", "courses"),
+		Courses:   courses,
+		Subscribe: SubscribeFormData{Source: "courses", Subscribed: r.URL.Query().Get("subscribed") == "1"},
 	}
 	for _, c := range courses {
 		switch c.Track() {

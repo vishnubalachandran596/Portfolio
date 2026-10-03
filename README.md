@@ -355,9 +355,14 @@ Implemented:
 
 Explicitly **not** implemented (each needs an infrastructure/account
 decision this repo can't make on its own):
-- **Newsletter signup** — needs an email service (Resend, etc.) and a
-  double opt-in/unsubscribe flow for compliance; no email provider is
-  wired up yet.
+- **Newsletter signup automation** — email *capture* exists (`POST
+  /subscribe` on Home/Courses/Articles, `subscribers` table, admin list at
+  `/admin/subscribers`), but nothing automated is sent on signup or ever
+  after: no welcome email, no actual newsletter, no unsubscribe link,
+  because there is still no transactional email provider (Resend, etc.)
+  wired up anywhere in this codebase. Vishnu reaches out to the list
+  manually. A real double opt-in/unsubscribe compliance flow is required
+  before any automated sending is added on top of this.
 - **UTM tracking** — added when you share links externally, not something
   to bake into internal navigation.
 - **Google Search Console verification / sitemap submission** — a manual

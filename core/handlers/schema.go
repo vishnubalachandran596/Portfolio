@@ -65,6 +65,80 @@ type graphSchema struct {
 	Graph   []any  `json:"@graph"`
 }
 
+// professionalServiceSchema is the Consultancy page's own entity — Service
+// on the home page covers the general "hire a technical consultant"
+// search; this one is more specific (ProfessionalService, with a
+// priceRange), attached to the page that actually describes the offer in
+// detail, which the generic Service schema never was.
+type professionalServiceSchema struct {
+	Context     string `json:"@context"`
+	Type        string `json:"@type"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Provider    struct {
+		Type string `json:"@type"`
+		Name string `json:"name"`
+	} `json:"provider"`
+	AreaServed string `json:"areaServed"`
+	PriceRange string `json:"priceRange,omitempty"`
+	URL        string `json:"url"`
+}
+
+// FAQItem is one question/answer pair on the Consultancy page. It is the
+// single source for both the visible <details> accordion and the FAQPage
+// schema below — building the schema from a second, independently
+// maintained copy of the same six questions is exactly the drift CLAUDE.md
+// rule #1 warns about (the money-formatting bug), so consultancy.go builds
+// one slice and both the template and schema.go read it.
+type FAQItem struct {
+	Question string
+	Answer   string
+}
+
+type faqAnswerSchema struct {
+	Type string `json:"@type"`
+	Text string `json:"text"`
+}
+
+type faqQuestionSchema struct {
+	Type           string          `json:"@type"`
+	Name           string          `json:"name"`
+	AcceptedAnswer faqAnswerSchema `json:"acceptedAnswer"`
+}
+
+// consultancyJSONLD combines the page's ProfessionalService entity and its
+// FAQPage into one @graph, following the exact pattern
+// personAndWebsiteJSONLD already uses for Home.
+func consultancyJSONLD(pageURL, providerName, description, priceRange string, faq []FAQItem) template.JS {
+	service := professionalServiceSchema{
+		Context:     "https://schema.org",
+		Type:        "ProfessionalService",
+		Name:        "Technical Consultancy — Architecture Review & Fractional Advisory",
+		Description: description,
+		AreaServed:  "Worldwide",
+		PriceRange:  priceRange,
+		URL:         pageURL,
+	}
+	service.Provider.Type = "Person"
+	service.Provider.Name = providerName
+
+	questions := make([]faqQuestionSchema, 0, len(faq))
+	for _, item := range faq {
+		q := faqQuestionSchema{Type: "Question", Name: item.Question}
+		q.AcceptedAnswer = faqAnswerSchema{Type: "Answer", Text: item.Answer}
+		questions = append(questions, q)
+	}
+	faqPage := struct {
+		Type       string              `json:"@type"`
+		MainEntity []faqQuestionSchema `json:"mainEntity"`
+	}{Type: "FAQPage", MainEntity: questions}
+
+	return toJSONLD(graphSchema{
+		Context: "https://schema.org",
+		Graph:   []any{service, faqPage},
+	})
+}
+
 // knowsAbout is the keyword set surfaced in the Person schema's
 // knowsAbout, derived from the skill groups the home page has already
 // loaded — each group's category plus its individual skills.
