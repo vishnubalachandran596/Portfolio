@@ -2251,6 +2251,36 @@ input:focus, textarea:focus, select:focus {
 .btn[data-loading-text][aria-busy="true"] { opacity: 0.75; pointer-events: none; }
 
 /* ---------------------------------------------------------------------
+   Promo code running banner (WELCOMEVB)
+--------------------------------------------------------------------- */
+.promo-banner {
+  background: var(--color-accent);
+  color: var(--color-accent-ink);
+  overflow: hidden;
+  white-space: nowrap;
+  padding: 0.5rem 0;
+}
+.promo-banner-track {
+  display: inline-flex;
+  width: max-content;
+  animation: promo-banner-scroll 18s linear infinite;
+}
+.promo-banner-item {
+  display: inline-block;
+  padding: 0 2.5rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+@keyframes promo-banner-scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .promo-banner-track { animation: none; }
+  .promo-banner { overflow-x: auto; }
+}
+
+/* ---------------------------------------------------------------------
    Paid course purchase box
 --------------------------------------------------------------------- */
 .purchase-box {

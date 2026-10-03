@@ -1,0 +1,15 @@
+{{/*
+  Shared "use WELCOMEVB for free access" banner embedded on Home, Courses
+  list, and a locked Course detail page — {{template "promo_banner" .}}.
+  Takes no page-specific data (the copy is static), so it can be called
+  from any page's data type. One partial rather than one copy per page,
+  same reasoning as subscribe_form.html.
+*/}}
+{{define "promo_banner"}}
+<div class="promo-banner" role="note" aria-label="Promo code offer">
+  <div class="promo-banner-track">
+    <span class="promo-banner-item">🎉 Use code <strong>WELCOMEVB</strong> at checkout for 100% off any course — free access, no exceptions.</span>
+    <span class="promo-banner-item">🎉 Use code <strong>WELCOMEVB</strong> at checkout for 100% off any course — free access, no exceptions.</span>
+  </div>
+</div>
+{{end}}

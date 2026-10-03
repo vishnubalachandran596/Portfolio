@@ -1,5 +1,6 @@
 {{define "jsonld"}}<script type="application/ld+json">{{.JSONLD}}</script>{{end}}
 {{define "content"}}
+{{template "promo_banner" .}}
 <section class="hero hero-simple">
   <div class="container hero-inner{{if .Profile.PhotoURL}} hero-inner-with-photo{{end}}">
     {{if .Profile.PhotoURL}}<img class="hero-photo" src="{{.Profile.PhotoURL}}" alt="{{.Profile.Name}}" width="176" height="176">{{end}}
@@ -11,7 +12,7 @@
         <a class="btn btn-primary btn-lg" href="{{.Nav.Consultancy}}">Work With Me</a>
         <a class="btn btn-secondary" href="{{.Nav.About}}">Background &amp; Resume</a>
       </div>
-      <p class="hero-tertiary">Learning on your own? <a href="{{.Nav.Courses}}">Browse the courses</a> — contribute as you like.</p>
+      <p class="hero-tertiary">Learning on your own? <a href="{{.Nav.Courses}}">Browse the courses</a> — or use code <strong>WELCOMEVB</strong> for free access.</p>
       {{if .Companies}}
       {{/* Spacing separates the names rather than a punctuation character:
            any separator drawn between them either orphans at the end of a

@@ -26,20 +26,13 @@
         {{if .HasQuiz}}<a class="btn btn-secondary" href="/courses/{{.Course.Slug}}/quiz">Take the Final Quiz</a>{{end}}
       </div>
       {{else}}
+      {{template "promo_banner" .}}
       <div class="purchase-box" id="purchase-box">
         <p class="purchase-box-title">Get access</p>
-        <p class="purchase-box-sub">
-          {{if gt .ResolvedMinCents 0}}Free to start — a minimum contribution of {{.ResolvedMinDisplay}} applies{{if eq .Country "IN"}} (India pricing){{end}}.
-          {{else}}This course is free. Contribute whatever you'd like to support future courses — or leave it at 0 and enroll now.{{end}}
-        </p>
+        <p class="purchase-box-sub">A minimum contribution of {{.ResolvedMinDisplay}} applies{{if eq .Country "IN"}} (India pricing){{end}} — or use the promo code above for free access.</p>
         <div id="purchase-error" class="alert alert-error" hidden></div>
         {{if .UserEmail}}
         <p class="purchase-box-sub">Access will be sent to <strong>{{.UserEmail}}</strong>.</p>
-        {{else}}
-        <label>Your email <span class="optional">(access is sent here)</span>
-          <input type="email" id="purchase-email" required>
-        </label>
-        {{end}}
         <label>Contribution ({{.ResolvedCurrency}}) <span class="optional">{{if .PaymentsEnabled}}optional — leave at 0 for free access{{else}}contributions aren't enabled yet — enroll free below{{end}}</span>
           <input type="number" id="purchase-amount" min="{{.ResolvedMinWhole}}" step="1" value="{{.ResolvedMinWhole}}" {{if not .PaymentsEnabled}}disabled{{end}}>
         </label>
@@ -49,6 +42,10 @@
         </label>
         {{end}}
         <button type="button" class="btn btn-primary" id="purchase-btn" data-slug="{{.Course.Slug}}" data-min-cents="{{.ResolvedMinCents}}">{{if gt .ResolvedMinCents 0}}Continue{{else}}Get Free Access{{end}}</button>
+        {{else}}
+        <p class="purchase-box-sub">Sign in with Google to enroll — it's how access gets tied to your account and how promo codes can be checked.</p>
+        <a class="btn btn-primary" href="/login?next=/courses/{{.Course.Slug}}">Log in with Google</a>
+        {{end}}
       </div>
       {{if .PaymentsEnabled}}<script src="https://checkout.razorpay.com/v1/checkout.js"></script>{{end}}
       {{end}}

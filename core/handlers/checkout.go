@@ -6,7 +6,6 @@ import (
 	"log"
 	"net/http"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/vishnubalachandran596/portfolio/core/authutil"
@@ -52,24 +51,23 @@ func (a *App) CheckoutCreateOrder(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Invalid form submission."})
 		return
 	}
-	email := strings.TrimSpace(r.FormValue("email"))
-	// Logged-in buyers get the purchase tied to their account (so it shows
-	// up under /account) and their session email always wins over whatever
-	// was typed in the form, so "my courses" can't drift from who's paying.
-	// The widget doesn't even ask a logged-in visitor for their email (see
-	// course_detail.html), so the submitted email is only required — and
-	// only trusted — for a guest checkout.
-	var userID int64
-	if uid, ok := a.Auth.UserID(r); ok {
-		userID = uid
-		if u, err := a.Users.GetByID(r.Context(), uid); err == nil {
-			email = u.Email
-		}
-	}
-	if email == "" || !strings.Contains(email, "@") {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "A valid email is required."})
+	// A Google-verified account is mandatory for every checkout — paid or
+	// free — both so a purchase can always be tied to a real account (no
+	// drifting "my courses" list) and so a promo code's one-redemption-
+	// per-user rule below has something stable to key off. There is no
+	// guest-checkout path anymore.
+	uid, ok := a.Auth.UserID(r)
+	if !ok {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "Please log in with Google to continue.", "login_required": "1"})
 		return
 	}
+	userID := uid
+	user, err := a.Users.GetByID(r.Context(), uid)
+	if err != nil {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "Please log in with Google to continue.", "login_required": "1"})
+		return
+	}
+	email := user.Email
 	// Currency and the minimum floor are resolved server-side from the
 	// visitor's own detected region (never from anything the client
 	// sends) — India gets an INR minimum, everyone else the international
@@ -86,6 +84,20 @@ func (a *App) CheckoutCreateOrder(w http.ResponseWriter, r *http.Request) {
 	if perr != nil {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "That promo code isn't valid."})
 		return
+	}
+	// Each promo code may be redeemed at most once per account, regardless
+	// of which course it's applied to or how many total redemptions it
+	// has left.
+	if promo != nil {
+		used, herr := a.Purchases.HasUserRedeemedPromo(r.Context(), userID, promo.ID)
+		if herr != nil {
+			a.serverError(w, "check promo redemption", herr)
+			return
+		}
+		if used {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "You've already used this promo code."})
+			return
+		}
 	}
 	amountCents -= discountCents
 	if amountCents < 0 {
