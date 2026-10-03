@@ -204,13 +204,15 @@ func (c Course) Track() string {
 	}
 }
 
-// PriceDisplay renders the price as a human string. Every paid course is
-// "contribute as you like" by default (no hard price) — see
-// RegionalPriceDisplay for the visitor-aware version (India gets its own
-// INR minimum, when one is set).
+// PriceDisplay renders the price as a human string. Every paid course
+// carries a real, industry-level minimum (set per course via the admin
+// form) rather than a voluntary contribution — see RegionalPriceDisplay
+// for the visitor-aware version (India gets its own INR minimum, when one
+// is set). The WELCOMEVB promo code, not a $0 default, is the free-access
+// path — see the promo banner partial.
 func (c Course) PriceDisplay() string {
 	if c.IsPaid {
-		return contributeDisplay(c.MinPriceCents, c.Currency)
+		return minPriceDisplay(c.MinPriceCents, c.Currency)
 	}
 	if c.IsFree() {
 		return "Free"
@@ -218,15 +220,14 @@ func (c Course) PriceDisplay() string {
 	return FormatMoney(c.PriceCents, c.Currency)
 }
 
-// contributeDisplay renders the "contribute as you like" pricing copy used
-// everywhere a paid course's price would otherwise show: no minimum set
-// (the default) reads as fully free with an optional contribution, and a
-// minimum reads the same way with the floor called out after an asterisk.
-func contributeDisplay(minCents int, currency string) string {
+// minPriceDisplay renders the regional minimum price for a paid course: a
+// plain price once a real minimum is set, falling back to "Free" only if
+// a course is ever left at its column default of 0.
+func minPriceDisplay(minCents int, currency string) string {
 	if minCents <= 0 {
-		return "Contribute as you like to support"
+		return "Free"
 	}
-	return "Contribute as you like to support *min " + FormatMoney(minCents, currency)
+	return FormatMoney(minCents, currency)
 }
 
 // MinPriceDisplay renders the minimum contribution for a paid course.
@@ -248,8 +249,7 @@ func (c Course) RegionalPrice(country string) (currency string, minCents int) {
 	return c.Currency, c.MinPriceCents
 }
 
-// RegionalPriceDisplay renders the "contribute as you like" pricing copy
-// (with a "*min $X" suffix only when a minimum is actually set) for the
+// RegionalPriceDisplay renders the course's real minimum price for the
 // given visitor's country — the region-aware counterpart to PriceDisplay,
 // used wherever a course price is shown to an actual visitor.
 func (c Course) RegionalPriceDisplay(country string) string {
@@ -257,7 +257,7 @@ func (c Course) RegionalPriceDisplay(country string) string {
 		return c.PriceDisplay()
 	}
 	currency, cents := c.RegionalPrice(country)
-	return contributeDisplay(cents, currency)
+	return minPriceDisplay(cents, currency)
 }
 
 func FormatMoney(cents int, currency string) string {
