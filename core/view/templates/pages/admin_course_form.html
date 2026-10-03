@@ -47,14 +47,11 @@
       <h2 class="admin-form-subhead">Pricing &amp; payment</h2>
       <label class="checkbox-label">
         <input type="checkbox" name="is_paid" {{if .Course.IsPaid}}checked{{end}}>
-        Paid (shows a Razorpay checkout box; a visitor can still get free access with a 100%-off promo code like WELCOMEVB)
+        Paid (shows a Razorpay checkout box; a visitor can still get free access with an active 100%-off promo code)
       </label>
       <div class="form-row">
-        <label>Minimum price, USD (cents) <span class="optional">0 = fully free, e.g. 3500 = $35 minimum — courses are priced at industry level, not $0, by default</span>
+        <label>Minimum price, INR (paise) <span class="optional">0 = fully free, e.g. 290000 = ₹2,900 minimum — courses sell in INR only; courses are priced at industry level, not ₹0, by default</span>
           <input type="number" name="min_price_cents" value="{{.Course.MinPriceCents}}" min="0">
-        </label>
-        <label>Minimum price, India (paise) <span class="optional">0 = fully free, e.g. 290000 = ₹2,900 minimum</span>
-          <input type="number" name="min_price_cents_inr" value="{{.Course.MinPriceCentsINR}}" min="0">
         </label>
       </div>
 

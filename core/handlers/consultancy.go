@@ -74,8 +74,8 @@ func (a *App) ConsultancyPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	auditDisplay := models.AuditRegionalPriceDisplay(base.Country)
-	retainerDisplay := models.RetainerRangeDisplay(base.Country)
+	auditDisplay := models.AuditPriceDisplay()
+	retainerDisplay := models.RetainerRangeDisplay()
 	faq := consultancyFAQ(auditDisplay, retainerDisplay)
 	description := "1:1 technical consultancy for architecture reviews, system design decisions, and fractional advisory, from a Java technical expert in banking and fintech platforms."
 

@@ -7,17 +7,20 @@
     </div>
     {{if .CoursePromos}}
     <table class="admin-table">
-      <thead><tr><th>Code</th><th>Discount</th><th>Applies to</th><th>Redemptions</th><th>Expires</th><th>Status</th><th></th></tr></thead>
+      <thead><tr><th>Code</th><th>Discount</th><th>Applies to</th><th>Per account</th><th>Visibility</th><th>Redemptions</th><th>Window</th><th>Status</th><th></th></tr></thead>
       <tbody>
         {{range .CoursePromos}}
         <tr>
           <td>{{.Code}}{{if .Description}}<br><span class="optional">{{.Description}}</span>{{end}}</td>
           <td>{{.DiscountPercent}}%</td>
-          <td>{{if .AppliesToAllCourses}}All courses{{else}}{{len .CourseIDs}} course{{if ne (len .CourseIDs) 1}}s{{end}}{{end}}</td>
+          <td>{{if not .CourseIDs}}Any course{{else}}{{len .CourseIDs}} course{{if ne (len .CourseIDs) 1}}s{{end}}{{end}}</td>
+          <td>{{if eq .MaxRedemptionsPerUser 0}}Unlimited{{else}}{{.MaxRedemptionsPerUser}}{{end}}</td>
+          <td>{{if .IsPrivate}}Private ({{len .AllowedEmails}} email{{if ne (len .AllowedEmails) 1}}s{{end}}){{else if .IsPublic}}Public{{else}}Hidden{{end}}</td>
           <td>{{.RedemptionsDisplay}}</td>
-          <td>{{formatDateTime .ExpiresAt}}</td>
+          <td>{{formatDateTime .StartsAt}} – {{formatDateTime .ExpiresAt}}</td>
           <td>
             {{if not .IsActive}}<span class="status-badge status-cancelled">Disabled</span>
+            {{else if .NotStarted}}<span class="status-badge status-pending_payment">Not started</span>
             {{else if .IsExpired}}<span class="status-badge status-cancelled">Expired</span>
             {{else if .IsExhausted}}<span class="status-badge status-cancelled">Exhausted</span>
             {{else}}<span class="status-badge status-confirmed">Active</span>{{end}}

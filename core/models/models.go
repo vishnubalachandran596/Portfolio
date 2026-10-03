@@ -152,26 +152,27 @@ type HomeFeature struct {
 	SortOrder   int
 }
 
+// Course pricing is INR-only (see models.CurrencyINR) — the earlier
+// US/India dual-currency pricing, detected from the visitor's region, was
+// retired in Oct 2026 in favor of selling only in INR.
 type Course struct {
-	ID               int64
-	Slug             string
-	Title            string
-	Summary          string
-	Description      string
-	Level            string
-	Duration         string
-	PriceCents       int
-	Currency         string
-	ImageURL         string
-	IsPublished      bool
-	SortOrder        int
-	IsPaid           bool
-	MinPriceCents    int
-	MinPriceCentsINR int
-	ContentKey       string
-	ContentObject    string // private Storage path, courses/{slug}.html
-	CreatedAt        time.Time
-	UpdatedAt        time.Time
+	ID            int64
+	Slug          string
+	Title         string
+	Summary       string
+	Description   string
+	Level         string
+	Duration      string
+	PriceCents    int
+	ImageURL      string
+	IsPublished   bool
+	SortOrder     int
+	IsPaid        bool
+	MinPriceCents int
+	ContentKey    string
+	ContentObject string // private Storage path, courses/{slug}.html
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
 }
 
 // IsFree reports whether the course has no listed price.
@@ -204,61 +205,34 @@ func (c Course) Track() string {
 	}
 }
 
+// CurrencyINR is the one currency this site ever charges in. Every price
+// everywhere renders in INR — see the package comment on Course for why
+// there's no per-visitor region/currency detection left in this codebase.
+const CurrencyINR = "INR"
+
 // PriceDisplay renders the price as a human string. Every paid course
-// carries a real, industry-level minimum (set per course via the admin
-// form) rather than a voluntary contribution — see RegionalPriceDisplay
-// for the visitor-aware version (India gets its own INR minimum, when one
-// is set). The WELCOMEVB promo code, not a $0 default, is the free-access
-// path — see the promo banner partial.
+// carries a real, industry-level INR minimum (set via the admin form)
+// rather than a voluntary contribution. The WELCOMEVB promo code, not a
+// $0 default, is the free-access path — see the promo banner partial.
 func (c Course) PriceDisplay() string {
 	if c.IsPaid {
-		return minPriceDisplay(c.MinPriceCents, c.Currency)
+		if c.MinPriceCents <= 0 {
+			return "Free"
+		}
+		return FormatMoney(c.MinPriceCents, CurrencyINR)
 	}
 	if c.IsFree() {
 		return "Free"
 	}
-	return FormatMoney(c.PriceCents, c.Currency)
+	return FormatMoney(c.PriceCents, CurrencyINR)
 }
 
-// minPriceDisplay renders the regional minimum price for a paid course: a
-// plain price once a real minimum is set, falling back to "Free" only if
-// a course is ever left at its column default of 0.
-func minPriceDisplay(minCents int, currency string) string {
-	if minCents <= 0 {
-		return "Free"
-	}
-	return FormatMoney(minCents, currency)
-}
+// MinPriceDisplay renders the minimum price for a paid course.
+func (c Course) MinPriceDisplay() string { return FormatMoney(c.MinPriceCents, CurrencyINR) }
 
-// MinPriceDisplay renders the minimum contribution for a paid course.
-func (c Course) MinPriceDisplay() string { return FormatMoney(c.MinPriceCents, c.Currency) }
-
-// MinPriceWhole is the minimum contribution in whole currency units
-// (e.g. 5 for $5), for use as a numeric HTML input attribute.
+// MinPriceWhole is the minimum price in whole rupees (e.g. 35 for ₹35),
+// for use as a numeric HTML input attribute.
 func (c Course) MinPriceWhole() int { return c.MinPriceCents / 100 }
-
-// RegionalPrice returns the currency and minimum contribution (in the
-// smallest currency unit) that applies for a visitor from the given ISO
-// 3166-1 alpha-2 country code: India gets its own INR minimum (when set),
-// everyone else — including unknown/local visitors — gets the course's
-// default international minimum.
-func (c Course) RegionalPrice(country string) (currency string, minCents int) {
-	if country == "IN" && c.MinPriceCentsINR > 0 {
-		return "INR", c.MinPriceCentsINR
-	}
-	return c.Currency, c.MinPriceCents
-}
-
-// RegionalPriceDisplay renders the course's real minimum price for the
-// given visitor's country — the region-aware counterpart to PriceDisplay,
-// used wherever a course price is shown to an actual visitor.
-func (c Course) RegionalPriceDisplay(country string) string {
-	if !c.IsPaid {
-		return c.PriceDisplay()
-	}
-	currency, cents := c.RegionalPrice(country)
-	return minPriceDisplay(cents, currency)
-}
 
 func FormatMoney(cents int, currency string) string {
 	symbol := "$"
@@ -369,41 +343,22 @@ type Subscriber struct {
 const (
 	ConsultancyDurationMinutes = 60
 
-	// AuditPriceCentsUSD/INR is a reference figure only — shown on the
+	// AuditPriceCentsINR is a reference figure only — shown on the
 	// consultancy page, never charged. The Architecture Review is scoped
 	// and invoiced outside this site.
-	AuditPriceCentsUSD = 300000   // $3,000
 	AuditPriceCentsINR = 15000000 // ₹1,50,000
 
-	// RetainerPriceRangeUSD/INR are display-only ranges shown on the
+	// RetainerPriceRangeINR is a display-only range shown on the
 	// consultancy page — a retainer is scoped on a call, never
 	// self-checkout, so there's no fixed cents constant to charge against.
-	RetainerPriceRangeUSD = "$4,000–$8,000/month"
 	RetainerPriceRangeINR = "₹2,00,000–₹4,00,000/month"
 )
 
-// AuditRegionalPrice mirrors Course.RegionalPrice for the reference-only
-// Architecture Review figure.
-func AuditRegionalPrice(country string) (currency string, cents int) {
-	if country == "IN" {
-		return "INR", AuditPriceCentsINR
-	}
-	return "USD", AuditPriceCentsUSD
-}
+// AuditPriceDisplay renders the reference-only Architecture Review figure.
+func AuditPriceDisplay() string { return FormatMoney(AuditPriceCentsINR, CurrencyINR) }
 
-func AuditRegionalPriceDisplay(country string) string {
-	currency, cents := AuditRegionalPrice(country)
-	return FormatMoney(cents, currency)
-}
-
-// RetainerRangeDisplay renders the display-only monthly retainer range for
-// the visitor's region.
-func RetainerRangeDisplay(country string) string {
-	if country == "IN" {
-		return RetainerPriceRangeINR
-	}
-	return RetainerPriceRangeUSD
-}
+// RetainerRangeDisplay renders the display-only monthly retainer range.
+func RetainerRangeDisplay() string { return RetainerPriceRangeINR }
 
 // AuditRequest is a paid, fixed-scope Architecture Review / technical due
 // diligence engagement — a single fixed-price checkout (unlike a course's
@@ -521,19 +476,6 @@ type ArticleContribution struct {
 	PaidAt            *time.Time
 }
 
-// ContributionCurrency is the checkout currency for optional article
-// support: INR for India, otherwise the site's configured fallback
-// (CHECKOUT_CURRENCY, usually USD).
-func ContributionCurrency(country, fallback string) string {
-	if country == "IN" {
-		return "INR"
-	}
-	if fallback == "" {
-		return "USD"
-	}
-	return fallback
-}
-
 type AvailabilityRule struct {
 	ID          int64
 	Weekday     time.Weekday
@@ -586,25 +528,38 @@ const (
 
 // PromoCode is a discount code an admin creates in the admin console and a
 // visitor redeems at checkout. It applies to exactly one product line —
-// courses (optionally scoped to specific courses, or all of them) or the
-// single consultancy offering — never both.
+// courses or the single consultancy offering — never both. CourseIDs
+// empty means "applies to any course" by itself; there is no separate
+// "applies to all" flag to keep in sync with that.
+//
+// A code is either public (scrolls in the sitewide promo banner to every
+// visitor) or user-scoped private (AllowedEmails non-empty — never shown
+// in the banner, and redeemable only by the listed accounts). Saving a
+// code with AllowedEmails set always forces IsPublic false, regardless of
+// what the admin form submitted — see AdminPromoSave.
 type PromoCode struct {
-	ID                  int64
-	Code                string
-	Description         string
-	Product             string // PromoProductCourse | PromoProductConsultancy
-	DiscountPercent     int
-	AppliesToAllCourses bool
-	CourseIDs           []int64
-	MaxRedemptions      int // 0 means unlimited
-	RedemptionCount     int
-	ExpiresAt           time.Time
-	IsActive            bool
-	CreatedAt           time.Time
+	ID              int64
+	Code            string
+	Description     string
+	Product         string // PromoProductCourse | PromoProductConsultancy
+	DiscountPercent int
+	CourseIDs       []int64
+	MaxRedemptions  int // 0 means unlimited, total across every account
+	// MaxRedemptionsPerUser caps how many times one account may redeem
+	// this code; 0 means unlimited. Defaults to 1 ("once per account")
+	// for a new code, which is almost always what's wanted.
+	MaxRedemptionsPerUser int
+	RedemptionCount       int
+	StartsAt              time.Time
+	ExpiresAt             time.Time
+	IsActive              bool
+	IsPublic              bool
+	AllowedEmails         []string
+	CreatedAt             time.Time
 }
 
 // HasCourse reports whether a course-scoped promo code applies to the
-// given course. Irrelevant when AppliesToAllCourses is true.
+// given course. Irrelevant when CourseIDs is empty (applies to any course).
 func (p PromoCode) HasCourse(id int64) bool {
 	for _, cid := range p.CourseIDs {
 		if cid == id {
@@ -614,7 +569,28 @@ func (p PromoCode) HasCourse(id int64) bool {
 	return false
 }
 
+// IsPrivate reports whether this code is scoped to specific accounts —
+// always true exactly when AllowedEmails is non-empty.
+func (p PromoCode) IsPrivate() bool { return len(p.AllowedEmails) > 0 }
+
+// AllowsEmail reports whether the given (already-lowercased) email may
+// redeem this code: any email, when it isn't user-scoped at all.
+func (p PromoCode) AllowsEmail(email string) bool {
+	if !p.IsPrivate() {
+		return true
+	}
+	for _, e := range p.AllowedEmails {
+		if e == email {
+			return true
+		}
+	}
+	return false
+}
+
 func (p PromoCode) IsExpired() bool { return time.Now().After(p.ExpiresAt) }
+
+// NotStarted reports whether the code's start time is still in the future.
+func (p PromoCode) NotStarted() bool { return time.Now().Before(p.StartsAt) }
 
 // IsExhausted reports whether the code has hit its total redemption cap;
 // a cap of 0 means unlimited.
@@ -622,9 +598,10 @@ func (p PromoCode) IsExhausted() bool {
 	return p.MaxRedemptions > 0 && p.RedemptionCount >= p.MaxRedemptions
 }
 
-// Usable reports whether the code can still be redeemed right now.
+// Usable reports whether the code can still be redeemed right now, before
+// any per-user or per-course scoping is even considered.
 func (p PromoCode) Usable() bool {
-	return p.IsActive && !p.IsExpired() && !p.IsExhausted()
+	return p.IsActive && !p.NotStarted() && !p.IsExpired() && !p.IsExhausted()
 }
 
 // RedemptionsDisplay renders e.g. "3 / 50" or "3 / unlimited" for the

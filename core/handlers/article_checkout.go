@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/vishnubalachandran596/portfolio/core/authutil"
-	"github.com/vishnubalachandran596/portfolio/core/geo"
 	"github.com/vishnubalachandran596/portfolio/core/models"
 	"github.com/vishnubalachandran596/portfolio/core/repo"
 )
@@ -54,7 +53,7 @@ func (a *App) ArticleContributeOrder(w http.ResponseWriter, r *http.Request) {
 		userID = id
 	}
 
-	currency := models.ContributionCurrency(geo.CountryFromRequest(r), a.Cfg.CheckoutCurrency)
+	currency := models.CurrencyINR
 	amountCents, _ := strconv.Atoi(r.FormValue("amount_cents"))
 	if amountCents < models.ArticleContributeMinCents {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Enter an amount of at least " + models.FormatMoney(models.ArticleContributeMinCents, currency) + "."})

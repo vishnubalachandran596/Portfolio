@@ -254,25 +254,22 @@ func (a *App) AdminCourseSave(w http.ResponseWriter, r *http.Request) {
 	price, _ := strconv.Atoi(r.FormValue("price_cents"))
 	sortOrder, _ := strconv.Atoi(r.FormValue("sort_order"))
 	minPriceCents, _ := strconv.Atoi(r.FormValue("min_price_cents"))
-	minPriceCentsINR, _ := strconv.Atoi(r.FormValue("min_price_cents_inr"))
 	isPaid := r.FormValue("is_paid") == "on"
 
 	course := models.Course{
-		ID:               id,
-		Slug:             slugify(r.FormValue("slug")),
-		Title:            strings.TrimSpace(r.FormValue("title")),
-		Summary:          strings.TrimSpace(r.FormValue("summary")),
-		Description:      strings.TrimSpace(r.FormValue("description")),
-		Level:            strings.TrimSpace(r.FormValue("level")),
-		Duration:         strings.TrimSpace(r.FormValue("duration")),
-		PriceCents:       price,
-		Currency:         orDefault(r.FormValue("currency"), "USD"),
-		ImageURL:         strings.TrimSpace(r.FormValue("image_url")),
-		IsPublished:      r.FormValue("is_published") == "on",
-		SortOrder:        sortOrder,
-		IsPaid:           isPaid,
-		MinPriceCents:    minPriceCents,
-		MinPriceCentsINR: minPriceCentsINR,
+		ID:            id,
+		Slug:          slugify(r.FormValue("slug")),
+		Title:         strings.TrimSpace(r.FormValue("title")),
+		Summary:       strings.TrimSpace(r.FormValue("summary")),
+		Description:   strings.TrimSpace(r.FormValue("description")),
+		Level:         strings.TrimSpace(r.FormValue("level")),
+		Duration:      strings.TrimSpace(r.FormValue("duration")),
+		PriceCents:    price,
+		ImageURL:      strings.TrimSpace(r.FormValue("image_url")),
+		IsPublished:   r.FormValue("is_published") == "on",
+		SortOrder:     sortOrder,
+		IsPaid:        isPaid,
+		MinPriceCents: minPriceCents,
 	}
 	if course.Slug == "" {
 		course.Slug = slugify(course.Title)

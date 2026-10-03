@@ -17,13 +17,34 @@ func NewPromoCodeRepo(db *sql.DB) *PromoCodeRepo { return &PromoCodeRepo{db: db}
 // existing one (the UNIQUE constraint on promo_codes.code).
 var ErrDuplicateCode = errors.New("promo code already exists")
 
-const promoCodeColumns = `id, code, description, product, discount_percent, applies_to_all_courses, max_redemptions, redemption_count, expires_at, is_active, created_at`
+const promoCodeColumns = `id, code, description, product, discount_percent, max_redemptions, max_redemptions_per_user, redemption_count, starts_at, expires_at, is_active, is_public, allowed_emails, created_at`
 
 func scanPromoCode(row interface{ Scan(...any) error }) (models.PromoCode, error) {
 	var p models.PromoCode
+	var allowedEmails string
 	err := row.Scan(&p.ID, &p.Code, &p.Description, &p.Product, &p.DiscountPercent,
-		&p.AppliesToAllCourses, &p.MaxRedemptions, &p.RedemptionCount, &p.ExpiresAt, &p.IsActive, &p.CreatedAt)
+		&p.MaxRedemptions, &p.MaxRedemptionsPerUser, &p.RedemptionCount, &p.StartsAt, &p.ExpiresAt,
+		&p.IsActive, &p.IsPublic, &allowedEmails, &p.CreatedAt)
+	p.AllowedEmails = splitEmails(allowedEmails)
 	return p, err
+}
+
+// splitEmails parses the comma-separated allowed_emails column into a
+// normalized (trimmed, lowercased, empty entries dropped) slice.
+func splitEmails(raw string) []string {
+	var out []string
+	for _, e := range strings.Split(raw, ",") {
+		e = strings.ToLower(strings.TrimSpace(e))
+		if e != "" {
+			out = append(out, e)
+		}
+	}
+	return out
+}
+
+// joinEmails is the inverse of splitEmails, for writing the column.
+func joinEmails(emails []string) string {
+	return strings.Join(emails, ",")
 }
 
 func (r *PromoCodeRepo) courseIDs(ctx context.Context, promoID int64) ([]int64, error) {
@@ -71,6 +92,33 @@ func (r *PromoCodeRepo) ListAll(ctx context.Context) ([]models.PromoCode, error)
 	return out, nil
 }
 
+// ListActivePublic returns every promo code currently redeemable
+// (active, started, not expired, not exhausted) and marked public — the
+// source for the sitewide scrolling promo banner. A private, user-scoped
+// code never appears here even if somehow marked public, since saving a
+// code with AllowedEmails set always forces IsPublic false.
+func (r *PromoCodeRepo) ListActivePublic(ctx context.Context) ([]models.PromoCode, error) {
+	rows, err := r.db.QueryContext(ctx, `
+		SELECT `+promoCodeColumns+` FROM promo_codes
+		WHERE is_active AND is_public AND now() >= starts_at AND now() < expires_at
+			AND (max_redemptions = 0 OR redemption_count < max_redemptions)
+		ORDER BY created_at DESC`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var out []models.PromoCode
+	for rows.Next() {
+		p, err := scanPromoCode(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, p)
+	}
+	return out, rows.Err()
+}
+
 func (r *PromoCodeRepo) GetByID(ctx context.Context, id int64) (models.PromoCode, error) {
 	p, err := scanPromoCode(r.db.QueryRowContext(ctx, `SELECT `+promoCodeColumns+` FROM promo_codes WHERE id = $1`, id))
 	if errors.Is(err, sql.ErrNoRows) {
@@ -115,10 +163,10 @@ func (r *PromoCodeRepo) Create(ctx context.Context, p models.PromoCode) (int64, 
 
 	var id int64
 	err = tx.QueryRowContext(ctx, `
-		INSERT INTO promo_codes (code, description, product, discount_percent, applies_to_all_courses, max_redemptions, expires_at, is_active)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id`,
+		INSERT INTO promo_codes (code, description, product, discount_percent, max_redemptions, max_redemptions_per_user, starts_at, expires_at, is_active, is_public, allowed_emails)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING id`,
 		strings.ToUpper(strings.TrimSpace(p.Code)), p.Description, p.Product, p.DiscountPercent,
-		p.AppliesToAllCourses, p.MaxRedemptions, p.ExpiresAt, p.IsActive,
+		p.MaxRedemptions, p.MaxRedemptionsPerUser, p.StartsAt, p.ExpiresAt, p.IsActive, p.IsPublic, joinEmails(p.AllowedEmails),
 	).Scan(&id)
 	if err != nil {
 		if isUniqueViolation(err) {
@@ -141,10 +189,12 @@ func (r *PromoCodeRepo) Update(ctx context.Context, p models.PromoCode) error {
 
 	res, err := tx.ExecContext(ctx, `
 		UPDATE promo_codes SET code=$1, description=$2, product=$3, discount_percent=$4,
-			applies_to_all_courses=$5, max_redemptions=$6, expires_at=$7, is_active=$8
-		WHERE id=$9`,
+			max_redemptions=$5, max_redemptions_per_user=$6, starts_at=$7, expires_at=$8, is_active=$9,
+			is_public=$10, allowed_emails=$11
+		WHERE id=$12`,
 		strings.ToUpper(strings.TrimSpace(p.Code)), p.Description, p.Product, p.DiscountPercent,
-		p.AppliesToAllCourses, p.MaxRedemptions, p.ExpiresAt, p.IsActive, p.ID,
+		p.MaxRedemptions, p.MaxRedemptionsPerUser, p.StartsAt, p.ExpiresAt, p.IsActive,
+		p.IsPublic, joinEmails(p.AllowedEmails), p.ID,
 	)
 	if err != nil {
 		if isUniqueViolation(err) {

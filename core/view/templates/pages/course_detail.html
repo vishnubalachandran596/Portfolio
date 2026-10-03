@@ -7,7 +7,7 @@
     <h1>{{.Course.Title}}</h1>
     <p class="hero-subtitle">{{.Course.Summary}}</p>
     <div class="course-detail-meta">
-      <span>{{.Course.RegionalPriceDisplay .Country}}</span>
+      <span>{{.Course.PriceDisplay}}</span>
       {{if .Course.Duration}}<span>· {{.Course.Duration}}</span>{{end}}
     </div>
 
@@ -26,14 +26,13 @@
         {{if .HasQuiz}}<a class="btn btn-secondary" href="/courses/{{.Course.Slug}}/quiz">Take the Final Quiz</a>{{end}}
       </div>
       {{else}}
-      {{template "promo_banner" .}}
       <div class="purchase-box" id="purchase-box">
         <p class="purchase-box-title">Get access</p>
-        <p class="purchase-box-sub">A minimum contribution of {{.ResolvedMinDisplay}} applies{{if eq .Country "IN"}} (India pricing){{end}} — or use the promo code above for free access.</p>
+        <p class="purchase-box-sub">A minimum price of {{.ResolvedMinDisplay}} applies — or use an active promo code above for free access.</p>
         <div id="purchase-error" class="alert alert-error" hidden></div>
         {{if .UserEmail}}
         <p class="purchase-box-sub">Access will be sent to <strong>{{.UserEmail}}</strong>.</p>
-        <label>Contribution ({{.ResolvedCurrency}}) <span class="optional">{{if .PaymentsEnabled}}optional — leave at 0 for free access{{else}}contributions aren't enabled yet — enroll free below{{end}}</span>
+        <label>Contribution (INR) <span class="optional">{{if .PaymentsEnabled}}optional — leave at 0 for free access{{else}}contributions aren't enabled yet — enroll free below{{end}}</span>
           <input type="number" id="purchase-amount" min="{{.ResolvedMinWhole}}" step="1" value="{{.ResolvedMinWhole}}" {{if not .PaymentsEnabled}}disabled{{end}}>
         </label>
         {{if .PaymentsEnabled}}

@@ -131,17 +131,17 @@ func (r *PurchaseRepo) ListByUserID(ctx context.Context, userID int64) ([]models
 	return out, rows.Err()
 }
 
-// HasUserRedeemedPromo reports whether a user already has a paid (or
-// free, which is recorded as paid — see CheckoutCreateOrder) purchase
-// against this promo code, so the same code can't be redeemed twice by
-// the same account.
-func (r *PurchaseRepo) HasUserRedeemedPromo(ctx context.Context, userID, promoCodeID int64) (bool, error) {
-	var exists bool
+// CountUserRedemptions returns how many paid (or free, which is recorded
+// as paid — see CheckoutCreateOrder) purchases this account already has
+// against this promo code, checked against the code's own configurable
+// MaxRedemptionsPerUser (0 = unlimited).
+func (r *PurchaseRepo) CountUserRedemptions(ctx context.Context, userID, promoCodeID int64) (int, error) {
+	var count int
 	err := r.db.QueryRowContext(ctx,
-		`SELECT EXISTS(SELECT 1 FROM purchases WHERE user_id = $1 AND promo_code_id = $2 AND status = 'paid')`,
+		`SELECT count(*) FROM purchases WHERE user_id = $1 AND promo_code_id = $2 AND status = 'paid'`,
 		userID, promoCodeID,
-	).Scan(&exists)
-	return exists, err
+	).Scan(&count)
+	return count, err
 }
 
 func (r *PurchaseRepo) ListAll(ctx context.Context) ([]models.Purchase, error) {

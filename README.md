@@ -221,15 +221,14 @@ in the repo to edit instead.
 ## Paid courses (Razorpay)
 
 Every published course is paid, priced by depth/advancement rather than a
-flat rate — a `min_price_cents`/`min_price_cents_inr` floor per course
-(the visitor can pay more, never less): Java Fundamentals (₹500/$6) →
-Technical Architecture & Design (₹1,000/$12) → System Design & Deployment
-(₹1,000/$12) → Java SSE Ultimate Guide, the advanced DSA/LLD/HLD
-interview-prep course (₹750/$9) → Kafka/Messaging/Caching with Redis
-(₹1,500/$18) → Resiliency & High-Scale Design, the advanced capstone
-(₹2,000/$24). The visitor picks any amount at or above that minimum ("pay
-what you want"), pays via Razorpay Checkout, and is redirected to
-`/courses/<slug>/learn`.
+flat rate — a `min_price_cents` floor per course in INR paise (the
+visitor can pay more, never less), ranging from ₹1,900 for the shortest
+course up to ₹5,900 for the flagship Java SSE Ultimate Guide. The
+visitor picks any amount at or above that minimum ("pay what you want",
+or free with an active 100%-off promo code), pays via Razorpay Checkout,
+and is redirected to `/courses/<slug>/learn`. Checkout is INR-only —
+there's no multi-currency handling anywhere in this codebase — and
+requires a Google-authenticated account; there is no guest-checkout path.
 
 - **Payment flow:** `POST /courses/<slug>/checkout/order` creates a
   Razorpay order and a `purchases` row (`core/payments`, `core/repo/purchases.go`).
@@ -266,9 +265,9 @@ what you want"), pays via Razorpay Checkout, and is redirected to
   which is the actually-effective deterrent — a leaked copy is traceable
   back to whoever shared it.
 - **Setup:** set `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` (start with
-  Razorpay's test-mode keys) and optionally `CHECKOUT_CURRENCY`. The
-  purchase button is hidden until both are set. See `/admin/purchases`
-  for a log of every order and its status.
+  Razorpay's test-mode keys). The purchase button is hidden until both are
+  set. Checkout is INR-only. See `/admin/purchases` for a log of every
+  order and its status.
 
 ### Notifying buyers when a course is updated
 

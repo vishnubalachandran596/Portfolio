@@ -39,11 +39,13 @@ func (a *App) AdminPromoList(w http.ResponseWriter, r *http.Request) {
 
 type AdminPromoFormData struct {
 	BaseData
-	Promo          models.PromoCode
-	ExpiresAtValue string
-	Courses        []models.Course
-	IsNew          bool
-	Error          string
+	Promo             models.PromoCode
+	StartsAtValue     string
+	ExpiresAtValue    string
+	AllowedEmailsText string
+	Courses           []models.Course
+	IsNew             bool
+	Error             string
 }
 
 func (a *App) AdminPromoNewPage(w http.ResponseWriter, r *http.Request) {
@@ -58,7 +60,7 @@ func (a *App) AdminPromoNewPage(w http.ResponseWriter, r *http.Request) {
 	}
 	a.View.Render(w, http.StatusOK, "admin_promo_form", AdminPromoFormData{
 		BaseData: a.base(r, "New Promo Code — Admin", "", "admin"),
-		Promo:    models.PromoCode{Product: product, IsActive: true},
+		Promo:    models.PromoCode{Product: product, IsActive: true, MaxRedemptionsPerUser: 1},
 		Courses:  courses,
 		IsNew:    true,
 	})
@@ -85,10 +87,12 @@ func (a *App) AdminPromoEditPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	a.View.Render(w, http.StatusOK, "admin_promo_form", AdminPromoFormData{
-		BaseData:       a.base(r, "Edit Promo Code — Admin", "", "admin"),
-		Promo:          promo,
-		ExpiresAtValue: promo.ExpiresAt.In(a.Timezone).Format(promoDateTimeLayout),
-		Courses:        courses,
+		BaseData:          a.base(r, "Edit Promo Code — Admin", "", "admin"),
+		Promo:             promo,
+		StartsAtValue:     promo.StartsAt.In(a.Timezone).Format(promoDateTimeLayout),
+		ExpiresAtValue:    promo.ExpiresAt.In(a.Timezone).Format(promoDateTimeLayout),
+		AllowedEmailsText: strings.Join(promo.AllowedEmails, ", "),
+		Courses:           courses,
 	})
 }
 
@@ -113,12 +117,14 @@ func (a *App) AdminPromoSave(w http.ResponseWriter, r *http.Request) {
 	}
 	discountPercent, _ := strconv.Atoi(r.FormValue("discount_percent"))
 	maxRedemptions, _ := strconv.Atoi(r.FormValue("max_redemptions"))
+	maxRedemptionsPerUser, _ := strconv.Atoi(r.FormValue("max_redemptions_per_user"))
+	startsAtRaw := strings.TrimSpace(r.FormValue("starts_at"))
+	startsAt, startErr := time.ParseInLocation(promoDateTimeLayout, startsAtRaw, a.Timezone)
 	expiresAtRaw := strings.TrimSpace(r.FormValue("expires_at"))
 	expiresAt, expErr := time.ParseInLocation(promoDateTimeLayout, expiresAtRaw, a.Timezone)
 
-	appliesToAll := r.FormValue("applies_to_all_courses") == "on"
 	var courseIDs []int64
-	if product == models.PromoProductCourse && !appliesToAll {
+	if product == models.PromoProductCourse {
 		for _, raw := range r.Form["course_ids"] {
 			if cid, err := strconv.ParseInt(raw, 10, 64); err == nil {
 				courseIDs = append(courseIDs, cid)
@@ -126,17 +132,32 @@ func (a *App) AdminPromoSave(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	allowedEmailsRaw := strings.TrimSpace(r.FormValue("allowed_emails"))
+	var allowedEmails []string
+	for _, e := range strings.Split(allowedEmailsRaw, ",") {
+		e = strings.ToLower(strings.TrimSpace(e))
+		if e != "" {
+			allowedEmails = append(allowedEmails, e)
+		}
+	}
+	// A user-scoped code is always private — the checkbox is ignored (and
+	// disabled client-side, see the template) once any email is listed.
+	isPublic := r.FormValue("is_public") == "on" && len(allowedEmails) == 0
+
 	promo := models.PromoCode{
-		ID:                  id,
-		Code:                strings.ToUpper(strings.TrimSpace(r.FormValue("code"))),
-		Description:         strings.TrimSpace(r.FormValue("description")),
-		Product:             product,
-		DiscountPercent:     discountPercent,
-		AppliesToAllCourses: appliesToAll,
-		CourseIDs:           courseIDs,
-		MaxRedemptions:      maxRedemptions,
-		ExpiresAt:           expiresAt,
-		IsActive:            r.FormValue("is_active") == "on",
+		ID:                    id,
+		Code:                  strings.ToUpper(strings.TrimSpace(r.FormValue("code"))),
+		Description:           strings.TrimSpace(r.FormValue("description")),
+		Product:               product,
+		DiscountPercent:       discountPercent,
+		CourseIDs:             courseIDs,
+		MaxRedemptions:        maxRedemptions,
+		MaxRedemptionsPerUser: maxRedemptionsPerUser,
+		StartsAt:              startsAt,
+		ExpiresAt:             expiresAt,
+		IsActive:              r.FormValue("is_active") == "on",
+		IsPublic:              isPublic,
+		AllowedEmails:         allowedEmails,
 	}
 
 	formErr := ""
@@ -145,22 +166,28 @@ func (a *App) AdminPromoSave(w http.ResponseWriter, r *http.Request) {
 		formErr = "A code is required."
 	case discountPercent <= 0 || discountPercent > 100:
 		formErr = "Discount must be between 1 and 100 percent."
+	case startErr != nil:
+		formErr = "A valid start date and time is required."
 	case expErr != nil:
 		formErr = "A valid expiry date and time is required."
+	case !expiresAt.After(startsAt):
+		formErr = "The expiry must be after the start time."
 	case maxRedemptions < 0:
 		formErr = "Redemption limit can't be negative."
-	case product == models.PromoProductCourse && !appliesToAll && len(courseIDs) == 0:
-		formErr = "Pick at least one course, or mark it as applying to all courses."
+	case maxRedemptionsPerUser < 0:
+		formErr = "Per-account redemption limit can't be negative."
 	}
 	if formErr != "" {
 		courses, _ := a.Courses.ListAll(r.Context())
 		a.View.Render(w, http.StatusUnprocessableEntity, "admin_promo_form", AdminPromoFormData{
-			BaseData:       a.base(r, "Promo Code — Admin", "", "admin"),
-			Promo:          promo,
-			ExpiresAtValue: expiresAtRaw,
-			Courses:        courses,
-			IsNew:          id == 0,
-			Error:          formErr,
+			BaseData:          a.base(r, "Promo Code — Admin", "", "admin"),
+			Promo:             promo,
+			StartsAtValue:     startsAtRaw,
+			ExpiresAtValue:    expiresAtRaw,
+			AllowedEmailsText: allowedEmailsRaw,
+			Courses:           courses,
+			IsNew:             id == 0,
+			Error:             formErr,
 		})
 		return
 	}
@@ -176,12 +203,14 @@ func (a *App) AdminPromoSave(w http.ResponseWriter, r *http.Request) {
 		if err == repo.ErrDuplicateCode {
 			courses, _ := a.Courses.ListAll(ctx)
 			a.View.Render(w, http.StatusUnprocessableEntity, "admin_promo_form", AdminPromoFormData{
-				BaseData:       a.base(r, "Promo Code — Admin", "", "admin"),
-				Promo:          promo,
-				ExpiresAtValue: expiresAtRaw,
-				Courses:        courses,
-				IsNew:          id == 0,
-				Error:          "That code is already in use.",
+				BaseData:          a.base(r, "Promo Code — Admin", "", "admin"),
+				Promo:             promo,
+				StartsAtValue:     startsAtRaw,
+				ExpiresAtValue:    expiresAtRaw,
+				AllowedEmailsText: allowedEmailsRaw,
+				Courses:           courses,
+				IsNew:             id == 0,
+				Error:             "That code is already in use.",
 			})
 			return
 		}

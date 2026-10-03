@@ -1,15 +1,23 @@
 {{/*
-  Shared "use WELCOMEVB for free access" banner embedded on Home, Courses
-  list, and a locked Course detail page — {{template "promo_banner" .}}.
-  Takes no page-specific data (the copy is static), so it can be called
-  from any page's data type. One partial rather than one copy per page,
-  same reasoning as subscribe_form.html.
+  Sitewide scrolling banner for every currently active, public promo code
+  — {{template "promo_banner" .}}, where . is a BaseData (it reads
+  .PromoCodes, populated by startBaseChrome on every request). Renders
+  nothing at all when there are no active public codes, rather than an
+  empty bar. A private, user-scoped code (AllowedEmails set) never
+  reaches .PromoCodes — see PromoCodeRepo.ListActivePublic.
+
+  The code list is rendered twice in a row (not once) because the CSS
+  marquee (.promo-banner-track, style.css) loops by translateX(-50%) —
+  that only reads as a seamless scroll when the strip is two identical
+  copies back to back, same technique as any CSS-only ticker.
 */}}
 {{define "promo_banner"}}
-<div class="promo-banner" role="note" aria-label="Promo code offer">
+{{if .PromoCodes}}
+<div class="promo-banner" role="note" aria-label="Promo code offers">
   <div class="promo-banner-track">
-    <span class="promo-banner-item">🎉 Use code <strong>WELCOMEVB</strong> at checkout for 100% off any course — free access, no exceptions.</span>
-    <span class="promo-banner-item">🎉 Use code <strong>WELCOMEVB</strong> at checkout for 100% off any course — free access, no exceptions.</span>
+    {{range .PromoCodes}}<span class="promo-banner-item">🎉 Use code <strong>{{.Code}}</strong> for {{.DiscountPercent}}% off{{if .Description}} — {{.Description}}{{end}}</span>{{end}}
+    {{range .PromoCodes}}<span class="promo-banner-item">🎉 Use code <strong>{{.Code}}</strong> for {{.DiscountPercent}}% off{{if .Description}} — {{.Description}}{{end}}</span>{{end}}
   </div>
 </div>
+{{end}}
 {{end}}

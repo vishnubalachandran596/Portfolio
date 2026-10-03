@@ -16,13 +16,13 @@ func NewCourseRepo(db *sql.DB) *CourseRepo { return &CourseRepo{db: db} }
 
 // content_html is intentionally absent. Lesson bytes live in Storage;
 // selecting that column would pull them onto every catalog query.
-const courseColumns = `id, slug, title, summary, description, level, duration, price_cents, currency, image_url, is_published, sort_order, is_paid, min_price_cents, min_price_cents_inr, content_key, content_object, created_at, updated_at`
+const courseColumns = `id, slug, title, summary, description, level, duration, price_cents, image_url, is_published, sort_order, is_paid, min_price_cents, content_key, content_object, created_at, updated_at`
 
 func scanCourse(row interface{ Scan(...any) error }) (models.Course, error) {
 	var c models.Course
 	err := row.Scan(&c.ID, &c.Slug, &c.Title, &c.Summary, &c.Description, &c.Level, &c.Duration,
-		&c.PriceCents, &c.Currency, &c.ImageURL, &c.IsPublished, &c.SortOrder,
-		&c.IsPaid, &c.MinPriceCents, &c.MinPriceCentsINR, &c.ContentKey, &c.ContentObject, &c.CreatedAt, &c.UpdatedAt)
+		&c.PriceCents, &c.ImageURL, &c.IsPublished, &c.SortOrder,
+		&c.IsPaid, &c.MinPriceCents, &c.ContentKey, &c.ContentObject, &c.CreatedAt, &c.UpdatedAt)
 	return c, err
 }
 
@@ -71,11 +71,11 @@ func (r *CourseRepo) GetByID(ctx context.Context, id int64) (models.Course, erro
 func (r *CourseRepo) Create(ctx context.Context, c models.Course) (int64, error) {
 	var id int64
 	err := r.db.QueryRowContext(ctx, `
-		INSERT INTO courses (slug, title, summary, description, level, duration, price_cents, currency, image_url, is_published, sort_order,
-			is_paid, min_price_cents, min_price_cents_inr)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING id`,
-		c.Slug, c.Title, c.Summary, c.Description, c.Level, c.Duration, c.PriceCents, c.Currency, c.ImageURL, c.IsPublished, c.SortOrder,
-		c.IsPaid, c.MinPriceCents, c.MinPriceCentsINR,
+		INSERT INTO courses (slug, title, summary, description, level, duration, price_cents, image_url, is_published, sort_order,
+			is_paid, min_price_cents)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING id`,
+		c.Slug, c.Title, c.Summary, c.Description, c.Level, c.Duration, c.PriceCents, c.ImageURL, c.IsPublished, c.SortOrder,
+		c.IsPaid, c.MinPriceCents,
 	).Scan(&id)
 	return id, err
 }
@@ -83,11 +83,11 @@ func (r *CourseRepo) Create(ctx context.Context, c models.Course) (int64, error)
 func (r *CourseRepo) Update(ctx context.Context, c models.Course) error {
 	_, err := r.db.ExecContext(ctx, `
 		UPDATE courses SET slug=$1, title=$2, summary=$3, description=$4, level=$5, duration=$6,
-			price_cents=$7, currency=$8, image_url=$9, is_published=$10, sort_order=$11,
-			is_paid=$12, min_price_cents=$13, min_price_cents_inr=$14, updated_at=now()
-		WHERE id=$15`,
-		c.Slug, c.Title, c.Summary, c.Description, c.Level, c.Duration, c.PriceCents, c.Currency, c.ImageURL, c.IsPublished, c.SortOrder,
-		c.IsPaid, c.MinPriceCents, c.MinPriceCentsINR, c.ID,
+			price_cents=$7, image_url=$8, is_published=$9, sort_order=$10,
+			is_paid=$11, min_price_cents=$12, updated_at=now()
+		WHERE id=$13`,
+		c.Slug, c.Title, c.Summary, c.Description, c.Level, c.Duration, c.PriceCents, c.ImageURL, c.IsPublished, c.SortOrder,
+		c.IsPaid, c.MinPriceCents, c.ID,
 	)
 	return err
 }

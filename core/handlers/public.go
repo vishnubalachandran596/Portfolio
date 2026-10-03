@@ -364,7 +364,6 @@ type CourseDetailData struct {
 	RazorpayKeyID      string
 	PurchaseRequired   bool
 	HasAccess          bool
-	ResolvedCurrency   string
 	ResolvedMinCents   int
 	ResolvedMinWhole   int
 	ResolvedMinDisplay string
@@ -431,7 +430,7 @@ func (a *App) CourseDetail(w http.ResponseWriter, r *http.Request) {
 
 	base := a.baseFrom(r, pf, course.Title+" — "+a.Cfg.SiteName, course.Summary, "courses")
 
-	currency, minCents := course.RegionalPrice(base.Country)
+	minCents := course.MinPriceCents
 
 	a.View.Render(w, http.StatusOK, "course_detail", CourseDetailData{
 		BaseData:           base,
@@ -441,10 +440,9 @@ func (a *App) CourseDetail(w http.ResponseWriter, r *http.Request) {
 		RazorpayKeyID:      a.Razorpay.KeyID,
 		PurchaseRequired:   r.URL.Query().Get("purchase") == "required",
 		HasAccess:          hasAccess,
-		ResolvedCurrency:   currency,
 		ResolvedMinCents:   minCents,
 		ResolvedMinWhole:   minCents / 100,
-		ResolvedMinDisplay: models.FormatMoney(minCents, currency),
+		ResolvedMinDisplay: models.FormatMoney(minCents, models.CurrencyINR),
 		UserEmail:          userEmail,
 		HasQuiz:            quizCount > 0,
 		QuizPassPercent:    models.QuizPassPercent,

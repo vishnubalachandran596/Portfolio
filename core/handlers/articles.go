@@ -149,7 +149,7 @@ func (a *App) ArticleDetailPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	base := a.baseFrom(r, pf, article.Title+" — "+a.Cfg.SiteName, article.Summary, "articles")
-	currency := models.ContributionCurrency(base.Country, a.Cfg.CheckoutCurrency)
+	currency := models.CurrencyINR
 	a.View.Render(w, http.StatusOK, "article_detail", ArticleDetailData{
 		BaseData:           base,
 		Article:            article,

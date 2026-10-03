@@ -24,11 +24,7 @@
       </fieldset>
 
       <fieldset class="form-fieldset">
-        <legend>Course scope <span class="optional">(only used when "Courses" is selected above)</span></legend>
-        <label class="checkbox-label">
-          <input type="checkbox" name="applies_to_all_courses" {{if .Promo.AppliesToAllCourses}}checked{{end}}>
-          Applies to all courses
-        </label>
+        <legend>Course scope <span class="optional">(only used when "Courses" is selected above — leave every box below unchecked to allow any course)</span></legend>
         {{if .Courses}}
         <div class="promo-course-list">
           {{range .Courses}}
@@ -45,16 +41,31 @@
         <label>Discount (%)
           <input type="number" name="discount_percent" value="{{.Promo.DiscountPercent}}" min="1" max="100" required>
         </label>
-        <label>Max redemptions <span class="optional">0 = unlimited</span>
+        <label>Max total redemptions <span class="optional">0 = unlimited, across every account</span>
           <input type="number" name="max_redemptions" value="{{.Promo.MaxRedemptions}}" min="0">
         </label>
+        <label>Max redemptions per account <span class="optional">0 = unlimited; 1 = once per account (the usual choice)</span>
+          <input type="number" name="max_redemptions_per_user" value="{{.Promo.MaxRedemptionsPerUser}}" min="0" required>
+        </label>
       </div>
-      <label>Expires <span class="optional">required</span>
-        <input type="datetime-local" name="expires_at" value="{{.ExpiresAtValue}}" required>
-      </label>
+      <div class="form-row">
+        <label>Starts <span class="optional">required</span>
+          <input type="datetime-local" name="starts_at" value="{{.StartsAtValue}}" required>
+        </label>
+        <label>Expires <span class="optional">required</span>
+          <input type="datetime-local" name="expires_at" value="{{.ExpiresAtValue}}" required>
+        </label>
+      </div>
       <label class="checkbox-label">
         <input type="checkbox" name="is_active" {{if or .IsNew .Promo.IsActive}}checked{{end}}>
         Active
+      </label>
+      <label class="checkbox-label">
+        <input type="checkbox" name="is_public" {{if .Promo.IsPublic}}checked{{end}} {{if .AllowedEmailsText}}disabled{{end}}>
+        Public <span class="optional">scrolls in the sitewide promo banner to every visitor — forced off automatically below if you list any account emails</span>
+      </label>
+      <label>Restrict to specific accounts <span class="optional">optional — comma-separated email addresses; leaving this blank keeps the code open to anyone. A code with any email listed here is always private and never appears in the public banner, regardless of the Public checkbox above.</span>
+        <textarea name="allowed_emails" rows="2" placeholder="alice@example.com, bob@example.com">{{.AllowedEmailsText}}</textarea>
       </label>
 
       <div class="form-actions">

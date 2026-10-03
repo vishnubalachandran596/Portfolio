@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/vishnubalachandran596/portfolio/core/config"
-	"github.com/vishnubalachandran596/portfolio/core/geo"
 	"github.com/vishnubalachandran596/portfolio/core/middleware"
 	"github.com/vishnubalachandran596/portfolio/core/models"
 	"github.com/vishnubalachandran596/portfolio/core/notify"
@@ -76,7 +75,6 @@ type BaseData struct {
 	CanonicalURL        string
 	OGImageURL          string
 	Nav                 NavLinks
-	Country             string
 	IsLoggedIn          bool
 	IsAdmin             bool
 	IsUser              bool
@@ -86,6 +84,11 @@ type BaseData struct {
 	Notifications       []NotificationItem
 	UnreadNotifCount    int
 	AssetVersion        string
+	// PromoCodes is every currently active, public promo code — the
+	// source for the sitewide scrolling banner (promo_banner.html),
+	// rendered just below the header on every page. Empty renders no
+	// banner at all.
+	PromoCodes []models.PromoCode
 }
 
 // SubscribeFormData backs the shared subscribe_form partial embedded on
@@ -210,6 +213,7 @@ type basePrefetch struct {
 
 	userName      string
 	notifications []NotificationItem
+	promoCodes    []models.PromoCode
 }
 
 // startBase begins the lookups every page's chrome needs, for a handler
@@ -271,6 +275,17 @@ func (a *App) startBaseChrome(r *http.Request) *basePrefetch {
 			}()
 		}
 	}
+	// Best-effort, same as the notifications/profile lookups above: a
+	// missing banner on one request is a fine outcome, so this never
+	// fails the render.
+	ctx := r.Context()
+	pf.wg.Add(1)
+	go func() {
+		defer pf.wg.Done()
+		if codes, err := a.PromoCodes.ListActivePublic(ctx); err == nil {
+			pf.promoCodes = codes
+		}
+	}()
 	return pf
 }
 
@@ -325,7 +340,6 @@ func (a *App) baseFrom(r *http.Request, pf *basePrefetch, title, metaDescription
 			Refund:      a.pageURL(r, "/refund"),
 			Cookies:     a.pageURL(r, "/cookies"),
 		},
-		Country:             geo.CountryFromRequest(r),
 		IsLoggedIn:          pf.isUser || pf.isAdmin,
 		IsAdmin:             pf.isAdmin,
 		IsUser:              pf.isUser,
@@ -335,6 +349,7 @@ func (a *App) baseFrom(r *http.Request, pf *basePrefetch, title, metaDescription
 		Notifications:       pf.notifications,
 		UnreadNotifCount:    unreadCount,
 		AssetVersion:        web.AssetVersion,
+		PromoCodes:          pf.promoCodes,
 	}
 }
 

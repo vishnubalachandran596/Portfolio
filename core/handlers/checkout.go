@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/vishnubalachandran596/portfolio/core/authutil"
-	"github.com/vishnubalachandran596/portfolio/core/geo"
 	"github.com/vishnubalachandran596/portfolio/core/models"
 	"github.com/vishnubalachandran596/portfolio/core/repo"
 )
@@ -68,36 +67,18 @@ func (a *App) CheckoutCreateOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	email := user.Email
-	// Currency and the minimum floor are resolved server-side from the
-	// visitor's own detected region (never from anything the client
-	// sends) — India gets an INR minimum, everyone else the international
-	// one. This is the same signal used to render the page, so it always
-	// matches what the visitor was shown.
-	currency, minCents := course.RegionalPrice(geo.CountryFromRequest(r))
+	// Courses sell in INR only — see models.CurrencyINR.
+	currency, minCents := models.CurrencyINR, course.MinPriceCents
 
 	amountCents, _ := strconv.Atoi(r.FormValue("amount_cents"))
 	if amountCents < minCents {
 		amountCents = minCents
 	}
 
-	discountCents, promo, perr := a.resolvePromoCode(r.Context(), r.FormValue("promo_code"), models.PromoProductCourse, course.ID, amountCents)
+	discountCents, promo, perr := a.resolvePromoCode(r.Context(), r.FormValue("promo_code"), models.PromoProductCourse, course.ID, userID, email, amountCents)
 	if perr != nil {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "That promo code isn't valid."})
 		return
-	}
-	// Each promo code may be redeemed at most once per account, regardless
-	// of which course it's applied to or how many total redemptions it
-	// has left.
-	if promo != nil {
-		used, herr := a.Purchases.HasUserRedeemedPromo(r.Context(), userID, promo.ID)
-		if herr != nil {
-			a.serverError(w, "check promo redemption", herr)
-			return
-		}
-		if used {
-			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "You've already used this promo code."})
-			return
-		}
 	}
 	amountCents -= discountCents
 	if amountCents < 0 {

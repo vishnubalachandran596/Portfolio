@@ -22,7 +22,6 @@ type Config struct {
 
 	RazorpayKeyID     string
 	RazorpayKeySecret string
-	CheckoutCurrency  string
 
 	TelegramBotToken string
 	TelegramChatID   string
@@ -73,11 +72,6 @@ func Load() (*Config, error) {
 		siteName = "Vishnu Balachandran"
 	}
 
-	checkoutCurrency := getenv("CHECKOUT_CURRENCY")
-	if checkoutCurrency == "" {
-		checkoutCurrency = "USD"
-	}
-
 	return &Config{
 		Port:          port,
 		DatabaseURL:   dbURL,
@@ -92,7 +86,6 @@ func Load() (*Config, error) {
 
 		RazorpayKeyID:     getenv("RAZORPAY_KEY_ID"),
 		RazorpayKeySecret: getenv("RAZORPAY_KEY_SECRET"),
-		CheckoutCurrency:  checkoutCurrency,
 
 		TelegramBotToken: getenv("TELEGRAM_BOT_TOKEN"),
 		TelegramChatID:   getenv("TELEGRAM_CHAT_ID"),
