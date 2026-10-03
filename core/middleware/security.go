@@ -6,14 +6,16 @@ import "net/http"
 // response. The CSP allows 'unsafe-inline' for scripts/styles because the
 // site's own templates and injected lesson/article scripts rely on inline
 // <script>/<style> blocks — it still blocks any *other* origin from
-// injecting script or style, which is the actual XSS-mitigation value, and
-// explicitly allowlists the external origins the site really loads from
-// (Google Fonts, Razorpay's Checkout widget).
+// injecting script or style, which is the actual XSS-mitigation value.
+// Fonts are self-hosted (web/static/fonts/, see style.css) rather than
+// loaded from Google Fonts, so font-src/style-src need no external
+// allowance for them; Razorpay's Checkout widget is the one remaining
+// external origin the site actually loads from.
 func SecurityHeaders(next http.Handler) http.Handler {
 	const csp = "default-src 'self'; " +
 		"script-src 'self' 'unsafe-inline' https://checkout.razorpay.com; " +
-		"style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
-		"font-src 'self' https://fonts.gstatic.com; " +
+		"style-src 'self' 'unsafe-inline'; " +
+		"font-src 'self'; " +
 		"img-src 'self' data: https:; " +
 		"connect-src 'self' https://*.razorpay.com; " +
 		"frame-src 'self' https://*.razorpay.com; " +

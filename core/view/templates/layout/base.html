@@ -10,6 +10,12 @@
 <link rel="icon" href="/static/img/favicon.svg" type="image/svg+xml">
 <link rel="alternate icon" href="/static/img/favicon.ico">
 <link rel="apple-touch-icon" href="/static/img/apple-touch-icon.png">
+{{/* Montserrat 400 is the body-text weight every page renders at rest, so
+     it's the one font file worth the preload scanner picking up before
+     style.css is even parsed — the rest of the self-hosted weights (see
+     style.css) are still only fetched lazily, on the pages that actually
+     use them. */}}
+<link rel="preload" href="/static/fonts/montserrat-400.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/static/css/style.css?v={{.AssetVersion}}">
 
 <meta property="og:type" content="website">

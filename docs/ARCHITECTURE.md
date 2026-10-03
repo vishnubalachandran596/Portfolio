@@ -528,7 +528,7 @@ Optional (`DOMAIN` env var) subdomain-per-page-group scheme: `about.`, `courses.
 
 ## 10. Security posture
 
-- CSP + `X-Content-Type-Options: nosniff` + `X-Frame-Options: DENY` + `Referrer-Policy: strict-origin-when-cross-origin` on every response (`middleware.SecurityHeaders`). CSP allows `'unsafe-inline'` for script/style (templates and embedded course-content pages both rely on inline blocks) but restricts *external* origins to only Razorpay's checkout domain and Google Fonts. `frame-src` allows `'self'` and Razorpay Checkout.
+- CSP + `X-Content-Type-Options: nosniff` + `X-Frame-Options: DENY` + `Referrer-Policy: strict-origin-when-cross-origin` on every response (`middleware.SecurityHeaders`). CSP allows `'unsafe-inline'` for script/style (templates and embedded course-content pages both rely on inline blocks) but restricts *external* origins to only Razorpay's checkout domain — fonts are self-hosted (below), so `style-src`/`font-src` need no external allowance at all. `frame-src` allows `'self'` and Razorpay Checkout.
 - All payment confirmation is server-side HMAC verification (`Razorpay.VerifySignature`) — never trusts a client-reported "payment succeeded."
 - Admin and user sessions are fully independent JWTs in `HttpOnly`, `SameSite=Lax` cookies, `Secure` in production.
 - Course-content access is an opaque random 32-byte hex bearer token, not a guessable ID. The learn page is the site chrome; the lesson loads from a base64 payload in a unique-origin iframe, so the outer page source does not contain the lesson tags and the parent cannot read the lesson DOM. `vishnubalachandran.com` is drawn three times along the pane diagonal, corner to corner, only inside the renderer; copied text is stamped with the viewer's identity.
