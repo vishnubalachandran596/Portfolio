@@ -22,12 +22,20 @@ type Data struct {
 	Description string
 	AmountCents int
 	Currency    string
-	// PromoCode and DiscountCents are empty/zero when no promo code was
-	// applied. AmountCents above is always the amount actually paid
-	// (already net of the discount) — these two only add a visible line
-	// showing that a code was used and what it saved.
+	// PromoCode, PromoText, and DiscountCents are empty/zero when no promo
+	// code was applied. AmountCents above is always the amount actually
+	// paid (already net of the discount) — these only add visible lines
+	// showing that a code was used, what it said, and what it saved.
 	PromoCode     string
+	PromoText     string
 	DiscountCents int
+	// PaymentMethod and OrderID describe how the money actually moved —
+	// "Razorpay" with its order ID for a real payment, or "Free
+	// enrollment (no payment)" with no order ID for a $0/100%-off
+	// checkout, which never touches Razorpay at all (see
+	// CheckoutCreateOrder's amountCents == 0 branch).
+	PaymentMethod string
+	OrderID       string
 	PaymentID     string
 	SiteName      string
 	IssuerName    string
@@ -67,6 +75,12 @@ func Generate(d Data) ([]byte, error) {
 	row("Receipt No.", d.ReceiptNo)
 	row("Date", d.IssuedAt.Format("Jan 2, 2006"))
 	row("Billed to", d.PayerEmail)
+	if d.PaymentMethod != "" {
+		row("Payment method", d.PaymentMethod)
+	}
+	if d.OrderID != "" {
+		row("Order ID", d.OrderID)
+	}
 	if d.PaymentID != "" {
 		row("Payment ID", d.PaymentID)
 	}
@@ -95,6 +109,12 @@ func Generate(d Data) ([]byte, error) {
 		pdf.SetTextColor(100, 100, 100)
 		pdf.CellFormat(contentW-35, 6, "Promo code applied: "+d.PromoCode, "", 0, "L", false, 0, "")
 		pdf.CellFormat(35, 6, "-"+formatMoney(d.DiscountCents, d.Currency), "", 1, "R", false, 0, "")
+		if d.PromoText != "" {
+			pdf.Ln(5.5)
+			pdf.SetFont("Helvetica", "I", 9)
+			pdf.SetTextColor(130, 130, 130)
+			pdf.MultiCell(contentW, 5, d.PromoText, "", "L", false)
+		}
 	}
 	pdf.Ln(4)
 

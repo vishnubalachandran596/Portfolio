@@ -45,7 +45,7 @@ func (a *App) CourseLearn(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ok, watermark := a.courseAccess(w, r, course)
+	ok, watermark, _ := a.courseAccess(w, r, course)
 	if !ok {
 		http.Redirect(w, r, "/courses/"+slug+"?purchase=required", http.StatusSeeOther)
 		return

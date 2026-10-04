@@ -103,6 +103,10 @@ func (a *App) CheckoutCreateOrder(w http.ResponseWriter, r *http.Request) {
 	if promo != nil {
 		purchase.PromoCodeID = &promo.ID
 		purchase.PromoCode = promo.Code
+		purchase.PromoText = promo.BannerText
+		if purchase.PromoText == "" {
+			purchase.PromoText = promo.Description
+		}
 	}
 
 	// A $0 course (the default — every course is "contribute as you like")
@@ -243,9 +247,13 @@ func (a *App) CheckoutVerify(w http.ResponseWriter, r *http.Request) {
 // ?token= query param — set as a cookie immediately so it isn't needed
 // again). watermark identifies who's viewing, for the copy-deterrent
 // watermark on the served content.
-func (a *App) courseAccess(w http.ResponseWriter, r *http.Request, course models.Course) (ok bool, watermark string) {
+// courseAccess's third return value is the purchase's own ID (0 when
+// access isn't backed by a real purchase row, e.g. admin preview) — the
+// course detail page uses it to link straight to that purchase's
+// printable receipt.
+func (a *App) courseAccess(w http.ResponseWriter, r *http.Request, course models.Course) (ok bool, watermark string, purchaseID int64) {
 	if a.Auth.IsAuthenticated(r) && !a.isPreviewingAsVisitor(r) {
-		return true, "Admin preview"
+		return true, "Admin preview", 0
 	}
 
 	token := r.URL.Query().Get("token")
@@ -256,12 +264,12 @@ func (a *App) courseAccess(w http.ResponseWriter, r *http.Request, course models
 		}
 	}
 	if token == "" {
-		return false, ""
+		return false, "", 0
 	}
 
 	purchase, err := a.Purchases.GetPaidByAccessToken(r.Context(), token)
 	if err != nil || purchase.CourseID != course.ID {
-		return false, ""
+		return false, "", 0
 	}
 
 	if fromQuery {
@@ -275,5 +283,5 @@ func (a *App) courseAccess(w http.ResponseWriter, r *http.Request, course models
 			Expires:  time.Now().AddDate(2, 0, 0),
 		})
 	}
-	return true, purchase.Email
+	return true, purchase.Email, purchase.ID
 }

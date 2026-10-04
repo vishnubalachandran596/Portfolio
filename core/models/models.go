@@ -516,9 +516,14 @@ type Purchase struct {
 	AccessToken       string
 	PromoCodeID       *int64
 	PromoCode         string
-	DiscountCents     int
-	CreatedAt         time.Time
-	PaidAt            *time.Time
+	// PromoText is a snapshot of the promo code's own BannerText (or
+	// Description, if no banner text was set) taken at redemption time,
+	// so the receipt always shows what the code actually said back then
+	// even if the code is later edited or deleted.
+	PromoText     string
+	DiscountCents int
+	CreatedAt     time.Time
+	PaidAt        *time.Time
 }
 
 const (
@@ -538,9 +543,14 @@ const (
 // code with AllowedEmails set always forces IsPublic false, regardless of
 // what the admin form submitted — see AdminPromoSave.
 type PromoCode struct {
-	ID              int64
-	Code            string
-	Description     string
+	ID          int64
+	Code        string
+	Description string
+	// BannerText, when set, is shown verbatim in the sitewide promo
+	// banner instead of the auto-generated "Use code X for Y% off —
+	// Description" line — e.g. "First course free using promocode
+	// WELCOMEVB on signup". Empty keeps the auto-generated line.
+	BannerText      string
 	Product         string // PromoProductCourse | PromoProductConsultancy
 	DiscountPercent int
 	CourseIDs       []int64

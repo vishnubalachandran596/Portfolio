@@ -270,6 +270,17 @@ func (a *App) AccountPurchaseReceipt(w http.ResponseWriter, r *http.Request) {
 		issuedAt = *p.PaidAt
 	}
 
+	// A $0/100%-off checkout never touches Razorpay at all (see
+	// CheckoutCreateOrder's amountCents == 0 branch) — RazorpayPaymentID
+	// is only ever set once a real Razorpay payment is verified, so its
+	// presence is a reliable way to tell the two apart on the receipt.
+	paymentMethod := "Free enrollment (no payment)"
+	orderID := ""
+	if p.RazorpayPaymentID != "" {
+		paymentMethod = "Razorpay"
+		orderID = p.RazorpayOrderID
+	}
+
 	pdfBytes, err := receipt.Generate(receipt.Data{
 		ReceiptNo:     receipt.ReceiptNoForPurchase(p.ID),
 		IssuedAt:      issuedAt,
@@ -278,7 +289,10 @@ func (a *App) AccountPurchaseReceipt(w http.ResponseWriter, r *http.Request) {
 		AmountCents:   p.AmountCents,
 		Currency:      p.Currency,
 		PromoCode:     p.PromoCode,
+		PromoText:     p.PromoText,
 		DiscountCents: p.DiscountCents,
+		PaymentMethod: paymentMethod,
+		OrderID:       orderID,
 		PaymentID:     p.RazorpayPaymentID,
 		SiteName:      a.Cfg.SiteName,
 		IssuerName:    a.issuerName(ctx),

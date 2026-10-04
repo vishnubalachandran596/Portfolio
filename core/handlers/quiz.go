@@ -47,7 +47,7 @@ func (a *App) quizCourseAndAccess(w http.ResponseWriter, r *http.Request) (cours
 		a.NotFound(w, r)
 		return models.Course{}, false
 	}
-	hasAccess, _ := a.courseAccess(w, r, course)
+	hasAccess, _, _ := a.courseAccess(w, r, course)
 	if !hasAccess {
 		http.Redirect(w, r, "/courses/"+slug+"?purchase=required", http.StatusSeeOther)
 		return models.Course{}, false

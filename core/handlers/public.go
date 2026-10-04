@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -358,12 +359,16 @@ func (a *App) CoursesList(w http.ResponseWriter, r *http.Request) {
 
 type CourseDetailData struct {
 	BaseData
-	Course             models.Course
-	JSONLD             template.JS
-	PaymentsEnabled    bool
-	RazorpayKeyID      string
-	PurchaseRequired   bool
-	HasAccess          bool
+	Course           models.Course
+	JSONLD           template.JS
+	PaymentsEnabled  bool
+	RazorpayKeyID    string
+	PurchaseRequired bool
+	HasAccess        bool
+	// ReceiptURL is empty unless HasAccess is backed by a real purchase
+	// (not admin preview) — the course page's "Download Order Receipt"
+	// button only renders when it's set.
+	ReceiptURL         string
 	ResolvedMinCents   int
 	ResolvedMinWhole   int
 	ResolvedMinDisplay string
@@ -420,8 +425,13 @@ func (a *App) CourseDetail(w http.ResponseWriter, r *http.Request) {
 	g2, g2ctx := errgroup.WithContext(ctx)
 	g2.Go(func() (err error) { quizCount, err = a.QuizQuestions.CountByCourse(g2ctx, course.ID); return })
 	hasAccess := false
+	receiptURL := ""
 	if course.IsPaid {
-		hasAccess, _ = a.courseAccess(w, r, course)
+		var purchaseID int64
+		hasAccess, _, purchaseID = a.courseAccess(w, r, course)
+		if purchaseID != 0 {
+			receiptURL = "/account/purchases/" + strconv.FormatInt(purchaseID, 10) + "/receipt.pdf"
+		}
 	}
 	if err := g2.Wait(); err != nil {
 		a.serverError(w, "load quiz count", err)
@@ -440,6 +450,7 @@ func (a *App) CourseDetail(w http.ResponseWriter, r *http.Request) {
 		RazorpayKeyID:      a.Razorpay.KeyID,
 		PurchaseRequired:   r.URL.Query().Get("purchase") == "required",
 		HasAccess:          hasAccess,
+		ReceiptURL:         receiptURL,
 		ResolvedMinCents:   minCents,
 		ResolvedMinWhole:   minCents / 100,
 		ResolvedMinDisplay: models.FormatMoney(minCents, models.CurrencyINR),

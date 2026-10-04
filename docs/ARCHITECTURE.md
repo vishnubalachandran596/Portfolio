@@ -285,6 +285,7 @@ erDiagram
         text access_token UK "bearer token unlocking /learn"
         bigint promo_code_id FK "nullable"
         text promo_code
+        text promo_text "snapshot of the promo code's BannerText/Description at redemption time, for the receipt; migration 063"
         int discount_cents
         timestamptz created_at
         timestamptz paid_at
@@ -374,6 +375,7 @@ erDiagram
         bigserial id PK
         text code UK
         text description
+        text banner_text "optional override for the public banner's copy; migration 063"
         text product "course | consultancy"
         int discount_percent
         int max_redemptions "0 = unlimited, total across every account"

@@ -12,14 +12,14 @@ type PurchaseRepo struct{ db *sql.DB }
 
 func NewPurchaseRepo(db *sql.DB) *PurchaseRepo { return &PurchaseRepo{db: db} }
 
-const purchaseColumns = `id, course_id, user_id, email, amount_cents, currency, status, razorpay_order_id, razorpay_payment_id, access_token, promo_code_id, promo_code, discount_cents, created_at, paid_at`
+const purchaseColumns = `id, course_id, user_id, email, amount_cents, currency, status, razorpay_order_id, razorpay_payment_id, access_token, promo_code_id, promo_code, promo_text, discount_cents, created_at, paid_at`
 
 func scanPurchase(row interface{ Scan(...any) error }) (models.Purchase, error) {
 	var p models.Purchase
 	var userID sql.NullInt64
 	var promoCodeID sql.NullInt64
 	err := row.Scan(&p.ID, &p.CourseID, &userID, &p.Email, &p.AmountCents, &p.Currency, &p.Status,
-		&p.RazorpayOrderID, &p.RazorpayPaymentID, &p.AccessToken, &promoCodeID, &p.PromoCode, &p.DiscountCents,
+		&p.RazorpayOrderID, &p.RazorpayPaymentID, &p.AccessToken, &promoCodeID, &p.PromoCode, &p.PromoText, &p.DiscountCents,
 		&p.CreatedAt, &p.PaidAt)
 	p.UserID = userID.Int64
 	if promoCodeID.Valid {
@@ -41,10 +41,10 @@ func (r *PurchaseRepo) Create(ctx context.Context, p models.Purchase) (int64, er
 		promoCodeID = *p.PromoCodeID
 	}
 	err := r.db.QueryRowContext(ctx, `
-		INSERT INTO purchases (course_id, user_id, email, amount_cents, currency, status, razorpay_order_id, access_token, promo_code_id, promo_code, discount_cents)
-		VALUES ($1,$2,$3,$4,$5,'created',$6,$7,$8,$9,$10) RETURNING id`,
+		INSERT INTO purchases (course_id, user_id, email, amount_cents, currency, status, razorpay_order_id, access_token, promo_code_id, promo_code, promo_text, discount_cents)
+		VALUES ($1,$2,$3,$4,$5,'created',$6,$7,$8,$9,$10,$11) RETURNING id`,
 		p.CourseID, userID, p.Email, p.AmountCents, p.Currency, p.RazorpayOrderID, p.AccessToken,
-		promoCodeID, p.PromoCode, p.DiscountCents,
+		promoCodeID, p.PromoCode, p.PromoText, p.DiscountCents,
 	).Scan(&id)
 	return id, err
 }

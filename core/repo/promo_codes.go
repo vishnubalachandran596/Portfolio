@@ -17,12 +17,12 @@ func NewPromoCodeRepo(db *sql.DB) *PromoCodeRepo { return &PromoCodeRepo{db: db}
 // existing one (the UNIQUE constraint on promo_codes.code).
 var ErrDuplicateCode = errors.New("promo code already exists")
 
-const promoCodeColumns = `id, code, description, product, discount_percent, max_redemptions, max_redemptions_per_user, redemption_count, starts_at, expires_at, is_active, is_public, allowed_emails, created_at`
+const promoCodeColumns = `id, code, description, banner_text, product, discount_percent, max_redemptions, max_redemptions_per_user, redemption_count, starts_at, expires_at, is_active, is_public, allowed_emails, created_at`
 
 func scanPromoCode(row interface{ Scan(...any) error }) (models.PromoCode, error) {
 	var p models.PromoCode
 	var allowedEmails string
-	err := row.Scan(&p.ID, &p.Code, &p.Description, &p.Product, &p.DiscountPercent,
+	err := row.Scan(&p.ID, &p.Code, &p.Description, &p.BannerText, &p.Product, &p.DiscountPercent,
 		&p.MaxRedemptions, &p.MaxRedemptionsPerUser, &p.RedemptionCount, &p.StartsAt, &p.ExpiresAt,
 		&p.IsActive, &p.IsPublic, &allowedEmails, &p.CreatedAt)
 	p.AllowedEmails = splitEmails(allowedEmails)
@@ -163,9 +163,9 @@ func (r *PromoCodeRepo) Create(ctx context.Context, p models.PromoCode) (int64, 
 
 	var id int64
 	err = tx.QueryRowContext(ctx, `
-		INSERT INTO promo_codes (code, description, product, discount_percent, max_redemptions, max_redemptions_per_user, starts_at, expires_at, is_active, is_public, allowed_emails)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING id`,
-		strings.ToUpper(strings.TrimSpace(p.Code)), p.Description, p.Product, p.DiscountPercent,
+		INSERT INTO promo_codes (code, description, banner_text, product, discount_percent, max_redemptions, max_redemptions_per_user, starts_at, expires_at, is_active, is_public, allowed_emails)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING id`,
+		strings.ToUpper(strings.TrimSpace(p.Code)), p.Description, p.BannerText, p.Product, p.DiscountPercent,
 		p.MaxRedemptions, p.MaxRedemptionsPerUser, p.StartsAt, p.ExpiresAt, p.IsActive, p.IsPublic, joinEmails(p.AllowedEmails),
 	).Scan(&id)
 	if err != nil {
@@ -188,11 +188,11 @@ func (r *PromoCodeRepo) Update(ctx context.Context, p models.PromoCode) error {
 	defer tx.Rollback()
 
 	res, err := tx.ExecContext(ctx, `
-		UPDATE promo_codes SET code=$1, description=$2, product=$3, discount_percent=$4,
-			max_redemptions=$5, max_redemptions_per_user=$6, starts_at=$7, expires_at=$8, is_active=$9,
-			is_public=$10, allowed_emails=$11
-		WHERE id=$12`,
-		strings.ToUpper(strings.TrimSpace(p.Code)), p.Description, p.Product, p.DiscountPercent,
+		UPDATE promo_codes SET code=$1, description=$2, banner_text=$3, product=$4, discount_percent=$5,
+			max_redemptions=$6, max_redemptions_per_user=$7, starts_at=$8, expires_at=$9, is_active=$10,
+			is_public=$11, allowed_emails=$12
+		WHERE id=$13`,
+		strings.ToUpper(strings.TrimSpace(p.Code)), p.Description, p.BannerText, p.Product, p.DiscountPercent,
 		p.MaxRedemptions, p.MaxRedemptionsPerUser, p.StartsAt, p.ExpiresAt, p.IsActive,
 		p.IsPublic, joinEmails(p.AllowedEmails), p.ID,
 	)

@@ -25,8 +25,9 @@
       <div class="hero-actions">
         <a class="btn btn-primary" href="/courses/{{.Course.Slug}}/learn">Open Course</a>
         {{if .HasQuiz}}<a class="btn btn-secondary" href="/courses/{{.Course.Slug}}/quiz">Take the Final Quiz</a>{{end}}
+        {{if .ReceiptURL}}<a class="btn btn-secondary" href="{{.ReceiptURL}}">Download Order Receipt</a>{{end}}
       </div>
-      {{if .UserEmail}}<p class="purchase-box-sub">Paid? <a href="/account#courses">Download your printable receipt</a> — it shows your email, the course, what you paid, and any promo code applied — then contact me to redeem your free consultation.</p>{{end}}
+      {{if .ReceiptURL}}<p class="purchase-box-sub">Your receipt shows your email, the course, what you paid, and any promo code applied — if you paid, send it to me to redeem your free consultation.</p>{{end}}
       {{else}}
       <div class="purchase-box" id="purchase-box">
         <p class="purchase-box-title">Get access</p>

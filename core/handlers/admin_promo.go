@@ -148,6 +148,7 @@ func (a *App) AdminPromoSave(w http.ResponseWriter, r *http.Request) {
 		ID:                    id,
 		Code:                  strings.ToUpper(strings.TrimSpace(r.FormValue("code"))),
 		Description:           strings.TrimSpace(r.FormValue("description")),
+		BannerText:            strings.TrimSpace(r.FormValue("banner_text")),
 		Product:               product,
 		DiscountPercent:       discountPercent,
 		CourseIDs:             courseIDs,
