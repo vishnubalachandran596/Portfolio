@@ -20,11 +20,13 @@
 
     {{if .Course.IsPaid}}
       {{if .PurchaseRequired}}<div class="alert alert-error">Get access below to continue — it only takes a moment.</div>{{end}}
+      <p class="course-detail-note">Every paid purchase (not a free/promo enrollment) includes a <strong>free 1-hour consultation call</strong> — after paying, contact me on <a href="{{.Nav.Contact}}">LinkedIn or email</a> with a screenshot of your order to redeem it.</p>
       {{if .HasAccess}}
       <div class="hero-actions">
         <a class="btn btn-primary" href="/courses/{{.Course.Slug}}/learn">Open Course</a>
         {{if .HasQuiz}}<a class="btn btn-secondary" href="/courses/{{.Course.Slug}}/quiz">Take the Final Quiz</a>{{end}}
       </div>
+      {{if .UserEmail}}<p class="purchase-box-sub">Paid? <a href="/account#courses">Download your printable receipt</a> — it shows your email, the course, what you paid, and any promo code applied — then contact me to redeem your free consultation.</p>{{end}}
       {{else}}
       <div class="purchase-box" id="purchase-box">
         <p class="purchase-box-title">Get access</p>

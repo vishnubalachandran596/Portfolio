@@ -271,15 +271,17 @@ func (a *App) AccountPurchaseReceipt(w http.ResponseWriter, r *http.Request) {
 	}
 
 	pdfBytes, err := receipt.Generate(receipt.Data{
-		ReceiptNo:   receipt.ReceiptNoForPurchase(p.ID),
-		IssuedAt:    issuedAt,
-		PayerEmail:  p.Email,
-		Description: "Course: " + course.Title,
-		AmountCents: p.AmountCents,
-		Currency:    p.Currency,
-		PaymentID:   p.RazorpayPaymentID,
-		SiteName:    a.Cfg.SiteName,
-		IssuerName:  a.issuerName(ctx),
+		ReceiptNo:     receipt.ReceiptNoForPurchase(p.ID),
+		IssuedAt:      issuedAt,
+		PayerEmail:    p.Email,
+		Description:   "Course: " + course.Title,
+		AmountCents:   p.AmountCents,
+		Currency:      p.Currency,
+		PromoCode:     p.PromoCode,
+		DiscountCents: p.DiscountCents,
+		PaymentID:     p.RazorpayPaymentID,
+		SiteName:      a.Cfg.SiteName,
+		IssuerName:    a.issuerName(ctx),
 	})
 	if err != nil {
 		a.serverError(w, "generate receipt", err)

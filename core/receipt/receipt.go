@@ -22,9 +22,15 @@ type Data struct {
 	Description string
 	AmountCents int
 	Currency    string
-	PaymentID   string
-	SiteName    string
-	IssuerName  string
+	// PromoCode and DiscountCents are empty/zero when no promo code was
+	// applied. AmountCents above is always the amount actually paid
+	// (already net of the discount) — these two only add a visible line
+	// showing that a code was used and what it saved.
+	PromoCode     string
+	DiscountCents int
+	PaymentID     string
+	SiteName      string
+	IssuerName    string
 }
 
 // Generate renders the receipt and returns the PDF bytes.
@@ -82,6 +88,14 @@ func Generate(d Data) ([]byte, error) {
 	pdf.SetTextColor(30, 30, 30)
 	pdf.CellFormat(contentW-35, 6.5, d.Description, "", 0, "L", false, 0, "")
 	pdf.CellFormat(35, 6.5, formatMoney(d.AmountCents, d.Currency), "", 1, "R", false, 0, "")
+
+	if d.PromoCode != "" {
+		pdf.Ln(6.5)
+		pdf.SetFont("Helvetica", "", 9.5)
+		pdf.SetTextColor(100, 100, 100)
+		pdf.CellFormat(contentW-35, 6, "Promo code applied: "+d.PromoCode, "", 0, "L", false, 0, "")
+		pdf.CellFormat(35, 6, "-"+formatMoney(d.DiscountCents, d.Currency), "", 1, "R", false, 0, "")
+	}
 	pdf.Ln(4)
 
 	y = pdf.GetY()
@@ -96,7 +110,7 @@ func Generate(d Data) ([]byte, error) {
 
 	pdf.SetFont("Helvetica", "I", 8.5)
 	pdf.SetTextColor(140, 140, 140)
-	pdf.MultiCell(contentW, 4.5, "This is a receipt of payment received, not a formal tax invoice. Payment processed and verified via Razorpay.", "", "L", false)
+	pdf.MultiCell(contentW, 4.5, "This is a receipt of payment received, not a formal tax invoice. Payment processed and verified via Razorpay. A paid course purchase includes a free 1-hour consultation call -- send this receipt via LinkedIn or email to redeem it.", "", "L", false)
 
 	var buf bytes.Buffer
 	if err := pdf.Output(&buf); err != nil {
