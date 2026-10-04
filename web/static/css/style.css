@@ -2251,7 +2251,7 @@ input:focus, textarea:focus, select:focus {
 .btn[data-loading-text][aria-busy="true"] { opacity: 0.75; pointer-events: none; }
 
 /* ---------------------------------------------------------------------
-   Promo code running banner (WELCOMEVB)
+   Promo code running banner
 --------------------------------------------------------------------- */
 .promo-banner {
   background: var(--color-accent);

@@ -82,7 +82,7 @@ func Generate(d Data) ([]byte, error) {
 		row("Order ID", d.OrderID)
 	}
 	if d.PaymentID != "" {
-		row("Payment ID", d.PaymentID)
+		row("Razorpay Transaction ID", d.PaymentID)
 	}
 	pdf.Ln(6)
 

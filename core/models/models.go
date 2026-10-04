@@ -212,8 +212,8 @@ const CurrencyINR = "INR"
 
 // PriceDisplay renders the price as a human string. Every paid course
 // carries a real, industry-level INR minimum (set via the admin form)
-// rather than a voluntary contribution. The WELCOMEVB promo code, not a
-// $0 default, is the free-access path — see the promo banner partial.
+// rather than a voluntary contribution. An active promo code, not a $0
+// default, is the free-access path — see the promo banner partial.
 func (c Course) PriceDisplay() string {
 	if c.IsPaid {
 		if c.MinPriceCents <= 0 {
@@ -548,8 +548,8 @@ type PromoCode struct {
 	Description string
 	// BannerText, when set, is shown verbatim in the sitewide promo
 	// banner instead of the auto-generated "Use code X for Y% off —
-	// Description" line — e.g. "First course free using promocode
-	// WELCOMEVB on signup". Empty keeps the auto-generated line.
+	// Description" line — e.g. "First course free using promocode X
+	// on signup". Empty keeps the auto-generated line.
 	BannerText      string
 	Product         string // PromoProductCourse | PromoProductConsultancy
 	DiscountPercent int

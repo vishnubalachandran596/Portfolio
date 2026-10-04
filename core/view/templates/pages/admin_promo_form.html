@@ -64,7 +64,7 @@
         <input type="checkbox" name="is_public" {{if .Promo.IsPublic}}checked{{end}} {{if .AllowedEmailsText}}disabled{{end}}>
         Public <span class="optional">scrolls in the sitewide promo banner to every visitor — forced off automatically below if you list any account emails</span>
       </label>
-      <label>Banner text <span class="optional">optional — overrides the auto-generated "Use code X for Y% off" line in the public banner, e.g. "First course free using promocode WELCOMEVB on signup". Only shown when Public is checked.</span>
+      <label>Banner text <span class="optional">optional — overrides the auto-generated "Use code X for Y% off" line in the public banner, e.g. "First course free using promocode LAUNCH25 on signup". Only shown when Public is checked.</span>
         <input type="text" name="banner_text" value="{{.Promo.BannerText}}">
       </label>
       <label>Restrict to specific accounts <span class="optional">optional — comma-separated email addresses; leaving this blank keeps the code open to anyone. A code with any email listed here is always private and never appears in the public banner, regardless of the Public checkbox above.</span>
