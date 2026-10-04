@@ -9,6 +9,7 @@
     <div class="course-detail-meta">
       <span>{{.Course.PriceDisplay}}</span>
       {{if .Course.Duration}}<span>· {{.Course.Duration}}</span>{{end}}
+      {{if gt .ReviewCount 0}}<span>· {{.ReviewCount}} rating{{if ne .ReviewCount 1}}s{{end}}</span>{{end}}
     </div>
 
     {{if .HasQuiz}}
@@ -28,6 +29,30 @@
         {{if .ReceiptURL}}<a class="btn btn-secondary" href="{{.ReceiptURL}}">Download Order Receipt</a>{{end}}
       </div>
       {{if .ReceiptURL}}<p class="purchase-box-sub">Your receipt shows your email, the course, what you paid, and any promo code applied — if you paid, send it to me to redeem your free consultation.</p>{{end}}
+      {{if .CanReview}}
+      <div class="purchase-box" id="review-box">
+        <p class="purchase-box-title">{{if .MyReview}}Update your review{{else}}Rate this course{{end}}</p>
+        <p class="purchase-box-sub">Private — only visible to me. The public page only ever shows the total number of ratings, never the score or comment.</p>
+        {{if .ReviewSaved}}<div class="alert alert-success">Thanks — your review was saved.</div>{{end}}
+        {{if .ReviewInvalid}}<div class="alert alert-error">Pick a star rating from 1 to 5.</div>{{end}}
+        <form method="POST" action="/courses/{{.Course.Slug}}/review">
+          <label>Rating
+            <select name="rating" required>
+              <option value="">Choose a rating</option>
+              <option value="5" {{if and .MyReview (eq .MyReview.Rating 5)}}selected{{end}}>★★★★★ (5 — excellent)</option>
+              <option value="4" {{if and .MyReview (eq .MyReview.Rating 4)}}selected{{end}}>★★★★☆ (4 — good)</option>
+              <option value="3" {{if and .MyReview (eq .MyReview.Rating 3)}}selected{{end}}>★★★☆☆ (3 — okay)</option>
+              <option value="2" {{if and .MyReview (eq .MyReview.Rating 2)}}selected{{end}}>★★☆☆☆ (2 — poor)</option>
+              <option value="1" {{if and .MyReview (eq .MyReview.Rating 1)}}selected{{end}}>★☆☆☆☆ (1 — very poor)</option>
+            </select>
+          </label>
+          <label>Comment <span class="optional">optional, just for me</span>
+            <textarea name="comment" rows="3">{{if .MyReview}}{{.MyReview.Comment}}{{end}}</textarea>
+          </label>
+          <button type="submit" class="btn btn-secondary" data-loading-text="Saving…">{{if .MyReview}}Update Review{{else}}Submit Review{{end}}</button>
+        </form>
+      </div>
+      {{end}}
       {{else}}
       <div class="purchase-box" id="purchase-box">
         <p class="purchase-box-title">Get access</p>

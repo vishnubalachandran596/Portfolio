@@ -246,6 +246,16 @@ erDiagram
         timestamptz created_at
         note "Postgres trigger fans this out to admin_messages for every paid buyer"
     }
+    course_reviews {
+        bigserial id PK
+        bigint course_id FK
+        bigint user_id FK
+        int rating "1-5, CHECK constraint"
+        text comment
+        timestamptz created_at
+        timestamptz updated_at
+        note "UNIQUE(course_id, user_id); rating/comment are admin-only (GET /admin/courses/{id}/reviews) -- the public course page shows only the row count"
+    }
     quiz_questions {
         bigserial id PK
         bigint course_id FK
@@ -450,6 +460,7 @@ Handler files, by area:
 | `booking_reschedule.go` | Both admin- and self-service booking reschedule flows |
 | `learn.go` | Gated course content serving inside the site chrome + watermark injection |
 | `quiz.go` | Quiz taking, scoring, certificate download |
+| `course_reviews.go` | Verified-buyer review submit (private rating/comment) + its admin-only list view |
 | `auth.go` | Login page, Google OAuth start/callback, logout |
 | `legal.go` | Generic static legal-page handler factory |
 | `seo.go` | `baseURL`/`pageURL` helpers, Sitemap, Robots, LLMsTxt, IndexNow key + submit, Search |

@@ -234,6 +234,23 @@ func (c Course) MinPriceDisplay() string { return FormatMoney(c.MinPriceCents, C
 // for use as a numeric HTML input attribute.
 func (c Course) MinPriceWhole() int { return c.MinPriceCents / 100 }
 
+// CourseReview is a verified buyer's 1-5 star rating plus an optional
+// written comment, one per account per course. The rating/comment is
+// never shown publicly — only the total count of reviews a course has
+// is (CourseReviewRepo.CountByCourse). The content itself is readable
+// only from the admin course page.
+type CourseReview struct {
+	ID            int64
+	CourseID      int64
+	UserID        int64
+	Rating        int
+	Comment       string
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
+	ReviewerEmail string // joined in for the admin view only; empty otherwise
+	ReviewerName  string
+}
+
 func FormatMoney(cents int, currency string) string {
 	symbol := "$"
 	switch currency {

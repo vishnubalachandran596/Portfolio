@@ -55,6 +55,7 @@ type App struct {
 	ArticleContributions *repo.ArticleContributionRepo
 	ContactMessages      *repo.ContactMessageRepo
 	Subscribers          *repo.SubscriberRepo
+	CourseReviews        *repo.CourseReviewRepo
 	CourseStorage        *storage.Client
 
 	Razorpay *payments.Razorpay
@@ -171,6 +172,7 @@ func New(cfg *config.Config, db *sql.DB, renderer *view.Renderer) *App {
 		ArticleContributions: repo.NewArticleContributionRepo(db),
 		ContactMessages:      repo.NewContactMessageRepo(db),
 		Subscribers:          repo.NewSubscriberRepo(db),
+		CourseReviews:        repo.NewCourseReviewRepo(db),
 		CourseStorage:        storage.New(cfg),
 		Razorpay:             payments.NewRazorpay(cfg.RazorpayKeyID, cfg.RazorpayKeySecret),
 		Telegram:             notify.NewTelegram(cfg.TelegramBotToken, cfg.TelegramChatID),

@@ -379,6 +379,16 @@ type CourseDetailData struct {
 	// threshold advertised on the detail page can't drift from the one
 	// actually enforced.
 	QuizPassPercent int
+	// ReviewCount is the only review data ever shown publicly — never the
+	// rating value or comment text (that's admin-only, see
+	// AdminCourseReviewsListData).
+	ReviewCount int
+	// CanReview mirrors "has a real purchase" (same condition as
+	// ReceiptURL being set) — admin preview never counts as a buyer.
+	CanReview     bool
+	MyReview      *models.CourseReview
+	ReviewSaved   bool
+	ReviewInvalid bool
 }
 
 func (a *App) CourseDetail(w http.ResponseWriter, r *http.Request) {
@@ -392,9 +402,10 @@ func (a *App) CourseDetail(w http.ResponseWriter, r *http.Request) {
 		course    models.Course
 		userEmail string
 	)
+	uid, loggedIn := a.Auth.UserID(r)
 	g, gctx := errgroup.WithContext(ctx)
 	g.Go(func() (err error) { course, err = a.Courses.GetBySlug(gctx, slug); return })
-	if uid, ok := a.Auth.UserID(r); ok {
+	if loggedIn {
 		g.Go(func() error {
 			// Best-effort: a missing email only costs the checkout form a
 			// prefill, so it must not fail the page.
@@ -421,9 +432,21 @@ func (a *App) CourseDetail(w http.ResponseWriter, r *http.Request) {
 	// Wave two: the two lookups that genuinely need the course row. The
 	// access check stays on this goroutine because it sets the access
 	// cookie, and only one goroutine may touch the response headers.
-	var quizCount int
+	var quizCount, reviewCount int
+	var myReview *models.CourseReview
 	g2, g2ctx := errgroup.WithContext(ctx)
 	g2.Go(func() (err error) { quizCount, err = a.QuizQuestions.CountByCourse(g2ctx, course.ID); return })
+	g2.Go(func() (err error) { reviewCount, err = a.CourseReviews.CountByCourse(g2ctx, course.ID); return })
+	if loggedIn {
+		g2.Go(func() error {
+			// Best-effort: a buyer's own review prefilling the form is a
+			// nice-to-have, not something that should fail the page.
+			if rev, err := a.CourseReviews.GetByUserAndCourse(g2ctx, course.ID, uid); err == nil {
+				myReview = &rev
+			}
+			return nil
+		})
+	}
 	hasAccess := false
 	receiptURL := ""
 	if course.IsPaid {
@@ -457,6 +480,11 @@ func (a *App) CourseDetail(w http.ResponseWriter, r *http.Request) {
 		UserEmail:          userEmail,
 		HasQuiz:            quizCount > 0,
 		QuizPassPercent:    models.QuizPassPercent,
+		ReviewCount:        reviewCount,
+		CanReview:          receiptURL != "",
+		MyReview:           myReview,
+		ReviewSaved:        r.URL.Query().Get("reviewed") == "1",
+		ReviewInvalid:      r.URL.Query().Get("review_error") == "1",
 	})
 }
 

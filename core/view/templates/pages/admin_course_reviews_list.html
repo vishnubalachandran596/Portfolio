@@ -1,0 +1,26 @@
+{{define "content"}}
+<section class="section">
+  <div class="container">
+    <p class="eyebrow"><a href="/admin/courses">← Courses</a></p>
+    <h1>Reviews — {{.Course.Title}}</h1>
+    <p class="section-lead">Private — never shown to the public. The course page only shows the total count ({{len .Reviews}} right now).</p>
+    {{if .Reviews}}
+    <table class="admin-table">
+      <thead><tr><th>Rating</th><th>Comment</th><th>Reviewer</th><th>Date</th></tr></thead>
+      <tbody>
+        {{range .Reviews}}
+        <tr>
+          <td>{{.Rating}} / 5</td>
+          <td>{{.Comment}}</td>
+          <td>{{.ReviewerName}}{{if .ReviewerEmail}} ({{.ReviewerEmail}}){{end}}</td>
+          <td>{{formatDate .CreatedAt}}</td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+    {{else}}
+    <p class="empty-state">No reviews yet.</p>
+    {{end}}
+  </div>
+</section>
+{{end}}

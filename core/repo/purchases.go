@@ -131,6 +131,19 @@ func (r *PurchaseRepo) ListByUserID(ctx context.Context, userID int64) ([]models
 	return out, rows.Err()
 }
 
+// HasPaidPurchase reports whether an account has a paid purchase for a
+// given course — any amount, including a free/100%-off enrollment, since
+// a "purchases" row (not the amount) is what makes someone a buyer. Used
+// to gate the course review form to verified buyers only.
+func (r *PurchaseRepo) HasPaidPurchase(ctx context.Context, userID, courseID int64) (bool, error) {
+	var exists bool
+	err := r.db.QueryRowContext(ctx,
+		`SELECT EXISTS(SELECT 1 FROM purchases WHERE user_id = $1 AND course_id = $2 AND status = 'paid')`,
+		userID, courseID,
+	).Scan(&exists)
+	return exists, err
+}
+
 // CountUserRedemptions returns how many paid (or free, which is recorded
 // as paid — see CheckoutCreateOrder) purchases this account already has
 // against this promo code, checked against the code's own configurable
