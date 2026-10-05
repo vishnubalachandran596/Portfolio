@@ -44,7 +44,7 @@ type Client struct {
 func New(apiKey string) *Client {
 	return &Client{
 		apiKey:     apiKey,
-		chatModel:  "meta/llama-3.1-8b-instruct",
+		chatModel:  "nvidia/nemotron-3.5-lightning-30b-a3b",
 		embedModel: "nvidia/nemotron-3-embed-1b",
 		httpClient: &http.Client{Timeout: 30 * time.Second},
 	}
@@ -103,10 +103,11 @@ type chatMessage struct {
 }
 
 type chatRequest struct {
-	Model       string        `json:"model"`
-	Messages    []chatMessage `json:"messages"`
-	Temperature float64       `json:"temperature"`
-	MaxTokens   int           `json:"max_tokens"`
+	Model              string          `json:"model"`
+	Messages           []chatMessage   `json:"messages"`
+	Temperature        float64         `json:"temperature"`
+	MaxTokens          int             `json:"max_tokens"`
+	ChatTemplateKwargs map[string]bool `json:"chat_template_kwargs"`
 }
 
 type chatResponse struct {
@@ -128,6 +129,14 @@ func (c *Client) Chat(ctx context.Context, systemPrompt, userMessage string) (st
 		},
 		Temperature: 0.2,
 		MaxTokens:   600,
+		// nemotron-3.5-lightning is a hybrid-reasoning model: without this,
+		// it spends the entire token budget on an internal chain-of-thought
+		// trace on anything longer than a trivial prompt (confirmed against
+		// the live endpoint -- a RAG-length system prompt filled all 600
+		// tokens with reasoning and left Content empty, finish_reason
+		// "length"), never reaching the actual answer. This forces straight
+		// to a final answer.
+		ChatTemplateKwargs: map[string]bool{"thinking": false},
 	})
 	if err != nil {
 		return "", err
