@@ -46,6 +46,7 @@ func (a *App) Routes() http.Handler {
 	mux.HandleFunc("POST /contact", a.ContactSubmit)
 	mux.HandleFunc("POST /subscribe", a.NewsletterSubscribe)
 	mux.Handle("POST /chat", noindex(http.HandlerFunc(a.Chat)))
+	mux.Handle("POST /api/chatbot/reindex", noindex(http.HandlerFunc(a.APIChatbotReindex)))
 	mux.Handle("GET /search", noindex(http.HandlerFunc(a.Search)))
 	mux.Handle("GET /account", noindex(a.Auth.RequireUser(http.HandlerFunc(a.AccountPage))))
 	mux.Handle("GET /account/bookings/{id}/receipt.pdf", a.Auth.RequireUser(http.HandlerFunc(a.AccountBookingReceipt)))

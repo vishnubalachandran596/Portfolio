@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"crypto/subtle"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -222,7 +223,7 @@ type AdminChatbotPageData struct {
 	BaseData
 	Enabled    bool
 	ChunkCount int
-	Rebuilt    bool
+	Started    bool
 }
 
 func (a *App) AdminChatbotPage(w http.ResponseWriter, r *http.Request) {
@@ -231,7 +232,7 @@ func (a *App) AdminChatbotPage(w http.ResponseWriter, r *http.Request) {
 		BaseData:   a.base(r, "AI Chatbot — Admin", "", ""),
 		Enabled:    a.Nvidia.Enabled(),
 		ChunkCount: count,
-		Rebuilt:    r.URL.Query().Get("rebuilt") == "1",
+		Started:    r.URL.Query().Get("started") == "1",
 	})
 }
 
@@ -240,17 +241,41 @@ func (a *App) AdminChatbotPage(w http.ResponseWriter, r *http.Request) {
 // see triggerChatbotReindex -- this exists for a first build, recovery
 // after an embedding-model swap (a new model needs the whole corpus
 // re-embedded, not just what changed), or whenever an admin wants to
-// confirm it ran.
+// force one. Fires in the background and redirects immediately rather
+// than blocking the admin's browser on a full corpus re-embed (which can
+// take well over Vercel's request timeout as the content grows) -- same
+// fire-and-forget pattern as triggerChatbotReindex.
 func (a *App) AdminChatbotReindex(w http.ResponseWriter, r *http.Request) {
+	a.triggerChatbotReindex()
+	http.Redirect(w, r, "/admin/chatbot?started=1", http.StatusSeeOther)
+}
+
+// APIChatbotReindex is a bearer-token-gated version of the same trigger,
+// for a coding agent (not a logged-in admin) that has just edited course
+// or article content directly -- a new/edited/deleted row in Postgres, or
+// a new/replaced/removed HTML file in Supabase Storage -- bypassing the
+// admin UI's own save/delete handlers, which already call
+// triggerChatbotReindex themselves. Disabled (404) until
+// CHATBOT_REINDEX_TOKEN is configured, and the token must match exactly;
+// POST-only, and does no work beyond firing the same background job the
+// admin button does.
+func (a *App) APIChatbotReindex(w http.ResponseWriter, r *http.Request) {
+	token := a.Cfg.ChatbotReindexToken
+	if token == "" {
+		http.NotFound(w, r)
+		return
+	}
+	got := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
+	if subtle.ConstantTimeCompare([]byte(got), []byte(token)) != 1 {
+		writeJSON(w, http.StatusUnauthorized, chatResponseBody{Error: "invalid or missing bearer token"})
+		return
+	}
 	if !a.Nvidia.Enabled() {
-		http.Redirect(w, r, "/admin/chatbot", http.StatusSeeOther)
+		writeJSON(w, http.StatusServiceUnavailable, chatResponseBody{Error: "chatbot isn't configured (NVIDIA_API_KEY unset)"})
 		return
 	}
-	if err := a.RebuildChatbotIndex(r.Context()); err != nil {
-		a.serverError(w, "chatbot reindex", err)
-		return
-	}
-	http.Redirect(w, r, "/admin/chatbot?rebuilt=1", http.StatusSeeOther)
+	a.triggerChatbotReindex()
+	writeJSON(w, http.StatusAccepted, chatResponseBody{Reply: "reindex started"})
 }
 
 // RebuildChatbotIndex rebuilds the entire chatbot index from the site's

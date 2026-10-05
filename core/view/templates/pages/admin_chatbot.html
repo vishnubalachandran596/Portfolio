@@ -5,13 +5,14 @@
     {{if not .Enabled}}
     <p class="empty-state">NVIDIA_API_KEY isn't configured yet -- the chatbot widget stays hidden on the public site until it is.</p>
     {{else}}
-    {{if .Rebuilt}}<p class="alert alert-success">Index rebuilt.</p>{{end}}
+    {{if .Started}}<p class="alert alert-success">Reindex started in the background -- refresh this page in a minute or two to see the updated chunk count.</p>{{end}}
     <p>The chatbot answers visitor questions using a RAG index built from the profile, skills, experience, education, courses, and articles currently in the database.</p>
     <p><strong>{{.ChunkCount}}</strong> chunk{{if ne .ChunkCount 1}}s{{end}} currently indexed.</p>
     <form method="POST" action="/admin/chatbot/reindex">
       <button type="submit" class="btn btn-primary">Rebuild Index</button>
     </form>
-    <p class="empty-state">Rebuild after editing your profile, skills, experience, education, course content, or articles -- the chatbot only knows what was indexed as of the last rebuild.</p>
+    <p class="empty-state">Saving or deleting a course or article already rebuilds this index automatically. Use this button after editing your profile, skills, experience, or education (which don't auto-trigger it), after swapping the underlying AI model, or any time you want to force a fresh rebuild.</p>
+    <p class="empty-state">A coding agent that edits content directly in Supabase can trigger the same rebuild via <code>POST /api/chatbot/reindex</code> with an <code>Authorization: Bearer &lt;CHATBOT_REINDEX_TOKEN&gt;</code> header, without an admin login.</p>
     {{end}}
   </div>
 </section>

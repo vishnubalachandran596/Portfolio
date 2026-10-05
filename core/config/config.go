@@ -49,6 +49,14 @@ type Config struct {
 	// chatbot's embeddings and chat completion. The chatbot stays disabled
 	// (hidden widget) until it is set -- see core/ai.Client.Enabled().
 	NvidiaAPIKey string
+
+	// ChatbotReindexToken gates POST /api/chatbot/reindex -- a bearer-token
+	// endpoint for triggering a full chatbot reindex without an admin
+	// browser session, for a coding agent that edits course/article content
+	// directly in Supabase (DB rows or Storage objects) rather than through
+	// the admin UI's own save/delete handlers, which already auto-reindex.
+	// The endpoint is disabled (404) until this is set.
+	ChatbotReindexToken string
 }
 
 func Load() (*Config, error) {
@@ -108,6 +116,8 @@ func Load() (*Config, error) {
 		LocalContentDir: getenv("LOCAL_CONTENT_DIR"),
 
 		NvidiaAPIKey: getenv("NVIDIA_API_KEY"),
+
+		ChatbotReindexToken: getenv("CHATBOT_REINDEX_TOKEN"),
 	}, nil
 }
 
