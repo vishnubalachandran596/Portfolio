@@ -22,10 +22,15 @@ type Client struct {
 	httpClient *http.Client
 }
 
-// New builds a client. chatModel is a fast instruction-tuned model well
-// suited to short, grounded RAG answers within NVIDIA's free-tier rate
-// limit; embedModel is nemotron-3-embed-1b, the model chatbot_chunks
-// .embedding's column dimension (2048, see migration 069) is sized for.
+// New builds a client. chatModel is openai/gpt-oss-20b -- OpenAI's open-
+// weight model, chosen over NVIDIA's own nemotron-3.5-lightning because
+// its hybrid-reasoning API shape (a separate reasoning_content field on
+// the message, distinct from content) is the same across every provider
+// that hosts gpt-oss (NVIDIA NIM, Groq, OpenRouter, Fireworks, ...), not
+// a NVIDIA-specific request flag -- the most portable free-tier choice
+// if this ever needs to move off NVIDIA. embedModel is nemotron-3-embed
+// -1b, the model chatbot_chunks.embedding's column dimension (2048, see
+// migration 069) is sized for.
 //
 // NVIDIA retires NIM-hosted models on a rolling basis with no advance
 // code-level warning -- nv-embed-v1 AND its apparent same-generation
@@ -44,7 +49,7 @@ type Client struct {
 func New(apiKey string) *Client {
 	return &Client{
 		apiKey:     apiKey,
-		chatModel:  "nvidia/nemotron-3.5-lightning-30b-a3b",
+		chatModel:  "openai/gpt-oss-20b",
 		embedModel: "nvidia/nemotron-3-embed-1b",
 		httpClient: &http.Client{Timeout: 30 * time.Second},
 	}
@@ -103,16 +108,21 @@ type chatMessage struct {
 }
 
 type chatRequest struct {
-	Model              string          `json:"model"`
-	Messages           []chatMessage   `json:"messages"`
-	Temperature        float64         `json:"temperature"`
-	MaxTokens          int             `json:"max_tokens"`
-	ChatTemplateKwargs map[string]bool `json:"chat_template_kwargs"`
+	Model           string        `json:"model"`
+	Messages        []chatMessage `json:"messages"`
+	Temperature     float64       `json:"temperature"`
+	MaxTokens       int           `json:"max_tokens"`
+	ReasoningEffort string        `json:"reasoning_effort"`
 }
 
 type chatResponse struct {
 	Choices []struct {
-		Message chatMessage `json:"message"`
+		Message struct {
+			Content string `json:"content"`
+			// ReasoningContent carries gpt-oss's internal chain-of-thought,
+			// separate from Content -- see the comment on Chat() below.
+			ReasoningContent string `json:"reasoning_content"`
+		} `json:"message"`
 	} `json:"choices"`
 	Detail string `json:"detail"`
 }
@@ -128,15 +138,16 @@ func (c *Client) Chat(ctx context.Context, systemPrompt, userMessage string) (st
 			{Role: "user", Content: userMessage},
 		},
 		Temperature: 0.2,
-		MaxTokens:   600,
-		// nemotron-3.5-lightning is a hybrid-reasoning model: without this,
-		// it spends the entire token budget on an internal chain-of-thought
-		// trace on anything longer than a trivial prompt (confirmed against
-		// the live endpoint -- a RAG-length system prompt filled all 600
-		// tokens with reasoning and left Content empty, finish_reason
-		// "length"), never reaching the actual answer. This forces straight
-		// to a final answer.
-		ChatTemplateKwargs: map[string]bool{"thinking": false},
+		MaxTokens:   900,
+		// gpt-oss-20b is a hybrid-reasoning model: it returns its internal
+		// chain-of-thought in a separate reasoning_content field rather
+		// than mixing it into Content (unlike nemotron, which needed a
+		// vendor-specific chat_template_kwargs flag to suppress it
+		// entirely). reasoning_effort still bounds how many of MaxTokens
+		// go to that trace before the model has to commit to an answer --
+		// "low" keeps enough budget free that a RAG-length prompt doesn't
+		// exhaust MaxTokens before Content is written.
+		ReasoningEffort: "low",
 	})
 	if err != nil {
 		return "", err
