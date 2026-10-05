@@ -262,7 +262,16 @@ type ChatbotChunk struct {
 	Title      string
 	URL        string
 	ChunkText  string
-	CreatedAt  time.Time
+	// IsGated marks a chunk whose content is only answerable to a visitor
+	// who has unlocked SourceID's course (a paid course's lesson body) --
+	// see ChatbotChunkRepo.Search. False for everything else.
+	IsGated   bool
+	CreatedAt time.Time
+	// Distance is pgvector's cosine distance from the query embedding,
+	// populated only on a Search result (never stored) -- the signal the
+	// chat handler's relevance gate uses to decide whether a question is
+	// in scope before paying for a full generation call.
+	Distance float64
 }
 
 func FormatMoney(cents int, currency string) string {

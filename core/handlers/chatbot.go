@@ -20,6 +20,20 @@ const (
 	chatbotTopK          = 5
 	chatbotChunkMaxChars = 1000
 	chatbotEmbedBatch    = 16
+
+	// chatbotRelevanceThreshold is the cosine-distance cutoff (0 =
+	// identical, 2 = opposite) the top retrieved chunk must beat for a
+	// question to count as "about Vishnu, his courses, or his articles."
+	// This is the intent classifier: it costs nothing beyond the
+	// embedding call already made for retrieval (no extra request, no
+	// extra tokens), and it runs *before* the expensive, context-stuffed
+	// generation call -- an off-topic question never reaches the LLM at
+	// all, which is the whole point: cut token spend and keep the bot on
+	// its one job instead of answering general-knowledge questions. A
+	// starting value tuned by hand, not measured against a labeled set --
+	// revisit if real traffic shows it too strict (relevant questions
+	// getting declined) or too loose (off-topic ones getting answered).
+	chatbotRelevanceThreshold = 0.75
 )
 
 // chatbotSessionID identifies an anonymous chat widget session so the
@@ -44,6 +58,26 @@ func (a *App) chatbotSessionID(w http.ResponseWriter, r *http.Request) string {
 		Expires:  time.Now().Add(365 * 24 * time.Hour),
 	})
 	return sid
+}
+
+// unlockedCourseIDs returns the paid course IDs a signed-in visitor has
+// actually bought -- the chatbot answers from a gated lesson's content
+// only for those, the same rule /courses/{slug}/learn enforces. A
+// signed-out visitor (most chat traffic) gets an empty, non-nil slice.
+func (a *App) unlockedCourseIDs(ctx context.Context, r *http.Request) []int64 {
+	uid, ok := a.Auth.UserID(r)
+	if !ok {
+		return []int64{}
+	}
+	purchases, err := a.Purchases.ListPaidByUserID(ctx, uid)
+	if err != nil {
+		return []int64{}
+	}
+	ids := make([]int64, len(purchases))
+	for i, p := range purchases {
+		ids[i] = p.CourseID
+	}
+	return ids
 }
 
 type chatRequestBody struct {
@@ -97,15 +131,30 @@ func (a *App) Chat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	unlockedCourseIDs := a.unlockedCourseIDs(ctx, r)
+
 	embeddings, err := a.Nvidia.Embed(ctx, []string{message}, "query")
 	if err != nil || len(embeddings) == 0 {
 		a.serverError(w, "chatbot embed question", err)
 		return
 	}
 
-	chunks, err := a.ChatbotChunks.Search(ctx, embeddings[0], chatbotTopK)
+	chunks, err := a.ChatbotChunks.Search(ctx, embeddings[0], chatbotTopK, unlockedCourseIDs)
 	if err != nil {
 		a.serverError(w, "chatbot search", err)
+		return
+	}
+
+	// Intent gate: if even the closest indexed chunk isn't a good match
+	// for this question, nothing relevant to retrieve means nothing
+	// grounded to answer with -- decline without spending a generation
+	// call's tokens, rather than letting the LLM improvise from its own
+	// training data (which is exactly the hallucination risk RAG exists
+	// to avoid).
+	if len(chunks) == 0 || chunks[0].Distance > chatbotRelevanceThreshold {
+		writeJSON(w, http.StatusOK, chatResponseBody{
+			Reply: "I can only answer questions about Vishnu's background, skills, experience, courses, and articles. Try asking something more specific, or use the Contact page for anything else.",
+		})
 		return
 	}
 
@@ -278,8 +327,13 @@ func (a *App) gatherChatbotChunks(ctx context.Context) []models.ChatbotChunk {
 			}
 			if c.ContentObject != "" {
 				if body, err := a.readStorageText(ctx, c.ContentObject); err == nil {
+					// A paid course's lesson body is the exact content
+					// /courses/{slug}/learn paywalls -- gate it the same
+					// way here, or the chatbot becomes a free side-channel
+					// around that paywall. A free course has nothing to
+					// gate: its lesson is already open to everyone.
 					for _, piece := range chunkText(body, chatbotChunkMaxChars) {
-						chunks = append(chunks, models.ChatbotChunk{SourceType: "course", SourceID: c.ID, Title: "Course lesson: " + c.Title, URL: url, ChunkText: piece})
+						chunks = append(chunks, models.ChatbotChunk{SourceType: "course", SourceID: c.ID, Title: "Course lesson: " + c.Title, URL: url, ChunkText: piece, IsGated: c.IsPaid})
 					}
 				}
 			}

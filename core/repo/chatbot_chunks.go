@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/lib/pq"
 	"github.com/vishnubalachandran596/portfolio/core/models"
 )
 
@@ -48,15 +49,15 @@ func (r *ChatbotChunkRepo) ReplaceAll(ctx context.Context, chunks []models.Chatb
 	}
 
 	stmt, err := tx.PrepareContext(ctx, `
-		INSERT INTO chatbot_chunks (source_type, source_id, title, url, chunk_text, embedding)
-		VALUES ($1,$2,$3,$4,$5,$6::vector)`)
+		INSERT INTO chatbot_chunks (source_type, source_id, title, url, chunk_text, is_gated, embedding)
+		VALUES ($1,$2,$3,$4,$5,$6,$7::vector)`)
 	if err != nil {
 		return err
 	}
 	defer stmt.Close()
 
 	for i, c := range chunks {
-		if _, err := stmt.ExecContext(ctx, c.SourceType, c.SourceID, c.Title, c.URL, c.ChunkText, vectorLiteral(embeddings[i])); err != nil {
+		if _, err := stmt.ExecContext(ctx, c.SourceType, c.SourceID, c.Title, c.URL, c.ChunkText, c.IsGated, vectorLiteral(embeddings[i])); err != nil {
 			return err
 		}
 	}
@@ -74,13 +75,25 @@ func (r *ChatbotChunkRepo) Count(ctx context.Context) (int, error) {
 
 // Search returns the limit chunks whose embedding is closest (cosine
 // distance, pgvector's <=> operator) to queryEmbedding -- the chatbot's
-// retrieval step for one incoming question.
-func (r *ChatbotChunkRepo) Search(ctx context.Context, queryEmbedding []float32, limit int) ([]models.ChatbotChunk, error) {
+// retrieval step for one incoming question. A gated chunk (a paid
+// course's lesson content) is only eligible when its course is in
+// unlockedCourseIDs -- an anonymous or non-buyer asker passes an empty
+// slice, never nil, so `source_id = ANY($3)` compares against a real
+// empty array rather than SQL NULL (which would make every comparison
+// NULL, not false, and silently change nothing). Each returned chunk
+// carries its cosine distance from the query, which the caller uses as a
+// relevance gate before paying for a full generation call.
+func (r *ChatbotChunkRepo) Search(ctx context.Context, queryEmbedding []float32, limit int, unlockedCourseIDs []int64) ([]models.ChatbotChunk, error) {
+	if unlockedCourseIDs == nil {
+		unlockedCourseIDs = []int64{}
+	}
 	rows, err := r.db.QueryContext(ctx, `
-		SELECT id, source_type, source_id, title, url, chunk_text, created_at
+		SELECT id, source_type, source_id, title, url, chunk_text, is_gated, created_at,
+			embedding <=> $1::vector AS distance
 		FROM chatbot_chunks
-		ORDER BY embedding <=> $1::vector
-		LIMIT $2`, vectorLiteral(queryEmbedding), limit)
+		WHERE NOT is_gated OR source_id = ANY($3)
+		ORDER BY distance
+		LIMIT $2`, vectorLiteral(queryEmbedding), limit, pq.Array(unlockedCourseIDs))
 	if err != nil {
 		return nil, err
 	}
@@ -89,7 +102,7 @@ func (r *ChatbotChunkRepo) Search(ctx context.Context, queryEmbedding []float32,
 	var out []models.ChatbotChunk
 	for rows.Next() {
 		var c models.ChatbotChunk
-		if err := rows.Scan(&c.ID, &c.SourceType, &c.SourceID, &c.Title, &c.URL, &c.ChunkText, &c.CreatedAt); err != nil {
+		if err := rows.Scan(&c.ID, &c.SourceType, &c.SourceID, &c.Title, &c.URL, &c.ChunkText, &c.IsGated, &c.CreatedAt, &c.Distance); err != nil {
 			return nil, err
 		}
 		out = append(out, c)
