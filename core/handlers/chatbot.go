@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"log"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -94,6 +95,19 @@ func (a *App) unlockedCourseIDs(ctx context.Context, r *http.Request) []int64 {
 	return ids
 }
 
+// chatServerError logs the real failure (same format a.serverError uses)
+// but responds with the widget's own JSON shape rather than a.serverError's
+// plain-text body -- the client always calls response.json() on every
+// /chat response, success or failure, so a plain-text 500 fails that
+// parse and surfaces only a generic "something went wrong reaching the
+// chatbot" with the real cause visible nowhere but the server log. This
+// was the actual bug behind a NVIDIA model retirement (410 Gone) showing
+// up to visitors as an unexplained failure instead of a clear message.
+func chatServerError(w http.ResponseWriter, action string, err error) {
+	log.Printf("%s: %v", action, err)
+	writeJSON(w, http.StatusInternalServerError, chatResponseBody{Error: "The chatbot hit a problem answering that. Please try again in a moment."})
+}
+
 type chatRequestBody struct {
 	Message string `json:"message"`
 }
@@ -137,7 +151,7 @@ func (a *App) Chat(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	allowed, err := a.ChatbotRateLimits.IncrementAndCheck(ctx, sid, chatbotDailyLimit)
 	if err != nil {
-		a.serverError(w, "chatbot rate limit", err)
+		chatServerError(w, "chatbot rate limit", err)
 		return
 	}
 	if !allowed {
@@ -149,13 +163,13 @@ func (a *App) Chat(w http.ResponseWriter, r *http.Request) {
 
 	embeddings, err := a.Nvidia.Embed(ctx, []string{message}, "query")
 	if err != nil || len(embeddings) == 0 {
-		a.serverError(w, "chatbot embed question", err)
+		chatServerError(w, "chatbot embed question", err)
 		return
 	}
 
 	chunks, err := a.ChatbotChunks.Search(ctx, embeddings[0], chatbotTopK, unlockedCourseIDs)
 	if err != nil {
-		a.serverError(w, "chatbot search", err)
+		chatServerError(w, "chatbot search", err)
 		return
 	}
 
@@ -194,7 +208,7 @@ func (a *App) Chat(w http.ResponseWriter, r *http.Request) {
 
 	reply, err := a.Nvidia.Chat(ctx, systemPrompt, message)
 	if err != nil {
-		a.serverError(w, "chatbot completion", err)
+		chatServerError(w, "chatbot completion", err)
 		return
 	}
 

@@ -24,13 +24,21 @@ type Client struct {
 
 // New builds a client. chatModel is a fast instruction-tuned model well
 // suited to short, grounded RAG answers within NVIDIA's free-tier rate
-// limit; embedModel is nv-embed-v1, the model chatbot_chunks.embedding's
-// column dimension (4096, see migration 065) is sized for.
+// limit; embedModel is nv-embedqa-e5-v5, the model chatbot_chunks.embedding's
+// column dimension (1024, see migration 068) is sized for.
+//
+// NVIDIA retires NIM-hosted models on a rolling basis (nv-embed-v1, this
+// client's original embedModel, returned HTTP 410 Gone on 2026-10-05 --
+// see migration 068's comment) with no advance code-level warning. A
+// production 500 here surfaces in Vercel's runtime logs as "chatbot embed
+// question: nvidia api /embeddings: status 410/404: ..." -- if that
+// recurs, the fix is checking https://build.nvidia.com/nim?q=embed for
+// the model's current replacement, not assuming the code is broken.
 func New(apiKey string) *Client {
 	return &Client{
 		apiKey:     apiKey,
 		chatModel:  "meta/llama-3.1-8b-instruct",
-		embedModel: "nvidia/nv-embed-v1",
+		embedModel: "nvidia/nv-embedqa-e5-v5",
 		httpClient: &http.Client{Timeout: 30 * time.Second},
 	}
 }
