@@ -11,7 +11,10 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
+
+	"golang.org/x/sync/errgroup"
 
 	"github.com/vishnubalachandran596/portfolio/core/authutil"
 	"github.com/vishnubalachandran596/portfolio/core/models"
@@ -22,7 +25,26 @@ const (
 	chatbotDailyLimit    = 30
 	chatbotTopK          = 5
 	chatbotChunkMaxChars = 1000
-	chatbotEmbedBatch    = 16
+	// chatbotEmbedBatch is how many chunks go into one NVIDIA embeddings
+	// call. RebuildChatbotIndex runs synchronously within an HTTP
+	// request (see its own comment for why), so fewer, larger batches
+	// directly shrink how much of vercel.json's maxDuration a reindex
+	// spends on network round trips rather than actual work.
+	chatbotEmbedBatch = 32
+	// chatbotMaxBodyChars caps how much of one course lesson's or
+	// article's plain-text body gets embedded, applied before chunking.
+	// Discovered necessary empirically: one course's lesson HTML alone
+	// is over 800KB (the rest average 30-135KB), and with 9 published
+	// courses and 12 articles, embedding every chunk of every source in
+	// full pushed a single RebuildChatbotIndex well past 60 seconds and
+	// into a FUNCTION_INVOCATION_TIMEOUT -- which, unlike the "fire-and
+	// -forget never completes" bug this replaced, would have made every
+	// single course/article save fail outright, since a save always
+	// triggers a full reindex. 15 chunks (~15,000 characters) is still
+	// far more than enough grounding for a RAG answer about any one
+	// course or article; the chatbot doesn't need the whole lesson,
+	// just enough of it to answer "what does this course cover."
+	chatbotMaxBodyChars = chatbotChunkMaxChars * 15
 
 	// chatbotRelevanceThreshold is the cosine-distance cutoff (0 =
 	// identical, 2 = opposite) the top retrieved chunk must beat for a
@@ -361,6 +383,21 @@ func stripHTML(s string) string {
 	return strings.Join(strings.Fields(s), " ")
 }
 
+// truncateChars caps s at maxChars, cutting on a word boundary rather
+// than mid-word -- used to bound how much of one lesson/article body
+// gets embedded (see chatbotMaxBodyChars) regardless of how long the
+// source file is.
+func truncateChars(s string, maxChars int) string {
+	if len(s) <= maxChars {
+		return s
+	}
+	cut := strings.LastIndexByte(s[:maxChars], ' ')
+	if cut <= 0 {
+		cut = maxChars
+	}
+	return s[:cut]
+}
+
 // chunkText splits plain text into pieces no longer than maxChars,
 // breaking on paragraph/sentence boundaries where possible so each chunk
 // stays a coherent, self-contained passage for retrieval.
@@ -429,6 +466,19 @@ func (a *App) gatherChatbotChunks(ctx context.Context) []models.ChatbotChunk {
 	}
 
 	if courses, err := a.Courses.ListPublished(ctx); err == nil {
+		paths := make([]string, 0, len(courses))
+		for _, c := range courses {
+			if c.ContentObject != "" {
+				paths = append(paths, c.ContentObject)
+			}
+		}
+		// Every course's lesson body is an independent Storage read --
+		// fetched concurrently (bounded) rather than one at a time, since
+		// RebuildChatbotIndex now runs synchronously within an HTTP
+		// request and each sequential round trip eats into
+		// vercel.json's maxDuration for no reason (CLAUDE.md §3).
+		bodies := a.fetchStorageBodies(ctx, paths)
+
 		for _, c := range courses {
 			url := "/courses/" + c.Slug
 			text := c.Title + ". " + c.Summary + ". " + c.Description + ". Level: " + c.Level + ". Duration: " + c.Duration + ". Price: " + priceSummary(c)
@@ -443,32 +493,36 @@ func (a *App) gatherChatbotChunks(ctx context.Context) []models.ChatbotChunk {
 			for _, piece := range chunkText(text, chatbotChunkMaxChars) {
 				chunks = append(chunks, models.ChatbotChunk{SourceType: "course", SourceID: c.ID, Title: "Course: " + c.Title, URL: url, ChunkText: piece})
 			}
-			if c.ContentObject != "" {
-				if body, err := a.readStorageText(ctx, c.ContentObject); err == nil {
-					// A paid course's lesson body is the exact content
-					// /courses/{slug}/learn paywalls -- gate it the same
-					// way here, or the chatbot becomes a free side-channel
-					// around that paywall. A free course has nothing to
-					// gate: its lesson is already open to everyone.
-					for _, piece := range chunkText(body, chatbotChunkMaxChars) {
-						chunks = append(chunks, models.ChatbotChunk{SourceType: "course", SourceID: c.ID, Title: "Course lesson: " + c.Title, URL: url, ChunkText: piece, IsGated: c.IsPaid})
-					}
+			if body, ok := bodies[c.ContentObject]; ok {
+				// A paid course's lesson body is the exact content
+				// /courses/{slug}/learn paywalls -- gate it the same
+				// way here, or the chatbot becomes a free side-channel
+				// around that paywall. A free course has nothing to
+				// gate: its lesson is already open to everyone.
+				for _, piece := range chunkText(truncateChars(body, chatbotMaxBodyChars), chatbotChunkMaxChars) {
+					chunks = append(chunks, models.ChatbotChunk{SourceType: "course", SourceID: c.ID, Title: "Course lesson: " + c.Title, URL: url, ChunkText: piece, IsGated: c.IsPaid})
 				}
 			}
 		}
 	}
 
 	if articles, err := a.Articles.ListPublished(ctx, 1000); err == nil {
+		paths := make([]string, 0, len(articles))
+		for _, art := range articles {
+			if art.ContentObject != "" {
+				paths = append(paths, art.ContentObject)
+			}
+		}
+		bodies := a.fetchStorageBodies(ctx, paths)
+
 		for _, art := range articles {
 			url := "/articles/" + art.Slug
 			text := art.Title + ". " + art.Summary
 			body := art.Body
-			if art.ContentObject != "" {
-				if fetched, err := a.readStorageText(ctx, art.ContentObject); err == nil {
-					body = fetched
-				}
+			if fetched, ok := bodies[art.ContentObject]; ok {
+				body = fetched
 			}
-			text += ". " + stripHTML(body)
+			text += ". " + truncateChars(stripHTML(body), chatbotMaxBodyChars)
 			for _, piece := range chunkText(text, chatbotChunkMaxChars) {
 				chunks = append(chunks, models.ChatbotChunk{SourceType: "article", SourceID: art.ID, Title: "Article: " + art.Title, URL: url, ChunkText: piece})
 			}
@@ -476,6 +530,36 @@ func (a *App) gatherChatbotChunks(ctx context.Context) []models.ChatbotChunk {
 	}
 
 	return chunks
+}
+
+// fetchStorageBodies reads several Storage objects concurrently (bounded
+// to 5 at a time) and returns a path -> plain-text body map, skipping any
+// path that fails to read -- these are independent lookups (CLAUDE.md
+// §3), and since RebuildChatbotIndex now runs synchronously within an
+// HTTP request (see its own comment), reading N lesson/article bodies
+// one at a time would waste N round trips' worth of latency against
+// vercel.json's maxDuration for no reason. CourseStorage's own access
+// token is cached behind a mutex (core/storage/client.go), so concurrent
+// calls are safe.
+func (a *App) fetchStorageBodies(ctx context.Context, paths []string) map[string]string {
+	out := make(map[string]string, len(paths))
+	var mu sync.Mutex
+	g, gctx := errgroup.WithContext(ctx)
+	g.SetLimit(5)
+	for _, p := range paths {
+		g.Go(func() error {
+			text, err := a.readStorageText(gctx, p)
+			if err != nil {
+				return nil
+			}
+			mu.Lock()
+			out[p] = text
+			mu.Unlock()
+			return nil
+		})
+	}
+	_ = g.Wait()
+	return out
 }
 
 func (a *App) readStorageText(ctx context.Context, path string) (string, error) {
