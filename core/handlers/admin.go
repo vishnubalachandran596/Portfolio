@@ -386,6 +386,7 @@ func (a *App) AdminCourseSave(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	a.triggerChatbotReindex()
 	http.Redirect(w, r, "/admin/courses", http.StatusSeeOther)
 }
 
@@ -404,6 +405,7 @@ func (a *App) AdminCourseDelete(w http.ResponseWriter, r *http.Request) {
 		a.serverError(w, "delete course", err)
 		return
 	}
+	a.triggerChatbotReindex()
 	http.Redirect(w, r, "/admin/courses", http.StatusSeeOther)
 }
 

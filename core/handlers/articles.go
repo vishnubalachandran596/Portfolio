@@ -512,6 +512,7 @@ func (a *App) AdminArticleSave(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	a.triggerChatbotReindex()
 	http.Redirect(w, r, "/admin/articles", http.StatusSeeOther)
 }
 
@@ -586,5 +587,6 @@ func (a *App) AdminArticleDelete(w http.ResponseWriter, r *http.Request) {
 		a.serverError(w, "delete article", err)
 		return
 	}
+	a.triggerChatbotReindex()
 	http.Redirect(w, r, "/admin/articles", http.StatusSeeOther)
 }

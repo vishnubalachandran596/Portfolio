@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -234,18 +235,31 @@ func (a *App) AdminChatbotPage(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// AdminChatbotReindex rebuilds the entire chatbot index from the site's
-// current content (profile, skills, experience, education, courses,
-// articles). It's a full replace rather than an incremental update --
-// simpler and safer for a corpus this small, and it's the only way stale
-// chunks for since-edited or deleted content get cleaned up.
+// AdminChatbotReindex is the manual "Rebuild Index" button on
+// /admin/chatbot. Most of the time the index stays current on its own --
+// see triggerChatbotReindex -- this exists for a first build, recovery
+// after an embedding-model swap (a new model needs the whole corpus
+// re-embedded, not just what changed), or whenever an admin wants to
+// confirm it ran.
 func (a *App) AdminChatbotReindex(w http.ResponseWriter, r *http.Request) {
 	if !a.Nvidia.Enabled() {
 		http.Redirect(w, r, "/admin/chatbot", http.StatusSeeOther)
 		return
 	}
-	ctx := r.Context()
+	if err := a.RebuildChatbotIndex(r.Context()); err != nil {
+		a.serverError(w, "chatbot reindex", err)
+		return
+	}
+	http.Redirect(w, r, "/admin/chatbot?rebuilt=1", http.StatusSeeOther)
+}
 
+// RebuildChatbotIndex rebuilds the entire chatbot index from the site's
+// current content (profile, skills, experience, education, courses,
+// articles). It's a full replace rather than an incremental update --
+// simpler and safer for a corpus this small, and it's the only way stale
+// chunks for since-edited or deleted content get cleaned up (a deleted
+// course just stops being gathered, so its chunks don't come back).
+func (a *App) RebuildChatbotIndex(ctx context.Context) error {
 	chunks := a.gatherChatbotChunks(ctx)
 
 	texts := make([]string, len(chunks))
@@ -258,18 +272,35 @@ func (a *App) AdminChatbotReindex(w http.ResponseWriter, r *http.Request) {
 		end := min(start+chatbotEmbedBatch, len(texts))
 		batch, err := a.Nvidia.Embed(ctx, texts[start:end], "passage")
 		if err != nil {
-			a.serverError(w, "chatbot reindex embed", err)
-			return
+			return fmt.Errorf("embed: %w", err)
 		}
 		embeddings = append(embeddings, batch...)
 	}
 
 	if err := a.ChatbotChunks.ReplaceAll(ctx, chunks, embeddings); err != nil {
-		a.serverError(w, "chatbot reindex replace", err)
+		return fmt.Errorf("replace: %w", err)
+	}
+	return nil
+}
+
+// triggerChatbotReindex fires RebuildChatbotIndex in the background after
+// a course or article save/delete, so the chatbot's index stays current
+// without a manual "Rebuild Index" click. Detached from the request's
+// context (which is canceled the moment the HTTP response is written) and
+// best-effort: a save should never fail, or even wait, on the chatbot --
+// same "degrade quietly" contract as the rest of this app's chrome
+// lookups (see app.go). A no-op when NVIDIA_API_KEY isn't configured.
+func (a *App) triggerChatbotReindex() {
+	if !a.Nvidia.Enabled() {
 		return
 	}
-
-	http.Redirect(w, r, "/admin/chatbot?rebuilt=1", http.StatusSeeOther)
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+		defer cancel()
+		if err := a.RebuildChatbotIndex(ctx); err != nil {
+			log.Printf("chatbot auto-reindex: %v", err)
+		}
+	}()
 }
 
 var htmlTagPattern = regexp.MustCompile(`<[^>]*>`)
