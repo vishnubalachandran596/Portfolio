@@ -60,11 +60,25 @@ func (a *App) chatbotSessionID(w http.ResponseWriter, r *http.Request) string {
 	return sid
 }
 
-// unlockedCourseIDs returns the paid course IDs a signed-in visitor has
-// actually bought -- the chatbot answers from a gated lesson's content
-// only for those, the same rule /courses/{slug}/learn enforces. A
+// unlockedCourseIDs returns the paid course IDs the asker may have a
+// gated lesson chunk answered from -- the chatbot applies the same rule
+// /courses/{slug}/learn does. A signed-in admin not previewing as a
+// visitor gets every course, mirroring courseAccess()'s own admin-preview
+// bypass (so the site owner can ask the bot about any locked lesson
+// while testing, exactly as they can already open it directly). Everyone
+// else gets only the courses Purchases says they've actually paid for; a
 // signed-out visitor (most chat traffic) gets an empty, non-nil slice.
 func (a *App) unlockedCourseIDs(ctx context.Context, r *http.Request) []int64 {
+	if a.Auth.IsAuthenticated(r) && !a.isPreviewingAsVisitor(r) {
+		if courses, err := a.Courses.ListAll(ctx); err == nil {
+			ids := make([]int64, len(courses))
+			for i, c := range courses {
+				ids[i] = c.ID
+			}
+			return ids
+		}
+	}
+
 	uid, ok := a.Auth.UserID(r)
 	if !ok {
 		return []int64{}
@@ -171,7 +185,9 @@ func (a *App) Chat(w http.ResponseWriter, r *http.Request) {
 
 	systemPrompt := "You are the AI assistant embedded on Vishnu Balachandran's personal portfolio site. " +
 		"Answer the visitor's question using ONLY the context below, which covers Vishnu's background, skills, " +
-		"experience, courses, and articles. If the context doesn't contain the answer, say you don't have that " +
+		"experience, courses, and articles. The context already excludes any paid course's lesson content the " +
+		"visitor hasn't unlocked -- if asked for specifics of a locked lesson, say that part is only available " +
+		"after purchasing the course, rather than guessing at what it might contain. If the context doesn't contain the answer, say you don't have that " +
 		"information and suggest the Contact page. Keep answers short (2-5 sentences), speak about Vishnu in " +
 		"third person as his assistant, and never invent prices, dates, or facts not present in the context.\n\n" +
 		"Context:\n" + retrieved.String()
