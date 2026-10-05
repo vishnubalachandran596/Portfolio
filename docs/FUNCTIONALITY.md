@@ -103,6 +103,9 @@ Email (with copy-to-clipboard), LinkedIn link, and a CTA into Consultancy — pl
 ### Search (`GET /search`)
 Simple substring search across published courses and a small hardcoded index of static pages. Search is an internal utility route and is `noindex`ed rather than listed in the sitemap; the actual landing pages and detail pages it links to are what search engines should index.
 
+### AI chatbot (`POST /chat`) — a floating widget on every page, RAG over site content
+A small floating "Ask about Vishnu" bubble, bottom-right on every page, that answers visitor questions about Vishnu's background, courses, and articles — retrieval-augmented generation (RAG), not a canned-answer bot. On each question: the message is embedded (NVIDIA NIM's free `nvidia/nv-embed-v1`), the closest indexed passages are retrieved from Postgres (pgvector cosine search over `chatbot_chunks`), and a free-tier NVIDIA LLM (`meta/llama-3.1-8b-instruct`) is asked to answer using *only* that retrieved context — it's told to say "I don't have that information" rather than invent prices, dates, or facts. The reply includes links back to the real pages (course/article URLs) the answer drew from. Entirely absent from the page (no widget markup, no JS) until `NVIDIA_API_KEY` is configured — see `docs/ARCHITECTURE.md` for the schema and request flow. Rate-limited per anonymous browser session (a cookie, not login) to 30 questions/day, enforced in Postgres (`chatbot_rate_limits`) rather than in-process, since this runs as a stateless serverless function. The index itself is rebuilt on demand from the admin console (`/admin/chatbot`), not automatically on every content edit.
+
 ### Legal pages
 `/privacy`, `/terms`, `/refund`, `/cookies` — static content pages, plus a cookie-consent banner (no third-party tracking; only a consent-preference cookie and, once logged in, a session cookie).
 
@@ -199,6 +202,9 @@ CRUD for the weekly recurring rules (weekday, start/end time, slot length in min
 ### Profile (`/admin/profile`)
 Edit the single `profile` row: name, title, tagline, hero subtitle, summary, location, email, LinkedIn/GitHub/resume URLs, photo URL, years of experience. A database with no profile row opens this form empty, and saving inserts the row. The same form accepts a PDF that replaces the default resume (`resumes/default.pdf`). Leaving the file empty keeps the current default. When a default file is stored, Preview (`GET /admin/resumes/default`) streams it inline. Role-specific PDFs are uploaded on the experience form, not here. Locally, with `LOCAL_CONTENT_DIR` set, those uploads are written into that directory instead of Supabase Storage.
 
+### AI Chatbot (`/admin/chatbot`)
+Shows how many chunks are currently indexed and a "Rebuild Index" button. Rebuilding re-gathers the profile, every skill group, every experience/education entry, every published course (metadata + the lesson HTML in Storage), and every published article (summary + body, fetched from Storage when the body isn't stored inline), splits it into passages, re-embeds all of it with NVIDIA's free embedding model, and replaces the entire `chatbot_chunks` table in one transaction. There's no automatic re-index on save — run it again after any content edit you want the chatbot to know about. Hidden entirely (with an explanatory notice instead) until `NVIDIA_API_KEY` is set.
+
 ### Preview as visitor (`GET /admin/preview-visitor` / `GET /exit-preview`)
 Lets a logged-in admin browse the site exactly as a normal visitor would (no Admin Console tab, no automatic gated-content access) without actually logging out — a cookie flag, not a session change.
 
@@ -216,4 +222,4 @@ Lets a logged-in admin browse the site exactly as a normal visitor would (no Adm
 
 ---
 
-*Last updated: September 2026, alongside the course pricing / consultancy 3-tier / articles-blog / SEO work described in the project's git history. If you're an AI agent reading this to get oriented on the codebase, `docs/ARCHITECTURE.md` is the companion doc — read both before making changes.*
+*Last updated: October 2026, alongside the RAG chatbot and AI/GenAI course work described in the project's git history. If you're an AI agent reading this to get oriented on the codebase, `docs/ARCHITECTURE.md` is the companion doc — read both before making changes.*

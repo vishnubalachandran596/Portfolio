@@ -44,6 +44,11 @@ type Config struct {
 	// HTML, and resume PDFs. Those files use the same object paths as
 	// Supabase Storage. Production leaves this empty.
 	LocalContentDir string
+
+	// NvidiaAPIKey is a free-tier build.nvidia.com key (NIM) for the RAG
+	// chatbot's embeddings and chat completion. The chatbot stays disabled
+	// (hidden widget) until it is set -- see core/ai.Client.Enabled().
+	NvidiaAPIKey string
 }
 
 func Load() (*Config, error) {
@@ -101,6 +106,8 @@ func Load() (*Config, error) {
 		SupabaseStoragePassword: getenv("SUPABASE_STORAGE_PASSWORD"),
 
 		LocalContentDir: getenv("LOCAL_CONTENT_DIR"),
+
+		NvidiaAPIKey: getenv("NVIDIA_API_KEY"),
 	}, nil
 }
 

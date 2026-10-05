@@ -20,6 +20,7 @@
 | Auth | JWT in `HttpOnly` cookies (`golang-jwt/jwt/v5`) | Two independent sessions: admin and user (visitor) |
 | Payments | Razorpay (Orders API + Checkout.js) | Server creates orders, verifies HMAC signatures server-side; India + international pricing |
 | PDF generation | `github.com/go-pdf/fpdf` | In-process — resume, receipts, certificates; no headless-browser dependency |
+| AI / RAG chatbot | NVIDIA NIM (free tier, `core/ai`) + pgvector | `nvidia/nv-embed-v1` embeddings, `meta/llama-3.1-8b-instruct` chat; vector store is the same Postgres instance, no separate vector-DB service — see §12 |
 | Deployment | Vercel, one Go serverless function | `api/index.go` is the entrypoint; `vercel.json` rewrites everything to it |
 | Static assets | `go:embed` (`web/embed.go`) | CSS/JS/images compiled into the binary, served at `/static/`, cache-busted via a content hash |
 | CSS | Plain CSS, custom-property design tokens | No Tailwind/Bootstrap, no build step |
@@ -31,6 +32,7 @@
 
 ```
 core/
+  ai/           NVIDIA NIM client (free-tier embeddings + chat completion) for the RAG chatbot — see §12
   app/          Bootstrap() — the one place that wires config+DB+renderer into handlers.App
   authutil/     password hashing (bcrypt wrapper) + RandomHex, the one shared source of cryptographically random tokens (OAuth state, access tokens, cert codes, placeholder passwords)
   certificate/  PDF quiz-completion certificate generator
@@ -413,6 +415,21 @@ erDiagram
         text version PK
         timestamptz applied_at
     }
+    chatbot_chunks {
+        bigserial id PK
+        text source_type "profile|skill|experience|education|course|article; migration 065"
+        bigint source_id
+        text title
+        text url
+        text chunk_text
+        vector embedding "vector(4096), nvidia/nv-embed-v1; see §12"
+        timestamptz created_at
+    }
+    chatbot_rate_limits {
+        text session_id PK
+        date day PK
+        int message_count "30/day cap for POST /chat; migration 065"
+    }
 ```
 
 **Notes on the model that aren't obvious from the diagram:**
@@ -432,8 +449,8 @@ erDiagram
 
 `handlers.App` (in `core/handlers/app.go`) is the one struct every handler is a method on. It holds:
 - `Cfg *config.Config`, `DB *sql.DB`, `View *view.Renderer`, `Auth *middleware.Auth`
-- One repo field per aggregate: `Profile, Skills, Experience, Resumes, Education, Features, Courses, Bookings, Availability, Admins, Purchases, Users, Articles, PromoCodes, QuizQuestions, QuizAttempts, AdminMessages, CourseUpdates, Testimonials, Certifications, Publications, CaseStudies, AuditRequests, ArticleVotes, ArticleContributions, ContactMessages, Subscribers`, plus `CourseStorage` for the private buckets
-- `Razorpay *payments.Razorpay`, `Telegram *notify.Telegram`, `Google *oauth.Google`, `Timezone *time.Location`
+- One repo field per aggregate: `Profile, Skills, Experience, Resumes, Education, Features, Courses, Bookings, Availability, Admins, Purchases, Users, Articles, PromoCodes, QuizQuestions, QuizAttempts, AdminMessages, CourseUpdates, Testimonials, Certifications, Publications, CaseStudies, AuditRequests, ArticleVotes, ArticleContributions, ContactMessages, Subscribers, CourseReviews, ChatbotChunks, ChatbotRateLimits`, plus `CourseStorage` for the private buckets
+- `Razorpay *payments.Razorpay`, `Telegram *notify.Telegram`, `Google *oauth.Google`, `Nvidia *ai.Client`, `Timezone *time.Location`
 
 Shared page chrome is assembled by `base` / `startBase` / `baseFrom` in `app.go`. `BaseData` carries site name, title, meta description, canonical URL, nav links, login/admin state, the footer's LinkedIn link, notifications, and `AssetVersion`. Every page-specific `*Data` struct embeds it.
 
@@ -472,6 +489,7 @@ Handler files, by area:
 | `admin_promo.go` | Admin CRUD for promo codes |
 | `admin_payments.go` | The combined payments ledger (purchases + bookings + audit requests merged) |
 | `promo.go` | `resolvePromoCode()` — the one shared discount-resolution function all three checkout flows call |
+| `chatbot.go` | Public `POST /chat` (RAG answer) + `chatbotSessionID`; admin `/admin/chatbot` page + `/admin/chatbot/reindex` + content-gathering/chunking helpers — see §12 |
 
 ---
 
@@ -575,4 +593,26 @@ Paid lesson HTML is not in the snapshot either. `courses.content_object` is the 
 
 ---
 
-*Last updated: September 2026. Companion doc: `docs/FUNCTIONALITY.md`. If you're an AI agent about to modify this codebase, read both files first — they're written specifically so you don't have to re-derive this context from the source tree.*
+## 12. AI chatbot — RAG over site content (`core/ai`, `core/repo/chatbot_chunks.go`, `core/handlers/chatbot.go`)
+
+A floating widget on every page (`chatbot-widget` in `base.html`, gated on `BaseData.ChatbotEnabled`) answers visitor questions about Vishnu's background, courses, and articles using retrieval-augmented generation — not a canned FAQ bot, and no paid API dependency.
+
+**Why pgvector instead of a separate vector-DB service.** Rule 3 in `CLAUDE.md` keeps this app's persistent state in one place: Postgres. Rather than adding a dedicated vector database (Pinecone, Weaviate, etc.) as a second external dependency, the `vector` extension (already available on the Supabase project, enabled idempotently in migration 065) is enabled on the same database and `chatbot_chunks.embedding` is a `vector(4096)` column. The corpus is small (a personal site's content — a few hundred chunks at most), so retrieval is a plain sequential scan with pgvector's `<=>` cosine-distance operator (`ORDER BY embedding <=> $1::vector LIMIT k`) — no ANN index (HNSW/ivfflat) needed, which is convenient since those index types cap out below 4096 dimensions anyway.
+
+**Why NVIDIA NIM.** The user asked for a real RAG chatbot "without using an external token" — clarified to mean no *paid* token. NVIDIA's build.nvidia.com (NIM) offers a free-tier, OpenAI-compatible API (`https://integrate.api.nvidia.com/v1`) for both chat completion and embeddings, with no other infrastructure to run. `core/ai.Client` wraps it: `Embed(ctx, texts, inputType)` (`inputType` is `"query"` for an incoming question, `"passage"` for an indexed chunk — `nvidia/nv-embed-v1` encodes the two differently) and `Chat(ctx, systemPrompt, userMessage)` (non-streaming; `meta/llama-3.1-8b-instruct` by default). `Client.Enabled()` mirrors `payments.Razorpay.Enabled()` — the chatbot widget, and the admin `/admin/chatbot` page's working state, are both driven off whether `NVIDIA_API_KEY` is set, never a separate feature flag.
+
+**Schema** (migration 065):
+```
+chatbot_chunks        -- id, source_type ('profile'|'skill'|'experience'|'education'|'course'|'article'),
+                          source_id, title, url, chunk_text, embedding vector(4096), created_at
+chatbot_rate_limits    -- session_id, day, message_count  (PK: session_id+day)
+```
+`chatbot_rate_limits` backs the public `/chat` endpoint's 30-questions/day cap. It's keyed by an anonymous per-browser session id (`cb_sid` cookie, generated via the existing `authutil.RandomHex` helper — reused, not reimplemented) rather than by login, since most visitors asking the chatbot something aren't signed in; and it lives in Postgres rather than in-process, for the same reason every other piece of app state does (§9/CLAUDE.md rule 3) — a serverless fleet has no shared memory between instances.
+
+**Indexing (`AdminChatbotReindex`, POST `/admin/chatbot/reindex`).** A full replace, not an incremental update: `gatherChatbotChunks()` re-reads the profile, every skill group, every experience/education row, every published course (metadata plus the lesson HTML fetched from Storage via the existing `CourseStorage` client and stripped of tags), and every published article (summary plus body, again from Storage when stored there) — all of it *live content*, never anything hardcoded in the repo, per CLAUDE.md rule 8. Each source is split into ≤1000-character chunks (`chunkText`, breaking on sentence/paragraph boundaries), embedded in batches of 16 (`inputType="passage"`), and written in one transaction via `ChatbotChunkRepo.ReplaceAll` (`TRUNCATE` + re-insert — simpler and safer than diffing against the previous index for a corpus this size, and it's what clears out chunks for since-edited or deleted content). There is no automatic re-index on content save; an admin reruns it from `/admin/chatbot` after edits they want reflected.
+
+**Answering a question (`Chat`, POST `/chat`, public).** Embed the question (`inputType="query"`) → `ChatbotChunkRepo.Search` for the 5 closest chunks → build a system prompt that includes only that retrieved text and instructs the model to say "I don't have that information" rather than invent facts, prices, or dates → `Client.Chat` → return the reply plus the deduplicated source URLs the retrieved chunks came from. The widget (`web/static/js/main.js`) renders the reply and clickable source links in a floating panel; its markup is entirely absent from the rendered page (not just hidden by CSS) when `ChatbotEnabled` is false.
+
+---
+
+*Last updated: October 2026, alongside the RAG chatbot and AI/GenAI course work. Companion doc: `docs/FUNCTIONALITY.md`. If you're an AI agent about to modify this codebase, read both files first — they're written specifically so you don't have to re-derive this context from the source tree.*

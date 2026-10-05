@@ -669,4 +669,83 @@
       });
     })(thumbsButtons[ti]);
   }
+
+  // --- Chatbot widget ----------------------------------------------------
+  // Floating bubble + panel, present only when the server rendered it
+  // (gated on BaseData.ChatbotEnabled -- i.e. NVIDIA_API_KEY is set).
+  var chatbotWidget = document.getElementById("chatbot-widget");
+  if (chatbotWidget) {
+    var chatbotToggle = document.getElementById("chatbot-toggle");
+    var chatbotClose = document.getElementById("chatbot-close");
+    var chatbotPanel = document.getElementById("chatbot-panel");
+    var chatbotForm = document.getElementById("chatbot-form");
+    var chatbotInput = document.getElementById("chatbot-input");
+    var chatbotMessages = document.getElementById("chatbot-messages");
+
+    function openChatbot() {
+      chatbotPanel.hidden = false;
+      chatbotToggle.setAttribute("aria-expanded", "true");
+      chatbotInput.focus();
+    }
+    function closeChatbot() {
+      chatbotPanel.hidden = true;
+      chatbotToggle.setAttribute("aria-expanded", "false");
+    }
+    chatbotToggle.addEventListener("click", function () {
+      if (chatbotPanel.hidden) openChatbot();
+      else closeChatbot();
+    });
+    chatbotClose.addEventListener("click", closeChatbot);
+
+    function appendMessage(text, who) {
+      var el = document.createElement("div");
+      el.className = "chatbot-message chatbot-message-" + who;
+      el.textContent = text;
+      chatbotMessages.appendChild(el);
+      chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
+      return el;
+    }
+
+    function appendSources(sources) {
+      if (!sources || !sources.length) return;
+      var wrap = document.createElement("div");
+      wrap.className = "chatbot-sources";
+      for (var si = 0; si < sources.length; si++) {
+        var a = document.createElement("a");
+        a.href = sources[si].url;
+        a.textContent = sources[si].title;
+        wrap.appendChild(a);
+      }
+      chatbotMessages.appendChild(wrap);
+      chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
+    }
+
+    chatbotForm.addEventListener("submit", function (e) {
+      e.preventDefault();
+      var message = chatbotInput.value.trim();
+      if (!message) return;
+      appendMessage(message, "user");
+      chatbotInput.value = "";
+      chatbotInput.disabled = true;
+      var pending = appendMessage("…", "bot");
+
+      fetch("/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: message })
+      })
+        .then(function (r) { return r.json().then(function (data) { return { status: r.status, data: data }; }); })
+        .then(function (res) {
+          pending.textContent = res.data.error || res.data.reply || "Something went wrong.";
+          if (res.status === 200 && res.data.sources) appendSources(res.data.sources);
+        })
+        .catch(function () {
+          pending.textContent = "Something went wrong reaching the chatbot. Please try again.";
+        })
+        .then(function () {
+          chatbotInput.disabled = false;
+          chatbotInput.focus();
+        });
+    });
+  }
 })();

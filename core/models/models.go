@@ -251,6 +251,20 @@ type CourseReview struct {
 	ReviewerName  string
 }
 
+// ChatbotChunk is one retrievable passage of site content indexed for the
+// RAG chatbot -- a slice of the profile summary, a skill group, an
+// experience entry, a course description, or an article body. SourceID is
+// 0 for sources with no natural row id (the single profile row).
+type ChatbotChunk struct {
+	ID         int64
+	SourceType string // "profile" | "skill" | "experience" | "education" | "course" | "article"
+	SourceID   int64
+	Title      string
+	URL        string
+	ChunkText  string
+	CreatedAt  time.Time
+}
+
 func FormatMoney(cents int, currency string) string {
 	symbol := "$"
 	switch currency {

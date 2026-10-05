@@ -160,6 +160,7 @@ func New() (*Renderer, error) {
 		"templates/pages/admin_promo_form.html",
 		"templates/pages/admin_quiz_list.html",
 		"templates/pages/admin_course_reviews_list.html",
+		"templates/pages/admin_chatbot.html",
 		"templates/pages/admin_quiz_form.html",
 	}
 

@@ -44,6 +44,26 @@
 </main>
 {{template "footer" .}}
 <button type="button" id="back-to-top" class="back-to-top" aria-label="Back to top" hidden>↑</button>
+{{if .ChatbotEnabled}}
+<div id="chatbot-widget" class="chatbot-widget">
+  <button type="button" id="chatbot-toggle" class="chatbot-toggle" aria-label="Open chat" aria-expanded="false">
+    <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><rect x="2.5" y="4" width="15" height="10" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M6.5 17 8 14h4l1.5 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="7.5" cy="9" r="1" fill="currentColor"/><circle cx="12.5" cy="9" r="1" fill="currentColor"/></svg>
+  </button>
+  <div id="chatbot-panel" class="chatbot-panel" hidden>
+    <div class="chatbot-panel-header">
+      <span>Ask about Vishnu</span>
+      <button type="button" id="chatbot-close" aria-label="Close chat">&times;</button>
+    </div>
+    <div id="chatbot-messages" class="chatbot-messages">
+      <div class="chatbot-message chatbot-message-bot">Hi! Ask me anything about Vishnu's background, courses, or articles.</div>
+    </div>
+    <form id="chatbot-form" class="chatbot-form">
+      <input type="text" id="chatbot-input" placeholder="Type a question…" maxlength="800" autocomplete="off">
+      <button type="submit" aria-label="Send">→</button>
+    </form>
+  </div>
+</div>
+{{end}}
 <script src="/static/js/main.js?v={{.AssetVersion}}" defer></script>
 </body>
 </html>

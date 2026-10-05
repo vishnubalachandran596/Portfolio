@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/vishnubalachandran596/portfolio/core/ai"
 	"github.com/vishnubalachandran596/portfolio/core/config"
 	"github.com/vishnubalachandran596/portfolio/core/middleware"
 	"github.com/vishnubalachandran596/portfolio/core/models"
@@ -56,11 +57,14 @@ type App struct {
 	ContactMessages      *repo.ContactMessageRepo
 	Subscribers          *repo.SubscriberRepo
 	CourseReviews        *repo.CourseReviewRepo
+	ChatbotChunks        *repo.ChatbotChunkRepo
+	ChatbotRateLimits    *repo.ChatbotRateLimitRepo
 	CourseStorage        *storage.Client
 
 	Razorpay *payments.Razorpay
 	Telegram *notify.Telegram
 	Google   *oauth.Google
+	Nvidia   *ai.Client
 	Timezone *time.Location
 }
 
@@ -90,6 +94,9 @@ type BaseData struct {
 	// rendered just below the header on every page. Empty renders no
 	// banner at all.
 	PromoCodes []models.PromoCode
+	// ChatbotEnabled gates the floating chat widget's markup/JS -- hidden
+	// entirely until NVIDIA_API_KEY is configured (core/ai.Client.Enabled()).
+	ChatbotEnabled bool
 }
 
 // SubscribeFormData backs the shared subscribe_form partial embedded on
@@ -173,10 +180,13 @@ func New(cfg *config.Config, db *sql.DB, renderer *view.Renderer) *App {
 		ContactMessages:      repo.NewContactMessageRepo(db),
 		Subscribers:          repo.NewSubscriberRepo(db),
 		CourseReviews:        repo.NewCourseReviewRepo(db),
+		ChatbotChunks:        repo.NewChatbotChunkRepo(db),
+		ChatbotRateLimits:    repo.NewChatbotRateLimitRepo(db),
 		CourseStorage:        storage.New(cfg),
 		Razorpay:             payments.NewRazorpay(cfg.RazorpayKeyID, cfg.RazorpayKeySecret),
 		Telegram:             notify.NewTelegram(cfg.TelegramBotToken, cfg.TelegramChatID),
 		Google:               oauth.NewGoogle(cfg.GoogleClientID, cfg.GoogleClientSecret, cfg.GoogleRedirectURL),
+		Nvidia:               ai.New(cfg.NvidiaAPIKey),
 		Timezone:             loc,
 	}
 }
@@ -352,6 +362,7 @@ func (a *App) baseFrom(r *http.Request, pf *basePrefetch, title, metaDescription
 		UnreadNotifCount:    unreadCount,
 		AssetVersion:        web.AssetVersion,
 		PromoCodes:          pf.promoCodes,
+		ChatbotEnabled:      a.Nvidia.Enabled(),
 	}
 }
 
