@@ -223,7 +223,7 @@ type AdminChatbotPageData struct {
 	BaseData
 	Enabled    bool
 	ChunkCount int
-	Started    bool
+	Rebuilt    bool
 }
 
 func (a *App) AdminChatbotPage(w http.ResponseWriter, r *http.Request) {
@@ -232,22 +232,25 @@ func (a *App) AdminChatbotPage(w http.ResponseWriter, r *http.Request) {
 		BaseData:   a.base(r, "AI Chatbot — Admin", "", ""),
 		Enabled:    a.Nvidia.Enabled(),
 		ChunkCount: count,
-		Started:    r.URL.Query().Get("started") == "1",
+		Rebuilt:    r.URL.Query().Get("rebuilt") == "1",
 	})
 }
 
 // AdminChatbotReindex is the manual "Rebuild Index" button on
-// /admin/chatbot. Most of the time the index stays current on its own --
-// see triggerChatbotReindex -- this exists for a first build, recovery
-// after an embedding-model swap (a new model needs the whole corpus
-// re-embedded, not just what changed), or whenever an admin wants to
-// force one. Fires in the background and redirects immediately rather
-// than blocking the admin's browser on a full corpus re-embed (which can
-// take well over Vercel's request timeout as the content grows) -- same
-// fire-and-forget pattern as triggerChatbotReindex.
+// /admin/chatbot. Runs synchronously (see RebuildChatbotIndex's comment
+// for why): this exists for a first build, recovery after an
+// embedding-model swap (a new model needs the whole corpus re-embedded,
+// not just what changed), or whenever an admin wants to force one.
 func (a *App) AdminChatbotReindex(w http.ResponseWriter, r *http.Request) {
-	a.triggerChatbotReindex()
-	http.Redirect(w, r, "/admin/chatbot?started=1", http.StatusSeeOther)
+	if !a.Nvidia.Enabled() {
+		http.Redirect(w, r, "/admin/chatbot", http.StatusSeeOther)
+		return
+	}
+	if err := a.RebuildChatbotIndex(r.Context()); err != nil {
+		a.serverError(w, "chatbot reindex", err)
+		return
+	}
+	http.Redirect(w, r, "/admin/chatbot?rebuilt=1", http.StatusSeeOther)
 }
 
 // APIChatbotReindex is a bearer-token-gated version of the same trigger,
@@ -255,10 +258,12 @@ func (a *App) AdminChatbotReindex(w http.ResponseWriter, r *http.Request) {
 // or article content directly -- a new/edited/deleted row in Postgres, or
 // a new/replaced/removed HTML file in Supabase Storage -- bypassing the
 // admin UI's own save/delete handlers, which already call
-// triggerChatbotReindex themselves. Disabled (404) until
+// RebuildChatbotIndex themselves. Disabled (404) until
 // CHATBOT_REINDEX_TOKEN is configured, and the token must match exactly;
-// POST-only, and does no work beyond firing the same background job the
-// admin button does.
+// POST-only. Runs synchronously and reports the resulting chunk count,
+// rather than responding before the work is done -- see
+// RebuildChatbotIndex's comment for why a "started, ask again later"
+// response would be a lie on this platform.
 func (a *App) APIChatbotReindex(w http.ResponseWriter, r *http.Request) {
 	token := a.Cfg.ChatbotReindexToken
 	if token == "" {
@@ -274,8 +279,12 @@ func (a *App) APIChatbotReindex(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusServiceUnavailable, chatResponseBody{Error: "chatbot isn't configured (NVIDIA_API_KEY unset)"})
 		return
 	}
-	a.triggerChatbotReindex()
-	writeJSON(w, http.StatusAccepted, chatResponseBody{Reply: "reindex started"})
+	if err := a.RebuildChatbotIndex(r.Context()); err != nil {
+		chatServerError(w, "api chatbot reindex", err)
+		return
+	}
+	count, _ := a.ChatbotChunks.Count(r.Context())
+	writeJSON(w, http.StatusOK, chatResponseBody{Reply: fmt.Sprintf("reindex complete: %d chunks", count)})
 }
 
 // RebuildChatbotIndex rebuilds the entire chatbot index from the site's
@@ -284,6 +293,22 @@ func (a *App) APIChatbotReindex(w http.ResponseWriter, r *http.Request) {
 // simpler and safer for a corpus this small, and it's the only way stale
 // chunks for since-edited or deleted content get cleaned up (a deleted
 // course just stops being gathered, so its chunks don't come back).
+//
+// Every caller runs this synchronously, bounded by its own request
+// context (and vercel.json's maxDuration) -- an earlier version fired it
+// in a detached goroutine instead ("fire-and-forget," so a save/delete
+// wouldn't have to wait on a full re-embed). That never actually ran to
+// completion in production: confirmed empirically -- several reindex
+// triggers in a row, `chatbot_chunks`'s row count and newest timestamp
+// never moved, and no error was ever logged either, meaning the
+// goroutine simply never got scheduled again. Vercel's Go runtime
+// freezes a function's whole process the instant its handler returns
+// the HTTP response; a goroutine still running at that moment has no
+// guaranteed chance to resume, since the platform gives no "waitUntil"
+// equivalent to a Go handler and doesn't guarantee the same warm
+// container is reused for the next request. The fix is the one every
+// serverless platform's own docs recommend for this situation: do the
+// work before responding, not after.
 func (a *App) RebuildChatbotIndex(ctx context.Context) error {
 	chunks := a.gatherChatbotChunks(ctx)
 
@@ -308,24 +333,23 @@ func (a *App) RebuildChatbotIndex(ctx context.Context) error {
 	return nil
 }
 
-// triggerChatbotReindex fires RebuildChatbotIndex in the background after
-// a course or article save/delete, so the chatbot's index stays current
-// without a manual "Rebuild Index" click. Detached from the request's
-// context (which is canceled the moment the HTTP response is written) and
-// best-effort: a save should never fail, or even wait, on the chatbot --
-// same "degrade quietly" contract as the rest of this app's chrome
-// lookups (see app.go). A no-op when NVIDIA_API_KEY isn't configured.
-func (a *App) triggerChatbotReindex() {
+// reindexChatbotQuietly runs RebuildChatbotIndex synchronously after a
+// course or article save/delete, so the chatbot's index stays current
+// without a manual "Rebuild Index" click, and logs rather than
+// propagates any failure -- a save or delete should still succeed even
+// if the chatbot reindex that follows it fails, same "degrade quietly"
+// contract as the rest of this app's chrome lookups (see app.go). A
+// no-op when NVIDIA_API_KEY isn't configured. Bounded by the caller's
+// own request context (and vercel.json's maxDuration) rather than a
+// detached background goroutine -- see RebuildChatbotIndex's comment
+// for why that doesn't actually work on this platform.
+func (a *App) reindexChatbotQuietly(ctx context.Context) {
 	if !a.Nvidia.Enabled() {
 		return
 	}
-	go func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
-		defer cancel()
-		if err := a.RebuildChatbotIndex(ctx); err != nil {
-			log.Printf("chatbot auto-reindex: %v", err)
-		}
-	}()
+	if err := a.RebuildChatbotIndex(ctx); err != nil {
+		log.Printf("chatbot auto-reindex: %v", err)
+	}
 }
 
 var htmlTagPattern = regexp.MustCompile(`<[^>]*>`)
