@@ -338,6 +338,14 @@ func (a *App) gatherChatbotChunks(ctx context.Context) []models.ChatbotChunk {
 		for _, c := range courses {
 			url := "/courses/" + c.Slug
 			text := c.Title + ". " + c.Summary + ". " + c.Description + ". Level: " + c.Level + ". Duration: " + c.Duration + ". Price: " + priceSummary(c)
+			// RagContext, when an admin has written one, is a passage
+			// authored specifically to read well out of context for the
+			// LLM -- appended rather than replacing the derived facts
+			// above (level/duration/price), which stay precise and can't
+			// drift the way a paraphrase could.
+			if c.RagContext != "" {
+				text += ". " + c.RagContext
+			}
 			for _, piece := range chunkText(text, chatbotChunkMaxChars) {
 				chunks = append(chunks, models.ChatbotChunk{SourceType: "course", SourceID: c.ID, Title: "Course: " + c.Title, URL: url, ChunkText: piece})
 			}

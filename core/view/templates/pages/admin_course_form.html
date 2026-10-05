@@ -24,14 +24,9 @@
           <input type="text" name="duration" value="{{.Course.Duration}}" placeholder="e.g. 4 weeks">
         </label>
       </div>
-      <div class="form-row">
-        <label>Price (cents) <span class="optional">(legacy fixed price, 0 = free — unused when "Paid course" below is checked)</span>
-          <input type="number" name="price_cents" value="{{.Course.PriceCents}}" min="0">
-        </label>
-        <label>Currency
-          <input type="text" name="currency" value="{{if .Course.Currency}}{{.Course.Currency}}{{else}}USD{{end}}" maxlength="3">
-        </label>
-      </div>
+      <label>Price (cents) <span class="optional">(legacy fixed price, 0 = free — unused when "Paid course" below is checked)</span>
+        <input type="number" name="price_cents" value="{{.Course.PriceCents}}" min="0">
+      </label>
       <label>Image URL
         <input type="url" name="image_url" value="{{.Course.ImageURL}}">
       </label>
@@ -60,6 +55,12 @@
       {{if .Course.ContentObject}}<p class="admin-form-note">This course already has a private lesson file ({{.Course.ContentObject}}). Upload a file below only if you want to replace it. Preview opens the same chrome-wrapped, watermarked page a visitor sees.</p>{{end}}
       <label>Upload course HTML <span class="optional">(a single self-contained .html file, stored privately — leave empty to keep existing content)</span>
         <input type="file" name="content_file" accept=".html,.htm">
+      </label>
+
+      <hr class="admin-form-divider">
+      <h2 class="admin-form-subhead">AI chatbot context</h2>
+      <label>RAG context <span class="optional">(optional — a self-contained paragraph for the AI chatbot to quote when answering about this course: what it covers, who it's for, outcomes. Written for an LLM reading it out of context, not for a visitor skimming the page. Leave blank to fall back to the summary/description above. Takes effect after the next "Rebuild Index" on /admin/chatbot.)</span>
+        <textarea name="rag_context" rows="4">{{.Course.RagContext}}</textarea>
       </label>
 
       {{if not .IsNew}}

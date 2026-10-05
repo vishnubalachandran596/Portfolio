@@ -270,6 +270,7 @@ func (a *App) AdminCourseSave(w http.ResponseWriter, r *http.Request) {
 		SortOrder:     sortOrder,
 		IsPaid:        isPaid,
 		MinPriceCents: minPriceCents,
+		RagContext:    strings.TrimSpace(r.FormValue("rag_context")),
 	}
 	if course.Slug == "" {
 		course.Slug = slugify(course.Title)

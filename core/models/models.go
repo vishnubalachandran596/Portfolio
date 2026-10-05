@@ -171,8 +171,15 @@ type Course struct {
 	MinPriceCents int
 	ContentKey    string
 	ContentObject string // private Storage path, courses/{slug}.html
-	CreatedAt     time.Time
-	UpdatedAt     time.Time
+	// RagContext is a self-contained passage written for the AI chatbot's
+	// retrieval index rather than for a human reading the course page --
+	// what the course covers, who it's for, outcomes -- so the chatbot
+	// has something coherent to quote even without the lesson's own
+	// content (gated, or not yet indexed). Empty is fine; the chatbot
+	// falls back to Summary/Description.
+	RagContext string
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
 }
 
 // IsFree reports whether the course has no listed price.

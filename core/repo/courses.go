@@ -16,13 +16,13 @@ func NewCourseRepo(db *sql.DB) *CourseRepo { return &CourseRepo{db: db} }
 
 // content_html is intentionally absent. Lesson bytes live in Storage;
 // selecting that column would pull them onto every catalog query.
-const courseColumns = `id, slug, title, summary, description, level, duration, price_cents, image_url, is_published, sort_order, is_paid, min_price_cents, content_key, content_object, created_at, updated_at`
+const courseColumns = `id, slug, title, summary, description, level, duration, price_cents, image_url, is_published, sort_order, is_paid, min_price_cents, content_key, content_object, rag_context, created_at, updated_at`
 
 func scanCourse(row interface{ Scan(...any) error }) (models.Course, error) {
 	var c models.Course
 	err := row.Scan(&c.ID, &c.Slug, &c.Title, &c.Summary, &c.Description, &c.Level, &c.Duration,
 		&c.PriceCents, &c.ImageURL, &c.IsPublished, &c.SortOrder,
-		&c.IsPaid, &c.MinPriceCents, &c.ContentKey, &c.ContentObject, &c.CreatedAt, &c.UpdatedAt)
+		&c.IsPaid, &c.MinPriceCents, &c.ContentKey, &c.ContentObject, &c.RagContext, &c.CreatedAt, &c.UpdatedAt)
 	return c, err
 }
 
@@ -72,10 +72,10 @@ func (r *CourseRepo) Create(ctx context.Context, c models.Course) (int64, error)
 	var id int64
 	err := r.db.QueryRowContext(ctx, `
 		INSERT INTO courses (slug, title, summary, description, level, duration, price_cents, image_url, is_published, sort_order,
-			is_paid, min_price_cents)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING id`,
+			is_paid, min_price_cents, rag_context)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING id`,
 		c.Slug, c.Title, c.Summary, c.Description, c.Level, c.Duration, c.PriceCents, c.ImageURL, c.IsPublished, c.SortOrder,
-		c.IsPaid, c.MinPriceCents,
+		c.IsPaid, c.MinPriceCents, c.RagContext,
 	).Scan(&id)
 	return id, err
 }
@@ -84,10 +84,10 @@ func (r *CourseRepo) Update(ctx context.Context, c models.Course) error {
 	_, err := r.db.ExecContext(ctx, `
 		UPDATE courses SET slug=$1, title=$2, summary=$3, description=$4, level=$5, duration=$6,
 			price_cents=$7, image_url=$8, is_published=$9, sort_order=$10,
-			is_paid=$11, min_price_cents=$12, updated_at=now()
-		WHERE id=$13`,
+			is_paid=$11, min_price_cents=$12, rag_context=$13, updated_at=now()
+		WHERE id=$14`,
 		c.Slug, c.Title, c.Summary, c.Description, c.Level, c.Duration, c.PriceCents, c.ImageURL, c.IsPublished, c.SortOrder,
-		c.IsPaid, c.MinPriceCents, c.ID,
+		c.IsPaid, c.MinPriceCents, c.RagContext, c.ID,
 	)
 	return err
 }
