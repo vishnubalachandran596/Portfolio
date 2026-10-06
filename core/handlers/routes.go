@@ -47,6 +47,7 @@ func (a *App) Routes() http.Handler {
 	mux.HandleFunc("GET /contact", a.ContactPage)
 	mux.HandleFunc("POST /contact", a.ContactSubmit)
 	mux.HandleFunc("POST /subscribe", a.NewsletterSubscribe)
+	mux.HandleFunc("GET /ai-assistant", a.AIAssistantPage)
 	mux.Handle("POST /chat", noindex(http.HandlerFunc(a.Chat)))
 	mux.Handle("POST /api/chatbot/reindex", noindex(http.HandlerFunc(a.APIChatbotReindex)))
 	mux.Handle("GET /internal/chatbot/cron-reindex", noindex(http.HandlerFunc(a.CronChatbotReindex)))

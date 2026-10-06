@@ -131,6 +131,13 @@ func (a *App) Sitemap(w http.ResponseWriter, r *http.Request) {
 	for _, p := range staticPaths {
 		fmt.Fprintf(&b, "  <url><loc>%s</loc><priority>%s</priority></url>\n", a.pageURL(r, p.path), p.priority)
 	}
+	// /ai-assistant only lists (and only works) once the chatbot itself is
+	// configured -- same "absent until NVIDIA_API_KEY is set" gate as the
+	// floating widget, so the sitemap never points at a page with no chat
+	// to show.
+	if a.Nvidia.Enabled() {
+		fmt.Fprintf(&b, "  <url><loc>%s</loc><priority>%s</priority></url>\n", a.pageURL(r, "/ai-assistant"), "0.6")
+	}
 	for _, c := range courses {
 		fmt.Fprintf(&b, "  <url><loc>%s</loc><lastmod>%s</lastmod><priority>0.7</priority></url>\n",
 			a.pageURL(r, "/courses/"+c.Slug), c.UpdatedAt.Format("2006-01-02"))
@@ -191,6 +198,9 @@ func (a *App) LLMsTxt(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(&b, "- [Courses](%s/courses): Practical courses on Java, architecture, system design, and distributed systems\n", base)
 	fmt.Fprintf(&b, "- [Articles](%s/articles): Original writing on software architecture, distributed systems, and engineering careers\n", base)
 	fmt.Fprintf(&b, "- [Contact](%s/contact): Get in touch\n", base)
+	if a.Nvidia.Enabled() {
+		fmt.Fprintf(&b, "- [AI Assistant](%s/ai-assistant): Ask questions about this background, courses, consultancy, and articles, answered with retrieval-augmented generation\n", base)
+	}
 	fmt.Fprintf(&b, "- [Privacy Policy](%s/privacy): How data is collected, used, and deleted\n", base)
 	fmt.Fprintf(&b, "- [Terms of Service](%s/terms): Terms governing use of this site\n", base)
 	fmt.Fprintf(&b, "- [Refund Policy](%s/refund): Refund terms for paid courses\n", base)

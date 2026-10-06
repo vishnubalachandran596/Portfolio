@@ -203,6 +203,32 @@ func historySearchQuery(history []ai.Message, message string) string {
 	return message
 }
 
+// AIAssistantData backs ai_assistant.html -- nothing beyond BaseData,
+// since the chat itself (chatbot_widget.html) reads only ChatbotEnabled/
+// ChatbotFullPage off that.
+type AIAssistantData struct {
+	BaseData
+}
+
+// AIAssistantPage renders the chatbot's full-page, own-URL counterpart to
+// the floating bubble every other page shows: same chatbot_widget.html
+// partial, same /chat endpoint and main.js wiring, just laid out as the
+// whole page instead of a corner panel (see chatbot_widget.html and
+// BaseData.ChatbotFullPage). Its own URL is what lets it appear in
+// sitemap.xml and get indexed -- the floating bubble can't, since it's
+// JS-rendered chrome repeated on every page, not a distinct page of its
+// own. "AI Assistant" (title, nav-adjacent copy, URL) is a deliberately
+// generic, commonly-searched term rather than site-specific branding, so
+// this page can also pick up generic "AI assistant"-type search traffic
+// alongside the branded searches the rest of the site targets.
+func (a *App) AIAssistantPage(w http.ResponseWriter, r *http.Request) {
+	base := a.base(r, "AI Assistant — "+a.Cfg.SiteName,
+		"Ask Vishnu Balachandran's AI Assistant about his background, courses, consultancy, and articles — instant, retrieval-augmented answers grounded in this site's real content.",
+		"ai-assistant")
+	base.ChatbotFullPage = true
+	a.View.Render(w, http.StatusOK, "ai_assistant", AIAssistantData{BaseData: base})
+}
+
 type chatSource struct {
 	Title string `json:"title"`
 	URL   string `json:"url"`
