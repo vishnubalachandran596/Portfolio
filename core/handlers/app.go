@@ -101,6 +101,13 @@ type BaseData struct {
 	// ChatbotEnabled gates the floating chat widget's markup/JS -- hidden
 	// entirely until NVIDIA_API_KEY is configured (core/ai.Client.Enabled()).
 	ChatbotEnabled bool
+	// ChatbotFullPage is true only for AIAssistantPage's own render. It
+	// switches chatbot_widget.html (templates/layout) between its two
+	// shells -- a floating bubble everywhere else, or this page's entire
+	// main content -- and tells base.html not to also render the floating
+	// bubble on top of that inline chat. False (zero value) everywhere
+	// else, so no other handler needs to set it.
+	ChatbotFullPage bool
 }
 
 // SubscribeFormData backs the shared subscribe_form partial embedded on
@@ -135,6 +142,7 @@ type NavLinks struct {
 	Booking     string
 	Articles    string
 	Contact     string
+	AIAssistant string
 	Search      string
 	Account     string
 	Admin       string
@@ -348,6 +356,7 @@ func (a *App) baseFrom(r *http.Request, pf *basePrefetch, title, metaDescription
 			Booking:     a.pageURL(r, "/booking"),
 			Articles:    a.pageURL(r, "/articles"),
 			Contact:     a.pageURL(r, "/contact"),
+			AIAssistant: a.pageURL(r, "/ai-assistant"),
 			Search:      a.pageURL(r, "/search"),
 			Account:     a.pageURL(r, "/account"),
 			Admin:       a.pageURL(r, "/admin"),

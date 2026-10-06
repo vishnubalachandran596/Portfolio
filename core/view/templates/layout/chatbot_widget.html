@@ -1,0 +1,42 @@
+{{/* Shared chat UI, reused in two places so there is exactly one
+     implementation to keep in sync (CLAUDE.md rule 1):
+       - base.html renders it floating, in its own fixed-position bubble,
+         on every page except the dedicated chat page itself.
+       - ai_assistant.html renders it inline, full-size, as that page's
+         entire main content.
+     .ChatbotFullPage (BaseData) switches which of those two shells it's
+     in -- same markup and IDs either way, so main.js's event wiring
+     (getElementById lookups) needs no branching of its own. */}}
+{{define "chatbot_widget"}}
+{{if .ChatbotEnabled}}
+<div id="chatbot-widget" class="chatbot-widget{{if .ChatbotFullPage}} chatbot-widget--full{{end}}">
+  {{if not .ChatbotFullPage}}
+  <button type="button" id="chatbot-toggle" class="chatbot-toggle" aria-label="Open AI Assistant" aria-expanded="false">
+    <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><rect x="2.5" y="4" width="15" height="10" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M6.5 17 8 14h4l1.5 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="7.5" cy="9" r="1" fill="currentColor"/><circle cx="12.5" cy="9" r="1" fill="currentColor"/></svg>
+  </button>
+  {{end}}
+  <div id="chatbot-panel" class="chatbot-panel"{{if not .ChatbotFullPage}} hidden{{end}}>
+    <div class="chatbot-panel-header">
+      <span>AI Assistant</span>
+      <div class="chatbot-panel-header-actions">
+        {{if not .ChatbotFullPage}}
+        <a href="/ai-assistant" class="chatbot-expand" aria-label="Open AI Assistant full screen" title="Open full screen">
+          <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M7.5 3H3v4.5M12.5 3H17v4.5M7.5 17H3v-4.5M12.5 17H17v-4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+        <button type="button" id="chatbot-close" aria-label="Close chat">&times;</button>
+        {{end}}
+      </div>
+    </div>
+    <div id="chatbot-messages" class="chatbot-messages">
+      <div class="chatbot-message chatbot-message-bot">Hi! I'm Vishnu's AI Assistant — ask me anything about his background, courses, consultancy, or articles.</div>
+    </div>
+    <form id="chatbot-form" class="chatbot-form">
+      <input type="text" id="chatbot-input" placeholder="Type a question…" maxlength="800" autocomplete="off">
+      <button type="submit" aria-label="Send">→</button>
+    </form>
+  </div>
+</div>
+{{else if .ChatbotFullPage}}
+<p class="chatbot-unavailable">The AI Assistant isn't configured on this deployment yet.</p>
+{{end}}
+{{end}}

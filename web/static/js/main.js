@@ -698,11 +698,18 @@
       chatbotPanel.hidden = true;
       chatbotToggle.setAttribute("aria-expanded", "false");
     }
-    chatbotToggle.addEventListener("click", function () {
-      if (chatbotPanel.hidden) openChatbot();
-      else closeChatbot();
-    });
-    chatbotClose.addEventListener("click", closeChatbot);
+    // chatbotToggle/chatbotClose are absent on the full-page chat
+    // (/ai-assistant) -- there the panel is the whole page, already open,
+    // with nothing to toggle or close. Same markup/ids otherwise, so
+    // everything else below runs unmodified in either shell.
+    if (chatbotToggle) {
+      chatbotToggle.addEventListener("click", function () {
+        if (chatbotPanel.hidden) openChatbot();
+        else closeChatbot();
+      });
+    }
+    if (chatbotClose) chatbotClose.addEventListener("click", closeChatbot);
+    if (!chatbotToggle) chatbotInput.focus();
 
     function appendMessage(text, who) {
       var el = document.createElement("div");
