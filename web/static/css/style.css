@@ -298,6 +298,17 @@ a, button, .slot-btn, .faq-item summary { cursor: pointer; }
   animation: splash-pulse 1.3s ease-in-out infinite;
   box-shadow: 0 1.25rem 3.75rem -1.25rem rgba(161, 98, 7, 0.5);
 }
+.splash-mark img, .page-loader-mark img {
+  /* contain, not cover: the uploaded logo is wider than the circular
+     badge is tall (its own flanking bracket accents extend past the
+     inner circle), so cropping to a perfect circle would chop those
+     off. The badge's own background (#1c1917) matches the logo's ink
+     circle fill, so the letterboxed edges read as one continuous
+     shape rather than a visible seam. */
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
 @keyframes splash-pulse {
   0%, 100% { transform: scale(1); }
   50% { transform: scale(1.08); }
