@@ -16,6 +16,7 @@ import (
 
 	"golang.org/x/sync/errgroup"
 
+	"github.com/vishnubalachandran596/portfolio/core/ai"
 	"github.com/vishnubalachandran596/portfolio/core/authutil"
 	"github.com/vishnubalachandran596/portfolio/core/models"
 )
@@ -45,6 +46,19 @@ const (
 	// course or article; the chatbot doesn't need the whole lesson,
 	// just enough of it to answer "what does this course cover."
 	chatbotMaxBodyChars = chatbotChunkMaxChars * 15
+
+	// chatbotMaxHistoryTurns caps how many prior turns of a conversation
+	// are kept and resent -- both to the LLM (prompt size/cost) and for
+	// retrieval query reformation below. 6 turns is 3 exchanges, enough
+	// for a follow-up like "as lead?" to still resolve against what was
+	// being discussed without letting a long conversation's prompt grow
+	// unbounded.
+	chatbotMaxHistoryTurns = 6
+	// chatbotMaxHistoryChars caps each history turn's content once it's
+	// re-sent as context -- a long prior reply re-included verbatim on
+	// every subsequent turn would otherwise make the prompt grow with
+	// every exchange, not just linearly with turn count.
+	chatbotMaxHistoryChars = 500
 
 	// chatbotRelevanceThreshold is the cosine-distance cutoff (0 =
 	// identical, 2 = opposite) the top retrieved chunk must beat for a
@@ -132,8 +146,61 @@ func chatServerError(w http.ResponseWriter, action string, err error) {
 	writeJSON(w, http.StatusInternalServerError, chatResponseBody{Error: "The chatbot hit a problem answering that. Please try again in a moment."})
 }
 
+// chatHistoryTurn is one prior exchange's turn as the widget sends it
+// back on every subsequent question -- the server holds no session-level
+// chat history itself (stateless serverless, CLAUDE.md §3), so the
+// client is the only place a conversation's turns live between requests.
+type chatHistoryTurn struct {
+	Role    string `json:"role"`
+	Content string `json:"content"`
+}
+
 type chatRequestBody struct {
-	Message string `json:"message"`
+	Message string            `json:"message"`
+	History []chatHistoryTurn `json:"history"`
+}
+
+// sanitizeHistory turns the client-supplied history into validated
+// ai.Message turns: only role "user"/"assistant" survive (never "system"
+// -- a crafted request could otherwise try to inject one), each turn is
+// trimmed to chatbotMaxHistoryChars, and only the most recent
+// chatbotMaxHistoryTurns are kept. Defense in depth -- the widget itself
+// never sends anything else -- but this is the boundary where an
+// untrusted request becomes what gets sent to the LLM.
+func sanitizeHistory(raw []chatHistoryTurn) []ai.Message {
+	var out []ai.Message
+	for _, t := range raw {
+		role := strings.TrimSpace(t.Role)
+		if role != "user" && role != "assistant" {
+			continue
+		}
+		content := truncateChars(strings.TrimSpace(t.Content), chatbotMaxHistoryChars)
+		if content == "" {
+			continue
+		}
+		out = append(out, ai.Message{Role: role, Content: content})
+	}
+	if len(out) > chatbotMaxHistoryTurns {
+		out = out[len(out)-chatbotMaxHistoryTurns:]
+	}
+	return out
+}
+
+// historySearchQuery folds the most recent user turn (if any) into the
+// current message before embedding it for retrieval -- a short follow-up
+// like "as lead?" embeds to a near-meaningless vector on its own, so
+// without this the relevance gate and the chunk search would both lose
+// the thread the moment a question doesn't stand alone. Only the last
+// user turn is used, not assistant replies (already-generated text could
+// drift from what the chunks actually say) and not the whole history
+// (would dilute the embedding rather than sharpen it).
+func historySearchQuery(history []ai.Message, message string) string {
+	for i := len(history) - 1; i >= 0; i-- {
+		if history[i].Role == "user" {
+			return history[i].Content + " " + message
+		}
+	}
+	return message
 }
 
 type chatSource struct {
@@ -157,8 +224,13 @@ func (a *App) Chat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// 16KB, not 4KB: a full chatbotMaxHistoryTurns-turn history at
+	// chatbotMaxHistoryChars each is already ~3KB before JSON overhead,
+	// plus the message itself -- sanitizeHistory trims/caps the content
+	// that actually gets used, this just has to be large enough to
+	// decode the raw request first.
 	var req chatRequestBody
-	if err := json.NewDecoder(io.LimitReader(r.Body, 4096)).Decode(&req); err != nil {
+	if err := json.NewDecoder(io.LimitReader(r.Body, 16384)).Decode(&req); err != nil {
 		writeJSON(w, http.StatusBadRequest, chatResponseBody{Error: "Invalid request."})
 		return
 	}
@@ -170,6 +242,7 @@ func (a *App) Chat(w http.ResponseWriter, r *http.Request) {
 	if len(message) > 800 {
 		message = message[:800]
 	}
+	history := sanitizeHistory(req.History)
 
 	sid := a.chatbotSessionID(w, r)
 	ctx := r.Context()
@@ -185,7 +258,11 @@ func (a *App) Chat(w http.ResponseWriter, r *http.Request) {
 
 	unlockedCourseIDs := a.unlockedCourseIDs(ctx, r)
 
-	embeddings, err := a.Nvidia.Embed(ctx, []string{message}, "query")
+	// The embedded search query folds in the last user turn so a
+	// standalone-looking follow-up ("as lead?") still retrieves against
+	// what was actually being discussed -- see historySearchQuery's own
+	// comment. The generation call below still gets the literal message.
+	embeddings, err := a.Nvidia.Embed(ctx, []string{historySearchQuery(history, message)}, "query")
 	if err != nil || len(embeddings) == 0 {
 		chatServerError(w, "chatbot embed question", err)
 		return
@@ -222,6 +299,9 @@ func (a *App) Chat(w http.ResponseWriter, r *http.Request) {
 	}
 
 	systemPrompt := "You are the AI assistant embedded on Vishnu Balachandran's personal portfolio site. " +
+		"This is a continuing conversation -- prior turns are included below the context; use them to resolve " +
+		"short follow-up questions, pronouns, and references like \"that\" or \"it\" to whatever was actually " +
+		"being discussed, rather than treating the latest message as standalone. " +
 		"Answer the visitor's question using ONLY the context below, which covers Vishnu's background, skills, " +
 		"experience, courses, and articles. The context already excludes any paid course's lesson content the " +
 		"visitor hasn't unlocked -- if asked for specifics of a locked lesson, say that part is only available " +
@@ -230,7 +310,7 @@ func (a *App) Chat(w http.ResponseWriter, r *http.Request) {
 		"third person as his assistant, and never invent prices, dates, or facts not present in the context.\n\n" +
 		"Context:\n" + retrieved.String()
 
-	reply, err := a.Nvidia.Chat(ctx, systemPrompt, message)
+	reply, err := a.Nvidia.Chat(ctx, systemPrompt, history, message)
 	if err != nil {
 		chatServerError(w, "chatbot completion", err)
 		return
@@ -499,6 +579,15 @@ func (a *App) gatherChatbotChunks(ctx context.Context) []models.ChatbotChunk {
 
 	if profile, err := a.Profile.Get(ctx); err == nil {
 		text := strings.Join(nonEmpty(profile.Name, profile.Title, profile.Tagline, profile.HeroSubtitle, profile.Summary), ". ")
+		// RagContext (migration 073) is additive, same pattern as
+		// courses.rag_context: Summary stays written for a visitor
+		// reading the About page, RagContext is written specifically to
+		// read well as retrieved evidence handed to the chatbot's LLM --
+		// explicit years-of-experience figures, named skills, and named
+		// AI tools read far better there than paraphrased out of prose.
+		if profile.RagContext != "" {
+			text += ". " + profile.RagContext
+		}
 		for _, piece := range chunkText(text, chatbotChunkMaxChars) {
 			chunks = append(chunks, models.ChatbotChunk{SourceType: "profile", Title: "About " + profile.Name, URL: "/about", ChunkText: piece})
 		}

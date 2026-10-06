@@ -32,8 +32,16 @@ type Profile struct {
 	// "profile/photo.jpg"), never a URL -- the app always serves them
 	// through GET /media/profile-photo and /media/logo. Empty means
 	// nothing uploaded yet.
-	PhotoObject     string
-	LogoObject      string
+	PhotoObject string
+	LogoObject  string
+	// RagContext is a passage written specifically for the AI chatbot's
+	// retrieval index -- what to say about Vishnu's experience, skill
+	// depth, and AI/GenAI work when a visitor asks, in words and numbers
+	// an LLM can quote directly -- additive to Summary (which stays
+	// written for a visitor reading the About page), same pattern as
+	// courses.rag_context (migration 067). Empty is fine; the chatbot
+	// falls back to Summary alone.
+	RagContext      string
 	YearsExperience int
 	UpdatedAt       time.Time
 }

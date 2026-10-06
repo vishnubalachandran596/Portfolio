@@ -25,6 +25,9 @@
       <label>About summary <span class="optional">(separate paragraphs with a blank line) — supports **bold** and *italic*</span>
         <textarea name="summary" rows="10">{{.Profile.Summary}}</textarea>
       </label>
+      <label>AI chatbot context <span class="optional">(optional — a self-contained passage for the AI chatbot to quote when answering about your experience, skill depth, or AI/GenAI work: years of experience, named skills, named AI tools, outcomes. Written for an LLM reading it out of context, not for a visitor skimming the About page. Additive to the summary above, not a replacement. Takes effect on the next scheduled reindex (~5 minutes) or immediately via "Rebuild Index" on /admin/chatbot.)</span>
+        <textarea name="rag_context" rows="6">{{.Profile.RagContext}}</textarea>
+      </label>
       <label>Location
         <input type="text" name="location" value="{{.Profile.Location}}">
       </label>
