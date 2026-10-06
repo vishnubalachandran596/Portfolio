@@ -199,7 +199,7 @@ func (a *App) LLMsTxt(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(&b, "- [Articles](%s/articles): Original writing on software architecture, distributed systems, and engineering careers\n", base)
 	fmt.Fprintf(&b, "- [Contact](%s/contact): Get in touch\n", base)
 	if a.Nvidia.Enabled() {
-		fmt.Fprintf(&b, "- [AI Assistant](%s/ai-assistant): Ask questions about this background, courses, consultancy, and articles, answered with retrieval-augmented generation\n", base)
+		fmt.Fprintf(&b, "- [AI Assistant](%s/ai-assistant): Ask questions about his background, courses, consultancy, and articles, answered with retrieval-augmented generation\n", base)
 	}
 	fmt.Fprintf(&b, "- [Privacy Policy](%s/privacy): How data is collected, used, and deleted\n", base)
 	fmt.Fprintf(&b, "- [Terms of Service](%s/terms): Terms governing use of this site\n", base)
