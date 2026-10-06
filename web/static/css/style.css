@@ -883,6 +883,7 @@ a, button, .slot-btn, .faq-item summary { cursor: pointer; }
   padding-bottom: 0.75rem;
 }
 .lesson-toolbar-inner .eyebrow { margin: 0; }
+.lesson-toolbar-actions { display: flex; align-items: center; gap: 0.5rem; }
 .html-renderer,
 .lesson-renderer,
 .article-renderer {

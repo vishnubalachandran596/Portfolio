@@ -222,8 +222,8 @@ type AIAssistantData struct {
 // this page can also pick up generic "AI assistant"-type search traffic
 // alongside the branded searches the rest of the site targets.
 func (a *App) AIAssistantPage(w http.ResponseWriter, r *http.Request) {
-	base := a.base(r, "AI Assistant — "+a.Cfg.SiteName,
-		"Ask Vishnu Balachandran's AI Assistant about his background, courses, consultancy, and articles — instant, retrieval-augmented answers grounded in this site's real content.",
+	base := a.base(r, "AI Assistant — Ask About "+a.Cfg.SiteName,
+		"A free AI chatbot and virtual assistant answering real questions about Vishnu Balachandran's software engineering experience, technical consultancy, and courses — instant, retrieval-augmented answers grounded in this site's real content.",
 		"ai-assistant")
 	base.ChatbotFullPage = true
 	a.View.Render(w, http.StatusOK, "ai_assistant", AIAssistantData{BaseData: base})
