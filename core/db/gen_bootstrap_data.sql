@@ -130,20 +130,20 @@ SELECT E'-- de-duplicate on natural keys before matching on them ---------------
 -- profile: a single identity row pinned to id = 1 by a CHECK constraint.
 SELECT E'\n-- profile -------------------------------------------------------------';
 SELECT format($f$
-WITH v (name, title, tagline, hero_subtitle, summary, location, email, linkedin_url, github_url, resume_url, photo_url, years_experience) AS (
-  VALUES (%L::text, %L::text, %L::text, %L::text, %L::text, %L::text, %L::text, %L::text, %L::text, %L::text, %L::text, %s::smallint)
+WITH v (name, title, tagline, hero_subtitle, summary, location, email, linkedin_url, github_url, resume_url, photo_object, logo_object, years_experience) AS (
+  VALUES (%L::text, %L::text, %L::text, %L::text, %L::text, %L::text, %L::text, %L::text, %L::text, %L::text, %L::text, %L::text, %s::smallint)
 ), upd AS (
   UPDATE profile p SET name = v.name, title = v.title, tagline = v.tagline,
       hero_subtitle = v.hero_subtitle, summary = v.summary, location = v.location,
       email = v.email, linkedin_url = v.linkedin_url, github_url = v.github_url,
-      resume_url = v.resume_url, photo_url = v.photo_url,
+      resume_url = v.resume_url, photo_object = v.photo_object, logo_object = v.logo_object,
       years_experience = v.years_experience, updated_at = now()
     FROM v WHERE p.id = 1 RETURNING 1
 )
-INSERT INTO profile (id, name, title, tagline, hero_subtitle, summary, location, email, linkedin_url, github_url, resume_url, photo_url, years_experience)
+INSERT INTO profile (id, name, title, tagline, hero_subtitle, summary, location, email, linkedin_url, github_url, resume_url, photo_object, logo_object, years_experience)
 SELECT 1, v.* FROM v WHERE NOT EXISTS (SELECT 1 FROM profile WHERE id = 1);$f$,
   name, title, tagline, hero_subtitle, summary, location, email,
-  linkedin_url, github_url, resume_url, photo_url, years_experience)
+  linkedin_url, github_url, resume_url, photo_object, logo_object, years_experience)
 FROM profile WHERE id = 1;
 
 -- skill_groups: natural key is `category`.
