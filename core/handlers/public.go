@@ -318,41 +318,111 @@ func (a *App) writeStoredResume(w http.ResponseWriter, r *http.Request, row mode
 	w.Write(raw)
 }
 
+// coursesPageSize: with the catalog at 10 courses and growing, 8 shows
+// nearly the whole thing on page one today while still exercising real
+// pagination -- narrower than that (5, matching articles) would split an
+// already-small catalog into three thin pages for no benefit; wider (10+)
+// would make the pager pointless until the catalog roughly doubles.
+const coursesPageSize = 8
+
 type CoursesListData struct {
 	BaseData
-	Courses []models.Course
-	// The same courses again, bucketed onto the three rungs of the
-	// suggested learning path (models.Course.Track) so the list page can
-	// offer a route through the catalogue rather than only a flat grid.
-	// Grouping here rather than in the template keeps the ordering logic
-	// testable and leaves the copy where the rest of the site's copy is.
+	// HasCourses gates the "Where to start" guided-path section, which
+	// always reflects the full catalog regardless of the filters below --
+	// a tag/search filter narrows "Every course," not the recommended path.
+	HasCourses bool
 	TrackStart []models.Course
 	TrackBuild []models.Course
 	TrackDeep  []models.Course
+	// Courses is the current page of the filtered/sorted "Every course"
+	// list -- same list-style UX as /articles (search, tag nav, sort,
+	// pagination), not the full catalog.
+	Courses    []models.Course
+	Tags       []models.CourseTag
+	Query      string
+	ActiveTag  string
+	Sort       string
+	Page       int
+	TotalPages int
+	Total      int
+	HasPrev    bool
+	HasNext    bool
+	PrevPage   int
+	NextPage   int
 	Subscribe  SubscribeFormData
 }
 
 func (a *App) CoursesList(w http.ResponseWriter, r *http.Request) {
-	pf := a.startBase(r)
-	var courses []models.Course
-	var err error
-	if a.Auth.IsAuthenticated(r) && !a.isPreviewingAsVisitor(r) {
-		// Admin sees every course, including unpublished drafts, so a new
-		// or in-progress course can be previewed before it goes live.
-		courses, err = a.Courses.ListAll(r.Context())
-	} else {
-		courses, err = a.Courses.ListPublished(r.Context())
+	ctx := r.Context()
+	q := r.URL.Query()
+	previewAll := a.Auth.IsAuthenticated(r) && !a.isPreviewingAsVisitor(r)
+
+	page, _ := strconv.Atoi(q.Get("page"))
+	if page < 1 {
+		page = 1
 	}
-	if err != nil {
-		a.serverError(w, "load courses", err)
+	sort := q.Get("sort")
+	if sort != "reviews_desc" && sort != "newest" {
+		sort = "recommended"
+	}
+	opt := repo.CourseListOptions{
+		Query:              strings.TrimSpace(q.Get("q")),
+		Tag:                strings.TrimSpace(q.Get("tag")),
+		Sort:               sort,
+		Page:               page,
+		PageSize:           coursesPageSize,
+		IncludeUnpublished: previewAll,
+	}
+
+	// Three independent lookups -- the filtered/paginated page, the full
+	// catalog that backs the always-complete "Where to start" tracks, and
+	// the distinct tag list -- go out concurrently rather than as a serial
+	// chain (CLAUDE.md §9). The chrome's own prefetch joins the same wave.
+	var (
+		result repo.CourseListResult
+		allSrc []models.Course
+		tags   []models.CourseTag
+	)
+	pf := a.startBase(r)
+	g, gctx := errgroup.WithContext(ctx)
+	g.Go(func() (err error) { result, err = a.Courses.ListPublishedFiltered(gctx, opt); return })
+	g.Go(func() (err error) {
+		if previewAll {
+			allSrc, err = a.Courses.ListAll(gctx)
+		} else {
+			allSrc, err = a.Courses.ListPublished(gctx)
+		}
+		return
+	})
+	g.Go(func() (err error) { tags, err = a.Courses.ListAllTags(gctx); return })
+	if err := g.Wait(); err != nil {
+		a.serverError(w, "load courses page data", err)
 		return
 	}
-	data := CoursesListData{
-		BaseData:  a.baseFrom(r, pf, "Java, Architecture & System Design Courses — "+a.Cfg.SiteName, "Practical, production-grade courses on Java, technical architecture, system design, and distributed systems from a working technical consultant.", "courses"),
-		Courses:   courses,
-		Subscribe: SubscribeFormData{Source: "courses", Subscribed: r.URL.Query().Get("subscribed") == "1"},
+
+	totalPages := (result.Total + coursesPageSize - 1) / coursesPageSize
+	if totalPages < 1 {
+		totalPages = 1
 	}
-	for _, c := range courses {
+
+	data := CoursesListData{
+		BaseData:   a.baseFrom(r, pf, "Java, Architecture & System Design Courses — "+a.Cfg.SiteName, "Practical, production-grade courses on Java, technical architecture, system design, and distributed systems from a working technical consultant.", "courses"),
+		HasCourses: len(allSrc) > 0,
+		Courses:    result.Courses,
+		Tags:       tags,
+		Query:      opt.Query,
+		ActiveTag:  opt.Tag,
+		Sort:       sort,
+		Page:       page,
+		TotalPages: totalPages,
+		Total:      result.Total,
+		HasPrev:    page > 1,
+		HasNext:    page < totalPages,
+		PrevPage:   page - 1,
+		NextPage:   page + 1,
+		Subscribe:  SubscribeFormData{Source: "courses", Subscribed: q.Get("subscribed") == "1"},
+	}
+	for _, c := range allSrc {
 		switch c.Track() {
 		case models.CourseTrackStart:
 			data.TrackStart = append(data.TrackStart, c)

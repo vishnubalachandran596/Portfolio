@@ -8,7 +8,7 @@
   </div>
 </section>
 
-{{if .Courses}}
+{{if .HasCourses}}
 <section class="section">
   <div class="container">
     <h2 class="section-title">Where to start</h2>
@@ -59,19 +59,60 @@
 <section class="section section-alt">
   <div class="container">
     <h2 class="section-title">Every course</h2>
+
+    {{if .Tags}}
+    <nav class="topic-nav" aria-label="Course topics">
+      <span class="topic-nav-label">Topics</span>
+      <a class="tag-chip{{if not .ActiveTag}} tag-chip-active{{end}}" href="/courses">All</a>
+      {{$active := .ActiveTag}}
+      {{range .Tags}}
+      <a class="tag-chip{{if eq .Name $active}} tag-chip-active{{end}}" href="/courses?tag={{.Name}}">{{.Name}} <span class="tag-chip-count">{{.Count}}</span></a>
+      {{end}}
+    </nav>
+    {{end}}
+
+    <form method="GET" action="/courses" class="article-filters">
+      <input type="search" name="q" value="{{.Query}}" placeholder="Search courses…" class="article-search">
+      <input type="hidden" name="tag" value="{{.ActiveTag}}">
+      <select name="sort" class="article-select">
+        <option value="recommended" {{if eq .Sort "recommended"}}selected{{end}}>Recommended order</option>
+        <option value="newest" {{if eq .Sort "newest"}}selected{{end}}>Newest first</option>
+        <option value="reviews_desc" {{if eq .Sort "reviews_desc"}}selected{{end}}>Most rated</option>
+      </select>
+      <button type="submit" class="btn btn-secondary">Apply</button>
+      {{if or .Query .ActiveTag}}<a class="link-button" href="/courses">Clear</a>{{end}}
+    </form>
+
     {{if .Courses}}
-    <div class="course-grid">
+    <p class="article-result-count">{{.Total}} course{{if ne .Total 1}}s{{end}}</p>
+    <div class="article-list article-archive">
       {{range .Courses}}
-      <a class="course-card" href="/courses/{{.Slug}}">
-        <span class="course-level">{{.Level}}</span>
-        <h3>{{.Title}}</h3>
-        <p>{{rich .Summary}}</p>
-        <span class="course-price">{{.PriceDisplay}}{{if .Duration}} <span class="course-duration">· {{.Duration}}</span>{{end}}</span>
-      </a>
+      <article class="article-row">
+        <a class="article-row-link" href="/courses/{{.Slug}}">
+          <div class="article-row-body">
+            <h3>{{.Title}}</h3>
+            <p>{{rich .Summary}}</p>
+            <div class="article-row-meta">
+              <span>{{.Level}}</span>
+              {{if .Duration}}<span>{{.Duration}}</span>{{end}}
+              <span>{{.PriceDisplay}}</span>
+              {{if gt .ReviewCount 0}}<span>{{.ReviewCount}} rating{{if ne .ReviewCount 1}}s{{end}}</span>{{end}}
+            </div>
+          </div>
+        </a>
+      </article>
       {{end}}
     </div>
+
+    {{if gt .TotalPages 1}}
+    <nav class="pagination" aria-label="Courses pagination">
+      {{if .HasPrev}}<a href="/courses?page={{.PrevPage}}&q={{.Query}}&tag={{.ActiveTag}}&sort={{.Sort}}">← Previous</a>{{else}}<span class="pagination-disabled">← Previous</span>{{end}}
+      <span class="pagination-status">Page {{.Page}} of {{.TotalPages}}</span>
+      {{if .HasNext}}<a href="/courses?page={{.NextPage}}&q={{.Query}}&tag={{.ActiveTag}}&sort={{.Sort}}">Next →</a>{{else}}<span class="pagination-disabled">Next →</span>{{end}}
+    </nav>
+    {{end}}
     {{else}}
-    <p class="empty-state">No courses published yet — check back soon.</p>
+    <p class="empty-state">No courses match — try a different search or clear the filters.</p>
     {{end}}
   </div>
 </section>

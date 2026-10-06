@@ -33,6 +33,9 @@
       <label>Sort order
         <input type="number" name="sort_order" value="{{.Course.SortOrder}}">
       </label>
+      <label>Tags <span class="optional">comma-separated, e.g. "Kafka, Resiliency, System Design" — powers the topic filter on /courses</span>
+        <input type="text" name="tags" value="{{.Course.TagsDisplay}}" placeholder="Kafka, Resiliency, System Design">
+      </label>
       <label class="checkbox-label">
         <input type="checkbox" name="is_published" {{if or .IsNew .Course.IsPublished}}checked{{end}}>
         Published (visible on the public site)
