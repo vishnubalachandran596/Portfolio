@@ -1763,6 +1763,8 @@ a, button, .slot-btn, .faq-item summary { cursor: pointer; }
 .article-row h3 { font-size: 1.08rem; margin-bottom: 0.5rem; }
 .article-row-body p { color: var(--color-text-muted); font-size: 0.92rem; margin-bottom: 0.625rem; }
 .article-row-meta { display: flex; flex-wrap: wrap; gap: 0.625rem; align-items: center; font-size: 0.82rem; color: var(--color-text-faint); }
+.course-meta-stat { display: inline-flex; align-items: center; gap: 0.3rem; }
+.course-meta-icon { width: 0.95em; height: 0.95em; flex-shrink: 0; }
 .tag-chip {
   background: var(--color-surface-2);
   color: var(--color-primary-strong);

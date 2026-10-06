@@ -192,6 +192,11 @@ type Course struct {
 	// this is the only review data ever shown publicly (never the rating
 	// value itself) -- see migration 064's doc comment.
 	ReviewCount int
+	// EnrolledCount is also populated only by ListPublishedFiltered: 1
+	// (a baseline so a brand new course never reads "0 enrolled") plus
+	// one per paid purchase, derived live -- never a stored/incremented
+	// counter, so it can never drift from what purchases actually says.
+	EnrolledCount int
 }
 
 // IsFree reports whether the course has no listed price.

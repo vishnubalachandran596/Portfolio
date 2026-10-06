@@ -18,7 +18,13 @@ import (
 	"github.com/vishnubalachandran596/portfolio/core/storage"
 )
 
-const articlesPageSize = 5
+// catalogPageSize is shared by /articles and /courses by deliberate
+// choice: both list pages reuse the same archive UX (topic nav, search,
+// sort, pagination -- see courses_list.html/articles_list.html, which
+// also share their row/pagination CSS classes), so a page-size change
+// made for one applies to both rather than needing to stay in sync by
+// hand.
+const catalogPageSize = 5
 
 type ArticlesData struct {
 	BaseData
@@ -61,7 +67,7 @@ func (a *App) ArticlesPage(w http.ResponseWriter, r *http.Request) {
 		Tag:      strings.TrimSpace(q.Get("tag")),
 		Sort:     sort,
 		Page:     page,
-		PageSize: articlesPageSize,
+		PageSize: catalogPageSize,
 	}
 	// The filtered page of articles and the full topic list are
 	// independent queries and both have to succeed, so they go out
@@ -81,7 +87,7 @@ func (a *App) ArticlesPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	totalPages := (result.Total + articlesPageSize - 1) / articlesPageSize
+	totalPages := (result.Total + catalogPageSize - 1) / catalogPageSize
 	if totalPages < 1 {
 		totalPages = 1
 	}

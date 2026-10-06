@@ -318,13 +318,6 @@ func (a *App) writeStoredResume(w http.ResponseWriter, r *http.Request, row mode
 	w.Write(raw)
 }
 
-// coursesPageSize: with the catalog at 10 courses and growing, 8 shows
-// nearly the whole thing on page one today while still exercising real
-// pagination -- narrower than that (5, matching articles) would split an
-// already-small catalog into three thin pages for no benefit; wider (10+)
-// would make the pager pointless until the catalog roughly doubles.
-const coursesPageSize = 8
-
 type CoursesListData struct {
 	BaseData
 	// HasCourses gates the "Where to start" guided-path section, which
@@ -370,7 +363,7 @@ func (a *App) CoursesList(w http.ResponseWriter, r *http.Request) {
 		Tag:                strings.TrimSpace(q.Get("tag")),
 		Sort:               sort,
 		Page:               page,
-		PageSize:           coursesPageSize,
+		PageSize:           catalogPageSize,
 		IncludeUnpublished: previewAll,
 	}
 
@@ -400,7 +393,7 @@ func (a *App) CoursesList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	totalPages := (result.Total + coursesPageSize - 1) / coursesPageSize
+	totalPages := (result.Total + catalogPageSize - 1) / catalogPageSize
 	if totalPages < 1 {
 		totalPages = 1
 	}
