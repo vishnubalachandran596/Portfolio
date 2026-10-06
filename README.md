@@ -260,8 +260,8 @@ requires a Google-authenticated account; there is no guest-checkout path.
   with `Cache-Control: no-store`, the lesson tags stay out of view-source,
   right-click is discouraged, copied text is stamped with the purchaser's
   email throughout, the parent cannot read the lesson iframe DOM, and
-  **vishnubalachandran.com is drawn three times along the renderer
-  diagonal, corner to corner**,
+  **vishnubalachandran.com is drawn once, horizontally, centered in the
+  renderer pane**,
   which is the actually-effective deterrent — a leaked copy is traceable
   back to whoever shared it.
 - **Setup:** set `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` (start with

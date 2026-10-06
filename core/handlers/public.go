@@ -31,6 +31,22 @@ type HomeData struct {
 	JSONLD    template.JS
 }
 
+// absoluteImageURL resolves profile.photo_url into the absolute URL an OG
+// tag requires. The admin form's Photo URL field is type="url", so the
+// browser's own native validation already enforces an absolute URL
+// (scheme + host) -- but the column predates that and may still hold an
+// older site-relative value (e.g. "/static/img/x.jpg"), so both are
+// handled rather than assuming one shape and breaking the other.
+func absoluteImageURL(siteURL, photoURL string) string {
+	if photoURL == "" {
+		return ""
+	}
+	if strings.HasPrefix(photoURL, "http://") || strings.HasPrefix(photoURL, "https://") {
+		return photoURL
+	}
+	return siteURL + photoURL
+}
+
 func (a *App) Home(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
@@ -79,10 +95,7 @@ func (a *App) Home(w http.ResponseWriter, r *http.Request) {
 	if profile.GitHubURL != "" {
 		sameAs = append(sameAs, profile.GitHubURL)
 	}
-	imageURL := ""
-	if profile.PhotoURL != "" {
-		imageURL = base.SiteURL + profile.PhotoURL
-	}
+	imageURL := absoluteImageURL(base.SiteURL, profile.PhotoURL)
 
 	a.View.Render(w, http.StatusOK, "home", HomeData{
 		BaseData:  base,

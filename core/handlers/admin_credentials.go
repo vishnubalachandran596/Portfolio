@@ -137,6 +137,7 @@ func (a *App) AdminCertificationSave(w http.ResponseWriter, r *http.Request) {
 		a.serverError(w, "save certification", err)
 		return
 	}
+	a.markChatbotReindexPending(ctx)
 	http.Redirect(w, r, "/admin/certifications", http.StatusSeeOther)
 }
 
@@ -150,6 +151,7 @@ func (a *App) AdminCertificationDelete(w http.ResponseWriter, r *http.Request) {
 		a.serverError(w, "delete certification", err)
 		return
 	}
+	a.markChatbotReindexPending(r.Context())
 	http.Redirect(w, r, "/admin/certifications", http.StatusSeeOther)
 }
 
@@ -260,6 +262,7 @@ func (a *App) AdminPublicationSave(w http.ResponseWriter, r *http.Request) {
 		a.serverError(w, "save publication", err)
 		return
 	}
+	a.markChatbotReindexPending(ctx)
 	http.Redirect(w, r, "/admin/publications", http.StatusSeeOther)
 }
 
@@ -273,5 +276,6 @@ func (a *App) AdminPublicationDelete(w http.ResponseWriter, r *http.Request) {
 		a.serverError(w, "delete publication", err)
 		return
 	}
+	a.markChatbotReindexPending(r.Context())
 	http.Redirect(w, r, "/admin/publications", http.StatusSeeOther)
 }
