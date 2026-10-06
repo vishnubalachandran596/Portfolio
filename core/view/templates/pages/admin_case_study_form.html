@@ -7,16 +7,16 @@
       <label>Title
         <input type="text" name="title" value="{{.CaseStudy.Title}}" required placeholder="e.g. Cutting a batch pricing job from hours to minutes">
       </label>
-      <label>Client / context <span class="optional">e.g. "Banking platform, via Zafin" — only name a client you're free to name</span>
+      <label>Client / context <span class="optional">e.g. "Banking platform, via Zafin" — only name a client you're free to name. Supports **bold** and *italic*</span>
         <input type="text" name="client_context" value="{{.CaseStudy.ClientContext}}">
       </label>
-      <label>Problem
+      <label>Problem <span class="optional">supports **bold** and *italic*</span>
         <textarea name="problem" rows="3" required>{{.CaseStudy.Problem}}</textarea>
       </label>
-      <label>Approach
+      <label>Approach <span class="optional">supports **bold** and *italic*</span>
         <textarea name="approach" rows="3" required>{{.CaseStudy.Approach}}</textarea>
       </label>
-      <label>Result <span class="optional">lead with the number, if there is one</span>
+      <label>Result <span class="optional">lead with the number, if there is one. Supports **bold** and *italic*</span>
         <textarea name="result" rows="3" required>{{.CaseStudy.Result}}</textarea>
       </label>
       <label class="checkbox-label">

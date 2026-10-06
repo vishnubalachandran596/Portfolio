@@ -50,7 +50,7 @@
         <a class="article-row-link" href="/articles/{{.Slug}}">
           <div class="article-row-body">
             <h3>{{.Title}}</h3>
-            <p>{{.Summary}}</p>
+            <p>{{rich .Summary}}</p>
             <div class="article-row-meta">
               {{if .PublishedDate}}<span>{{formatDateOptional .PublishedDate}}</span>{{end}}
               <span>By {{$.SiteName}}</span>

@@ -23,7 +23,7 @@
           <input type="text" name="end_date" value="{{.Experience.EndDate}}">
         </label>
       </div>
-      <label>Bullets <span class="optional">one per line</span>
+      <label>Bullets <span class="optional">one per line — supports **bold** and *italic*</span>
         <textarea name="bullets" rows="6">{{range $i, $b := .Experience.Bullets}}{{if $i}}
 {{end}}{{$b}}{{end}}</textarea>
       </label>

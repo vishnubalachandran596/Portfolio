@@ -10,10 +10,10 @@
       <label>Slug <span class="optional">(leave blank to auto-generate)</span>
         <input type="text" name="slug" value="{{.Course.Slug}}">
       </label>
-      <label>Summary <span class="optional">(one line, shown in listings)</span>
+      <label>Summary <span class="optional">(one line, shown in listings) — supports **bold** and *italic*</span>
         <input type="text" name="summary" value="{{.Course.Summary}}" maxlength="240">
       </label>
-      <label>Description <span class="optional">(separate paragraphs with a blank line)</span>
+      <label>Description <span class="optional">(separate paragraphs with a blank line) — supports **bold** and *italic*</span>
         <textarea name="description" rows="8">{{.Course.Description}}</textarea>
       </label>
       <div class="form-row">

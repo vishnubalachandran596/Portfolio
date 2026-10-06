@@ -39,7 +39,7 @@
       {{if .Article.CoverImageURL}}
       <img class="article-cover-image" src="{{.Article.CoverImageURL}}" alt="{{.Article.Title}}" loading="eager">
       {{end}}
-      <p class="article-lede"><strong>{{.Article.Summary}}</strong></p>
+      <p class="article-lede"><strong>{{rich .Article.Summary}}</strong></p>
       <div class="article-body">{{articleBody .Article.Body}}</div>
       <p class="article-thumbs-cta">Found this useful? Give it a thumbs up for more of these contents.</p>
       <div class="article-detail-actions">

@@ -16,13 +16,13 @@
       <label>Title
         <input type="text" name="title" value="{{.Profile.Title}}">
       </label>
-      <label>Hero tagline
+      <label>Hero tagline <span class="optional">supports **bold** and *italic*</span>
         <input type="text" name="tagline" value="{{.Profile.Tagline}}">
       </label>
-      <label>Hero subtitle
+      <label>Hero subtitle <span class="optional">supports **bold** and *italic*</span>
         <input type="text" name="hero_subtitle" value="{{.Profile.HeroSubtitle}}">
       </label>
-      <label>About summary <span class="optional">(separate paragraphs with a blank line)</span>
+      <label>About summary <span class="optional">(separate paragraphs with a blank line) — supports **bold** and *italic*</span>
         <textarea name="summary" rows="10">{{.Profile.Summary}}</textarea>
       </label>
       <label>Location

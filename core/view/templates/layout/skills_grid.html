@@ -111,7 +111,7 @@
           <span class="skill-card-title">{{.Category}}</span>
           {{if .Level}}<span class="skill-level skill-level-{{.Level}}">{{.Level}}</span>{{end}}
         </div>
-        {{if .Achievement}}<p class="skill-achievement">{{.Achievement}}</p>{{end}}
+        {{if .Achievement}}<p class="skill-achievement">{{rich .Achievement}}</p>{{end}}
         <ul class="skill-tags">
           {{range .Items}}<li>{{.}}</li>{{end}}
         </ul>
