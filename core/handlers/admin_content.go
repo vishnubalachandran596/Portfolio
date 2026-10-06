@@ -115,6 +115,7 @@ func (a *App) AdminSkillSave(w http.ResponseWriter, r *http.Request) {
 		a.serverError(w, "save skill", err)
 		return
 	}
+	a.markChatbotReindexPending(ctx)
 	http.Redirect(w, r, "/admin/skills", http.StatusSeeOther)
 }
 
@@ -128,6 +129,7 @@ func (a *App) AdminSkillDelete(w http.ResponseWriter, r *http.Request) {
 		a.serverError(w, "delete skill", err)
 		return
 	}
+	a.markChatbotReindexPending(r.Context())
 	http.Redirect(w, r, "/admin/skills", http.StatusSeeOther)
 }
 
@@ -301,6 +303,7 @@ func (a *App) AdminExperienceSave(w http.ResponseWriter, r *http.Request) {
 		a.serverError(w, "save resume", err)
 		return
 	}
+	a.markChatbotReindexPending(ctx)
 	http.Redirect(w, r, "/admin/experience", http.StatusSeeOther)
 }
 
@@ -349,6 +352,7 @@ func (a *App) AdminExperienceDelete(w http.ResponseWriter, r *http.Request) {
 		a.serverError(w, "delete experience", err)
 		return
 	}
+	a.markChatbotReindexPending(ctx)
 	http.Redirect(w, r, "/admin/experience", http.StatusSeeOther)
 }
 
@@ -608,6 +612,7 @@ func (a *App) AdminTestimonialSave(w http.ResponseWriter, r *http.Request) {
 		a.serverError(w, "save testimonial", err)
 		return
 	}
+	a.markChatbotReindexPending(ctx)
 	http.Redirect(w, r, "/admin/testimonials", http.StatusSeeOther)
 }
 
@@ -623,6 +628,7 @@ func (a *App) AdminTestimonialApprove(w http.ResponseWriter, r *http.Request) {
 		a.serverError(w, "approve testimonial", err)
 		return
 	}
+	a.markChatbotReindexPending(r.Context())
 	http.Redirect(w, r, "/admin/testimonials", http.StatusSeeOther)
 }
 
@@ -636,5 +642,6 @@ func (a *App) AdminTestimonialDelete(w http.ResponseWriter, r *http.Request) {
 		a.serverError(w, "delete testimonial", err)
 		return
 	}
+	a.markChatbotReindexPending(r.Context())
 	http.Redirect(w, r, "/admin/testimonials", http.StatusSeeOther)
 }

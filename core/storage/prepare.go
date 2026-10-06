@@ -65,10 +65,11 @@ func PrepareLesson(raw []byte, identity, stylesheet string) (PreparedLesson, err
 }
 
 // WatermarkScript returns a self-contained <canvas>/<script> block that
-// draws label at most three times along the host diagonal, from one
-// corner to the opposite. When #html-renderer is present it paints only
-// inside that pane; otherwise (the lesson iframe) it covers the iframe
-// viewport, which is the same pane. Font size scales with the diagonal.
+// draws label once, horizontally, centered in the pane. When
+// #html-renderer is present it paints only inside that pane; otherwise
+// (the lesson iframe) it covers the iframe viewport, which is the same
+// pane. Font size scales with the pane's diagonal, then shrinks further
+// if the label would overflow the pane's width.
 //
 // The text is canvas-rendered pixels, not a DOM node holding the string.
 // A MutationObserver re-appends the canvas if it is deleted. None of this
@@ -134,24 +135,17 @@ func WatermarkScript(label, copyIdentity string) string {
     var diag = Math.hypot(w, h);
     var fontSize = Math.max(15, Math.min(24, diag / 48));
     ctx.save();
-    ctx.translate(w / 2, h / 2);
-    ctx.rotate(-Math.atan2(h, w));
-    ctx.fillStyle = isDark() ? '#d6d3d1' : '#78716c';
-    ctx.font = '600 ' + fontSize + 'px system-ui, -apple-system, sans-serif';
+    ctx.fillStyle = isDark() ? '#9c8f81' : '#78716c';
+    ctx.font = '600 ' + fontSize + 'px "Montserrat", system-ui, -apple-system, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     var textW = ctx.measureText(label).width;
-    if (textW * 3.5 > diag) {
-      fontSize = Math.max(12, fontSize * (diag / (textW * 3.5)));
-      ctx.font = '600 ' + fontSize + 'px system-ui, -apple-system, sans-serif';
-      textW = ctx.measureText(label).width;
+    var maxTextW = w * 0.85;
+    if (textW > maxTextW) {
+      fontSize = Math.max(10, fontSize * (maxTextW / textW));
+      ctx.font = '600 ' + fontSize + 'px "Montserrat", system-ui, -apple-system, sans-serif';
     }
-    var inset = Math.min(textW / 2 + 16, diag / 2 - 8);
-    var start = -diag / 2 + inset;
-    var end = diag / 2 - inset;
-    ctx.fillText(label, start, 0);
-    ctx.fillText(label, 0, 0);
-    ctx.fillText(label, end, 0);
+    ctx.fillText(label, w / 2, h / 2);
     ctx.restore();
   }
 

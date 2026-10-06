@@ -485,11 +485,15 @@ func chunkText(s string, maxChars int) []string {
 	return out
 }
 
-// gatherChatbotChunks reads every piece of indexable site content (never
-// anything from the repo itself -- all of this is live DB/Storage
-// content, per CLAUDE.md rule 8) and splits it into embeddable chunks.
-// Best-effort throughout: a lookup failure for one content type just
-// means that type is skipped this rebuild, not a failed reindex.
+// gatherChatbotChunks reads every piece of indexable site content --
+// profile, skills, experience, education, courses (+ gated lesson
+// bodies), articles, consultancy tiers/FAQ, case studies,
+// certifications, publications, and testimonials -- never anything
+// from the repo itself (all of this is live DB/Storage content, or
+// Go/template-literal copy for consultancy, per CLAUDE.md rule 8) and
+// splits it into embeddable chunks. Best-effort throughout: a lookup
+// failure for one content type just means that type is skipped this
+// rebuild, not a failed reindex.
 func (a *App) gatherChatbotChunks(ctx context.Context) []models.ChatbotChunk {
 	var chunks []models.ChatbotChunk
 
@@ -559,6 +563,51 @@ func (a *App) gatherChatbotChunks(ctx context.Context) []models.ChatbotChunk {
 					chunks = append(chunks, models.ChatbotChunk{SourceType: "course", SourceID: c.ID, Title: "Course lesson: " + c.Title, URL: url, ChunkText: piece, IsGated: c.IsPaid})
 				}
 			}
+		}
+	}
+
+	// Consultancy tiers and FAQ are template/Go-literal copy, not DB rows
+	// (see docs/ARCHITECTURE.md) -- consultancyFAQ is the same function
+	// consultancy.go uses for the page's own <details> accordion and its
+	// FAQPage JSON-LD, so this can never drift from what a visitor
+	// actually sees on /consultancy.
+	auditDisplay, retainerDisplay := models.AuditPriceDisplay(), models.RetainerRangeDisplay()
+	for _, item := range consultancyFAQ(auditDisplay, retainerDisplay) {
+		chunks = append(chunks, models.ChatbotChunk{SourceType: "consultancy", Title: "Consultancy FAQ: " + item.Question, URL: "/consultancy", ChunkText: item.Question + " " + item.Answer})
+	}
+	tierText := "Consultancy tiers at /consultancy: " +
+		"Architecture Review (" + auditDisplay + ", indicative, quoted after scoping) -- a focused written review of one system, migration, or architecture decision: a scoping call, the review, a written findings document with a specific recommendation, and a walkthrough call, typically a couple of weeks end to end. " +
+		"Fractional Advisory (" + retainerDisplay + ") -- an ongoing month-to-month retainer: a standing review call plus async access for questions in between, with written notes and a recommendation from every review. " +
+		"Schedule a Call (free) -- a free scoping call and the entry point into both paid tiers above; book it on the Booking page after signing in with Google."
+	for _, piece := range chunkText(tierText, chatbotChunkMaxChars) {
+		chunks = append(chunks, models.ChatbotChunk{SourceType: "consultancy", Title: "Consultancy tiers", URL: "/consultancy", ChunkText: piece})
+	}
+
+	if caseStudies, err := a.CaseStudies.ListPublished(ctx); err == nil {
+		for _, cs := range caseStudies {
+			text := cs.Title + ". Context: " + cs.ClientContext + ". Problem: " + cs.Problem + ". Approach: " + cs.Approach + ". Result: " + cs.Result
+			for _, piece := range chunkText(text, chatbotChunkMaxChars) {
+				chunks = append(chunks, models.ChatbotChunk{SourceType: "case_study", SourceID: cs.ID, Title: "Case study: " + cs.Title, URL: "/about#case-studies", ChunkText: piece})
+			}
+		}
+	}
+
+	if certs, err := a.Certifications.ListPublished(ctx); err == nil {
+		for _, c := range certs {
+			chunks = append(chunks, models.ChatbotChunk{SourceType: "certification", SourceID: c.ID, Title: "Certification: " + c.Name, URL: "/about#certifications", ChunkText: c.Name + " from " + c.Issuer})
+		}
+	}
+
+	if pubs, err := a.Publications.ListPublished(ctx); err == nil {
+		for _, p := range pubs {
+			text := p.Title + " (" + p.Kind + ", " + p.Venue + "). " + p.Summary
+			chunks = append(chunks, models.ChatbotChunk{SourceType: "publication", SourceID: p.ID, Title: p.Kind + ": " + p.Title, URL: "/about#publications", ChunkText: text})
+		}
+	}
+
+	if testimonials, err := a.Testimonials.ListPublished(ctx); err == nil {
+		for _, t := range testimonials {
+			chunks = append(chunks, models.ChatbotChunk{SourceType: "testimonial", SourceID: t.ID, Title: "Testimonial from " + t.AuthorName, URL: "/about#testimonials", ChunkText: t.AuthorName + ", " + t.AuthorTitle + ": " + t.Body})
 		}
 	}
 

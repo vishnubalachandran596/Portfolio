@@ -624,6 +624,7 @@ func (a *App) AdminProfileSave(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	a.markChatbotReindexPending(r.Context())
 	http.Redirect(w, r, "/admin/profile?saved=1", http.StatusSeeOther)
 }
 

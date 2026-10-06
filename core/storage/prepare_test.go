@@ -42,19 +42,22 @@ func TestPrepareLessonHidesMarkupAndKeepsLessonStyles(t *testing.T) {
 	}
 }
 
-func TestWatermarkScriptSpansDiagonal(t *testing.T) {
+func TestWatermarkScriptIsSingleCenteredLine(t *testing.T) {
 	got := WatermarkScript(WatermarkLabel, "buyer@example.com")
 	if !strings.Contains(got, `"vishnubalachandran.com"`) {
 		t.Fatal("visible watermark is not the site domain")
 	}
-	if !strings.Contains(got, "Math.atan2") || !strings.Contains(got, "Math.hypot") {
-		t.Fatal("watermark is not drawn corner-to-corner along the host diagonal")
+	if strings.Contains(got, "Math.atan2") || strings.Contains(got, "ctx.rotate") {
+		t.Fatal("watermark should draw a single horizontal line, not rotate along the diagonal")
 	}
 	if !strings.Contains(got, "html-renderer") {
 		t.Fatal("watermark is not restricted to the renderer pane")
 	}
-	if strings.Count(got, "ctx.fillText(label") > 3 {
-		t.Fatalf("watermark draws more than 3 lines")
+	if strings.Count(got, "ctx.fillText(label") != 1 {
+		t.Fatalf("watermark should draw exactly one line, got %d", strings.Count(got, "ctx.fillText(label"))
+	}
+	if !strings.Contains(got, `"Montserrat"`) {
+		t.Fatal("watermark font does not reference the site's own font family")
 	}
 	if !strings.Contains(got, `<canvas id="__access_watermark"`) {
 		t.Fatal("watermark is not canvas-rendered")

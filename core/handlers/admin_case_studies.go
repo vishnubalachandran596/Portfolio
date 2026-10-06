@@ -117,6 +117,7 @@ func (a *App) AdminCaseStudySave(w http.ResponseWriter, r *http.Request) {
 		a.serverError(w, "save case study", err)
 		return
 	}
+	a.markChatbotReindexPending(ctx)
 	http.Redirect(w, r, "/admin/case-studies", http.StatusSeeOther)
 }
 
@@ -130,5 +131,6 @@ func (a *App) AdminCaseStudyDelete(w http.ResponseWriter, r *http.Request) {
 		a.serverError(w, "delete case study", err)
 		return
 	}
+	a.markChatbotReindexPending(r.Context())
 	http.Redirect(w, r, "/admin/case-studies", http.StatusSeeOther)
 }
