@@ -314,6 +314,27 @@ a, button, .slot-btn, .faq-item summary { cursor: pointer; }
   50% { transform: scale(1.08); }
 }
 
+/* Cross-document view transition: a native-browser cross-fade between
+   the outgoing and incoming page on a normal link navigation (opt-in,
+   zero JS, zero framework — see CLAUDE.md's "no client-side JS
+   framework" rule). Pure progressive enhancement: Firefox and older
+   Safari ignore this at-rule entirely and navigate exactly as before,
+   no broken behavior either way. This runs *after* the next page's
+   HTML has already arrived and parsed — it only smooths the visual
+   handoff, so it has no bearing on load time, URLs, crawlability, or
+   any other SEO-relevant signal; the page-loader below is what covers
+   the actual network/server wait before that handoff happens. */
+@view-transition {
+  navigation: auto;
+}
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation-duration: 0.01ms !important;
+  }
+}
+
 /* Between-page loader: a small branded route indicator (not a
    full-screen blocker) shown for any navigation, not just slow ones —
    a plain opacity fade-in, deliberately not the splash's pulse/scale. */
