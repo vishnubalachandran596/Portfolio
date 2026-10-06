@@ -1,0 +1,25 @@
+name: Chatbot reindex
+
+# Vercel's own Cron Jobs only run once/day on the Hobby plan (confirmed
+# via a rejected deploy: "Hobby accounts are limited to daily cron
+# jobs"), which is too infrequent for this -- a course/article save only
+# flags that a reindex is needed (core/handlers/chatbot.go's
+# markChatbotReindexPending); something has to actually run it. This
+# workflow is that something, calling the app's own
+# GET /internal/chatbot/cron-reindex, which no-ops immediately (no
+# NVIDIA call) whenever nothing is pending.
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch: {}
+
+jobs:
+  reindex:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger reindex if pending
+        run: |
+          curl -sS -o response.json -w "\nHTTP %{http_code}\n" \
+            "https://www.vishnubalachandran.com/internal/chatbot/cron-reindex" \
+            -H "Authorization: Bearer ${{ secrets.CHATBOT_REINDEX_TOKEN }}"
+          cat response.json

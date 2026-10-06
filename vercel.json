@@ -6,9 +6,6 @@
       "maxDuration": 60
     }
   },
-  "crons": [
-    { "path": "/internal/chatbot/cron-reindex", "schedule": "*/5 * * * *" }
-  ],
   "redirects": [
     {
       "source": "/:path*",
