@@ -44,8 +44,8 @@
           <input type="url" name="resume_url" value="{{.Profile.ResumeURL}}">
         </label>
       </div>
-      <label>Photo URL
-        <input type="url" name="photo_url" value="{{.Profile.PhotoURL}}">
+      <label>Photo URL <span class="optional">site-relative, e.g. /static/img/photo.jpg — not a full URL</span>
+        <input type="text" name="photo_url" value="{{.Profile.PhotoURL}}">
       </label>
       <label>Default resume PDF <span class="optional">optional — replaces the main download</span>
         <input type="file" name="resume_file" accept=".pdf,application/pdf">
