@@ -107,6 +107,17 @@ type chatMessage struct {
 	Content string `json:"content"`
 }
 
+// Message is one turn of prior conversation history, passed into Chat so
+// a follow-up question ("as lead?" after a question about AI work) can be
+// answered in context instead of treated as a standalone, ungrounded
+// question. Role must be "user" or "assistant" -- the caller (chatbot.go's
+// sanitizeHistory) is responsible for validating and bounding this before
+// it reaches here; this package trusts its input.
+type Message struct {
+	Role    string
+	Content string
+}
+
 type chatRequest struct {
 	Model           string        `json:"model"`
 	Messages        []chatMessage `json:"messages"`
@@ -127,16 +138,21 @@ type chatResponse struct {
 	Detail string `json:"detail"`
 }
 
-// Chat sends one grounded question (system prompt + user message,
-// non-streaming -- the widget shows one reply at a time) and returns the
-// model's reply text.
-func (c *Client) Chat(ctx context.Context, systemPrompt, userMessage string) (string, error) {
+// Chat sends one grounded question (system prompt + prior conversation
+// history, if any, + the new user message, non-streaming -- the widget
+// shows one reply at a time) and returns the model's reply text. history
+// is ordered oldest-first; pass nil for a standalone question.
+func (c *Client) Chat(ctx context.Context, systemPrompt string, history []Message, userMessage string) (string, error) {
+	messages := make([]chatMessage, 0, len(history)+2)
+	messages = append(messages, chatMessage{Role: "system", Content: systemPrompt})
+	for _, h := range history {
+		messages = append(messages, chatMessage{Role: h.Role, Content: h.Content})
+	}
+	messages = append(messages, chatMessage{Role: "user", Content: userMessage})
+
 	body, err := json.Marshal(chatRequest{
-		Model: c.chatModel,
-		Messages: []chatMessage{
-			{Role: "system", Content: systemPrompt},
-			{Role: "user", Content: userMessage},
-		},
+		Model:       c.chatModel,
+		Messages:    messages,
 		Temperature: 0.2,
 		MaxTokens:   900,
 		// gpt-oss-20b is a hybrid-reasoning model: it returns its internal

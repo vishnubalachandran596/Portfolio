@@ -601,6 +601,7 @@ func (a *App) AdminProfileSave(w http.ResponseWriter, r *http.Request) {
 		Tagline:         strings.TrimSpace(r.FormValue("tagline")),
 		HeroSubtitle:    strings.TrimSpace(r.FormValue("hero_subtitle")),
 		Summary:         r.FormValue("summary"),
+		RagContext:      strings.TrimSpace(r.FormValue("rag_context")),
 		Location:        strings.TrimSpace(r.FormValue("location")),
 		Email:           strings.TrimSpace(r.FormValue("email")),
 		LinkedInURL:     strings.TrimSpace(r.FormValue("linkedin_url")),

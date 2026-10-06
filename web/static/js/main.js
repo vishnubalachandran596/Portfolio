@@ -681,6 +681,13 @@
     var chatbotForm = document.getElementById("chatbot-form");
     var chatbotInput = document.getElementById("chatbot-input");
     var chatbotMessages = document.getElementById("chatbot-messages");
+    // In-memory only, per the app's own "no server-side session store"
+    // rule (CLAUDE.md §3) -- the server is stateless, so the conversation
+    // has to live somewhere between requests, and that's here, not a
+    // cookie or sessionStorage. Resets on reload, which is fine: a fresh
+    // page load is a reasonable place to start a new conversation.
+    var chatHistory = [];
+    var CHATBOT_MAX_HISTORY_TURNS = 6;
 
     function openChatbot() {
       chatbotPanel.hidden = false;
@@ -732,12 +739,25 @@
       fetch("/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: message })
+        body: JSON.stringify({ message: message, history: chatHistory })
       })
         .then(function (r) { return r.json().then(function (data) { return { status: r.status, data: data }; }); })
         .then(function (res) {
-          pending.textContent = res.data.error || res.data.reply || "Something went wrong.";
+          var reply = res.data.error || res.data.reply || "Something went wrong.";
+          pending.textContent = reply;
           if (res.status === 200 && res.data.sources) appendSources(res.data.sources);
+          // Only a real answer extends the conversation -- an error (rate
+          // limit, server problem) isn't something the next question
+          // should be "continuing", and the server's own decline reply
+          // ("I can only answer questions about...") isn't useful context
+          // for a follow-up either.
+          if (res.status === 200 && res.data.reply) {
+            chatHistory.push({ role: "user", content: message });
+            chatHistory.push({ role: "assistant", content: res.data.reply });
+            if (chatHistory.length > CHATBOT_MAX_HISTORY_TURNS) {
+              chatHistory = chatHistory.slice(chatHistory.length - CHATBOT_MAX_HISTORY_TURNS);
+            }
+          }
         })
         .catch(function () {
           pending.textContent = "Something went wrong reaching the chatbot. Please try again.";

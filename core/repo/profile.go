@@ -17,10 +17,10 @@ func (r *ProfileRepo) Get(ctx context.Context) (models.Profile, error) {
 	var p models.Profile
 	err := r.db.QueryRowContext(ctx, `
 		SELECT name, title, tagline, hero_subtitle, summary, location, email,
-		       linkedin_url, github_url, resume_url, photo_object, logo_object, years_experience, updated_at
+		       linkedin_url, github_url, resume_url, photo_object, logo_object, rag_context, years_experience, updated_at
 		FROM profile WHERE id = 1`).Scan(
 		&p.Name, &p.Title, &p.Tagline, &p.HeroSubtitle, &p.Summary, &p.Location, &p.Email,
-		&p.LinkedInURL, &p.GitHubURL, &p.ResumeURL, &p.PhotoObject, &p.LogoObject, &p.YearsExperience, &p.UpdatedAt,
+		&p.LinkedInURL, &p.GitHubURL, &p.ResumeURL, &p.PhotoObject, &p.LogoObject, &p.RagContext, &p.YearsExperience, &p.UpdatedAt,
 	)
 	// A fresh database has the table and no row. Pages still render; the
 	// admin profile form inserts the row on save. Content is not seeded here.
@@ -33,18 +33,18 @@ func (r *ProfileRepo) Get(ctx context.Context) (models.Profile, error) {
 func (r *ProfileRepo) Update(ctx context.Context, p models.Profile) error {
 	_, err := r.db.ExecContext(ctx, `
 		INSERT INTO profile (id, name, title, tagline, hero_subtitle, summary, location, email,
-		                      linkedin_url, github_url, resume_url, photo_object, logo_object, years_experience, updated_at)
-		VALUES (1, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, now())
+		                      linkedin_url, github_url, resume_url, photo_object, logo_object, rag_context, years_experience, updated_at)
+		VALUES (1, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, now())
 		ON CONFLICT (id) DO UPDATE SET
 			name = EXCLUDED.name, title = EXCLUDED.title, tagline = EXCLUDED.tagline,
 			hero_subtitle = EXCLUDED.hero_subtitle, summary = EXCLUDED.summary,
 			location = EXCLUDED.location, email = EXCLUDED.email,
 			linkedin_url = EXCLUDED.linkedin_url, github_url = EXCLUDED.github_url,
 			resume_url = EXCLUDED.resume_url, photo_object = EXCLUDED.photo_object,
-			logo_object = EXCLUDED.logo_object,
+			logo_object = EXCLUDED.logo_object, rag_context = EXCLUDED.rag_context,
 			years_experience = EXCLUDED.years_experience, updated_at = now()`,
 		p.Name, p.Title, p.Tagline, p.HeroSubtitle, p.Summary, p.Location, p.Email,
-		p.LinkedInURL, p.GitHubURL, p.ResumeURL, p.PhotoObject, p.LogoObject, p.YearsExperience,
+		p.LinkedInURL, p.GitHubURL, p.ResumeURL, p.PhotoObject, p.LogoObject, p.RagContext, p.YearsExperience,
 	)
 	return err
 }
