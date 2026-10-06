@@ -584,6 +584,15 @@ func (a *App) AdminProfileSave(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid form", http.StatusBadRequest)
 		return
 	}
+	ctx := r.Context()
+	// The photo/logo file inputs are optional on every save (most saves
+	// just edit a text field) -- load the current row first so an
+	// untouched image isn't wiped out by Update's full-row upsert.
+	current, err := a.Profile.Get(ctx)
+	if err != nil {
+		a.serverError(w, "load profile", err)
+		return
+	}
 	years, _ := strconv.Atoi(r.FormValue("years_experience"))
 	profile := models.Profile{
 		Name:            strings.TrimSpace(r.FormValue("name")),
@@ -596,36 +605,64 @@ func (a *App) AdminProfileSave(w http.ResponseWriter, r *http.Request) {
 		LinkedInURL:     strings.TrimSpace(r.FormValue("linkedin_url")),
 		GitHubURL:       strings.TrimSpace(r.FormValue("github_url")),
 		ResumeURL:       strings.TrimSpace(r.FormValue("resume_url")),
-		PhotoURL:        strings.TrimSpace(r.FormValue("photo_url")),
+		PhotoObject:     current.PhotoObject,
+		LogoObject:      current.LogoObject,
 		YearsExperience: years,
 	}
 	pdf, pdfErr := readResumeUpload(r)
-	if pdfErr != "" || (len(pdf) > 0 && a.CourseStorage == nil) {
-		msg := pdfErr
-		if msg == "" {
-			msg = "Storage is not configured, so the resume cannot be saved."
+	photo, photoExt, photoErr := readImageUpload(r, "photo_file")
+	logo, logoExt, logoErr := readImageUpload(r, "logo_file")
+	errMsg := firstNonEmpty(pdfErr, photoErr, logoErr)
+	if errMsg != "" || ((len(pdf) > 0 || len(photo) > 0 || len(logo) > 0) && a.CourseStorage == nil) {
+		if errMsg == "" {
+			errMsg = "Storage is not configured, so the upload cannot be saved."
 		}
-		hasDefault, _ := a.hasDefaultResume(r.Context())
+		hasDefault, _ := a.hasDefaultResume(ctx)
 		a.View.Render(w, http.StatusUnprocessableEntity, "admin_profile", AdminProfileData{
 			BaseData:         a.base(r, "Profile — Admin", "", "admin"),
 			Profile:          profile,
 			HasDefaultResume: hasDefault,
-			Error:            msg,
+			Error:            errMsg,
 		})
 		return
 	}
-	if err := a.Profile.Update(r.Context(), profile); err != nil {
+	if len(photo) > 0 {
+		path, err := a.replaceStoredImage(ctx, storage.ProfilePhotoObject, current.PhotoObject, photo, photoExt)
+		if err != nil {
+			a.serverError(w, "save profile photo", err)
+			return
+		}
+		profile.PhotoObject = path
+	}
+	if len(logo) > 0 {
+		path, err := a.replaceStoredImage(ctx, storage.LogoObject, current.LogoObject, logo, logoExt)
+		if err != nil {
+			a.serverError(w, "save logo", err)
+			return
+		}
+		profile.LogoObject = path
+	}
+	if err := a.Profile.Update(ctx, profile); err != nil {
 		a.serverError(w, "save profile", err)
 		return
 	}
 	if len(pdf) > 0 {
-		if err := a.replaceDefaultResume(r.Context(), pdf); err != nil {
+		if err := a.replaceDefaultResume(ctx, pdf); err != nil {
 			a.serverError(w, "save resume", err)
 			return
 		}
 	}
-	a.markChatbotReindexPending(r.Context())
+	a.markChatbotReindexPending(ctx)
 	http.Redirect(w, r, "/admin/profile?saved=1", http.StatusSeeOther)
+}
+
+func firstNonEmpty(parts ...string) string {
+	for _, p := range parts {
+		if p != "" {
+			return p
+		}
+	}
+	return ""
 }
 
 func (a *App) hasDefaultResume(ctx context.Context) (bool, error) {

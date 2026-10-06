@@ -44,9 +44,23 @@
           <input type="url" name="resume_url" value="{{.Profile.ResumeURL}}">
         </label>
       </div>
-      <label>Photo URL <span class="optional">relative (/static/img/photo.jpg) or a full URL</span>
-        <input type="text" name="photo_url" value="{{.Profile.PhotoURL}}">
-      </label>
+      <div class="form-row">
+        <label>Profile photo <span class="optional">JPEG, PNG, or WEBP, up to 5MB</span>
+          <input type="file" name="photo_file" id="photo_file" accept="image/jpeg,image/png,image/webp" data-preview="photo_preview">
+        </label>
+        <div class="admin-image-preview">
+          <img id="photo_preview" alt="Profile photo preview"{{if .Profile.PhotoObject}} src="/media/profile-photo"{{else}} hidden{{end}}>
+        </div>
+      </div>
+      <div class="form-row">
+        <label>Site logo <span class="optional">JPEG, PNG, or WEBP, up to 5MB — shown in the header instead of the text brand</span>
+          <input type="file" name="logo_file" id="logo_file" accept="image/jpeg,image/png,image/webp" data-preview="logo_preview">
+        </label>
+        <div class="admin-image-preview">
+          <img id="logo_preview" alt="Logo preview"{{if .Profile.LogoObject}} src="/media/logo"{{else}} hidden{{end}}>
+        </div>
+      </div>
+      <p class="admin-form-note">Uploading replaces the current photo or logo. Leave either file field empty to keep what's already stored. Both are kept in private Storage, never in the repo.</p>
       <label>Default resume PDF <span class="optional">optional — replaces the main download</span>
         <input type="file" name="resume_file" accept=".pdf,application/pdf">
       </label>
@@ -64,4 +78,18 @@
     </form>
   </div>
 </section>
+<script>
+(function () {
+  document.querySelectorAll('input[type="file"][data-preview]').forEach(function (input) {
+    var preview = document.getElementById(input.dataset.preview);
+    if (!preview) return;
+    input.addEventListener('change', function () {
+      var file = input.files && input.files[0];
+      if (!file) return;
+      preview.src = URL.createObjectURL(file);
+      preview.hidden = false;
+    });
+  });
+})();
+</script>
 {{end}}

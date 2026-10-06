@@ -1,8 +1,8 @@
 {{define "jsonld"}}<script type="application/ld+json">{{.JSONLD}}</script>{{end}}
 {{define "content"}}
 <section class="hero hero-simple">
-  <div class="container hero-inner{{if .Profile.PhotoURL}} hero-inner-with-photo{{end}}">
-    {{if .Profile.PhotoURL}}<img class="hero-photo" src="{{.Profile.PhotoURL}}" alt="{{.Profile.Name}}" width="176" height="176">{{end}}
+  <div class="container hero-inner{{if .Profile.PhotoObject}} hero-inner-with-photo{{end}}">
+    {{if .Profile.PhotoObject}}<img class="hero-photo" src="/media/profile-photo" alt="{{.Profile.Name}}" width="176" height="176">{{end}}
     <div class="hero-copy">
       <h1>{{.Profile.Name}}</h1>
       <p class="hero-title">{{.Profile.Title}}</p>

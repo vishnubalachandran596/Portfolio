@@ -25,6 +25,8 @@ func (a *App) Routes() http.Handler {
 	mux.HandleFunc("GET /{$}", a.Home)
 	mux.HandleFunc("GET /about", a.About)
 	mux.HandleFunc("GET /resume.pdf", a.Resume)
+	mux.HandleFunc("GET /media/profile-photo", a.ProfilePhoto)
+	mux.HandleFunc("GET /media/logo", a.Logo)
 	mux.HandleFunc("GET /courses", a.CoursesList)
 	mux.HandleFunc("GET /courses/{slug}", a.CourseDetail)
 	mux.HandleFunc("POST /courses/{slug}/checkout/order", a.CheckoutCreateOrder)

@@ -6,7 +6,7 @@
 <section class="section page-hero about-intro">
   <div class="container">
     <div class="about-hero-row">
-      {{if .Profile.PhotoURL}}<img class="about-photo" src="{{.Profile.PhotoURL}}" alt="{{.Profile.Name}}" width="160" height="160">{{end}}
+      {{if .Profile.PhotoObject}}<img class="about-photo" src="/media/profile-photo" alt="{{.Profile.Name}}" width="160" height="160">{{end}}
       <div class="about-hero-copy">
         <p class="eyebrow">About</p>
         <h1>{{.Profile.Name}}</h1>

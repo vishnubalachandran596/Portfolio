@@ -31,20 +31,15 @@ type HomeData struct {
 	JSONLD    template.JS
 }
 
-// absoluteImageURL resolves profile.photo_url into the absolute URL an OG
-// tag requires. The admin form's Photo URL field is type="url", so the
-// browser's own native validation already enforces an absolute URL
-// (scheme + host) -- but the column predates that and may still hold an
-// older site-relative value (e.g. "/static/img/x.jpg"), so both are
-// handled rather than assuming one shape and breaking the other.
-func absoluteImageURL(siteURL, photoURL string) string {
-	if photoURL == "" {
+// absoluteImageURL is the Person schema's photo URL: the app's own
+// /media/profile-photo route (never a Storage URL directly -- see
+// core/storage/client.go), absolute because structured data requires it.
+// Empty until a photo has actually been uploaded via /admin/profile.
+func absoluteImageURL(siteURL, photoObject string) string {
+	if photoObject == "" {
 		return ""
 	}
-	if strings.HasPrefix(photoURL, "http://") || strings.HasPrefix(photoURL, "https://") {
-		return photoURL
-	}
-	return siteURL + photoURL
+	return siteURL + "/media/profile-photo"
 }
 
 func (a *App) Home(w http.ResponseWriter, r *http.Request) {
@@ -95,7 +90,7 @@ func (a *App) Home(w http.ResponseWriter, r *http.Request) {
 	if profile.GitHubURL != "" {
 		sameAs = append(sameAs, profile.GitHubURL)
 	}
-	imageURL := absoluteImageURL(base.SiteURL, profile.PhotoURL)
+	imageURL := absoluteImageURL(base.SiteURL, profile.PhotoObject)
 
 	a.View.Render(w, http.StatusOK, "home", HomeData{
 		BaseData:  base,
