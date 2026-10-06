@@ -58,6 +58,7 @@ type App struct {
 	Subscribers          *repo.SubscriberRepo
 	CourseReviews        *repo.CourseReviewRepo
 	ChatbotChunks        *repo.ChatbotChunkRepo
+	ChatbotAnswerCache   *repo.ChatbotAnswerCacheRepo
 	ChatbotRateLimits    *repo.ChatbotRateLimitRepo
 	CourseStorage        *storage.Client
 
@@ -193,6 +194,7 @@ func New(cfg *config.Config, db *sql.DB, renderer *view.Renderer) *App {
 		Subscribers:          repo.NewSubscriberRepo(db),
 		CourseReviews:        repo.NewCourseReviewRepo(db),
 		ChatbotChunks:        repo.NewChatbotChunkRepo(db),
+		ChatbotAnswerCache:   repo.NewChatbotAnswerCacheRepo(db),
 		ChatbotRateLimits:    repo.NewChatbotRateLimitRepo(db),
 		CourseStorage:        storage.New(cfg),
 		Razorpay:             payments.NewRazorpay(cfg.RazorpayKeyID, cfg.RazorpayKeySecret),

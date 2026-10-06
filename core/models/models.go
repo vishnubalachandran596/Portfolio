@@ -315,6 +315,33 @@ type ChatbotChunk struct {
 	Distance float64
 }
 
+// ChatbotAnswerCacheEntry is one previously-generated chatbot answer,
+// cached so a repeat or near-duplicate first-turn question can skip
+// retrieval and the LLM call entirely and be served straight from here.
+// CourseID is nil for an answer that used no gated content and is safe
+// to serve to any visitor; a real course id means the answer was
+// generated from that course's gated lesson content, so
+// ChatbotAnswerCacheRepo.Find only returns it to an asker whose own
+// unlocked courses include that id -- the same rule
+// ChatbotChunkRepo.Search already applies to a raw chunk, applied here
+// to a finished answer instead. SourceTitles/SourceURLs are parallel
+// slices, paired by position (same convention as
+// ChatbotChunkRepo.ReplaceAll's chunks/embeddings).
+type ChatbotAnswerCacheEntry struct {
+	ID           int64
+	Question     string
+	Answer       string
+	SourceTitles []string
+	SourceURLs   []string
+	CourseID     *int64
+	HitCount     int
+	CreatedAt    time.Time
+	LastServedAt time.Time
+	// Distance is pgvector's cosine distance from the query embedding,
+	// populated only on a Find result (never stored).
+	Distance float64
+}
+
 func FormatMoney(cents int, currency string) string {
 	symbol := "$"
 	switch currency {

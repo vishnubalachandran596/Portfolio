@@ -294,6 +294,34 @@ func (a *App) Chat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// cacheable gates both the lookup below and the write near the end of
+	// this function to first-turn questions only: once a conversation has
+	// history, "the same question" stops meaning the same thing (a
+	// follow-up's correct answer depends on what preceded it), so caching
+	// it under the bare question text could serve the wrong reply to a
+	// later, unrelated asker who happens to phrase their first question
+	// the same way.
+	cacheable := len(history) == 0
+	if cacheable {
+		if cached, err := a.ChatbotAnswerCache.Find(ctx, embeddings[0], unlockedCourseIDs); err != nil {
+			log.Printf("chatbot answer cache lookup: %v", err)
+		} else if cached != nil {
+			if err := a.ChatbotAnswerCache.Touch(ctx, cached.ID); err != nil {
+				log.Printf("chatbot answer cache touch: %v", err)
+			}
+			sources := make([]chatSource, len(cached.SourceTitles))
+			for i, title := range cached.SourceTitles {
+				url := ""
+				if i < len(cached.SourceURLs) {
+					url = cached.SourceURLs[i]
+				}
+				sources[i] = chatSource{Title: title, URL: url}
+			}
+			writeJSON(w, http.StatusOK, chatResponseBody{Reply: cached.Answer, Sources: sources})
+			return
+		}
+	}
+
 	chunks, err := a.ChatbotChunks.Search(ctx, embeddings[0], chatbotTopK, unlockedCourseIDs)
 	if err != nil {
 		chatServerError(w, "chatbot search", err)
@@ -342,25 +370,73 @@ func (a *App) Chat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if cacheable {
+		// courseID stays nil (a publicly-cacheable answer) unless the
+		// chunks actually used contain gated content, in which case it's
+		// set to that course's id -- ChatbotAnswerCacheRepo.Find then only
+		// ever returns this row to an asker whose own unlockedCourseIDs
+		// includes it, same rule Search already applied to get here. If
+		// gated chunks from more than one course ended up in the same
+		// answer (a buyer of two courses asking something that touches
+		// both), skip caching entirely rather than invent a multi-course
+		// cache key for a rare case.
+		var courseID *int64
+		multiCourse := false
+		for _, c := range chunks {
+			if !c.IsGated {
+				continue
+			}
+			if courseID == nil {
+				id := c.SourceID
+				courseID = &id
+			} else if *courseID != c.SourceID {
+				multiCourse = true
+				break
+			}
+		}
+		if !multiCourse {
+			sourceTitles := make([]string, len(sources))
+			sourceURLs := make([]string, len(sources))
+			for i, s := range sources {
+				sourceTitles[i] = s.Title
+				sourceURLs[i] = s.URL
+			}
+			if err := a.ChatbotAnswerCache.Insert(ctx, message, reply, sourceTitles, sourceURLs, courseID, embeddings[0]); err != nil {
+				log.Printf("chatbot answer cache insert: %v", err)
+			}
+		}
+	}
+
 	writeJSON(w, http.StatusOK, chatResponseBody{Reply: reply, Sources: sources})
 }
 
-// AdminChatbotPageData backs the "AI Chatbot" admin page: a chunk count
-// and a "Rebuild Index" button.
+// AdminChatbotPageData backs the "AI Chatbot" admin page: a chunk count,
+// answer-cache stats, and a "Rebuild Index" button.
 type AdminChatbotPageData struct {
 	BaseData
 	Enabled    bool
 	ChunkCount int
-	Rebuilt    bool
+	// CachedAnswerCount/CacheHitCount surface whether the answer cache
+	// (ChatbotAnswerCache, see Chat) is actually doing anything -- a
+	// repeat/near-duplicate question skips retrieval and the NVIDIA call
+	// entirely on a hit, and CacheHitCount is how many times that's
+	// happened since the cache was last wiped (every reindex wipes it).
+	CachedAnswerCount int
+	CacheHitCount     int
+	Rebuilt           bool
 }
 
 func (a *App) AdminChatbotPage(w http.ResponseWriter, r *http.Request) {
 	count, _ := a.ChatbotChunks.Count(r.Context())
+	cachedAnswers, _ := a.ChatbotAnswerCache.Count(r.Context())
+	cacheHits, _ := a.ChatbotAnswerCache.TotalHits(r.Context())
 	a.View.Render(w, http.StatusOK, "admin_chatbot", AdminChatbotPageData{
-		BaseData:   a.base(r, "AI Chatbot — Admin", "", ""),
-		Enabled:    a.Nvidia.Enabled(),
-		ChunkCount: count,
-		Rebuilt:    r.URL.Query().Get("rebuilt") == "1",
+		BaseData:          a.base(r, "AI Chatbot — Admin", "", ""),
+		Enabled:           a.Nvidia.Enabled(),
+		ChunkCount:        count,
+		CachedAnswerCount: cachedAnswers,
+		CacheHitCount:     cacheHits,
+		Rebuilt:           r.URL.Query().Get("rebuilt") == "1",
 	})
 }
 
@@ -457,6 +533,15 @@ func (a *App) RebuildChatbotIndex(ctx context.Context) error {
 
 	if err := a.ChatbotChunks.ReplaceAll(ctx, chunks, embeddings); err != nil {
 		return fmt.Errorf("replace: %w", err)
+	}
+
+	// The content just changed, so any cached answer could now be citing
+	// something stale, wrong, or deleted -- wipe the whole answer cache
+	// rather than try to figure out which cached rows are still valid; it
+	// refills from real traffic afterward, same as chatbot_chunks itself
+	// got fully replaced above rather than diffed.
+	if err := a.ChatbotAnswerCache.TruncateAll(ctx); err != nil {
+		return fmt.Errorf("truncate answer cache: %w", err)
 	}
 	return nil
 }
