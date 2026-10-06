@@ -66,7 +66,7 @@ type CourseListOptions struct {
 	Tag                string // exact tag match
 	Sort               string // "recommended" (default, sort_order), "reviews_desc", "newest"
 	Page               int    // 1-indexed, defaults to 1
-	PageSize           int    // defaults to 8
+	PageSize           int    // defaults to 5 -- callers pass handlers.catalogPageSize, shared with /articles
 	IncludeUnpublished bool   // admin-preview: also returns draft courses
 }
 
@@ -85,7 +85,7 @@ func (r *CourseRepo) ListPublishedFiltered(ctx context.Context, opt CourseListOp
 		page = 1
 	}
 	if pageSize < 1 {
-		pageSize = 8
+		pageSize = 5
 	}
 
 	where := []string{}
@@ -115,12 +115,19 @@ func (r *CourseRepo) ListPublishedFiltered(ctx context.Context, opt CourseListOp
 		orderClause = "ORDER BY c.created_at DESC, c.id DESC"
 	}
 
-	// review_count is a derived aggregate (course_reviews has no count
-	// column on courses itself), joined once here rather than queried
-	// per-row -- a course with zero reviews still needs to sort/display
-	// correctly, hence COALESCE rather than an inner join.
+	// review_count and enrolled_count are both derived aggregates (neither
+	// is a stored column on courses itself), joined once here rather than
+	// queried per-row -- a course with zero reviews/purchases still needs
+	// to sort/display correctly, hence COALESCE rather than an inner join.
+	// enrolled_count starts at 1 for every course (a baseline so a brand
+	// new course never reads "0 enrolled") plus one per paid purchase --
+	// deriving it live from purchases rather than a separately maintained
+	// counter column means every *existing* paid purchase already counts
+	// automatically, and there's nothing for checkout.go to increment or
+	// risk drifting out of sync with reality.
 	fromClause := `FROM courses c
-		LEFT JOIN (SELECT course_id, COUNT(*) AS n FROM course_reviews GROUP BY course_id) rc ON rc.course_id = c.id`
+		LEFT JOIN (SELECT course_id, COUNT(*) AS n FROM course_reviews GROUP BY course_id) rc ON rc.course_id = c.id
+		LEFT JOIN (SELECT course_id, COUNT(*) AS n FROM purchases WHERE status = 'paid' GROUP BY course_id) pc ON pc.course_id = c.id`
 
 	countQuery := "SELECT count(*) " + fromClause + " " + whereClause
 	countArgs := args
@@ -129,7 +136,8 @@ func (r *CourseRepo) ListPublishedFiltered(ctx context.Context, opt CourseListOp
 	listQuery := fmt.Sprintf(
 		"SELECT c.id, c.slug, c.title, c.summary, c.description, c.level, c.duration, c.price_cents, c.image_url, "+
 			"c.is_published, c.sort_order, c.is_paid, c.min_price_cents, c.content_key, c.content_object, c.rag_context, "+
-			"c.tags, c.created_at, c.updated_at, COALESCE(rc.n, 0) AS review_count %s %s %s LIMIT $%d OFFSET $%d",
+			"c.tags, c.created_at, c.updated_at, COALESCE(rc.n, 0) AS review_count, COALESCE(pc.n, 0) + 1 AS enrolled_count "+
+			"%s %s %s LIMIT $%d OFFSET $%d",
 		fromClause, whereClause, orderClause, len(listArgs)-1, len(listArgs))
 
 	// Independent queries (the total for the pager, the page of rows) run
@@ -154,7 +162,8 @@ func (r *CourseRepo) ListPublishedFiltered(ctx context.Context, opt CourseListOp
 			var tags []string
 			if err := rows.Scan(&c.ID, &c.Slug, &c.Title, &c.Summary, &c.Description, &c.Level, &c.Duration,
 				&c.PriceCents, &c.ImageURL, &c.IsPublished, &c.SortOrder, &c.IsPaid, &c.MinPriceCents,
-				&c.ContentKey, &c.ContentObject, &c.RagContext, pq.Array(&tags), &c.CreatedAt, &c.UpdatedAt, &c.ReviewCount); err != nil {
+				&c.ContentKey, &c.ContentObject, &c.RagContext, pq.Array(&tags), &c.CreatedAt, &c.UpdatedAt,
+				&c.ReviewCount, &c.EnrolledCount); err != nil {
 				return err
 			}
 			c.Tags = tags

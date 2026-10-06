@@ -96,7 +96,22 @@
               <span>{{.Level}}</span>
               {{if .Duration}}<span>{{.Duration}}</span>{{end}}
               <span>{{.PriceDisplay}}</span>
-              {{if gt .ReviewCount 0}}<span>{{.ReviewCount}} rating{{if ne .ReviewCount 1}}s{{end}}</span>{{end}}
+              <span class="course-meta-stat">
+                {{/* Graduation cap -- distinct from the ratings icon below
+                     on purpose, so two adjacent "people" stats don't read
+                     as a copy-paste duplicate at a glance. */}}
+                <svg class="course-meta-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M2 8L10 4L18 8L10 12L2 8Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M5.5 9.5v4c0 1 2 2 4.5 2s4.5-1 4.5-2v-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M18 8v4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                {{.EnrolledCount}} enrolled
+              </span>
+              {{if gt .ReviewCount 0}}
+              <span class="course-meta-stat">
+                {{/* Same single-person icon the header's own account menu
+                     uses (header.html) -- reused, not redrawn, since "a
+                     person" means the same thing in both places. */}}
+                <svg class="course-meta-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="10" cy="6.5" r="3" stroke="currentColor" stroke-width="1.5"/><path d="M3.5 17c1-3.5 4-5 6.5-5s5.5 1.5 6.5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                {{.ReviewCount}} rating{{if ne .ReviewCount 1}}s{{end}}
+              </span>
+              {{end}}
             </div>
           </div>
         </a>
