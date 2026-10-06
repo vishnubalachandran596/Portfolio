@@ -29,6 +29,7 @@
         {{if .ReceiptURL}}<a class="btn btn-secondary" href="{{.ReceiptURL}}">Download Order Receipt</a>{{end}}
       </div>
       {{if .ReceiptURL}}<p class="purchase-box-sub">Your receipt shows your email, the course, what you paid, and any promo code applied — if you paid, send it to me to redeem your free consultation.</p>{{end}}
+      {{if .ChatbotEnabled}}<p class="course-detail-note">Stuck on something in this course? The <a href="{{.Nav.AIAssistant}}">AI Assistant</a> knows this course's lessons and can help answer questions anytime while you learn.</p>{{end}}
       {{if .CanReview}}
       <div class="purchase-box" id="review-box">
         <p class="purchase-box-title">{{if .MyReview}}Update your review{{else}}Rate this course{{end}}</p>

@@ -677,6 +677,7 @@
   if (chatbotWidget) {
     var chatbotToggle = document.getElementById("chatbot-toggle");
     var chatbotClose = document.getElementById("chatbot-close");
+    var chatbotExpand = document.getElementById("chatbot-expand");
     var chatbotPanel = document.getElementById("chatbot-panel");
     var chatbotForm = document.getElementById("chatbot-form");
     var chatbotInput = document.getElementById("chatbot-input");
@@ -685,9 +686,13 @@
     // rule (CLAUDE.md §3) -- the server is stateless, so the conversation
     // has to live somewhere between requests, and that's here, not a
     // cookie or sessionStorage. Resets on reload, which is fine: a fresh
-    // page load is a reasonable place to start a new conversation.
+    // page load is a reasonable place to start a new conversation -- the
+    // one deliberate exception is clicking the expand-to-full-page icon
+    // below, which hands this same array to the next page via sessionStorage
+    // so the conversation keeps going instead of restarting.
     var chatHistory = [];
     var CHATBOT_MAX_HISTORY_TURNS = 6;
+    var CHATBOT_TRANSFER_KEY = "chatbotTransferHistory";
 
     function openChatbot() {
       chatbotPanel.hidden = false;
@@ -709,6 +714,20 @@
       });
     }
     if (chatbotClose) chatbotClose.addEventListener("click", closeChatbot);
+    // Hand the in-progress conversation to /ai-assistant rather than
+    // losing it on navigation -- sessionStorage, not a server session,
+    // same "no in-process state" reasoning as chatHistory itself above.
+    // A plain synchronous write before the browser's normal navigation
+    // for this link proceeds; no preventDefault needed.
+    if (chatbotExpand) {
+      chatbotExpand.addEventListener("click", function () {
+        try {
+          if (chatHistory.length) {
+            sessionStorage.setItem(CHATBOT_TRANSFER_KEY, JSON.stringify(chatHistory));
+          }
+        } catch (err) {}
+      });
+    }
     if (!chatbotToggle) chatbotInput.focus();
 
     function appendMessage(text, who) {
@@ -733,6 +752,35 @@
       chatbotMessages.appendChild(wrap);
       chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
     }
+
+    // Other half of the expand-click handoff above: a transfer left here
+    // by the page that sent us here replaces the default greeting with
+    // the real conversation so far, and chatHistory picks up from where
+    // it left off instead of starting over. Read-once -- removed
+    // immediately so a later reload of this same page doesn't replay it.
+    (function restoreTransferredHistory() {
+      var raw;
+      try {
+        raw = sessionStorage.getItem(CHATBOT_TRANSFER_KEY);
+        sessionStorage.removeItem(CHATBOT_TRANSFER_KEY);
+      } catch (err) {
+        return;
+      }
+      if (!raw) return;
+      var transferred;
+      try {
+        transferred = JSON.parse(raw);
+      } catch (err) {
+        return;
+      }
+      if (!transferred || !transferred.length) return;
+      chatbotMessages.innerHTML = "";
+      for (var hi = 0; hi < transferred.length; hi++) {
+        var turn = transferred[hi];
+        appendMessage(turn.content, turn.role === "user" ? "user" : "bot");
+      }
+      chatHistory = transferred;
+    })();
 
     chatbotForm.addEventListener("submit", function (e) {
       e.preventDefault();

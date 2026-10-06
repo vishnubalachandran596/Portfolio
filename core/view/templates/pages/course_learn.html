@@ -3,7 +3,10 @@
   <div class="lesson-toolbar">
     <div class="container lesson-toolbar-inner">
       <p class="eyebrow"><a href="/courses/{{.Course.Slug}}">← {{.Course.Title}}</a></p>
-      {{if .HasQuiz}}<a class="btn btn-secondary btn-sm" href="/courses/{{.Course.Slug}}/quiz">Take the Final Quiz</a>{{end}}
+      <div class="lesson-toolbar-actions">
+        {{if .ChatbotEnabled}}<a class="btn btn-secondary btn-sm" href="{{.Nav.AIAssistant}}">Ask AI Assistant</a>{{end}}
+        {{if .HasQuiz}}<a class="btn btn-secondary btn-sm" href="/courses/{{.Course.Slug}}/quiz">Take the Final Quiz</a>{{end}}
+      </div>
     </div>
   </div>
   <div class="html-renderer lesson-renderer" id="html-renderer">
