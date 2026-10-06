@@ -8,6 +8,7 @@
     {{if .Rebuilt}}<p class="alert alert-success">Index rebuilt.</p>{{end}}
     <p>The chatbot answers visitor questions using a RAG index built from the profile, skills, experience, education, courses, and articles currently in the database.</p>
     <p><strong>{{.ChunkCount}}</strong> chunk{{if ne .ChunkCount 1}}s{{end}} currently indexed.</p>
+    <p class="empty-state">A repeat or near-duplicate first-turn question skips retrieval and the NVIDIA call entirely when it matches a cached answer closely enough — <strong>{{.CachedAnswerCount}}</strong> answer{{if ne .CachedAnswerCount 1}}s{{end}} currently cached, served from cache <strong>{{.CacheHitCount}}</strong> time{{if ne .CacheHitCount 1}}s{{end}} so far. Rebuilding the index below also wipes this cache, since edited content could make a cached answer stale.</p>
     <form method="POST" action="/admin/chatbot/reindex">
       <button type="submit" class="btn btn-primary">Rebuild Index</button>
     </form>
