@@ -73,6 +73,33 @@ func (r *ChatbotChunkRepo) Count(ctx context.Context) (int, error) {
 	return count, err
 }
 
+// MarkReindexPending records that course/article content changed since
+// the last full reindex, for the Vercel Cron job (CronChatbotReindex) to
+// notice and act on later. A single fast UPDATE against a one-row table
+// (migration 070) -- unlike RebuildChatbotIndex itself, this is cheap
+// enough for a save/delete handler to call inline without adding real
+// latency to the save.
+func (r *ChatbotChunkRepo) MarkReindexPending(ctx context.Context) error {
+	_, err := r.db.ExecContext(ctx, `UPDATE chatbot_reindex_pending SET requested_at = now()`)
+	return err
+}
+
+// ConsumePendingReindex atomically reports whether a reindex is pending
+// and clears the flag in the same statement, so two cron ticks that
+// overlap (one still running RebuildChatbotIndex when the next fires)
+// can't both decide there's work to do for the same change.
+func (r *ChatbotChunkRepo) ConsumePendingReindex(ctx context.Context) (bool, error) {
+	var cleared bool
+	err := r.db.QueryRowContext(ctx, `
+		UPDATE chatbot_reindex_pending SET requested_at = NULL
+		WHERE requested_at IS NOT NULL
+		RETURNING true`).Scan(&cleared)
+	if err == sql.ErrNoRows {
+		return false, nil
+	}
+	return cleared, err
+}
+
 // Search returns the limit chunks whose embedding is closest (cosine
 // distance, pgvector's <=> operator) to queryEmbedding -- the chatbot's
 // retrieval step for one incoming question. A gated chunk (a paid

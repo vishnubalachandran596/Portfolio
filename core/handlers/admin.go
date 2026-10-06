@@ -386,7 +386,7 @@ func (a *App) AdminCourseSave(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	a.reindexChatbotQuietly(r.Context())
+	a.markChatbotReindexPending(r.Context())
 	http.Redirect(w, r, "/admin/courses", http.StatusSeeOther)
 }
 
@@ -405,7 +405,7 @@ func (a *App) AdminCourseDelete(w http.ResponseWriter, r *http.Request) {
 		a.serverError(w, "delete course", err)
 		return
 	}
-	a.reindexChatbotQuietly(r.Context())
+	a.markChatbotReindexPending(r.Context())
 	http.Redirect(w, r, "/admin/courses", http.StatusSeeOther)
 }
 

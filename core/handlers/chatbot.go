@@ -355,23 +355,79 @@ func (a *App) RebuildChatbotIndex(ctx context.Context) error {
 	return nil
 }
 
-// reindexChatbotQuietly runs RebuildChatbotIndex synchronously after a
-// course or article save/delete, so the chatbot's index stays current
-// without a manual "Rebuild Index" click, and logs rather than
-// propagates any failure -- a save or delete should still succeed even
-// if the chatbot reindex that follows it fails, same "degrade quietly"
-// contract as the rest of this app's chrome lookups (see app.go). A
-// no-op when NVIDIA_API_KEY isn't configured. Bounded by the caller's
-// own request context (and vercel.json's maxDuration) rather than a
-// detached background goroutine -- see RebuildChatbotIndex's comment
-// for why that doesn't actually work on this platform.
-func (a *App) reindexChatbotQuietly(ctx context.Context) {
+// markChatbotReindexPending flags that course/article content changed,
+// after a save or delete, so CronChatbotReindex picks it up on its next
+// run -- a single fast UPDATE (ChatbotChunkRepo.MarkReindexPending), not
+// a full re-embed, so a save is never slowed down by this. Logs rather
+// than propagates any failure, same "degrade quietly" contract as the
+// rest of this app's chrome lookups (see app.go). A no-op when
+// NVIDIA_API_KEY isn't configured -- there would be nothing for the cron
+// to reindex with anyway.
+//
+// RebuildChatbotIndex itself used to run here synchronously, immediately
+// after every save. That correctly fixed an earlier bug (a detached
+// goroutine that never actually completed on Vercel's runtime -- see
+// RebuildChatbotIndex's own comment), but a second problem came with it:
+// every course/article save started taking up to a minute, since a
+// rebuild always re-embeds the *entire* corpus. This pending-flag +
+// cron split keeps the fix (no fire-and-forget goroutine; the real
+// re-embed still only ever runs synchronously inside a real HTTP
+// request, in CronChatbotReindex) while giving saves their speed back.
+func (a *App) markChatbotReindexPending(ctx context.Context) {
 	if !a.Nvidia.Enabled() {
 		return
 	}
-	if err := a.RebuildChatbotIndex(ctx); err != nil {
-		log.Printf("chatbot auto-reindex: %v", err)
+	if err := a.ChatbotChunks.MarkReindexPending(ctx); err != nil {
+		log.Printf("mark chatbot reindex pending: %v", err)
 	}
+}
+
+// CronChatbotReindex is the Vercel Cron target (see vercel.json's
+// "crons") that actually runs the reindex a save only flagged as
+// pending. Vercel's cron invoker sends `Authorization: Bearer
+// $CRON_SECRET` automatically when that env var is set, which this
+// checks against the same ChatbotReindexToken the agent-facing
+// /api/chatbot/reindex endpoint uses -- CRON_SECRET and
+// CHATBOT_REINDEX_TOKEN are set to the identical value in Vercel for
+// exactly this reason, so one token authorizes both triggers. Exits
+// immediately (no NVIDIA call, no DB write beyond the pending check) on
+// every tick where nothing changed, which is the common case -- the
+// free-tier NVIDIA budget is only spent when there's real work.
+func (a *App) CronChatbotReindex(w http.ResponseWriter, r *http.Request) {
+	token := a.Cfg.ChatbotReindexToken
+	if token == "" {
+		http.NotFound(w, r)
+		return
+	}
+	got := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
+	if subtle.ConstantTimeCompare([]byte(got), []byte(token)) != 1 {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+	if !a.Nvidia.Enabled() {
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprint(w, "nvidia not configured")
+		return
+	}
+	pending, err := a.ChatbotChunks.ConsumePendingReindex(r.Context())
+	if err != nil {
+		log.Printf("cron chatbot reindex: check pending: %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if !pending {
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprint(w, "nothing pending")
+		return
+	}
+	if err := a.RebuildChatbotIndex(r.Context()); err != nil {
+		log.Printf("cron chatbot reindex: %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	count, _ := a.ChatbotChunks.Count(r.Context())
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(w, "reindexed: %d chunks", count)
 }
 
 var htmlTagPattern = regexp.MustCompile(`<[^>]*>`)

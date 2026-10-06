@@ -512,7 +512,7 @@ func (a *App) AdminArticleSave(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	a.reindexChatbotQuietly(ctx)
+	a.markChatbotReindexPending(ctx)
 	http.Redirect(w, r, "/admin/articles", http.StatusSeeOther)
 }
 
@@ -587,6 +587,6 @@ func (a *App) AdminArticleDelete(w http.ResponseWriter, r *http.Request) {
 		a.serverError(w, "delete article", err)
 		return
 	}
-	a.reindexChatbotQuietly(r.Context())
+	a.markChatbotReindexPending(r.Context())
 	http.Redirect(w, r, "/admin/articles", http.StatusSeeOther)
 }
