@@ -11,7 +11,7 @@
     <form method="POST" action="/admin/chatbot/reindex">
       <button type="submit" class="btn btn-primary">Rebuild Index</button>
     </form>
-    <p class="empty-state">Saving or deleting a course or article already rebuilds this index automatically. Use this button after editing your profile, skills, experience, or education (which don't auto-trigger it), after swapping the underlying AI model, or any time you want to force a fresh rebuild. The button waits for the rebuild to finish before confirming -- for a corpus this size that's a few seconds, not a background job.</p>
+    <p class="empty-state">Saving or deleting a course or article already rebuilds this index the same way -- which is why both can take up to a minute: every rebuild re-embeds the whole corpus (profile, skills, experience, education, every course, every article), not just what changed. Use this button after editing your profile, skills, experience, or education (which don't have their own save hook to trigger it), after swapping the underlying AI model, or any time you want to force a fresh rebuild.</p>
     <p class="empty-state">A coding agent that edits content directly in Supabase can trigger the same rebuild via <code>POST /api/chatbot/reindex</code> with an <code>Authorization: Bearer &lt;CHATBOT_REINDEX_TOKEN&gt;</code> header, without an admin login.</p>
     {{end}}
   </div>
