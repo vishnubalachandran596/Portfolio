@@ -1,12 +1,12 @@
 {{define "jsonld"}}<script type="application/ld+json">{{.JSONLD}}</script>{{end}}
 {{define "content"}}
 <section class="hero hero-simple">
-  <div class="container hero-inner{{if .Profile.PhotoURL}} hero-inner-with-photo{{end}}">
-    {{if .Profile.PhotoURL}}<img class="hero-photo" src="{{.Profile.PhotoURL}}" alt="{{.Profile.Name}}" width="176" height="176">{{end}}
+  <div class="container hero-inner{{if .Profile.PhotoObject}} hero-inner-with-photo{{end}}">
+    {{if .Profile.PhotoObject}}<img class="hero-photo" src="/media/profile-photo" alt="{{.Profile.Name}}" width="176" height="176">{{end}}
     <div class="hero-copy">
       <h1>{{.Profile.Name}}</h1>
       <p class="hero-title">{{.Profile.Title}}</p>
-      <p class="hero-subtitle">{{.Profile.HeroSubtitle}}</p>
+      <p class="hero-subtitle">{{rich .Profile.HeroSubtitle}}</p>
       <div class="hero-actions">
         <a class="btn btn-primary btn-lg" href="{{.Nav.Consultancy}}">Work With Me</a>
         <a class="btn btn-secondary" href="{{.Nav.About}}">Background &amp; Resume</a>
@@ -36,7 +36,7 @@
 
     {{if .Profile.Summary}}
     <div class="home-bring-summary">
-      {{range $p := splitLines .Profile.Summary}}<p>{{$p}}</p>{{end}}
+      {{range $p := splitLines .Profile.Summary}}<p>{{rich $p}}</p>{{end}}
     </div>
     {{end}}
 
@@ -71,7 +71,7 @@
       <a class="article-card" href="/articles/{{.Slug}}">
         <div class="article-card-body">
           <h3>{{.Title}}</h3>
-          <p>{{.Summary}}</p>
+          <p>{{rich .Summary}}</p>
         </div>
         <div class="article-card-meta">
           <span>Read the post →</span>

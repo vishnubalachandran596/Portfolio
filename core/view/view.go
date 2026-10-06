@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 
@@ -74,6 +75,30 @@ var funcs = template.FuncMap{
 		}
 		return template.HTML(b.String())
 	},
+	"rich": rich,
+}
+
+var richBoldPattern = regexp.MustCompile(`\*\*(.+?)\*\*`)
+var richItalicPattern = regexp.MustCompile(`\*(.+?)\*`)
+
+// rich renders a small, deliberately limited subset of markdown --
+// **bold** and *italic* only -- as styled HTML, for admin-authored
+// free-text fields (profile tagline, skill achievements, experience
+// bullets, testimonial quotes, and the like) that aren't full HTML
+// documents the way an uploaded article/lesson body is.
+//
+// The input is HTML-escaped first, so only the two recognized marker
+// patterns can ever turn into tags -- nothing else in the original
+// text can introduce markup. That's what makes this safe to apply
+// directly to any plain text field without a separate HTML sanitizer:
+// there is no raw HTML path here at all, unlike articleBody above.
+// Bold runs before italic so "**x**" is never also read as a pair of
+// italic markers once its own asterisks are gone.
+func rich(s string) template.HTML {
+	escaped := template.HTMLEscapeString(s)
+	escaped = richBoldPattern.ReplaceAllString(escaped, "<strong>$1</strong>")
+	escaped = richItalicPattern.ReplaceAllString(escaped, "<em>$1</em>")
+	return template.HTML(escaped)
 }
 
 type renderEntry struct {

@@ -8,8 +8,12 @@
 <header class="site-header">
   <div class="container header-inner">
     <a class="brand{{if eq .Active "home"}} active{{end}}" href="{{.Nav.Home}}" aria-label="{{.SiteName}} — Home">
+      {{if .HasLogo}}
+      <img class="brand-logo" src="/media/logo" alt="{{.SiteName}}" height="32">
+      {{else}}
       <span class="brand-full">{{.SiteName}}</span>
       <span class="brand-mark" aria-hidden="true">VB</span>
+      {{end}}
     </a>
 
     <nav class="primary-nav" aria-label="Primary">

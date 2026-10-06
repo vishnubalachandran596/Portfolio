@@ -86,9 +86,13 @@ type BaseData struct {
 	PreviewingAsVisitor bool
 	UserName            string
 	LinkedInURL         string
-	Notifications       []NotificationItem
-	UnreadNotifCount    int
-	AssetVersion        string
+	// HasLogo is true once a logo has been uploaded via /admin/profile.
+	// header.html shows the image logo (GET /media/logo) only then;
+	// otherwise it falls back to the text brand mark, same as today.
+	HasLogo          bool
+	Notifications    []NotificationItem
+	UnreadNotifCount int
+	AssetVersion     string
 	// PromoCodes is every currently active, public promo code — the
 	// source for the sitewide scrolling banner (promo_banner.html),
 	// rendered just below the header on every page. Empty renders no
@@ -317,8 +321,10 @@ func (a *App) baseFrom(r *http.Request, pf *basePrefetch, title, metaDescription
 
 	base := a.baseURL(r)
 	linkedIn := ""
+	hasLogo := false
 	if pf.profile != nil {
 		linkedIn = pf.profile.LinkedInURL
+		hasLogo = pf.profile.LogoObject != ""
 	}
 	unreadCount := 0
 	for _, n := range pf.notifications {
@@ -358,6 +364,7 @@ func (a *App) baseFrom(r *http.Request, pf *basePrefetch, title, metaDescription
 		PreviewingAsVisitor: pf.previewing && a.Auth.IsAuthenticated(r),
 		UserName:            pf.userName,
 		LinkedInURL:         linkedIn,
+		HasLogo:             hasLogo,
 		Notifications:       pf.notifications,
 		UnreadNotifCount:    unreadCount,
 		AssetVersion:        web.AssetVersion,

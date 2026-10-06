@@ -5,7 +5,7 @@
     <p class="eyebrow"><a href="{{.Nav.Courses}}">← All courses</a></p>
     <span class="course-level">{{.Course.Level}}</span>
     <h1>{{.Course.Title}}</h1>
-    <p class="hero-subtitle">{{.Course.Summary}}</p>
+    <p class="hero-subtitle">{{rich .Course.Summary}}</p>
     <div class="course-detail-meta">
       <span>{{.Course.PriceDisplay}}</span>
       {{if .Course.Duration}}<span>· {{.Course.Duration}}</span>{{end}}
@@ -86,7 +86,7 @@
 
 <section class="section">
   <div class="container course-description">
-    {{range $p := splitLines .Course.Description}}<p>{{$p}}</p>{{end}}
+    {{range $p := splitLines .Course.Description}}<p>{{rich $p}}</p>{{end}}
   </div>
 </section>
 {{end}}

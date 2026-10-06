@@ -6,17 +6,17 @@
 <section class="section page-hero about-intro">
   <div class="container">
     <div class="about-hero-row">
-      {{if .Profile.PhotoURL}}<img class="about-photo" src="{{.Profile.PhotoURL}}" alt="{{.Profile.Name}}" width="160" height="160">{{end}}
+      {{if .Profile.PhotoObject}}<img class="about-photo" src="/media/profile-photo" alt="{{.Profile.Name}}" width="160" height="160">{{end}}
       <div class="about-hero-copy">
         <p class="eyebrow">About</p>
         <h1>{{.Profile.Name}}</h1>
         <p class="hero-title">{{.Profile.Title}}</p>
-        {{if .Profile.Tagline}}<p class="hero-subtitle">{{.Profile.Tagline}}</p>{{end}}
+        {{if .Profile.Tagline}}<p class="hero-subtitle">{{rich .Profile.Tagline}}</p>{{end}}
       </div>
     </div>
     <div class="about-grid">
       <div class="about-summary">
-        {{range $p := splitLines .Profile.Summary}}<p>{{$p}}</p>{{end}}
+        {{range $p := splitLines .Profile.Summary}}<p>{{rich $p}}</p>{{end}}
         <div class="about-links">
           {{if .Profile.LinkedInURL}}<a class="btn btn-secondary" href="{{.Profile.LinkedInURL}}" target="_blank" rel="noopener">LinkedIn</a>{{end}}
           {{if .Profile.GitHubURL}}<a class="btn btn-secondary" href="{{.Profile.GitHubURL}}" target="_blank" rel="noopener">GitHub</a>{{end}}
@@ -65,10 +65,10 @@
       {{range .CaseStudies}}
       <div class="feature-card case-study-card">
         <h3>{{.Title}}</h3>
-        {{if .ClientContext}}<p class="case-study-context">{{.ClientContext}}</p>{{end}}
-        <p><strong>Problem:</strong> {{.Problem}}</p>
-        <p><strong>Approach:</strong> {{.Approach}}</p>
-        <p><strong>Result:</strong> {{.Result}}</p>
+        {{if .ClientContext}}<p class="case-study-context">{{rich .ClientContext}}</p>{{end}}
+        <p><strong>Problem:</strong> {{rich .Problem}}</p>
+        <p><strong>Approach:</strong> {{rich .Approach}}</p>
+        <p><strong>Result:</strong> {{rich .Result}}</p>
       </div>
       {{end}}
     </div>
@@ -83,7 +83,7 @@
     <div class="testimonial-grid">
       {{range .Testimonials}}
       <blockquote class="testimonial-card">
-        <p>&ldquo;{{.Body}}&rdquo;</p>
+        <p>&ldquo;{{rich .Body}}&rdquo;</p>
         <cite>{{.AuthorName}}{{if .AuthorTitle}}<span>{{.AuthorTitle}}</span>{{end}}</cite>
       </blockquote>
       {{end}}
@@ -106,7 +106,7 @@
           <h3>{{.Role}}</h3>
           <p class="timeline-company">{{.Company}}{{if .Location}} · {{.Location}}{{end}}</p>
           <ul>
-            {{range .Bullets}}<li>{{.}}</li>{{end}}
+            {{range .Bullets}}<li>{{rich .}}</li>{{end}}
           </ul>
         </div>
       </article>
@@ -125,7 +125,7 @@
       <div class="education-item">
         <h3>{{.Institution}}</h3>
         <p>{{.Degree}}{{if .Field}}, {{.Field}}{{end}}</p>
-        <p class="education-years">{{.StartYear}} – {{.EndYear}}{{if .Details}} · {{.Details}}{{end}}</p>
+        <p class="education-years">{{.StartYear}} – {{.EndYear}}{{if .Details}} · {{rich .Details}}{{end}}</p>
       </div>
       {{end}}
     </div>
@@ -171,7 +171,7 @@
       <li class="credential-item">
         <div class="credential-main">
           <h3>{{if .URL}}<a href="{{.URL}}" target="_blank" rel="noopener">{{.Title}} ↗</a>{{else}}{{.Title}}{{end}}</h3>
-          {{if .Summary}}<p class="credential-issuer">{{.Summary}}</p>{{end}}
+          {{if .Summary}}<p class="credential-issuer">{{rich .Summary}}</p>{{end}}
         </div>
         <p class="credential-meta">
           {{if .Kind}}<span class="credential-kind">{{.Kind}}</span>{{end}}

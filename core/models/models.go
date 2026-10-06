@@ -18,17 +18,22 @@ type Admin struct {
 }
 
 type Profile struct {
-	Name            string
-	Title           string
-	Tagline         string
-	HeroSubtitle    string
-	Summary         string
-	Location        string
-	Email           string
-	LinkedInURL     string
-	GitHubURL       string
-	ResumeURL       string
-	PhotoURL        string
+	Name         string
+	Title        string
+	Tagline      string
+	HeroSubtitle string
+	Summary      string
+	Location     string
+	Email        string
+	LinkedInURL  string
+	GitHubURL    string
+	ResumeURL    string
+	// PhotoObject and LogoObject are Storage object paths (e.g.
+	// "profile/photo.jpg"), never a URL -- the app always serves them
+	// through GET /media/profile-photo and /media/logo. Empty means
+	// nothing uploaded yet.
+	PhotoObject     string
+	LogoObject      string
 	YearsExperience int
 	UpdatedAt       time.Time
 }

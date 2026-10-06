@@ -404,6 +404,11 @@ a, button, .slot-btn, .faq-item summary { cursor: pointer; }
 .brand.active .brand-mark {
   box-shadow: 0 0 0 0.125rem var(--color-bg), 0 0 0 0.25rem var(--color-primary);
 }
+.brand-logo {
+  display: block;
+  height: 2rem;
+  width: auto;
+}
 .primary-nav {
   display: flex;
   align-items: center;
@@ -1798,6 +1803,8 @@ a.tag-chip-active:hover { color: var(--color-surface); border-color: var(--color
 .admin-form-divider { border: none; border-top: 0.0625rem solid var(--color-border); margin: 0.5rem 0 0.25rem; }
 .admin-form-subhead { font-size: 1.05rem; margin: 0 0 0.25rem; }
 .admin-form-note { color: var(--color-text-muted); font-size: 0.88rem; margin: -0.5rem 0 0.25rem; }
+.admin-image-preview { display: flex; align-items: flex-end; }
+.admin-image-preview img { max-height: 5rem; max-width: 100%; border-radius: 0.375rem; border: 0.0625rem solid var(--color-border); object-fit: contain; }
 
 .how-it-works { display: flex; flex-direction: column; gap: 0.875rem; max-width: 40rem; padding-left: 1.375rem; list-style: decimal; color: var(--color-text-muted); }
 .how-it-works li { padding-left: 0.375rem; }

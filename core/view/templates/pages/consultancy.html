@@ -74,10 +74,10 @@
       {{range .CaseStudies}}
       <div class="feature-card case-study-card">
         <h3>{{.Title}}</h3>
-        {{if .ClientContext}}<p class="case-study-context">{{.ClientContext}}</p>{{end}}
-        <p><strong>Problem:</strong> {{.Problem}}</p>
-        <p><strong>Approach:</strong> {{.Approach}}</p>
-        <p><strong>Result:</strong> {{.Result}}</p>
+        {{if .ClientContext}}<p class="case-study-context">{{rich .ClientContext}}</p>{{end}}
+        <p><strong>Problem:</strong> {{rich .Problem}}</p>
+        <p><strong>Approach:</strong> {{rich .Approach}}</p>
+        <p><strong>Result:</strong> {{rich .Result}}</p>
       </div>
       {{end}}
     </div>

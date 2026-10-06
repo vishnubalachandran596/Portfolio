@@ -2,7 +2,11 @@
 // Paid lessons are read after the purchase check. Article HTML uploaded
 // from the admin console is read when the article page renders. A role
 // resume PDF is read when someone downloads that role's resume. The
-// browser never receives an object URL.
+// profile photo and site logo, uploaded via /admin/profile, are read on
+// every page render that needs them. The browser never receives an
+// object URL -- every one of these is proxied through the app's own
+// route, which is also what lets a replaced photo/logo take effect
+// immediately with no stale-cache risk.
 package storage
 
 import (
@@ -30,6 +34,10 @@ const (
 	ArticleBucket = "articles"
 	// ResumeBucket is the private bucket for role-keyed resume PDFs.
 	ResumeBucket = "resumes"
+	// ProfilePhotoBucket is the private bucket for the profile headshot.
+	ProfilePhotoBucket = "profile-photo"
+	// LogoBucket is the private bucket for the site logo.
+	LogoBucket = "site-logo"
 )
 
 // objectPath is courses/{slug}.html or articles/{slug}.html. Slugs come
@@ -38,6 +46,14 @@ var objectPath = regexp.MustCompile(`^(?:courses|articles)/[a-z0-9]+(?:-[a-z0-9]
 
 // resumePath is resumes/{role_key}.pdf. The role key is slugify(company + role).
 var resumePath = regexp.MustCompile(`^resumes/[a-z0-9]+(?:-[a-z0-9]+)*\.pdf$`)
+
+// imageExt matches the three formats sniffed by magic bytes on upload
+// (see readImageUpload in core/handlers) -- never trusted from a
+// filename or a client-supplied Content-Type.
+const imageExt = `jpg|jpeg|png|webp`
+
+var profilePhotoPath = regexp.MustCompile(`^profile/photo\.(?:` + imageExt + `)$`)
+var logoPath = regexp.MustCompile(`^brand/logo\.(?:` + imageExt + `)$`)
 
 // CourseObject is the private-bucket path for a course slug.
 func CourseObject(slug string) (string, error) {
@@ -53,6 +69,27 @@ func ArticleObject(slug string) (string, error) {
 func ResumeObject(roleKey string) (string, error) {
 	path := "resumes/" + roleKey + ".pdf"
 	if !resumePath.MatchString(path) {
+		return "", fmt.Errorf("invalid storage object path %q", path)
+	}
+	return path, nil
+}
+
+// ProfilePhotoObject is the private-bucket path for the profile headshot,
+// fixed except for the extension (jpg/jpeg/png/webp) sniffed from the
+// uploaded bytes.
+func ProfilePhotoObject(ext string) (string, error) {
+	path := "profile/photo." + ext
+	if !profilePhotoPath.MatchString(path) {
+		return "", fmt.Errorf("invalid storage object path %q", path)
+	}
+	return path, nil
+}
+
+// LogoObject is the private-bucket path for the site logo, same shape
+// as ProfilePhotoObject.
+func LogoObject(ext string) (string, error) {
+	path := "brand/logo." + ext
+	if !logoPath.MatchString(path) {
 		return "", fmt.Errorf("invalid storage object path %q", path)
 	}
 	return path, nil
@@ -214,7 +251,8 @@ func (c *Client) objectURL(path string) string {
 }
 
 func allowedObject(path string) bool {
-	return objectPath.MatchString(path) || resumePath.MatchString(path)
+	return objectPath.MatchString(path) || resumePath.MatchString(path) ||
+		profilePhotoPath.MatchString(path) || logoPath.MatchString(path)
 }
 
 func (c *Client) openLocal(path string) (io.ReadCloser, error) {
@@ -286,6 +324,10 @@ func bucketFor(path string) string {
 		return ArticleBucket
 	case strings.HasPrefix(path, "resumes/"):
 		return ResumeBucket
+	case strings.HasPrefix(path, "profile/"):
+		return ProfilePhotoBucket
+	case strings.HasPrefix(path, "brand/"):
+		return LogoBucket
 	default:
 		return Bucket
 	}

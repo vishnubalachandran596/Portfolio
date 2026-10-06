@@ -100,16 +100,19 @@ still render. Saving **Admin → Profile** inserts the profile row. Load
 `portfolio_seed_data.sql` from the Google Drive folder named `Portfolio`
 when you want the live rows locally.
 
-Article HTML, course HTML, and resume PDFs are not in that SQL and not in
-the repo. Put them in the directory `LOCAL_CONTENT_DIR` names (default
-`../portfolio-local-content`, next to the repo). Compose mounts it at
-`/content`. Use the same paths Storage uses:
+Article HTML, course HTML, resume PDFs, the profile photo, and the site
+logo are not in that SQL and not in the repo. Put them in the directory
+`LOCAL_CONTENT_DIR` names (default `../portfolio-local-content`, next to
+the repo). Compose mounts it at `/content`. Use the same paths Storage
+uses:
 
 ```text
 ../portfolio-local-content/articles/{slug}.html
 ../portfolio-local-content/courses/{slug}.html
 ../portfolio-local-content/resumes/default.pdf
 ../portfolio-local-content/resumes/{role-key}.pdf
+../portfolio-local-content/profile/photo.{ext}
+../portfolio-local-content/brand/logo.{ext}
 ```
 
 A database row's `content_object` or `object_path` has to match the file
