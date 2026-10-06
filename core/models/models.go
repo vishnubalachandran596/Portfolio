@@ -183,12 +183,28 @@ type Course struct {
 	// content (gated, or not yet indexed). Empty is fine; the chatbot
 	// falls back to Summary/Description.
 	RagContext string
+	Tags       []string
 	CreatedAt  time.Time
 	UpdatedAt  time.Time
+	// ReviewCount is populated only by CourseRepo.ListPublishedFiltered --
+	// never persisted by Create/Update, since it's a derived count from
+	// course_reviews, not a stored column. Like the course detail page,
+	// this is the only review data ever shown publicly (never the rating
+	// value itself) -- see migration 064's doc comment.
+	ReviewCount int
 }
 
 // IsFree reports whether the course has no listed price.
 func (c Course) IsFree() bool { return !c.IsPaid && c.PriceCents == 0 }
+
+func (c Course) TagsDisplay() string { return strings.Join(c.Tags, ", ") }
+
+// CourseTag is one distinct tag across the published course catalog, with
+// how many published courses carry it -- mirrors ArticleTag.
+type CourseTag struct {
+	Name  string
+	Count int
+}
 
 // The three rungs of the suggested learning path on /courses. Every course
 // is priced identically ("contribute as you like"), so price carries no

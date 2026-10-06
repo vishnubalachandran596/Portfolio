@@ -271,6 +271,7 @@ func (a *App) AdminCourseSave(w http.ResponseWriter, r *http.Request) {
 		IsPaid:        isPaid,
 		MinPriceCents: minPriceCents,
 		RagContext:    strings.TrimSpace(r.FormValue("rag_context")),
+		Tags:          parseTags(r.FormValue("tags")),
 	}
 	if course.Slug == "" {
 		course.Slug = slugify(course.Title)
