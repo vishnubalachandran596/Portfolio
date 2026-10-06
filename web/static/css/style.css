@@ -409,6 +409,18 @@ a, button, .slot-btn, .faq-item summary { cursor: pointer; }
   height: 2rem;
   width: auto;
 }
+.landing-logo-wrap {
+  display: flex;
+  justify-content: center;
+  padding: 2rem 0 0;
+}
+.landing-logo {
+  height: 5rem;
+  width: auto;
+}
+@media (max-width: 560px) {
+  .landing-logo { height: 3.75rem; }
+}
 .primary-nav {
   display: flex;
   align-items: center;

@@ -1,5 +1,10 @@
 {{define "jsonld"}}<script type="application/ld+json">{{.JSONLD}}</script>{{end}}
 {{define "content"}}
+{{if .HasLogo}}
+<div class="landing-logo-wrap">
+  <img class="landing-logo" src="/media/logo" alt="{{.SiteName}}">
+</div>
+{{end}}
 <section class="hero hero-simple">
   <div class="container hero-inner{{if .Profile.PhotoObject}} hero-inner-with-photo{{end}}">
     {{if .Profile.PhotoObject}}<img class="hero-photo" src="/media/profile-photo" alt="{{.Profile.Name}}" width="176" height="176">{{end}}

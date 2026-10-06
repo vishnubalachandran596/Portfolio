@@ -21,7 +21,7 @@ Domain: `vishnubalachandran.com`, canonical host `www.vishnubalachandran.com`. `
 ## 2. Public (unauthenticated visitor) functionality
 
 ### Home (`GET /`)
-Hero (headshot from `Profile.PhotoObject`, streamed via `GET /media/profile-photo`, name, title, subtitle) with a deliberate **three-rung CTA ladder** — "Work With Me" → Consultancy as the one primary button, "Background & Resume" → About as the secondary (the recruiter path), and a plain text link to Courses third — followed by a **"Previously at" strip** of every employer's name straight from `experiences`, so a visitor registers the credibility without clicking through to About.
+When a logo is uploaded (`Profile.LogoObject`), it's the very first thing on the page — centered above the hero, larger than the header's own copy of it (`BaseData.HasLogo` gates both). Then the hero (headshot from `Profile.PhotoObject`, streamed via `GET /media/profile-photo`, name, title, subtitle) with a deliberate **three-rung CTA ladder** — "Work With Me" → Consultancy as the one primary button, "Background & Resume" → About as the secondary (the recruiter path), and a plain text link to Courses third — followed by a **"Previously at" strip** of every employer's name straight from `experiences`, so a visitor registers the credibility without clicking through to About.
 
 Then "What I bring": the professional summary (`Profile.Summary`, the same field About renders — not hardcoded copy) followed immediately by the skills grid. Nothing else sits in that section: no proof-point cards, no extra lead paragraphs, no "what I do" tiles. The heading row still carries a "Full background" link to About. The "Previously at" strip stays in the hero, not here.
 
