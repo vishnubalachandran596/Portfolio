@@ -1,0 +1,35 @@
+{{define "content"}}
+<section class="section">
+  <div class="container">
+    <div class="section-header-row">
+      <h1>Software</h1>
+      <a class="btn btn-primary" href="/admin/software/new">Add Software</a>
+    </div>
+    {{if .Software}}
+    <table class="admin-table">
+      <thead><tr><th>Title</th><th>Version</th><th>Price</th><th>Status</th><th>Sort</th><th></th></tr></thead>
+      <tbody>
+        {{range .Software}}
+        <tr>
+          <td>{{.Title}}</td>
+          <td>{{.Version}}</td>
+          <td>{{.PriceDisplay}}</td>
+          <td><span class="status-badge status-{{if .IsPublished}}confirmed{{else}}cancelled{{end}}">{{if .IsPublished}}Published{{else}}Hidden{{end}}</span></td>
+          <td>{{.SortOrder}}</td>
+          <td class="admin-table-actions">
+            <a class="link-button" href="/software/{{.Slug}}">View</a>
+            <a class="link-button" href="/admin/software/{{.ID}}/edit">Edit</a>
+            <form method="POST" action="/admin/software/{{.ID}}/delete" onsubmit="return confirm('Delete this software item?');">
+              <button type="submit" class="link-button danger">Delete</button>
+            </form>
+          </td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+    {{else}}
+    <p class="empty-state">No software items yet.</p>
+    {{end}}
+  </div>
+</section>
+{{end}}

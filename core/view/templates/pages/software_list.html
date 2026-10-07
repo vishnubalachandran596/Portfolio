@@ -1,0 +1,29 @@
+{{define "content"}}
+<section class="section page-hero">
+  <div class="container">
+    <p class="eyebrow">Software</p>
+    <h1>Downloadable Software</h1>
+    <p class="hero-subtitle">Apps and tools I've built and sell directly — download after purchase, no subscription.</p>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    {{if .Software}}
+    <div class="course-grid">
+      {{range .Software}}
+      <a class="course-card" href="/software/{{.Slug}}">
+        <h3>{{.Title}} <span class="optional">{{.Version}}</span></h3>
+        <p>{{.Description}}</p>
+        <div class="course-detail-meta">
+          <span>{{.PriceDisplay}}</span>
+        </div>
+      </a>
+      {{end}}
+    </div>
+    {{else}}
+    <p class="empty-state">Nothing published yet — check back soon.</p>
+    {{end}}
+  </div>
+</section>
+{{end}}

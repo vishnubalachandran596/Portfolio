@@ -3,7 +3,7 @@
   <div class="container">
     <p class="eyebrow">Account</p>
     <h1>My Account</h1>
-    <p class="hero-subtitle">Your consultancy bookings, purchased courses, article contributions, payments, and messages, in one place.</p>
+    <p class="hero-subtitle">Your consultancy bookings, purchased courses and software, article contributions, payments, and messages, in one place.</p>
   </div>
 </section>
 
@@ -26,7 +26,28 @@
   </div>
 </section>
 
-<section id="bookings" class="section section-alt">
+<section id="software" class="section section-alt">
+  <div class="container">
+    <h2 class="section-title">My Software</h2>
+    {{if .Software}}
+    <div class="course-grid">
+      {{range .Software}}
+      <div class="course-card">
+        <h3>{{.Title}} {{.Version}}</h3>
+        <p>Purchased {{if .PaidAt}}{{.PaidAt}}{{else}}recently{{end}}{{if .Amount}} · {{.Amount}}{{end}}</p>
+        {{if .LicenseTerms}}<p class="purchase-box-sub">{{.LicenseTerms}}</p>{{end}}
+        {{if .PostPurchaseInstructions}}<p class="purchase-box-sub">{{.PostPurchaseInstructions}}</p>{{end}}
+        {{if .DownloadLink}}<a class="btn btn-primary" href="{{.DownloadLink}}" target="_blank" rel="noopener">Download</a>{{end}}
+      </div>
+      {{end}}
+    </div>
+    {{else}}
+    <p class="empty-state">No software purchases yet — <a href="/software">browse what's available</a>.</p>
+    {{end}}
+  </div>
+</section>
+
+<section id="bookings" class="section">
   <div class="container">
     <h2 class="section-title">My Bookings</h2>
     {{if .Bookings}}

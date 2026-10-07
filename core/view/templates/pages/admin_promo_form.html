@@ -14,12 +14,16 @@
       <fieldset class="form-fieldset">
         <legend>Applies to</legend>
         <label class="checkbox-label">
-          <input type="radio" name="product" value="course" {{if ne .Promo.Product "consultancy"}}checked{{end}}>
+          <input type="radio" name="product" value="course" {{if and (ne .Promo.Product "consultancy") (ne .Promo.Product "software")}}checked{{end}}>
           Courses
         </label>
         <label class="checkbox-label">
           <input type="radio" name="product" value="consultancy" {{if eq .Promo.Product "consultancy"}}checked{{end}}>
           Consultancy bookings
+        </label>
+        <label class="checkbox-label">
+          <input type="radio" name="product" value="software" {{if eq .Promo.Product "software"}}checked{{end}}>
+          Software purchases
         </label>
       </fieldset>
 

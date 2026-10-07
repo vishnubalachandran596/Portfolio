@@ -1,0 +1,50 @@
+{{define "jsonld"}}<script type="application/ld+json">{{.JSONLD}}</script>{{end}}
+{{define "content"}}
+<section class="section page-hero">
+  <div class="container">
+    <p class="eyebrow"><a href="{{.Nav.Software}}">← All software</a></p>
+    <h1>{{.Software.Title}} <span class="optional">{{.Software.Version}}</span></h1>
+    <p class="hero-subtitle">{{rich .Software.Description}}</p>
+    <div class="course-detail-meta">
+      <span>{{.Software.PriceDisplay}}</span>
+    </div>
+
+    {{if .PurchaseRequired}}<div class="alert alert-error">Get access below to continue — it only takes a moment.</div>{{end}}
+
+    {{if .HasAccess}}
+    <div class="hero-actions">
+      <a class="btn btn-primary" href="{{.Software.DownloadLink}}" target="_blank" rel="noopener">Download</a>
+    </div>
+    {{if .Software.LicenseTerms}}<p class="purchase-box-sub">{{.Software.LicenseTerms}}</p>{{end}}
+    {{if .Software.PostPurchaseInstructions}}<p class="purchase-box-sub">{{.Software.PostPurchaseInstructions}}</p>{{end}}
+    {{else}}
+    <div class="purchase-box" id="purchase-box">
+      <p class="purchase-box-title">Get access</p>
+      <p class="purchase-box-sub">{{.Software.PriceDisplay}} — one-time purchase.</p>
+      <div id="purchase-error" class="alert alert-error" hidden></div>
+      {{if .UserEmail}}
+      <p class="purchase-box-sub">Access will be sent to <strong>{{.UserEmail}}</strong>.</p>
+      {{if .PaymentsEnabled}}
+      <label>Promo code <span class="optional">(optional)</span>
+        <input type="text" id="software-promo-code" autocapitalize="characters">
+      </label>
+      <button type="button" class="btn btn-primary" id="software-purchase-btn" data-slug="{{.Software.Slug}}">{{if gt .Software.PriceCents 0}}Buy Now{{else}}Get Free Access{{end}}</button>
+      {{else}}
+      <p class="purchase-box-sub">Payments aren't enabled yet.</p>
+      {{end}}
+      {{else}}
+      <p class="purchase-box-sub">Sign in with Google to purchase — it's how access gets tied to your account and how promo codes can be checked.</p>
+      <a class="btn btn-primary" href="/login?next=/software/{{.Software.Slug}}">Log in with Google</a>
+      {{end}}
+    </div>
+    {{if .PaymentsEnabled}}<script src="https://checkout.razorpay.com/v1/checkout.js"></script>{{end}}
+    {{end}}
+  </div>
+</section>
+
+<section class="section">
+  <div class="container course-description">
+    {{range $p := splitLines .Software.Description}}<p>{{rich $p}}</p>{{end}}
+  </div>
+</section>
+{{end}}

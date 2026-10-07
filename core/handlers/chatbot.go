@@ -766,6 +766,22 @@ func (a *App) gatherChatbotChunks(ctx context.Context) []models.ChatbotChunk {
 		}
 	}
 
+	if software, err := a.Software.ListPublished(ctx); err == nil {
+		for _, sw := range software {
+			url := "/software/" + sw.Slug
+			text := sw.Title + " v" + sw.Version + ". " + sw.Description + ". Price: " + sw.PriceDisplay()
+			if sw.LicenseTerms != "" {
+				text += ". License: " + sw.LicenseTerms
+			}
+			if sw.RagContext != "" {
+				text += ". " + sw.RagContext
+			}
+			for _, piece := range chunkText(text, chatbotChunkMaxChars) {
+				chunks = append(chunks, models.ChatbotChunk{SourceType: "software", SourceID: sw.ID, Title: "Software: " + sw.Title, URL: url, ChunkText: piece})
+			}
+		}
+	}
+
 	// Consultancy tiers and FAQ are template/Go-literal copy, not DB rows
 	// (see docs/ARCHITECTURE.md) -- consultancyFAQ is the same function
 	// consultancy.go uses for the page's own <details> accordion and its

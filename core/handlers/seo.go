@@ -145,6 +145,11 @@ func (a *App) Sitemap(w http.ResponseWriter, r *http.Request) {
 		a.serverError(w, "load courses for sitemap", err)
 		return
 	}
+	software, err := a.Software.ListPublished(r.Context())
+	if err != nil {
+		a.serverError(w, "load software for sitemap", err)
+		return
+	}
 	articlesResult, err := a.Articles.ListPublishedFiltered(r.Context(), repo.ArticleListOptions{PageSize: 10000})
 	if err != nil {
 		a.serverError(w, "load articles for sitemap", err)
@@ -164,6 +169,7 @@ func (a *App) Sitemap(w http.ResponseWriter, r *http.Request) {
 		{"/about", "0.9"},
 		{"/resume.pdf", "0.5"},
 		{"/courses", "0.9"},
+		{"/software", "0.7"},
 		{"/consultancy", "0.8"},
 		{"/articles", "0.6"},
 		{"/contact", "0.5"},
@@ -189,6 +195,10 @@ func (a *App) Sitemap(w http.ResponseWriter, r *http.Request) {
 	for _, art := range articles {
 		fmt.Fprintf(&b, "  <url><loc>%s</loc><lastmod>%s</lastmod><priority>0.6</priority></url>\n",
 			a.pageURL(r, "/articles/"+art.Slug), art.CreatedAt.Format("2006-01-02"))
+	}
+	for _, sw := range software {
+		fmt.Fprintf(&b, "  <url><loc>%s</loc><lastmod>%s</lastmod><priority>0.6</priority></url>\n",
+			a.pageURL(r, "/software/"+sw.Slug), sw.UpdatedAt.Format("2006-01-02"))
 	}
 	b.WriteString(`</urlset>`)
 
@@ -240,6 +250,7 @@ func (a *App) LLMsTxt(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(&b, "- [Resume PDF](%s/resume.pdf): Downloadable resume generated from the live profile\n", base)
 	fmt.Fprintf(&b, "- [Consultancy](%s/consultancy): Fixed-price architecture reviews, fractional advisory retainers, and hourly sessions\n", base)
 	fmt.Fprintf(&b, "- [Courses](%s/courses): Practical courses on Java, architecture, system design, and distributed systems\n", base)
+	fmt.Fprintf(&b, "- [Software](%s/software): Downloadable apps and tools, sold directly\n", base)
 	fmt.Fprintf(&b, "- [Articles](%s/articles): Original writing on software architecture, distributed systems, and engineering careers\n", base)
 	fmt.Fprintf(&b, "- [Contact](%s/contact): Get in touch\n", base)
 	if a.Nvidia.Enabled() {

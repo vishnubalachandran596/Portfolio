@@ -10,7 +10,7 @@ import (
 type adminPaymentRow struct {
 	When        string
 	whenSort    int64
-	Type        string // "Course", "Consultancy", "Audit", or "Article"
+	Type        string // "Course", "Consultancy", "Audit", "Article", or "Software"
 	Description string
 	Email       string
 	Amount      string
@@ -50,6 +50,11 @@ func (a *App) AdminPaymentsList(w http.ResponseWriter, r *http.Request) {
 	articleContribs, err := a.ArticleContributions.ListAll(ctx)
 	if err != nil {
 		a.serverError(w, "load article contributions", err)
+		return
+	}
+	softwarePurchases, err := a.SoftwarePurchases.ListAll(ctx)
+	if err != nil {
+		a.serverError(w, "load software purchases", err)
 		return
 	}
 
@@ -139,6 +144,31 @@ func (a *App) AdminPaymentsList(w http.ResponseWriter, r *http.Request) {
 			PaymentID:   c.RazorpayPaymentID,
 		})
 		totalCents[c.Currency] += c.AmountCents
+	}
+	for _, p := range softwarePurchases {
+		if p.Status != models.PurchaseStatusPaid || p.PaidAt == nil {
+			continue
+		}
+		sw, swerr := a.Software.GetByID(ctx, p.SoftwareID)
+		title := "(software removed)"
+		if swerr == nil {
+			title = sw.Title + " " + sw.Version
+		}
+		row := adminPaymentRow{
+			When:        p.PaidAt.In(a.Timezone).Format("Jan 2, 2006 · 3:04 PM"),
+			whenSort:    p.PaidAt.Unix(),
+			Type:        "Software",
+			Description: title,
+			Email:       p.Email,
+			Amount:      models.FormatMoney(p.AmountCents, p.Currency),
+			PaymentID:   p.RazorpayPaymentID,
+			PromoCode:   p.PromoCode,
+		}
+		if p.PromoCode != "" {
+			row.Discount = models.FormatMoney(p.DiscountCents, p.Currency)
+		}
+		rows = append(rows, row)
+		totalCents[p.Currency] += p.AmountCents
 	}
 
 	sort.Slice(rows, func(i, j int) bool { return rows[i].whenSort > rows[j].whenSort })

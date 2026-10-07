@@ -324,6 +324,92 @@
     });
   }
 
+  // --- Fixed-price software checkout (Razorpay) ---------------------------
+  var softwarePurchaseBtn = document.getElementById("software-purchase-btn");
+  if (softwarePurchaseBtn) {
+    softwarePurchaseBtn.addEventListener("click", function () {
+      var slug = softwarePurchaseBtn.getAttribute("data-slug");
+      var promoInput = document.getElementById("software-promo-code");
+      var errorBox = document.getElementById("purchase-error");
+      var defaultLabel = softwarePurchaseBtn.textContent;
+
+      function showError(msg) {
+        if (errorBox) {
+          errorBox.textContent = msg;
+          errorBox.hidden = false;
+        }
+      }
+
+      if (errorBox) errorBox.hidden = true;
+      softwarePurchaseBtn.disabled = true;
+      softwarePurchaseBtn.textContent = "Starting checkout…";
+
+      var form = new FormData();
+      form.append("promo_code", promoInput ? promoInput.value.trim() : "");
+
+      fetch("/software/" + slug + "/checkout/order", { method: "POST", body: form })
+        .then(function (res) {
+          return res.json().then(function (data) {
+            if (!res.ok) throw new Error(data.error || "Could not start checkout.");
+            return data;
+          });
+        })
+        .then(function (order) {
+          if (order.free) {
+            window.location.href = order.redirect;
+            return;
+          }
+          var rzp = new Razorpay({
+            key: order.key_id,
+            amount: order.amount,
+            currency: order.currency,
+            name: order.software_name,
+            description: "Software purchase",
+            order_id: order.order_id,
+            prefill: { email: order.email },
+            handler: function (response) {
+              fetch("/software/" + slug + "/checkout/verify", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  razorpay_order_id: response.razorpay_order_id,
+                  razorpay_payment_id: response.razorpay_payment_id,
+                  razorpay_signature: response.razorpay_signature,
+                }),
+              })
+                .then(function (res) {
+                  return res.json();
+                })
+                .then(function (result) {
+                  if (result.redirect) {
+                    window.location.href = result.redirect;
+                  } else {
+                    showError(result.error || "Payment could not be verified.");
+                  }
+                })
+                .catch(function () {
+                  showError("Payment could not be verified. Contact support with your payment ID.");
+                });
+            },
+            modal: {
+              ondismiss: function () {
+                softwarePurchaseBtn.disabled = false;
+                softwarePurchaseBtn.textContent = defaultLabel;
+              },
+            },
+          });
+          rzp.open();
+          softwarePurchaseBtn.disabled = false;
+          softwarePurchaseBtn.textContent = defaultLabel;
+        })
+        .catch(function (err) {
+          showError(err.message || "Could not start checkout.");
+          softwarePurchaseBtn.disabled = false;
+          softwarePurchaseBtn.textContent = defaultLabel;
+        });
+    });
+  }
+
   // --- Optional article contribution (Razorpay) --------------------------
   var contributeBtn = document.getElementById("contribute-btn");
   if (contributeBtn) {

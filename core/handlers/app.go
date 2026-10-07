@@ -36,6 +36,8 @@ type App struct {
 	Education            *repo.EducationRepo
 	Features             *repo.HomeFeatureRepo
 	Courses              *repo.CourseRepo
+	Software             *repo.SoftwareRepo
+	SoftwarePurchases    *repo.SoftwarePurchaseRepo
 	Bookings             *repo.BookingRepo
 	Availability         *repo.AvailabilityRepo
 	Admins               *repo.AdminRepo
@@ -139,6 +141,7 @@ type NavLinks struct {
 	Home        string
 	About       string
 	Courses     string
+	Software    string
 	Consultancy string
 	Booking     string
 	Articles    string
@@ -172,6 +175,8 @@ func New(cfg *config.Config, db *sql.DB, renderer *view.Renderer) *App {
 		Education:            repo.NewEducationRepo(db),
 		Features:             repo.NewHomeFeatureRepo(db),
 		Courses:              repo.NewCourseRepo(db),
+		Software:             repo.NewSoftwareRepo(db),
+		SoftwarePurchases:    repo.NewSoftwarePurchaseRepo(db),
 		Bookings:             repo.NewBookingRepo(db),
 		Availability:         repo.NewAvailabilityRepo(db),
 		Admins:               repo.NewAdminRepo(db),
@@ -354,6 +359,7 @@ func (a *App) baseFrom(r *http.Request, pf *basePrefetch, title, metaDescription
 			Home:        a.pageURL(r, "/"),
 			About:       a.pageURL(r, "/about"),
 			Courses:     a.pageURL(r, "/courses"),
+			Software:    a.pageURL(r, "/software"),
 			Consultancy: a.pageURL(r, "/consultancy"),
 			Booking:     a.pageURL(r, "/booking"),
 			Articles:    a.pageURL(r, "/articles"),

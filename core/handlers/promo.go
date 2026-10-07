@@ -22,9 +22,12 @@ var errPromoInvalid = errors.New("promo code is invalid or expired")
 // (never more than amountCents) plus the code's own record so the caller
 // can label the purchase/booking and bump its redemption count once
 // payment is verified. An empty raw code is not an error — it just means
-// no discount applies. courseID is ignored for the consultancy product.
-// userID/email identify the account attempting to redeem — checkout
-// requires a signed-in account unconditionally, so these are never zero.
+// no discount applies. courseID is ignored for the consultancy and
+// software products (software has no per-item scoping — a software code
+// applies to any software purchase, the same default an empty CourseIDs
+// list already means for courses). userID/email identify the account
+// attempting to redeem — checkout requires a signed-in account
+// unconditionally, so these are never zero.
 func (a *App) resolvePromoCode(ctx context.Context, raw, product string, courseID, userID int64, email string, amountCents int) (discountCents int, promo *models.PromoCode, err error) {
 	raw = strings.TrimSpace(raw)
 	if raw == "" {
@@ -47,7 +50,16 @@ func (a *App) resolvePromoCode(ctx context.Context, raw, product string, courseI
 		return 0, nil, errPromoInvalid
 	}
 	if p.MaxRedemptionsPerUser > 0 {
-		count, cerr := a.Purchases.CountUserRedemptions(ctx, userID, p.ID)
+		// Per-user redemption counting is product-aware: software
+		// purchases live in their own table (software_purchases), not
+		// purchases, so each product line counts against its own history.
+		var count int
+		var cerr error
+		if product == models.PromoProductSoftware {
+			count, cerr = a.SoftwarePurchases.CountUserRedemptions(ctx, userID, p.ID)
+		} else {
+			count, cerr = a.Purchases.CountUserRedemptions(ctx, userID, p.ID)
+		}
 		if cerr != nil {
 			return 0, nil, cerr
 		}

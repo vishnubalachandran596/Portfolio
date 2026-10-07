@@ -1,0 +1,61 @@
+{{define "content"}}
+<section class="section">
+  <div class="container">
+    <h1>{{if .IsNew}}Add Software{{else}}Edit Software{{end}}</h1>
+    {{if .Error}}<div class="alert alert-error">{{.Error}}</div>{{end}}
+    <form method="POST" action="{{if .IsNew}}/admin/software/new{{else}}/admin/software/{{.Software.ID}}/edit{{end}}" class="admin-form">
+      <div class="form-row">
+        <label>Title
+          <input type="text" name="title" value="{{.Software.Title}}" required placeholder="e.g. Temple Accounts &amp; Billing">
+        </label>
+        <label>Version
+          <input type="text" name="version" value="{{.Software.Version}}" placeholder="e.g. 1.0.0">
+        </label>
+      </div>
+      <label>URL slug <span class="optional">leave blank to generate from the title</span>
+        <input type="text" name="slug" value="{{.Software.Slug}}" placeholder="e.g. temple-accounts-billing">
+      </label>
+      <label>Description <span class="optional">supports **bold** and *italic*; shown on the software's own page and in the catalog</span>
+        <textarea name="description" rows="4">{{.Software.Description}}</textarea>
+      </label>
+
+      <hr class="admin-form-divider">
+      <h2 class="admin-form-subhead">Pricing & delivery</h2>
+      <div class="form-row">
+        <label>Price, INR <span class="optional">0 = free</span>
+          <input type="number" name="price" value="{{.Software.PriceWhole}}" min="0" step="1">
+        </label>
+      </div>
+      <label>Download link <span class="optional">external URL (e.g. a Google Drive folder) — revealed only after a verified purchase, or to you as admin</span>
+        <input type="url" name="download_link" value="{{.Software.DownloadLink}}" placeholder="https://drive.google.com/drive/folders/...">
+      </label>
+      <label>License terms <span class="optional">shown on the product page and the purchase receipt, e.g. "Licensed per device"</span>
+        <input type="text" name="license_terms" value="{{.Software.LicenseTerms}}" placeholder="e.g. Licensed per device">
+      </label>
+      <label>Post-purchase instructions <span class="optional">shown on the product page and the purchase receipt, e.g. how to get a license key</span>
+        <textarea name="post_purchase_instructions" rows="2" placeholder="e.g. Email support@yourdomain.com with your receipt to receive your license key.">{{.Software.PostPurchaseInstructions}}</textarea>
+      </label>
+
+      <hr class="admin-form-divider">
+      <h2 class="admin-form-subhead">AI chatbot context</h2>
+      <label>RAG context <span class="optional">(optional — a self-contained paragraph for the AI chatbot to quote when answering about this software. Leave blank to fall back to the description above. Takes effect after the next "Rebuild Index" on /admin/chatbot.)</span>
+        <textarea name="rag_context" rows="4">{{.Software.RagContext}}</textarea>
+      </label>
+
+      <hr class="admin-form-divider">
+      <label class="checkbox-label">
+        <input type="checkbox" name="is_published" {{if .Software.IsPublished}}checked{{end}}>
+        Published (visible in the public Software catalog)
+      </label>
+      <label>Sort order
+        <input type="number" name="sort_order" value="{{.Software.SortOrder}}">
+      </label>
+
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary" data-loading-text="Saving…">Save Software</button>
+        <a class="btn btn-secondary" href="/admin/software">Cancel</a>
+      </div>
+    </form>
+  </div>
+</section>
+{{end}}

@@ -75,6 +75,7 @@ docs/
 ```mermaid
 erDiagram
     users ||--o{ purchases : makes
+    users ||--o{ software_purchases : makes
     users ||--o{ bookings : makes
     users ||--o{ testimonials : submits
     users ||--o{ admin_messages : receives
@@ -87,6 +88,8 @@ erDiagram
     courses ||--o{ promo_code_courses : "scoped by"
     promo_codes ||--o{ purchases : "discounts (nullable FK)"
     promo_codes ||--o{ bookings : "discounts (nullable FK)"
+    software ||--o{ software_purchases : "is bought via"
+    promo_codes ||--o{ software_purchases : "discounts (nullable FK)"
     availability_rules ||--o{ bookings : "generates slots for (app-level, not FK)"
     articles ||--o{ article_thumbs_up : "receives"
     users ||--o{ article_thumbs_up : "casts (nullable FK — real login, guest-by-email, or a name-only vote with no user row)"
@@ -307,6 +310,42 @@ erDiagram
         timestamptz paid_at
         note "CHECK (status <> paid OR paid_at IS NOT NULL)"
     }
+    software {
+        bigserial id PK
+        text slug UK
+        text title
+        text version
+        text description
+        text rag_context "admin-editable passage for the AI chatbot's RAG index; see §12"
+        text download_link "external URL, e.g. a Google Drive folder -- never a Storage path, there is no file hosted on this site"
+        int price_cents "INR, fixed price -- not pay-what-you-want like courses"
+        text license_terms "admin-editable, e.g. 'Licensed per device'; shown on the product page and the receipt"
+        text post_purchase_instructions "admin-editable, e.g. how to request a license key by email; shown on the product page and the receipt"
+        bool is_published
+        int sort_order
+        timestamptz created_at
+        timestamptz updated_at
+        note "migration 075; the fourth paid product, alongside courses/booking/article-contribution"
+    }
+    software_purchases {
+        bigserial id PK
+        bigint software_id FK
+        bigint user_id FK "nullable, ON DELETE SET NULL"
+        text email
+        int amount_cents
+        text currency
+        text status "created | paid | failed"
+        text razorpay_order_id
+        text razorpay_payment_id
+        text access_token "bearer token revealing download_link"
+        bigint promo_code_id FK "nullable"
+        text promo_code
+        text promo_text
+        int discount_cents
+        timestamptz created_at
+        timestamptz paid_at
+        note "mirrors purchases field-for-field with software_id in place of course_id; migration 075"
+    }
     bookings {
         serial id PK
         bigint user_id FK
@@ -392,7 +431,7 @@ erDiagram
         text code UK
         text description
         text banner_text "optional override for the public banner's copy; migration 063"
-        text product "course | consultancy"
+        text product "course | consultancy | software; migration 075 added software"
         int discount_percent
         int max_redemptions "0 = unlimited, total across every account"
         int max_redemptions_per_user "0 = unlimited; configurable per code, migration 062"
@@ -421,7 +460,7 @@ erDiagram
     }
     chatbot_chunks {
         bigserial id PK
-        text source_type "profile|skill|experience|education|course|article|consultancy|case_study|certification|publication|testimonial; migration 065"
+        text source_type "profile|skill|experience|education|course|software|article|consultancy|case_study|certification|publication|testimonial; migration 065, software added migration 075"
         bigint source_id
         text title
         text url
@@ -484,6 +523,9 @@ Handler files, by area:
 |---|---|
 | `public.go` | Home (incl. subscribe-form data), About (incl. case studies), Resume, CoursesList (incl. subscribe-form data), CourseDetail, Sitemap-adjacent data |
 | `checkout.go` | Course purchase order/verify, `courseAccess()` gate |
+| `software.go` | Public Software list/detail |
+| `software_checkout.go` | Software purchase order/verify (fixed price), `softwareAccess()` gate |
+| `admin_software.go` | Admin CRUD for Software |
 | `consultancy.go` | Consultancy page (tiers, FAQ, case studies, JSON-LD), Booking page/confirm (free, no payment gateway), Contact page/submit |
 | `admin_contact.go` | Admin contact-messages list + mark-read |
 | `admin_credentials.go` | Admin CRUD for Certifications and Speaking & Publications |
@@ -505,8 +547,8 @@ Handler files, by area:
 | `admin_users.go` | Admin user list/detail/promote/demote/message |
 | `admin_quiz.go` | Admin CRUD for quiz questions |
 | `admin_promo.go` | Admin CRUD for promo codes |
-| `admin_payments.go` | The combined payments ledger (purchases + bookings + audit requests merged) |
-| `promo.go` | `resolvePromoCode()` — the one shared discount-resolution function all three checkout flows call |
+| `admin_payments.go` | The combined payments ledger (purchases + bookings + audit requests + article contributions + software purchases merged) |
+| `promo.go` | `resolvePromoCode()` — the one shared discount-resolution function every checkout flow calls |
 | `chatbot.go` | Public `POST /chat` (RAG answer) + `GET /ai-assistant` (`AIAssistantPage`) + `chatbotSessionID`; admin `/admin/chatbot` page + `/admin/chatbot/reindex` + content-gathering/chunking helpers — see §12 |
 
 ---
@@ -530,19 +572,23 @@ Both live in `core/middleware/auth.go`, sharing one `Auth` struct (one JWT secre
 
 ---
 
-## 6. Payments — Razorpay is wired up for courses only
+## 6. Payments — Razorpay powers two live paid flows: courses and software
 
-**Course purchases are the only paid flow left on this site.** Consultancy (Architecture Review, retainer, hourly) never touches a payment gateway at all — no code path, no dormant endpoint, nothing to re-enable by flipping a flag. This was a deliberate removal, not a disable: the site owner isn't taking payment integration further any time soon, and having a live-but-unlinked paid endpoint sitting in the background was considered worse than just deleting it. If self-checkout for consultancy is ever wanted again, it needs to be rebuilt — `git log` on `consultancy.go`/`booking.html` around the removal commit is the reference for what the Razorpay version looked like.
+**Course purchases and software purchases are the two paid flows left on this site.** Consultancy (Architecture Review, retainer, hourly) never touches a payment gateway at all — no code path, no dormant endpoint, nothing to re-enable by flipping a flag. This was a deliberate removal, not a disable: the site owner isn't taking payment integration further for consultancy, and having a live-but-unlinked paid endpoint sitting in the background was considered worse than just deleting it. If self-checkout for consultancy is ever wanted again, it needs to be rebuilt — `git log` on `consultancy.go`/`booking.html` around the removal commit is the reference for what the Razorpay version looked like.
 
-**Course purchase** (`POST /courses/{slug}/checkout/order` → `.../verify`, `purchases` table) follows: **create-order handler** (server resolves the true price, creates a Razorpay order, writes a `pending` DB row) → client opens Razorpay's Checkout.js modal with that order ID → **verify handler** (HMAC-verifies the callback server-side via `Razorpay.VerifySignature`, flips the DB row to paid, fires a Telegram notification, returns a redirect). Access is **only ever granted from the verify step**, never trusted from the client-side "success" callback alone. It **skips Razorpay entirely when the resolved amount is $0** — see §3.
+**Course purchase** (`POST /courses/{slug}/checkout/order` → `.../verify`, `purchases` table) follows: **create-order handler** (server resolves the true price, creates a Razorpay order, writes a `pending` DB row) → client opens Razorpay's Checkout.js modal with that order ID → **verify handler** (HMAC-verifies the callback server-side via `Razorpay.VerifySignature`, flips the DB row to paid, fires a Telegram notification, returns a redirect). Access is **only ever granted from the verify step**, never trusted from the client-side "success" callback alone. It **skips Razorpay entirely when the resolved amount is $0** — see §3. Pricing here is pay-what-you-want, floored at `courses.min_price_cents`.
+
+**Software purchase** (`POST /software/{slug}/checkout/order` → `.../verify`, `software_purchases` table, `core/handlers/software_checkout.go`) follows the *exact same* create/verify/HMAC/cookie/$0-skip shape as course purchase, copied field-for-field rather than branched into `checkout.go` — the one real difference is pricing: a software item sells at one fixed price (`software.price_cents`), set and edited only in the admin console, never supplied by the client. A verified purchase doesn't unlock in-browser content the way a course does — it reveals `software.download_link` (an external URL, e.g. a Google Drive folder) plus the admin-editable `license_terms`/`post_purchase_instructions` free-text fields, on the software's own detail page and in the buyer's `/account` "My Software" section and PDF receipt.
 
 **Consultancy hourly** (`POST /booking/confirm`, `bookings` table) is a plain "reserve the slot, confirm it" flow with no price and no payment step of any kind — `BookingConfirm` in `consultancy.go` calls `BookingRepo.CreatePending` then `MarkPaid` back to back, purely to reuse the existing slot-race protection (the unique constraint on `slot_start`), not because anything is actually "paid." A synthetic `razorpay_order_id` (`"free-"+token`) only exists so `MarkPaid` has something unambiguous to scope its update to.
 
-**Architecture Review and Fractional Advisory** have no create/verify endpoints at all — both route to `/contact` from `consultancy.html`, to be scoped and invoiced outside this site. The `audit_requests` table and `AuditRequestRepo.ListAll` still exist, read-only, purely so the admin payments ledger (`admin_payments.go`) can keep showing the real historical Architecture Review purchases from when self-checkout briefly existed; nothing writes to that table anymore.
+**Architecture Review and Fractional Advisory** have no create/verify endpoints at all — both route to `/contact` from `consultancy.html`, to be scoped and invoiced outside this site. The `audit_requests` table and `AuditRequestRepo.ListAll` still exist, read-only, purely so the admin payments ledger (`admin_payments.go`) can keep showing the real historical Architecture Review purchases from when self-checkout briefly existed; nothing writes to that table anymore. **Do not copy `audit_requests.go`'s shape for a new paid product — it is dead code, kept only for that historical ledger.**
 
-`core/payments/razorpay.go`: `Razorpay.Enabled()` is `false` whenever `RAZORPAY_KEY_ID`/`RAZORPAY_KEY_SECRET` aren't set — the course create-order handler checks this (except its own $0 branch, which doesn't need Razorpay at all) and returns `503` with a friendly message instead of erroring.
+`core/payments/razorpay.go`: `Razorpay.Enabled()` is `false` whenever `RAZORPAY_KEY_ID`/`RAZORPAY_KEY_SECRET` aren't set — both create-order handlers check this (except each one's own $0 branch, which doesn't need Razorpay at all) and return `503` with a friendly message instead of erroring.
 
-**To add a new fixed-price paid product**, the course purchase flow (`checkout.go`'s `CheckoutCreateOrder`/`CheckoutVerify` + `purchases` table) is now the only live reference implementation for a Razorpay create/verify pair in this codebase.
+**Promo codes are product-scoped** (`promo_codes.product`, a `CHECK` of `'course' | 'consultancy' | 'software'`). `resolvePromoCode()` (`core/handlers/promo.go`) is one shared function, not three near-duplicates — it branches internally only where the products genuinely differ: course-ID scoping (`promo_code_courses`) only applies to the course product (a `software` promo code has no equivalent per-item scoping — it applies to any software purchase, the same default an empty course-ID list already means for courses), and per-user redemption counting branches between `PurchaseRepo.CountUserRedemptions` (courses) and `SoftwarePurchaseRepo.CountUserRedemptions` (software), since paid purchases of each product live in their own table.
+
+**To add a new fixed-price paid product**, `checkout.go`'s `CheckoutCreateOrder`/`CheckoutVerify` + `purchases` table (pay-what-you-want) and `software_checkout.go`'s `SoftwareCheckoutOrder`/`SoftwareCheckoutVerify` + `software_purchases` table (fixed price) are the two live reference implementations for a Razorpay create/verify pair in this codebase — pick whichever pricing model fits and copy that one's shape into its own new file(s), per the layering rule in §2 above.
 
 ---
 
