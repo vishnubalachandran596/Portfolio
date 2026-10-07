@@ -4,7 +4,6 @@
   <div class="container">
     <p class="eyebrow"><a href="{{.Nav.Software}}">← All software</a></p>
     <h1>{{.Software.Title}} <span class="optional">{{.Software.Version}}</span></h1>
-    <p class="hero-subtitle">{{rich .Software.Description}}</p>
     <div class="course-detail-meta">
       <span>{{.Software.PriceDisplay}}</span>
     </div>
@@ -15,8 +14,8 @@
     <div class="hero-actions">
       <a class="btn btn-primary" href="{{.Software.DownloadLink}}" target="_blank" rel="noopener">Download</a>
     </div>
-    {{if .Software.LicenseTerms}}<p class="purchase-box-sub">{{.Software.LicenseTerms}}</p>{{end}}
-    {{if .Software.PostPurchaseInstructions}}<p class="purchase-box-sub">{{.Software.PostPurchaseInstructions}}</p>{{end}}
+    {{if .Software.LicenseTerms}}<p class="course-detail-note">{{.Software.LicenseTerms}}</p>{{end}}
+    {{if .Software.PostPurchaseInstructions}}<p class="course-detail-note">{{.Software.PostPurchaseInstructions}}</p>{{end}}
     {{else}}
     <div class="purchase-box" id="purchase-box">
       <p class="purchase-box-title">Get access</p>
