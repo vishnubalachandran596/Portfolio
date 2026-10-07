@@ -398,8 +398,15 @@ func (a *App) CoursesList(w http.ResponseWriter, r *http.Request) {
 		totalPages = 1
 	}
 
+	// A search-results view (?q=) is site-internal search, not content
+	// worth its own index entry -- see the identical note in
+	// ArticlesPage/articles.go.
+	if opt.Query != "" {
+		w.Header().Set("X-Robots-Tag", "noindex, follow")
+	}
+
 	data := CoursesListData{
-		BaseData:   a.baseFrom(r, pf, "Java, Architecture & System Design Courses — "+a.Cfg.SiteName, "Practical, production-grade courses on Java, technical architecture, system design, and distributed systems from a working technical consultant.", "courses"),
+		BaseData:   a.baseFrom(r, pf, catalogListTitle("Java, Architecture & System Design Courses — "+a.Cfg.SiteName, opt.Tag, page), "Practical, production-grade courses on Java, technical architecture, system design, and distributed systems from a working technical consultant.", "courses"),
 		HasCourses: len(allSrc) > 0,
 		Courses:    result.Courses,
 		Tags:       tags,

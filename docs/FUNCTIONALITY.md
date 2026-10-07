@@ -124,6 +124,8 @@ A small floating "AI Assistant" bubble, bottom-right on every page (including a 
 
 Utility/gated routes are deliberately excluded from the sitemap and marked `noindex` where they can render HTML: `/search`, `/login`, `/booking`, `/account`, admin pages, and gated course learn/quiz/certificate routes.
 
+**Canonical URLs on `/courses` and `/articles` reflect the active filter.** A tag filter (`?tag=…`) and a page beyond the first (`?page=2`) each show a genuinely different set of courses/articles, so the page declares its own URL (including that parameter) as canonical, with a `<title>` that names the active tag/page — not the bare list page, which was a real indexing bug fixed Oct 2026 (Search Console had flagged it as "Duplicate, Google chose different canonical than user," since it was crawling these real, internally-linked filtered pages and finding different content than what the declared canonical claimed). Sort (`?sort=…`) stays canonical to the plain list — it's the identical set of items, just reordered, so that's correct as-is. A search query (`?q=…`) is excluded from the index outright (`noindex, follow`) rather than fought over — it's a site-internal search result, not a page worth ranking on its own.
+
 ---
 
 ## 3. User (logged-in visitor) functionality

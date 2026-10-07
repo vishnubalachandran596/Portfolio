@@ -26,6 +26,24 @@ import (
 // hand.
 const catalogPageSize = 5
 
+// catalogListTitle appends the active tag/page to a list page's <title> --
+// shared by /articles and /courses for the same reason catalogPageSize is
+// shared: both reuse the identical archive UX. A filtered or paginated
+// view now declares its own canonical URL (canonicalURLForRequest, see
+// seo.go) rather than the bare list page's, and needs a title that's
+// actually distinct to match -- an identical title across every tag/page
+// variant was part of what made Google read them as true duplicates of
+// the unfiltered list rather than as genuinely different pages.
+func catalogListTitle(base, tag string, page int) string {
+	if tag != "" {
+		base = tag + " — " + base
+	}
+	if page > 1 {
+		base = fmt.Sprintf("%s (Page %d)", base, page)
+	}
+	return base
+}
+
 type ArticlesData struct {
 	BaseData
 	Articles   []models.Article
@@ -92,8 +110,17 @@ func (a *App) ArticlesPage(w http.ResponseWriter, r *http.Request) {
 		totalPages = 1
 	}
 
+	// A search-results view (?q=) is site-internal search, not content
+	// worth its own index entry -- Google's own long-standing guidance is
+	// to keep these out of the index entirely, same reasoning
+	// canonicalURLForRequest's doc comment gives for dropping "q" from the
+	// canonical rather than just pointing it at the bare list page.
+	if opt.Query != "" {
+		w.Header().Set("X-Robots-Tag", "noindex, follow")
+	}
+
 	a.View.Render(w, http.StatusOK, "articles_list", ArticlesData{
-		BaseData:   a.baseFrom(r, pf, "Blog — "+a.Cfg.SiteName, "Original writing on architecture, event-driven systems, and engineering careers, plus a short take on other pieces worth your time.", "articles"),
+		BaseData:   a.baseFrom(r, pf, catalogListTitle("Blog — "+a.Cfg.SiteName, opt.Tag, page), "Original writing on architecture, event-driven systems, and engineering careers, plus a short take on other pieces worth your time.", "articles"),
 		Articles:   result.Articles,
 		Tags:       tags,
 		Query:      opt.Query,
