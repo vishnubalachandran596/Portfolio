@@ -743,10 +743,17 @@ func (p PromoCode) RedemptionsDisplay() string {
 // payment -- the same access-gating shape courseAccess uses for paid
 // course content.
 type Software struct {
-	ID          int64
-	Slug        string
-	Title       string
-	Version     string
+	ID      int64
+	Slug    string
+	Title   string
+	Version string
+	// Summary is a short one-liner for the catalog grid and the product
+	// page's hero -- Description is the long form shown in full on the
+	// product page and, inline, behind the catalog card's "Read more"
+	// expand. Mirrors Course's Summary/Description split -- without it,
+	// the only text available for both a short list-card and a full page
+	// body is Description, which duplicates badly across the two.
+	Summary     string
 	Description string
 	// RagContext is a self-contained passage written for the AI chatbot's
 	// retrieval index -- same purpose as Course.RagContext.

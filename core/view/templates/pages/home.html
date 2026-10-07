@@ -75,6 +75,7 @@
       {{range .Software}}
       <a class="course-card" href="/software/{{.Slug}}">
         <h3>{{.Title}} <span class="optional">{{.Version}}</span></h3>
+        {{if .Summary}}<p>{{.Summary}}</p>{{end}}
         <div class="course-detail-meta"><span>{{.PriceDisplay}}</span></div>
         <span class="link-arrow">View &amp; Download →</span>
       </a>

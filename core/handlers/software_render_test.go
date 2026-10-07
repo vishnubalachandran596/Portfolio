@@ -25,7 +25,8 @@ func TestSoftwareTemplatesRender(t *testing.T) {
 	}
 	sw := models.Software{
 		ID: 1, Slug: "temple-accounts-billing", Title: "Temple Accounts & Billing", Version: "1.0.0",
-		Description: "A local order and expense tracker for temples.", DownloadLink: "https://drive.google.com/drive/folders/abc",
+		Summary:     "A local order and expense tracker for temples, no subscription.",
+		Description: "A local order and expense tracker for temples.\n\nSecond paragraph of the description.", DownloadLink: "https://drive.google.com/drive/folders/abc",
 		PriceCents: 200000, LicenseTerms: "Licensed per device.",
 		PostPurchaseInstructions: "Email support@example.com with your receipt for your license key.",
 		IsPublished:              true,

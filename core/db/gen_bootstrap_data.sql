@@ -257,18 +257,18 @@ FROM courses ORDER BY sort_order, id;
 -- column to omit here the way courses/articles do.
 SELECT E'\n-- software -------------------------------------------------------------';
 SELECT format($f$
-WITH v (slug, title, version, description, rag_context, download_link, price_cents, license_terms, post_purchase_instructions, is_published, sort_order) AS (
-  VALUES (%L::text, %L::text, %L::text, %L::text, %L::text, %L::text, %s::int, %L::text, %L::text, %L::boolean, %s::int)
+WITH v (slug, title, version, summary, description, rag_context, download_link, price_cents, license_terms, post_purchase_instructions, is_published, sort_order) AS (
+  VALUES (%L::text, %L::text, %L::text, %L::text, %L::text, %L::text, %L::text, %s::int, %L::text, %L::text, %L::boolean, %s::int)
 ), upd AS (
-  UPDATE software s SET title = v.title, version = v.version, description = v.description,
+  UPDATE software s SET title = v.title, version = v.version, summary = v.summary, description = v.description,
       rag_context = v.rag_context, download_link = v.download_link, price_cents = v.price_cents,
       license_terms = v.license_terms, post_purchase_instructions = v.post_purchase_instructions,
       is_published = v.is_published, sort_order = v.sort_order, updated_at = now()
     FROM v WHERE s.slug = v.slug RETURNING 1
 )
-INSERT INTO software (slug, title, version, description, rag_context, download_link, price_cents, license_terms, post_purchase_instructions, is_published, sort_order)
+INSERT INTO software (slug, title, version, summary, description, rag_context, download_link, price_cents, license_terms, post_purchase_instructions, is_published, sort_order)
 SELECT v.* FROM v WHERE NOT EXISTS (SELECT 1 FROM software s WHERE s.slug = v.slug);$f$,
-  slug, title, version, description, rag_context, download_link, price_cents,
+  slug, title, version, summary, description, rag_context, download_link, price_cents,
   license_terms, post_purchase_instructions, is_published, sort_order)
 FROM software ORDER BY sort_order, id;
 

@@ -92,6 +92,7 @@ func (a *App) AdminSoftwareSave(w http.ResponseWriter, r *http.Request) {
 		Slug:                     slug,
 		Title:                    title,
 		Version:                  strings.TrimSpace(r.FormValue("version")),
+		Summary:                  strings.TrimSpace(r.FormValue("summary")),
 		Description:              strings.TrimSpace(r.FormValue("description")),
 		RagContext:               strings.TrimSpace(r.FormValue("rag_context")),
 		DownloadLink:             strings.TrimSpace(r.FormValue("download_link")),
