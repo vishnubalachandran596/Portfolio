@@ -78,8 +78,8 @@ func TestSkillsGridCollapsedHasNoFaceSummary(t *testing.T) {
 		}
 	}
 
-	if !strings.Contains(home, "What I bring") {
-		t.Error("home: missing What I bring heading")
+	if !strings.Contains(home, "My story") {
+		t.Error("home: missing My story heading")
 	}
 	if !strings.Contains(home, "Paragraph one of the professional summary.") {
 		t.Error("home: missing professional summary")
@@ -87,12 +87,12 @@ func TestSkillsGridCollapsedHasNoFaceSummary(t *testing.T) {
 	if strings.Contains(home, "feature-card") || strings.Contains(home, "What that has actually produced") {
 		t.Error("home: leftover proof-point cards or lead copy")
 	}
-	bring := between(home, "What I bring", "From the same work I do for clients")
+	bring := between(home, "My story", "From the same work I do for clients")
 	if !strings.Contains(bring, "home-bring-summary") || !strings.Contains(bring, "skills-grid") {
-		t.Error("home: What I bring must hold the summary then the skills grid")
+		t.Error("home: My story must hold the summary then the skills grid")
 	}
 	if strings.Contains(bring, "feature-grid") {
-		t.Error("home: extra feature-grid inside What I bring")
+		t.Error("home: extra feature-grid inside My story")
 	}
 	if !strings.Contains(about, "Skills") {
 		t.Error("about: Skills heading missing")

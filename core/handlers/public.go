@@ -27,6 +27,11 @@ type HomeData struct {
 	// whether to click through to About at all.
 	Companies []string
 	Articles  []models.Article
+	// Software is every published software item, for the Home page's
+	// downloadable-software teaser card -- same reuse-not-reimplement
+	// pattern as Articles above (a short teaser list, full catalog on its
+	// own page).
+	Software  []models.Software
 	Subscribe SubscribeFormData
 	JSONLD    template.JS
 }
@@ -50,6 +55,7 @@ func (a *App) Home(w http.ResponseWriter, r *http.Request) {
 		skills   []models.SkillGroup
 		exp      []models.Experience
 		articles []models.Article
+		software []models.Software
 	)
 	// The chrome's lookups start here, before the errgroup, so they go out
 	// in the same wave as the page's own rather than as a second wave
@@ -61,6 +67,7 @@ func (a *App) Home(w http.ResponseWriter, r *http.Request) {
 	g.Go(func() (err error) { skills, err = a.Skills.List(gctx); return })
 	g.Go(func() (err error) { exp, err = a.Experience.List(gctx); return })
 	g.Go(func() (err error) { articles, err = a.Articles.ListPublished(gctx, 3); return })
+	g.Go(func() (err error) { software, err = a.Software.ListPublished(gctx); return })
 	if err := g.Wait(); err != nil {
 		a.serverError(w, "load home page data", err)
 		return
@@ -98,6 +105,7 @@ func (a *App) Home(w http.ResponseWriter, r *http.Request) {
 		Skills:    skills,
 		Companies: companies,
 		Articles:  articles,
+		Software:  software,
 		Subscribe: SubscribeFormData{Source: "home", Subscribed: r.URL.Query().Get("subscribed") == "1"},
 		JSONLD:    personAndWebsiteJSONLD(profile, base.CanonicalURL, imageURL, sameAs, skills),
 	})

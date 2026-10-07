@@ -35,7 +35,7 @@
 <section class="section">
   <div class="container">
     <div class="section-header-row">
-      <h2 class="section-title">What I bring</h2>
+      <h2 class="section-title">My story</h2>
       <a class="link-arrow" href="{{.Nav.About}}">Full background →</a>
     </div>
 
@@ -62,6 +62,27 @@
     </div>
   </div>
 </section>
+
+{{if .Software}}
+<section class="section">
+  <div class="container">
+    <div class="section-header-row">
+      <h2 class="section-title">Software</h2>
+      <a class="link-arrow" href="{{.Nav.Software}}">All software →</a>
+    </div>
+    <p class="section-lead">Apps and tools I have built and sell directly — download after purchase, no subscription.</p>
+    <div class="course-grid">
+      {{range .Software}}
+      <a class="course-card" href="/software/{{.Slug}}">
+        <h3>{{.Title}} <span class="optional">{{.Version}}</span></h3>
+        <div class="course-detail-meta"><span>{{.PriceDisplay}}</span></div>
+        <span class="link-arrow">View &amp; Download →</span>
+      </a>
+      {{end}}
+    </div>
+  </div>
+</section>
+{{end}}
 
 {{if .Articles}}
 <section class="section">
