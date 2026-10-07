@@ -348,7 +348,7 @@ func (a *App) baseFrom(r *http.Request, pf *basePrefetch, title, metaDescription
 		MetaDescription: metaDescription,
 		Active:          active,
 		SiteURL:         a.Cfg.SiteURL,
-		CanonicalURL:    base + r.URL.Path,
+		CanonicalURL:    canonicalURLForRequest(base, r),
 		OGImageURL:      base + "/static/img/og-image.png",
 		Nav: NavLinks{
 			Home:        a.pageURL(r, "/"),

@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
@@ -93,6 +95,48 @@ func (a *App) pageURL(r *http.Request, path string) string {
 		return scheme + "://www." + a.Cfg.Domain + path
 	}
 	return scheme + "://" + sub + "." + a.Cfg.Domain + path
+}
+
+// canonicalURLForRequest builds the canonical URL for a page, keeping only
+// the query parameters that identify genuinely different indexable
+// content: "tag" (a real content filter — /courses?tag=java lists a
+// different set of courses than /courses itself) and "page" beyond the
+// first (each page of a paginated list is its own distinct set of items,
+// which is also Google's own current guidance: a self-referential
+// canonical per page, rather than collapsing every page onto page 1).
+// "sort" is deliberately dropped — it only reorders the identical set of
+// items, so the sorted view is correctly the *same* page, not a new one.
+// "q" is dropped too, but for a different reason: a site-internal search
+// result isn't content worth a canonical identity at all — see the
+// noindex handling next to this function's two call sites (ArticlesPage,
+// CoursesList) for why that one is excluded from indexing entirely
+// rather than just left out of the canonical.
+//
+// Before this existed, every filtered/paginated/sorted variant of
+// /courses and /articles declared canonical straight to the bare list
+// page. That was a real indexing bug, not just untidy: Google crawls
+// these pages for real (the topic nav and pagination controls are
+// ordinary internal <a href> links), finds genuinely different course/
+// article listings at each one, and disagrees with a canonical that
+// claims they're all the same page as the unfiltered list — which is
+// exactly Search Console's "Duplicate, Google chose different canonical
+// than user" report. Confirmed live (Oct 2026): /courses?tag=java and
+// /articles?tag=Kafka both declared canonical to their bare list page
+// while showing a different course/article set than that page shows.
+func canonicalURLForRequest(base string, r *http.Request) string {
+	q := r.URL.Query()
+	u := base + r.URL.Path
+	var extra []string
+	if tag := strings.TrimSpace(q.Get("tag")); tag != "" {
+		extra = append(extra, "tag="+url.QueryEscape(tag))
+	}
+	if page, _ := strconv.Atoi(q.Get("page")); page > 1 {
+		extra = append(extra, "page="+strconv.Itoa(page))
+	}
+	if len(extra) > 0 {
+		u += "?" + strings.Join(extra, "&")
+	}
+	return u
 }
 
 func (a *App) Sitemap(w http.ResponseWriter, r *http.Request) {
