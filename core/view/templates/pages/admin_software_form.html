@@ -15,7 +15,10 @@
       <label>URL slug <span class="optional">leave blank to generate from the title</span>
         <input type="text" name="slug" value="{{.Software.Slug}}" placeholder="e.g. temple-accounts-billing">
       </label>
-      <label>Description <span class="optional">supports **bold** and *italic*; shown on the software's own page and in the catalog</span>
+      <label>Summary <span class="optional">one line — shown on the catalog card and the product page's hero; supports **bold** and *italic*</span>
+        <input type="text" name="summary" value="{{.Software.Summary}}" placeholder="e.g. A local order and expense tracker for temples, no subscription.">
+      </label>
+      <label>Description <span class="optional">full write-up — supports **bold** and *italic*; shown in full on the product page, and inline behind "Read more" on the catalog card</span>
         <textarea name="description" rows="4">{{.Software.Description}}</textarea>
       </label>
 

@@ -315,7 +315,8 @@ erDiagram
         text slug UK
         text title
         text version
-        text description
+        text summary "short one-liner -- catalog card and the product page's hero; migration 077, mirrors courses.summary"
+        text description "full write-up -- shown in full on the product page, and inline behind the catalog card's 'Read more' expand"
         text rag_context "admin-editable passage for the AI chatbot's RAG index; see §12"
         text download_link "external URL, e.g. a Google Drive folder -- never a Storage path, there is no file hosted on this site"
         int price_cents "INR, fixed price -- not pay-what-you-want like courses"

@@ -4,6 +4,7 @@
   <div class="container">
     <p class="eyebrow"><a href="{{.Nav.Software}}">← All software</a></p>
     <h1>{{.Software.Title}} <span class="optional">{{.Software.Version}}</span></h1>
+    {{if .Software.Summary}}<p class="hero-subtitle">{{rich .Software.Summary}}</p>{{end}}
     <div class="course-detail-meta">
       <span>{{.Software.PriceDisplay}}</span>
     </div>

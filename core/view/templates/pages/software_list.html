@@ -12,12 +12,20 @@
     {{if .Software}}
     <div class="course-grid">
       {{range .Software}}
-      <a class="course-card" href="/software/{{.Slug}}">
+      <div class="course-card">
         <h3>{{.Title}} <span class="optional">{{.Version}}</span></h3>
+        {{if .Summary}}<p>{{.Summary}}</p>{{end}}
         <div class="course-detail-meta">
           <span>{{.PriceDisplay}}</span>
         </div>
-      </a>
+        {{if .Description}}
+        <details class="card-expand">
+          <summary>Read more</summary>
+          {{range $p := splitLines .Description}}<p>{{rich $p}}</p>{{end}}
+        </details>
+        {{end}}
+        <a class="btn btn-primary" href="/software/{{.Slug}}">Download</a>
+      </div>
       {{end}}
     </div>
     {{else}}
