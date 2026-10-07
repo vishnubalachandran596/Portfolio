@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"html/template"
+	"strconv"
 	"strings"
 
 	"github.com/vishnubalachandran596/portfolio/core/models"
@@ -268,4 +269,33 @@ func courseJSONLD(title, description, url, providerName string) template.JS {
 	c.Provider.Type = "Person"
 	c.Provider.Name = providerName
 	return toJSONLD(c)
+}
+
+type softwareApplicationSchema struct {
+	Context         string `json:"@context"`
+	Type            string `json:"@type"`
+	Name            string `json:"name"`
+	Description     string `json:"description"`
+	URL             string `json:"url"`
+	SoftwareVersion string `json:"softwareVersion,omitempty"`
+	Offers          struct {
+		Type          string `json:"@type"`
+		Price         string `json:"price"`
+		PriceCurrency string `json:"priceCurrency"`
+	} `json:"offers"`
+}
+
+func softwareApplicationJSONLD(sw models.Software, url string) template.JS {
+	s := softwareApplicationSchema{
+		Context:         "https://schema.org",
+		Type:            "SoftwareApplication",
+		Name:            sw.Title,
+		Description:     sw.Description,
+		URL:             url,
+		SoftwareVersion: sw.Version,
+	}
+	s.Offers.Type = "Offer"
+	s.Offers.Price = strconv.Itoa(sw.PriceCents / 100)
+	s.Offers.PriceCurrency = models.CurrencyINR
+	return toJSONLD(s)
 }

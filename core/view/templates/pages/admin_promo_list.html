@@ -72,6 +72,43 @@
     {{else}}
     <p class="empty-state">No consultancy promo codes yet.</p>
     {{end}}
+
+    <div class="section-header-row">
+      <h1>Software Promo Codes</h1>
+      <a class="btn btn-primary" href="/admin/promo-codes/new?product=software">Add Software Promo Code</a>
+    </div>
+    {{if .SoftwarePromos}}
+    <table class="admin-table">
+      <thead><tr><th>Code</th><th>Discount</th><th>Per account</th><th>Visibility</th><th>Redemptions</th><th>Window</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+        {{range .SoftwarePromos}}
+        <tr>
+          <td>{{.Code}}{{if .Description}}<br><span class="optional">{{.Description}}</span>{{end}}</td>
+          <td>{{.DiscountPercent}}%</td>
+          <td>{{if eq .MaxRedemptionsPerUser 0}}Unlimited{{else}}{{.MaxRedemptionsPerUser}}{{end}}</td>
+          <td>{{if .IsPrivate}}Private ({{len .AllowedEmails}} email{{if ne (len .AllowedEmails) 1}}s{{end}}){{else if .IsPublic}}Public{{else}}Hidden{{end}}</td>
+          <td>{{.RedemptionsDisplay}}</td>
+          <td>{{formatDateTime .StartsAt}} – {{formatDateTime .ExpiresAt}}</td>
+          <td>
+            {{if not .IsActive}}<span class="status-badge status-cancelled">Disabled</span>
+            {{else if .NotStarted}}<span class="status-badge status-pending_payment">Not started</span>
+            {{else if .IsExpired}}<span class="status-badge status-cancelled">Expired</span>
+            {{else if .IsExhausted}}<span class="status-badge status-cancelled">Exhausted</span>
+            {{else}}<span class="status-badge status-confirmed">Active</span>{{end}}
+          </td>
+          <td class="admin-table-actions">
+            <a class="link-button" href="/admin/promo-codes/{{.ID}}/edit">Edit</a>
+            <form method="POST" action="/admin/promo-codes/{{.ID}}/delete" onsubmit="return confirm('Delete this promo code?');">
+              <button type="submit" class="link-button danger">Delete</button>
+            </form>
+          </td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+    {{else}}
+    <p class="empty-state">No software promo codes yet.</p>
+    {{end}}
   </div>
 </section>
 {{end}}

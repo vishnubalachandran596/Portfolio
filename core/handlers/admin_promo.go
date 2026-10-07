@@ -18,6 +18,7 @@ type AdminPromoListData struct {
 	BaseData
 	CoursePromos      []models.PromoCode
 	ConsultancyPromos []models.PromoCode
+	SoftwarePromos    []models.PromoCode
 }
 
 func (a *App) AdminPromoList(w http.ResponseWriter, r *http.Request) {
@@ -28,9 +29,12 @@ func (a *App) AdminPromoList(w http.ResponseWriter, r *http.Request) {
 	}
 	data := AdminPromoListData{BaseData: a.base(r, "Promo Codes — Admin", "", "admin")}
 	for _, p := range all {
-		if p.Product == models.PromoProductConsultancy {
+		switch p.Product {
+		case models.PromoProductConsultancy:
 			data.ConsultancyPromos = append(data.ConsultancyPromos, p)
-		} else {
+		case models.PromoProductSoftware:
+			data.SoftwarePromos = append(data.SoftwarePromos, p)
+		default:
 			data.CoursePromos = append(data.CoursePromos, p)
 		}
 	}
@@ -55,8 +59,11 @@ func (a *App) AdminPromoNewPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	product := models.PromoProductCourse
-	if r.URL.Query().Get("product") == models.PromoProductConsultancy {
+	switch r.URL.Query().Get("product") {
+	case models.PromoProductConsultancy:
 		product = models.PromoProductConsultancy
+	case models.PromoProductSoftware:
+		product = models.PromoProductSoftware
 	}
 	a.View.Render(w, http.StatusOK, "admin_promo_form", AdminPromoFormData{
 		BaseData: a.base(r, "New Promo Code — Admin", "", "admin"),
@@ -112,8 +119,11 @@ func (a *App) AdminPromoSave(w http.ResponseWriter, r *http.Request) {
 	}
 
 	product := models.PromoProductCourse
-	if r.FormValue("product") == models.PromoProductConsultancy {
+	switch r.FormValue("product") {
+	case models.PromoProductConsultancy:
 		product = models.PromoProductConsultancy
+	case models.PromoProductSoftware:
+		product = models.PromoProductSoftware
 	}
 	discountPercent, _ := strconv.Atoi(r.FormValue("discount_percent"))
 	maxRedemptions, _ := strconv.Atoi(r.FormValue("max_redemptions"))

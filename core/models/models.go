@@ -637,13 +637,17 @@ type Purchase struct {
 const (
 	PromoProductCourse      = "course"
 	PromoProductConsultancy = "consultancy"
+	PromoProductSoftware    = "software"
 )
 
 // PromoCode is a discount code an admin creates in the admin console and a
 // visitor redeems at checkout. It applies to exactly one product line —
-// courses or the single consultancy offering — never both. CourseIDs
-// empty means "applies to any course" by itself; there is no separate
-// "applies to all" flag to keep in sync with that.
+// courses, the single consultancy offering, or software — never more than
+// one. CourseIDs empty means "applies to any course" by itself; there is
+// no separate "applies to all" flag to keep in sync with that. A
+// software-product code has no equivalent per-item scoping (there's no
+// SoftwareIDs list) — it simply applies to any software purchase, the
+// same default CourseIDs-empty already means for courses.
 //
 // A code is either public (scrolls in the sitewide promo banner to every
 // visitor) or user-scoped private (AllowedEmails non-empty — never shown
@@ -729,6 +733,70 @@ func (p PromoCode) RedemptionsDisplay() string {
 		return strconv.Itoa(p.RedemptionCount) + " / unlimited"
 	}
 	return strconv.Itoa(p.RedemptionCount) + " / " + strconv.Itoa(p.MaxRedemptions)
+}
+
+// Software is a downloadable paid product (e.g. a desktop app) sold at a
+// fixed price -- unlike a course's pay-what-you-want pricing, every
+// software item has exactly one PriceCents. The download itself is never
+// hosted on this site: DownloadLink is an external URL (e.g. a Google
+// Drive folder), revealed only once a software_purchases row confirms
+// payment -- the same access-gating shape courseAccess uses for paid
+// course content.
+type Software struct {
+	ID          int64
+	Slug        string
+	Title       string
+	Version     string
+	Description string
+	// RagContext is a self-contained passage written for the AI chatbot's
+	// retrieval index -- same purpose as Course.RagContext.
+	RagContext   string
+	DownloadLink string
+	PriceCents   int
+	// LicenseTerms and PostPurchaseInstructions are admin-editable free
+	// text rendered on the product page and the purchase receipt -- e.g.
+	// "Licensed per device" and "Email support@... after payment for your
+	// license key" -- never hardcoded in a template, so a licensing
+	// policy change needs no deploy.
+	LicenseTerms             string
+	PostPurchaseInstructions string
+	IsPublished              bool
+	SortOrder                int
+	CreatedAt                time.Time
+	UpdatedAt                time.Time
+}
+
+// PriceDisplay renders the software's fixed price as a human string.
+func (s Software) PriceDisplay() string { return FormatMoney(s.PriceCents, CurrencyINR) }
+
+// PriceWhole is the price in whole rupees, for a numeric HTML attribute.
+func (s Software) PriceWhole() int { return s.PriceCents / 100 }
+
+// IsFree reports whether this software has no listed price.
+func (s Software) IsFree() bool { return s.PriceCents == 0 }
+
+// SoftwarePurchase tracks a Razorpay order for a paid software download,
+// from creation through payment verification -- mirrors Purchase
+// field-for-field, with SoftwareID in place of CourseID. AccessToken is
+// the opaque bearer credential that reveals DownloadLink once Status is
+// "paid".
+type SoftwarePurchase struct {
+	ID                int64
+	SoftwareID        int64
+	UserID            int64
+	Email             string
+	AmountCents       int
+	Currency          string
+	Status            string
+	RazorpayOrderID   string
+	RazorpayPaymentID string
+	AccessToken       string
+	PromoCodeID       *int64
+	PromoCode         string
+	PromoText         string
+	DiscountCents     int
+	CreatedAt         time.Time
+	PaidAt            *time.Time
 }
 
 // QuizPassPercent is the minimum score required to pass a course's final

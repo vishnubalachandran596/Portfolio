@@ -155,3 +155,4 @@ func ReceiptNoForPurchase(id int64) string { return receiptNo("CRS", id) }
 func ReceiptNoForArticleContribution(id int64) string {
 	return receiptNo("ART", id)
 }
+func ReceiptNoForSoftwarePurchase(id int64) string { return receiptNo("SW", id) }

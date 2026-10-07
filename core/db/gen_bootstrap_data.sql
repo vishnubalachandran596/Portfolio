@@ -13,10 +13,10 @@
 -- a second copy here would be a second source of truth that drifts.
 --
 -- Personal and transactional tables are deliberately NOT emitted either:
--- admins, users, purchases, bookings, quiz_attempts, contact_messages,
--- article_thumbs_up, testimonials, promo_codes, promo_code_courses,
--- admin_messages, course_updates, audit_requests, subscribers,
--- article_contributions. They are not content, they
+-- admins, users, purchases, software_purchases, bookings, quiz_attempts,
+-- contact_messages, article_thumbs_up, testimonials, promo_codes,
+-- promo_code_courses, admin_messages, course_updates, audit_requests,
+-- subscribers, article_contributions. They are not content, they
 -- carry third-party PII, and a fresh install should not have them. The first
 -- admin account is created by Bootstrap() from ADMIN_BOOTSTRAP_EMAIL /
 -- ADMIN_BOOTSTRAP_PASSWORD -- see the generated header for the procedure. No
@@ -250,6 +250,27 @@ SELECT v.* FROM v WHERE NOT EXISTS (SELECT 1 FROM courses c WHERE c.slug = v.slu
   slug, title, summary, description, level, duration, price_cents, currency, image_url,
   is_published, sort_order, is_paid, min_price_cents, min_price_cents_inr, content_key, content_object, content_html)
 FROM courses ORDER BY sort_order, id;
+
+-- software: natural key is `slug`. Downloadable products (e.g. desktop
+-- apps) sold at a fixed price -- download_link is an external URL (e.g. a
+-- Google Drive folder), not a Storage path, so there is no content_object
+-- column to omit here the way courses/articles do.
+SELECT E'\n-- software -------------------------------------------------------------';
+SELECT format($f$
+WITH v (slug, title, version, description, rag_context, download_link, price_cents, license_terms, post_purchase_instructions, is_published, sort_order) AS (
+  VALUES (%L::text, %L::text, %L::text, %L::text, %L::text, %L::text, %s::int, %L::text, %L::text, %L::boolean, %s::int)
+), upd AS (
+  UPDATE software s SET title = v.title, version = v.version, description = v.description,
+      rag_context = v.rag_context, download_link = v.download_link, price_cents = v.price_cents,
+      license_terms = v.license_terms, post_purchase_instructions = v.post_purchase_instructions,
+      is_published = v.is_published, sort_order = v.sort_order, updated_at = now()
+    FROM v WHERE s.slug = v.slug RETURNING 1
+)
+INSERT INTO software (slug, title, version, description, rag_context, download_link, price_cents, license_terms, post_purchase_instructions, is_published, sort_order)
+SELECT v.* FROM v WHERE NOT EXISTS (SELECT 1 FROM software s WHERE s.slug = v.slug);$f$,
+  slug, title, version, description, rag_context, download_link, price_cents,
+  license_terms, post_purchase_instructions, is_published, sort_order)
+FROM software ORDER BY sort_order, id;
 
 -- articles: natural key is `slug`. thumbs_up_count is deliberately omitted --
 -- it is a running tally of visitor activity, not content, and the matching
