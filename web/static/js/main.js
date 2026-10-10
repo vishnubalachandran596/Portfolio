@@ -777,6 +777,7 @@
     // below, which hands this same array to the next page via sessionStorage
     // so the conversation keeps going instead of restarting.
     var chatHistory = [];
+    var greeted = false;
     var CHATBOT_MAX_HISTORY_TURNS = 6;
     var CHATBOT_TRANSFER_KEY = "chatbotTransferHistory";
 
@@ -866,7 +867,16 @@
         appendMessage(turn.content, turn.role === "user" ? "user" : "bot");
       }
       chatHistory = transferred;
+      greeted = true;
     })();
+
+    // Default greeting, injected here rather than server-rendered into
+    // chatbot_widget.html -- see the comment there. Skipped when the IIFE
+    // above already restored a transferred conversation.
+    if (!greeted) appendMessage(
+      "Hi! I'm Vishnu's AI Assistant — ask me anything about his background, courses, consultancy, or articles. If you've purchased a course, I can also answer questions on the topics covered inside it.",
+      "bot"
+    );
 
     chatbotForm.addEventListener("submit", function (e) {
       e.preventDefault();

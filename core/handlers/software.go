@@ -67,7 +67,16 @@ func (a *App) SoftwareDetail(w http.ResponseWriter, r *http.Request) {
 
 	hasAccess := a.softwareAccess(w, r, sw)
 
-	base := a.baseFrom(r, pf, sw.Title+" — "+a.Cfg.SiteName, sw.Description, "software")
+	// Summary, not Description -- Description runs to ~1,000 chars and
+	// Google truncates/ignores an over-long meta description (seen live:
+	// the stats/listing audit flagged this page's snippet going stale/
+	// inconsistent because of it). Fall back to Description only if a
+	// software item predates the Summary field and has none set.
+	metaDescription := sw.Summary
+	if metaDescription == "" {
+		metaDescription = sw.Description
+	}
+	base := a.baseFrom(r, pf, sw.Title+" — "+a.Cfg.SiteName, metaDescription, "software")
 
 	a.View.Render(w, http.StatusOK, "software_detail", SoftwareDetailData{
 		BaseData:         base,
