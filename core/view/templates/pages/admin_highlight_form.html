@@ -1,0 +1,29 @@
+{{define "content"}}
+<section class="section">
+  <div class="container">
+    <h1>{{if .IsNew}}Add highlight{{else}}Edit highlight{{end}}</h1>
+    {{if .Error}}<div class="alert alert-error">{{.Error}}</div>{{end}}
+    <form method="POST" action="{{if .IsNew}}/admin/highlights/new{{else}}/admin/highlights/{{.Highlight.ID}}/edit{{end}}" class="admin-form">
+      <div class="form-row">
+        <label>Value <span class="optional">short — e.g. "2M+", "99.95%", "8+"</span>
+          <input type="text" name="value" value="{{.Highlight.Value}}" required maxlength="12">
+        </label>
+        <label>Label <span class="optional">what it measures — e.g. "transactions a day"</span>
+          <input type="text" name="label" value="{{.Highlight.Label}}" required maxlength="60">
+        </label>
+      </div>
+      <label class="checkbox-label">
+        <input type="checkbox" name="is_published" {{if or .IsNew .Highlight.IsPublished}}checked{{end}}>
+        Published (visible on the home page)
+      </label>
+      <label>Sort order
+        <input type="number" name="sort_order" value="{{.Highlight.SortOrder}}">
+      </label>
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary" data-loading-text="Saving…">Save highlight</button>
+        <a class="btn btn-secondary" href="/admin/highlights">Cancel</a>
+      </div>
+    </form>
+  </div>
+</section>
+{{end}}

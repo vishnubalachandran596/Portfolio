@@ -1,33 +1,53 @@
 {{define "footer"}}
 <footer class="site-footer">
-  <div class="container footer-inner">
-    <p>&copy; {{currentYear}} {{.SiteName}}. All rights reserved.</p>
-    <nav class="footer-nav">
-      <a href="{{.Nav.About}}">About Me</a>
-      <a href="{{.Nav.Courses}}">Courses</a>
-      <a href="{{.Nav.Software}}">Software</a>
-      <a href="{{.Nav.Consultancy}}">Consultancy</a>
-      <a href="{{.Nav.Articles}}">Blog</a>
-      <a href="{{.Nav.Contact}}">Contact Me</a>
-      {{if .ChatbotEnabled}}<a href="{{.Nav.AIAssistant}}">AI Assistant</a>{{end}}
-      <a href="{{.Nav.Search}}">Search</a>
-    </nav>
-    <nav class="footer-nav footer-nav-legal">
-      <a href="{{.Nav.Privacy}}">Privacy</a>
-      <a href="{{.Nav.Terms}}">Terms</a>
-      <a href="{{.Nav.Refund}}">Refund Policy</a>
-      <a href="{{.Nav.Cookies}}">Cookies</a>
-      {{/* Login lives here and in the header's account menu, never in the
-           primary nav — signing in is an affordance almost no visitor
-           needs, and it was taking attention from Consultancy. */}}
-      {{if not .IsLoggedIn}}<a href="{{.Nav.Login}}">Login</a>{{end}}
-      {{if .IsAdmin}}<a href="{{.Nav.Admin}}">Admin</a>{{end}}
-    </nav>
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <a class="brand" href="{{.Nav.Home}}"><span class="brand-mark" aria-hidden="true">VB</span> {{.SiteName}}</a>
+        <p>Architecture, consultancy and courses drawn from building banking and fintech platforms at scale.</p>
+      </div>
+      <nav class="footer-col" aria-labelledby="footer-work">
+        <h2 id="footer-work">Work together</h2>
+        <ul>
+          <li><a href="{{.Nav.Consultancy}}">Consultancy</a></li>
+          <li><a href="{{.Nav.Booking}}">Book a free call</a></li>
+          <li><a href="{{.Nav.Contact}}">Contact</a></li>
+          <li><a href="{{.Nav.About}}">About &amp; resume</a></li>
+        </ul>
+      </nav>
+      <nav class="footer-col" aria-labelledby="footer-learn">
+        <h2 id="footer-learn">Learn</h2>
+        <ul>
+          <li><a href="{{.Nav.Courses}}">Courses</a></li>
+          <li><a href="{{.Nav.Articles}}">Blog</a></li>
+          <li><a href="{{.Nav.Software}}">Software</a></li>
+          {{if .ChatbotEnabled}}<li><a href="{{.Nav.AIAssistant}}">AI Assistant</a></li>{{end}}
+          <li><a href="{{.Nav.Search}}">Search</a></li>
+        </ul>
+      </nav>
+      <nav class="footer-col" aria-labelledby="footer-site">
+        <h2 id="footer-site">Site</h2>
+        <ul>
+          <li><a href="{{.Nav.Privacy}}">Privacy</a></li>
+          <li><a href="{{.Nav.Terms}}">Terms</a></li>
+          <li><a href="{{.Nav.Refund}}">Refund Policy</a></li>
+          <li><a href="{{.Nav.Cookies}}">Cookies</a></li>
+          {{/* Login lives here and in the header's account menu, never in
+               the primary nav — almost no visitor needs it. */}}
+          {{if not .IsLoggedIn}}<li><a href="{{.Nav.Login}}">Log in</a></li>{{end}}
+          {{if .IsAdmin}}<li><a href="{{.Nav.Admin}}">Admin</a></li>{{end}}
+        </ul>
+      </nav>
+    </div>
+    <div class="footer-bottom">
+      <p>&copy; {{currentYear}} {{.SiteName}}. All rights reserved.</p>
+      {{if .LinkedInURL}}<p><a href="{{.LinkedInURL}}" target="_blank" rel="noopener">LinkedIn ↗</a></p>{{end}}
+    </div>
   </div>
 </footer>
 
 <div id="cookie-banner" class="cookie-banner" hidden>
-  <p>This site uses only essential cookies (a consent preference, and a session cookie once you log in) — no third-party tracking. See our <a href="{{.Nav.Cookies}}">Cookie Policy</a>.</p>
-  <button type="button" id="cookie-accept" class="btn btn-primary btn-sm">Got it</button>
+  <p>Only essential cookies here — no third-party tracking. <a href="{{.Nav.Cookies}}">Cookie Policy</a></p>
+  <button type="button" id="cookie-accept" class="btn btn-sm">Got it</button>
 </div>
 {{end}}

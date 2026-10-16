@@ -51,6 +51,7 @@ type App struct {
 	CourseUpdates        *repo.CourseUpdateRepo
 	Testimonials         *repo.TestimonialRepo
 	Certifications       *repo.CertificationRepo
+	Highlights           *repo.HighlightRepo
 	Publications         *repo.PublicationRepo
 	CaseStudies          *repo.CaseStudyRepo
 	AuditRequests        *repo.AuditRequestRepo
@@ -111,6 +112,10 @@ type BaseData struct {
 	// bubble on top of that inline chat. False (zero value) everywhere
 	// else, so no other handler needs to set it.
 	ChatbotFullPage bool
+	// Immersive is set by the course reader: base.html marks the body
+	// .is-immersive, which hides the promo bar, footer and floating
+	// widgets so the lesson can fill the viewport under the header.
+	Immersive bool
 }
 
 // SubscribeFormData backs the shared subscribe_form partial embedded on
@@ -190,6 +195,7 @@ func New(cfg *config.Config, db *sql.DB, renderer *view.Renderer) *App {
 		CourseUpdates:        repo.NewCourseUpdateRepo(db),
 		Testimonials:         repo.NewTestimonialRepo(db),
 		Certifications:       repo.NewCertificationRepo(db),
+		Highlights:           repo.NewHighlightRepo(db),
 		Publications:         repo.NewPublicationRepo(db),
 		CaseStudies:          repo.NewCaseStudyRepo(db),
 		AuditRequests:        repo.NewAuditRequestRepo(db),

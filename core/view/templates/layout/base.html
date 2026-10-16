@@ -2,20 +2,21 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>{{.Title}}</title>
 <meta name="description" content="{{.MetaDescription}}">
-<meta name="theme-color" content="#1c1917">
+<meta name="theme-color" content="#faf9f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#14110e" media="(prefers-color-scheme: dark)">
 <link rel="canonical" href="{{.CanonicalURL}}">
 <link rel="icon" href="/static/img/favicon.svg" type="image/svg+xml">
 <link rel="alternate icon" href="/static/img/favicon.ico">
 <link rel="apple-touch-icon" href="/static/img/apple-touch-icon.png">
-{{/* Montserrat 400 is the body-text weight every page renders at rest, so
-     it's the one font file worth the preload scanner picking up before
-     style.css is even parsed — the rest of the self-hosted weights (see
-     style.css) are still only fetched lazily, on the pages that actually
-     use them. */}}
-<link rel="preload" href="/static/fonts/montserrat-400.woff2" as="font" type="font/woff2" crossorigin>
+{{/* Applied before first paint so an explicit light/dark choice never
+     flashes the OS theme first (main.js is deferred). */}}
+<script>try{var t=localStorage.getItem("theme");if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+{{/* Inter (variable) is the body face every page renders at rest, so it
+     is the one font worth preloading; display and mono faces load lazily. */}}
+<link rel="preload" href="/static/fonts/inter-latin-var.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/static/css/style.css?v={{.AssetVersion}}">
 
 <meta property="og:type" content="website">
@@ -31,10 +32,8 @@
 
 {{block "jsonld" .}}{{end}}
 </head>
-<body data-active="{{.Active}}">
-<div id="splash-loader" class="splash-loader" aria-hidden="true"><div class="splash-mark">{{if .HasLogo}}<img src="/media/logo" alt="">{{else}}VB{{end}}</div></div>
+<body data-active="{{.Active}}"{{if .Immersive}} class="is-immersive"{{end}}>
 <div id="page-loader" class="page-loader" aria-hidden="true"><span></span></div>
-<div id="page-loader-mark" class="page-loader-mark" aria-hidden="true">{{if .HasLogo}}<img src="/media/logo" alt="">{{else}}VB{{end}}</div>
 <div id="scroll-progress" class="scroll-progress" aria-hidden="true"></div>
 <a class="skip-link" href="#main-content">Skip to content</a>
 {{template "header" .}}
@@ -44,7 +43,9 @@
 </main>
 {{template "footer" .}}
 <button type="button" id="back-to-top" class="back-to-top" aria-label="Back to top" hidden>↑</button>
+<div class="toast-region" id="toast-region" role="status" aria-live="polite"></div>
 {{if not .ChatbotFullPage}}{{template "chatbot_widget" .}}{{end}}
 <script src="/static/js/main.js?v={{.AssetVersion}}" defer></script>
+{{block "scripts" .}}{{end}}
 </body>
 </html>

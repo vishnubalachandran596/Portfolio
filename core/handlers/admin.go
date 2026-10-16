@@ -369,6 +369,11 @@ func (a *App) AdminCourseSave(w http.ResponseWriter, r *http.Request) {
 			a.serverError(w, "save course content path", err)
 			return
 		}
+		// The outline is derived from the bytes just stored, so it can
+		// never describe a different file than the one on Storage.
+		if err := a.Courses.UpdateOutline(ctx, id, strings.Join(storage.LessonOutline(uploaded), "\n")); err != nil {
+			log.Printf("save course outline %d: %v", id, err)
+		}
 		if previous != "" && previous != objectPath {
 			if err := a.CourseStorage.Delete(ctx, previous); err != nil {
 				log.Printf("delete previous course object %s: %v", previous, err)

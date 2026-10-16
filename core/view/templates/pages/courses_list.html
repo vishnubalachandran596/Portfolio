@@ -1,142 +1,145 @@
 {{define "content"}}
-<section class="section page-hero">
+<section class="page-hero">
   <div class="container">
     <p class="eyebrow">Courses</p>
     <h1>Learn what I've shipped in production</h1>
-    <p class="hero-subtitle">Practical, no-fluff courses on architecture, backend engineering, and technical leadership.</p>
-    <p class="hero-tertiary">Priced at what this material is actually worth — the <strong>level</strong> on each card is the real difficulty signal, and it's the same material I draw on for paid <a href="{{.Nav.Consultancy}}">consulting work</a>. Check the banner above for an active promo code.</p>
+    <p class="hero-subtitle">Practical courses on architecture, backend engineering and technical leadership — the same material I draw on for paid <a class="text-link" href="{{.Nav.Consultancy}}">consulting work</a>. The level on each course is the real difficulty signal.</p>
   </div>
 </section>
 
 {{if .HasCourses}}
-<section class="section">
+<section class="section section-tight" aria-labelledby="path-title">
   <div class="container">
-    <h2 class="section-title">Where to start</h2>
-    <p class="section-lead">The order matters more than the catalogue does. Pick the rung that matches where you are now, rather than starting at the top of the list.</p>
-
-    {{if .TrackStart}}
-    <div class="track">
-      <div class="track-head">
-        <p class="track-step">Start here</p>
-        <h3>New to backend architecture</h3>
-        <p>Opens at beginner level and builds up — start here if you want the foundations laid properly rather than a tour of buzzwords.</p>
-      </div>
-      <ul class="track-list">
-        {{range .TrackStart}}<li><a href="/courses/{{.Slug}}">{{.Title}}</a> <span class="track-level">{{.Level}}</span></li>{{end}}
-      </ul>
+    <div class="section-head" data-reveal>
+      <h2 class="section-title" id="path-title">Where to start</h2>
+      <p class="lead">The order matters more than the catalogue. Pick the rung that matches where you are now.</p>
     </div>
-    {{end}}
-
-    {{if .TrackBuild}}
-    <div class="track">
-      <div class="track-head">
-        <p class="track-step">Then</p>
-        <h3>You've shipped backends, now design them</h3>
-        <p>Assumes you can already write the code and want the architecture, design, and delivery layer on top of it.</p>
+    <div class="track-path">
+      {{if .TrackStart}}
+      <div class="track" data-reveal>
+        <div class="track-head">
+          <p class="track-step">Start here</p>
+          <h3>New to backend architecture</h3>
+          <p>Opens at beginner level and builds up — the foundations laid properly, not a tour of buzzwords.</p>
+        </div>
+        <ul class="track-list">
+          {{range .TrackStart}}<li><a href="/courses/{{.Slug}}">{{.Title}}</a></li>{{end}}
+        </ul>
       </div>
-      <ul class="track-list">
-        {{range .TrackBuild}}<li><a href="/courses/{{.Slug}}">{{.Title}}</a> <span class="track-level">{{.Level}}</span></li>{{end}}
-      </ul>
-    </div>
-    {{end}}
-
-    {{if .TrackDeep}}
-    <div class="track">
-      <div class="track-head">
-        <p class="track-step">Go deep</p>
-        <h3>Already senior</h3>
-        <p>Advanced throughout, and the right entry point if you've already operated systems at scale and want the hard parts rather than the overview.</p>
+      {{end}}
+      {{if .TrackBuild}}
+      <div class="track" data-reveal>
+        <div class="track-head">
+          <p class="track-step">Then</p>
+          <h3>You've shipped backends — now design them</h3>
+          <p>Assumes you can write the code and want the architecture, design and delivery layer on top.</p>
+        </div>
+        <ul class="track-list">
+          {{range .TrackBuild}}<li><a href="/courses/{{.Slug}}">{{.Title}}</a></li>{{end}}
+        </ul>
       </div>
-      <ul class="track-list">
-        {{range .TrackDeep}}<li><a href="/courses/{{.Slug}}">{{.Title}}</a> <span class="track-level">{{.Level}}</span></li>{{end}}
-      </ul>
+      {{end}}
+      {{if .TrackDeep}}
+      <div class="track" data-reveal>
+        <div class="track-head">
+          <p class="track-step">Go deep</p>
+          <h3>Already senior</h3>
+          <p>Advanced throughout — for people who've operated systems at scale and want the hard parts.</p>
+        </div>
+        <ul class="track-list">
+          {{range .TrackDeep}}<li><a href="/courses/{{.Slug}}">{{.Title}}</a></li>{{end}}
+        </ul>
+      </div>
+      {{end}}
     </div>
-    {{end}}
   </div>
 </section>
 {{end}}
 
-<section class="section section-alt">
+<section class="section section-alt" id="catalog" aria-labelledby="catalog-title">
   <div class="container">
-    <h2 class="section-title">Every course</h2>
+    <div class="section-head">
+      <h2 class="section-title" id="catalog-title">Every course</h2>
+    </div>
 
-    {{if .Tags}}
-    <nav class="topic-nav" aria-label="Course topics">
-      <span class="topic-nav-label">Topics</span>
-      <a class="tag-chip{{if not .ActiveTag}} tag-chip-active{{end}}" href="/courses">All</a>
-      {{$active := .ActiveTag}}
-      {{range .Tags}}
-      <a class="tag-chip{{if eq .Name $active}} tag-chip-active{{end}}" href="/courses?tag={{.Name}}">{{.Name}} <span class="tag-chip-count">{{.Count}}</span></a>
+    <div class="catalog-toolbar">
+      {{if .Tags}}
+      <nav class="topic-nav" aria-label="Course topics">
+        <span class="topic-nav-label">Topics</span>
+        <a class="tag-chip{{if not .ActiveTag}} tag-chip-active{{end}}" href="/courses#catalog">All</a>
+        {{$active := .ActiveTag}}
+        {{range .Tags}}
+        <a class="tag-chip{{if eq .Name $active}} tag-chip-active{{end}}" href="/courses?tag={{.Name}}#catalog">{{.Name}} <span class="tag-chip-count">{{.Count}}</span></a>
+        {{end}}
+      </nav>
       {{end}}
-    </nav>
-    {{end}}
 
-    <form method="GET" action="/courses" class="article-filters">
-      <input type="search" name="q" value="{{.Query}}" placeholder="Search courses…" class="article-search">
-      <input type="hidden" name="tag" value="{{.ActiveTag}}">
-      <select name="sort" class="article-select">
-        <option value="recommended" {{if eq .Sort "recommended"}}selected{{end}}>Recommended order</option>
-        <option value="newest" {{if eq .Sort "newest"}}selected{{end}}>Newest first</option>
-        <option value="reviews_desc" {{if eq .Sort "reviews_desc"}}selected{{end}}>Most rated</option>
-      </select>
-      <button type="submit" class="btn btn-secondary">Apply</button>
-      {{if or .Query .ActiveTag}}<a class="link-button" href="/courses">Clear</a>{{end}}
-    </form>
+      <form method="GET" action="/courses#catalog" class="article-filters" role="search">
+        <label class="sr-only" for="course-q">Search courses</label>
+        <input type="search" id="course-q" name="q" value="{{.Query}}" placeholder="Search courses…" class="article-search">
+        <input type="hidden" name="tag" value="{{.ActiveTag}}">
+        <label class="sr-only" for="course-sort">Sort</label>
+        <select name="sort" id="course-sort" class="article-select">
+          <option value="recommended" {{if eq .Sort "recommended"}}selected{{end}}>Recommended order</option>
+          <option value="newest" {{if eq .Sort "newest"}}selected{{end}}>Newest first</option>
+          <option value="reviews_desc" {{if eq .Sort "reviews_desc"}}selected{{end}}>Most rated</option>
+        </select>
+        <button type="submit" class="btn btn-secondary">Apply</button>
+        {{if or .Query .ActiveTag}}<a class="btn btn-ghost" href="/courses#catalog">Clear</a>{{end}}
+      </form>
+    </div>
 
     {{if .Courses}}
-    <p class="article-result-count">{{.Total}} course{{if ne .Total 1}}s{{end}}</p>
-    <div class="article-list article-archive">
+    <p class="article-result-count">{{.Total}} course{{if ne .Total 1}}s{{end}}{{if .ActiveTag}} in {{.ActiveTag}}{{end}}</p>
+    <div class="catalog-list">
       {{range .Courses}}
-      <article class="article-row">
-        <a class="article-row-link" href="/courses/{{.Slug}}">
-          <div class="article-row-body">
-            <h3>{{.Title}}</h3>
-            <p>{{rich .Summary}}</p>
-            <div class="article-row-meta">
-              <span>{{.Level}}</span>
-              {{if .Duration}}<span>{{.Duration}}</span>{{end}}
-              <span>{{.PriceDisplay}}</span>
-              <span class="course-meta-stat">
-                {{/* Graduation cap -- distinct from the ratings icon below
-                     on purpose, so two adjacent "people" stats don't read
-                     as a copy-paste duplicate at a glance. */}}
-                <svg class="course-meta-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M2 8L10 4L18 8L10 12L2 8Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M5.5 9.5v4c0 1 2 2 4.5 2s4.5-1 4.5-2v-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M18 8v4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-                {{.EnrolledCount}} enrolled
-              </span>
-              {{if gt .ReviewCount 0}}
-              <span class="course-meta-stat">
-                {{/* Same single-person icon the header's own account menu
-                     uses (header.html) -- reused, not redrawn, since "a
-                     person" means the same thing in both places. */}}
-                <svg class="course-meta-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="10" cy="6.5" r="3" stroke="currentColor" stroke-width="1.5"/><path d="M3.5 17c1-3.5 4-5 6.5-5s5.5 1.5 6.5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-                {{.ReviewCount}} rating{{if ne .ReviewCount 1}}s{{end}}
-              </span>
-              {{end}}
-            </div>
-          </div>
-        </a>
-      </article>
+      <a class="catalog-card card-interactive" href="/courses/{{.Slug}}" data-reveal>
+        <div class="course-card-top">
+          <span class="course-level">{{.Level}}</span>
+          {{if .SectionCount}}<span class="meta-note">{{.SectionCount}} sections</span>{{end}}
+        </div>
+        <h3>{{.Title}}</h3>
+        <p>{{rich .Summary}}</p>
+        <div class="catalog-card-meta">
+          <span class="price">{{.PriceDisplay}}</span>
+          {{if .Duration}}<span>{{.Duration}}</span>{{end}}
+          <span class="course-meta-stat">
+            <svg class="course-meta-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M2 8L10 4L18 8L10 12L2 8Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M5.5 9.5v4c0 1 2 2 4.5 2s4.5-1 4.5-2v-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            {{.EnrolledCount}} enrolled
+          </span>
+          {{if gt .ReviewCount 0}}
+          <span class="course-meta-stat">
+            <svg class="course-meta-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="10" cy="6.5" r="3" stroke="currentColor" stroke-width="1.5"/><path d="M3.5 17c1-3.5 4-5 6.5-5s5.5 1.5 6.5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            {{.ReviewCount}} rating{{if ne .ReviewCount 1}}s{{end}}
+          </span>
+          {{end}}
+        </div>
+      </a>
       {{end}}
     </div>
 
     {{if gt .TotalPages 1}}
     <nav class="pagination" aria-label="Courses pagination">
-      {{if .HasPrev}}<a href="/courses?page={{.PrevPage}}&q={{.Query}}&tag={{.ActiveTag}}&sort={{.Sort}}">← Previous</a>{{else}}<span class="pagination-disabled">← Previous</span>{{end}}
+      {{if .HasPrev}}<a href="/courses?page={{.PrevPage}}&q={{.Query}}&tag={{.ActiveTag}}&sort={{.Sort}}#catalog" rel="prev">← Previous</a>{{else}}<span class="pagination-disabled">← Previous</span>{{end}}
       <span class="pagination-status">Page {{.Page}} of {{.TotalPages}}</span>
-      {{if .HasNext}}<a href="/courses?page={{.NextPage}}&q={{.Query}}&tag={{.ActiveTag}}&sort={{.Sort}}">Next →</a>{{else}}<span class="pagination-disabled">Next →</span>{{end}}
+      {{if .HasNext}}<a href="/courses?page={{.NextPage}}&q={{.Query}}&tag={{.ActiveTag}}&sort={{.Sort}}#catalog" rel="next">Next →</a>{{else}}<span class="pagination-disabled">Next →</span>{{end}}
     </nav>
     {{end}}
     {{else}}
-    <p class="empty-state">No courses match — try a different search or clear the filters.</p>
+    <p class="empty-state">No courses match — try a different search or <a href="/courses#catalog">clear the filters</a>.</p>
     {{end}}
   </div>
 </section>
 
 <section class="section">
   <div class="container">
-    <h2 class="section-title">Get new courses by email</h2>
-    <p class="section-lead">A note whenever a new course (or a meaningful update to an existing one) goes up — nothing else.</p>
-    {{template "subscribe_form" .Subscribe}}
+    <div class="subscribe-panel" data-reveal>
+      <div>
+        <h2>Get new courses by email</h2>
+        <p>A note whenever a new course, or a meaningful update to one, goes up — nothing else.</p>
+      </div>
+      {{template "subscribe_form" .Subscribe}}
+    </div>
   </div>
 </section>
 {{end}}

@@ -1,59 +1,87 @@
 {{define "jsonld"}}<script type="application/ld+json">{{.JSONLD}}</script>{{end}}
 {{define "content"}}
-<section class="section page-hero">
+<section class="page-hero">
   <div class="container">
     <p class="eyebrow">Consultancy</p>
     <h1>Work with me directly</h1>
-    <p class="hero-subtitle">Three ways to get real time with me, grounded in 8+ years building banking and fintech platforms at scale — a fixed-scope architecture review, an ongoing advisory retainer, or a free call to work out which of those you actually need.</p>
-    <p class="hero-tertiary">Not sure which one fits? <a href="{{.Nav.Booking}}">Start with a free call</a> — it's the scoping step for all three, not a separate product.</p>
+    <p class="hero-subtitle">Three ways to get senior time on a real system, grounded in 8+ years building banking and fintech platforms at scale.</p>
+    <div class="hero-actions page-hero-actions">
+      <a class="btn btn-primary btn-lg" href="{{.Nav.Booking}}">Book a free call</a>
+      <a class="btn btn-secondary btn-lg" href="#tiers">Compare the options</a>
+    </div>
+    <p class="hero-tertiary">Not sure which fits? The free call is the scoping step for all three — not a separate product.</p>
   </div>
 </section>
 
-<section class="section section-alt">
+<section class="section section-alt" id="tiers" aria-label="Engagement options">
   <div class="container">
     <div class="pricing-grid">
 
-      <a class="pricing-card" id="audit" href="{{.Nav.Contact}}">
+      <article class="pricing-card" id="audit" data-reveal>
         <h2 class="pricing-card-title">Architecture Review</h2>
-        <p class="pricing-card-price">{{.AuditPriceDisplay}}<span class="pricing-card-price-note"> · indicative, quoted after scoping</span></p>
-        <p class="pricing-card-sub">A focused review of a real system or decision — not an open-ended hour. I look at your architecture, design docs, or a specific migration (an event-driven system, a Kafka setup, a payments or billing flow) and you get a written set of findings and a clear recommendation, not just conversation.</p>
-        <ul class="pricing-card-list">
-          <li><strong>Scope:</strong> one system, one migration, or one architecture decision — agreed in writing before anything starts, so neither of us is guessing</li>
-          <li><strong>You get:</strong> a written findings document — the risks, the trade-offs, and a specific recommendation you can act on</li>
-          <li><strong>How it runs:</strong> a scoping call, then the review itself, then one call to walk the findings through with you and your team</li>
-          <li><strong>Typical length:</strong> a couple of weeks end to end, depending on how much material there is to read</li>
-          <li><strong>Price:</strong> the figure above is what a review of this shape usually lands at; the quote comes after scoping, so you're never paying for work you didn't need</li>
-        </ul>
-        <span class="btn btn-primary">Discuss an Architecture Review</span>
-      </a>
+        <p class="pricing-card-price">{{.AuditPriceDisplay}}<span class="pricing-card-price-note">indicative — quoted after scoping</span></p>
+        <p class="pricing-card-sub">A focused review of one real system or decision, ending in written findings and a clear recommendation — not an open-ended hour.</p>
+        <dl class="pricing-card-facts">
+          <div><dt>Scope</dt><dd>One system or decision</dd></div>
+          <div><dt>You get</dt><dd>Written findings</dd></div>
+          <div><dt>Length</dt><dd>About two weeks</dd></div>
+        </dl>
+        <details>
+          <summary>What's included</summary>
+          <ul class="pricing-card-list">
+            <li><strong>Scope:</strong> one system, one migration, or one architecture decision — agreed in writing before anything starts, so neither of us is guessing</li>
+            <li><strong>You get:</strong> a written findings document — the risks, the trade-offs, and a specific recommendation you can act on</li>
+            <li><strong>How it runs:</strong> a scoping call, then the review itself, then one call to walk the findings through with you and your team</li>
+            <li><strong>Typical length:</strong> a couple of weeks end to end, depending on how much material there is to read</li>
+            <li><strong>Price:</strong> the figure above is what a review of this shape usually lands at; the quote comes after scoping, so you're never paying for work you didn't need</li>
+          </ul>
+        </details>
+        <a class="btn btn-secondary btn-block pricing-card-cta" href="{{.Nav.Contact}}">Discuss a review</a>
+      </article>
 
-      <a class="pricing-card" id="retainer" href="{{.Nav.Contact}}">
+      <article class="pricing-card" id="retainer" data-reveal>
         <h2 class="pricing-card-title">Fractional Advisory</h2>
-        <p class="pricing-card-price">{{.RetainerRangeDisplay}}</p>
-        <p class="pricing-card-sub">Ongoing access for a team that wants a technical architect on call — regular reviews, on-demand design input, and a second opinion before the decisions that are expensive to reverse.</p>
-        <ul class="pricing-card-list">
-          <li><strong>Scope:</strong> ongoing architecture and design input alongside your team, rather than one fixed deliverable</li>
-          <li><strong>You get:</strong> notes and a recommendation in writing out of every review, so the decisions are on the record and not just in someone's memory</li>
-          <li><strong>Cadence:</strong> a standing review call on whatever rhythm fits you, plus async access for the questions that come up in between</li>
-          <li><strong>Commitment:</strong> month to month — usually starting once an Architecture Review has shown it's a clear fit</li>
-          <li><strong>Price:</strong> the range above covers most teams; where you land in it depends on cadence and how much async access you want</li>
-        </ul>
-        <span class="btn btn-primary">Discuss a Retainer</span>
-      </a>
+        <p class="pricing-card-price">{{.RetainerRangeDisplay}}<span class="pricing-card-price-note">per month, depending on cadence</span></p>
+        <p class="pricing-card-sub">A technical architect on call for your team — regular reviews, design input, and a second opinion before the decisions that are expensive to reverse.</p>
+        <dl class="pricing-card-facts">
+          <div><dt>Scope</dt><dd>Ongoing design input</dd></div>
+          <div><dt>Cadence</dt><dd>Standing call + async</dd></div>
+          <div><dt>Commitment</dt><dd>Month to month</dd></div>
+        </dl>
+        <details>
+          <summary>What's included</summary>
+          <ul class="pricing-card-list">
+            <li><strong>Scope:</strong> ongoing architecture and design input alongside your team, rather than one fixed deliverable</li>
+            <li><strong>You get:</strong> notes and a recommendation in writing out of every review, so the decisions are on the record and not just in someone's memory</li>
+            <li><strong>Cadence:</strong> a standing review call on whatever rhythm fits you, plus async access for the questions that come up in between</li>
+            <li><strong>Commitment:</strong> month to month — usually starting once an Architecture Review has shown it's a clear fit</li>
+            <li><strong>Price:</strong> the range above covers most teams; where you land in it depends on cadence and how much async access you want</li>
+          </ul>
+        </details>
+        <a class="btn btn-secondary btn-block pricing-card-cta" href="{{.Nav.Contact}}">Discuss a retainer</a>
+      </article>
 
-      <a class="pricing-card" id="hourly" href="{{.Nav.Booking}}">
-        <p class="pricing-card-badge pricing-card-badge-muted">Free · start here if you're unsure</p>
+      <article class="pricing-card pricing-card-featured" id="hourly" data-reveal>
+        <span class="badge badge-accent pricing-card-badge">Start here if you're unsure</span>
         <h2 class="pricing-card-title">Schedule a Call</h2>
-        <p class="pricing-card-price">Free</p>
-        <p class="pricing-card-sub">An hour of my time, free, with no obligation — and the scoping step for <em>both</em> paid tiers above. Bring a specific question, a decision you want a second opinion on, or just describe what you're working on, and we'll work out together which option actually fits. If the honest answer is "none of them", I'll say that too.</p>
-        <ul class="pricing-card-list">
-          <li><strong>Scope:</strong> one call, on whatever you bring to it</li>
-          <li><strong>You get:</strong> a clear view of which tier fits your problem — or that neither does</li>
-          <li><strong>How it runs:</strong> pick a slot yourself on the booking page, no email thread to find a time — it asks you to sign in with Google first (one click, so the slot has a name and an email attached to it)</li>
-          <li><strong>Price:</strong> free, always — there's no version of this you pay for</li>
-        </ul>
-        <span class="btn btn-primary">Book a Free Call</span>
-      </a>
+        <p class="pricing-card-price">Free<span class="pricing-card-price-note">one hour, no obligation</span></p>
+        <p class="pricing-card-sub">The scoping step for both paid options. Bring a question, a decision you want a second opinion on, or just what you're working on — we'll work out what fits. If the honest answer is "none of them", I'll say so.</p>
+        <dl class="pricing-card-facts">
+          <div><dt>Scope</dt><dd>Whatever you bring</dd></div>
+          <div><dt>You get</dt><dd>A clear next step</dd></div>
+          <div><dt>Booking</dt><dd>Pick a slot yourself</dd></div>
+        </dl>
+        <details>
+          <summary>How it works</summary>
+          <ul class="pricing-card-list">
+            <li><strong>Scope:</strong> one call, on whatever you bring to it</li>
+            <li><strong>You get:</strong> a clear view of which option fits your problem — or that neither does</li>
+            <li><strong>How it runs:</strong> pick a slot on the booking page, no email thread to find a time — it asks you to sign in with Google first, so the slot has a name and an email attached</li>
+            <li><strong>Price:</strong> free, always — there's no version of this you pay for</li>
+          </ul>
+        </details>
+        <a class="btn btn-primary btn-block pricing-card-cta" href="{{.Nav.Booking}}">Book a free call</a>
+      </article>
 
     </div>
   </div>
@@ -61,8 +89,24 @@
 
 <section class="section">
   <div class="container">
-    <h2 class="section-title">What you walk away with</h2>
-    <p class="hero-subtitle">Not just time on a call — a concrete, actionable outcome either way: which of two architectures to pick and why, the specific risks in a migration plan, or a clear next step on a technical or career decision. Every paid engagement ends with something in writing, not just a memory of the conversation.</p>
+    <div class="section-head" data-reveal>
+      <h2 class="section-title">What you walk away with</h2>
+      <p class="lead">A concrete outcome either way: which of two architectures to pick and why, the specific risks in a migration plan, or a clear next step on a technical decision. Every paid engagement ends with something in writing.</p>
+    </div>
+    <div class="feature-grid">
+      <div class="feature-card" data-reveal>
+        <h3>Scheduling that fits your time zone</h3>
+        <p>I work with clients across the US, the UK, Europe and India. I'm based in IST, and the self-serve slots land in the US morning and the UK/European afternoon — <a href="{{.Nav.Booking}}">pick one that works</a>. Need a different time? Say so and I'll schedule around your day; reviews and retainer calls are always booked with you directly.</p>
+      </div>
+      <div class="feature-card" data-reveal>
+        <h3>Why book direct</h3>
+        <p>No marketplace markup and no assigned-consultant lottery — you work with me specifically, at a lower price than a platform's cut would allow, with the person who did the work described on this site.</p>
+      </div>
+      <div class="feature-card" data-reveal>
+        <h3>Professional boundaries</h3>
+        <p>Consulting happens entirely outside working hours and never touches my employer's clients, codebases or confidential information — this is separate, independent work.</p>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -72,7 +116,7 @@
     <h2 class="section-title">Case studies</h2>
     <div class="feature-grid">
       {{range .CaseStudies}}
-      <div class="feature-card case-study-card">
+      <div class="feature-card case-study-card" data-reveal>
         <h3>{{.Title}}</h3>
         {{if .ClientContext}}<p class="case-study-context">{{rich .ClientContext}}</p>{{end}}
         <p><strong>Problem:</strong> {{rich .Problem}}</p>
@@ -85,29 +129,11 @@
 </section>
 {{end}}
 
-<section class="section section-alt">
+<section class="section{{if .CaseStudies}}{{else}} section-alt{{end}}">
   <div class="container">
-    <h2 class="section-title">Worth knowing before you book</h2>
-    <div class="feature-grid">
-      <div class="feature-card">
-        <h3>Scheduling that fits your time zone</h3>
-        <p>I work with clients across the US, the UK, Europe, and India. I'm based in IST, and the self-serve slots are deliberately set late enough in my day to land in the US morning and the UK/European afternoon — <a href="{{.Nav.Booking}}">pick one that works for you</a>. Need a time outside them? Say so when you get in touch and I'll schedule around your working day instead; Architecture Reviews and retainer calls are always booked with you directly rather than off a fixed calendar.</p>
-      </div>
-      <div class="feature-card">
-        <h3>Why book direct</h3>
-        <p>No marketplace markup, no assigned-consultant lottery — you're working with me specifically, at a lower price than a platform's cut would allow, and talking to the person who actually did the work described on this site.</p>
-      </div>
-      <div class="feature-card">
-        <h3>Professional boundaries</h3>
-        <p>Consulting engagements are handled entirely outside working hours and never touch my employer's clients, codebases, or confidential information — this is separate, independent work.</p>
-      </div>
+    <div class="section-head" data-reveal>
+      <h2 class="section-title">Questions people ask first</h2>
     </div>
-  </div>
-</section>
-
-<section class="section">
-  <div class="container">
-    <h2 class="section-title">Questions people ask before they get in touch</h2>
     <div class="faq-list">
       {{range .FAQ}}
       <details class="faq-item">
@@ -119,11 +145,11 @@
   </div>
 </section>
 
-<section class="section section-alt cta-section">
-  <div class="container cta-inner">
-    <h2>Still not sure which one fits?</h2>
-    <p>Then don't pick yet. Book the free call, describe the problem, and we'll work out together whether it's an Architecture Review, a retainer, or something you don't need me for at all.</p>
-    <a class="btn btn-primary btn-lg" href="{{.Nav.Booking}}">Book a Free Call</a>
+<section class="band cta-section">
+  <div class="container cta-inner" data-reveal>
+    <h2 class="section-title">Still not sure which one fits?</h2>
+    <p>Then don't pick yet. Book the free call, describe the problem, and we'll work out together whether it's a review, a retainer, or something you don't need me for at all.</p>
+    <a class="btn btn-primary btn-lg" href="{{.Nav.Booking}}">Book a free call</a>
   </div>
 </section>
 {{end}}

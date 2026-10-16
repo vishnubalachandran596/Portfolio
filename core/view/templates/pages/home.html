@@ -1,64 +1,108 @@
 {{define "jsonld"}}<script type="application/ld+json">{{.JSONLD}}</script>{{end}}
 {{define "content"}}
-{{if .HasLogo}}
-<div class="landing-logo-wrap">
-  <img class="landing-logo" src="/media/logo" alt="{{.SiteName}}">
-</div>
-{{end}}
-<section class="hero hero-simple">
-  <div class="container hero-inner{{if .Profile.PhotoObject}} hero-inner-with-photo{{end}}">
-    {{if .Profile.PhotoObject}}<img class="hero-photo" src="/media/profile-photo" alt="{{.Profile.Name}}" width="176" height="176">{{end}}
-    <div class="hero-copy">
-      <h1>{{.Profile.Name}}</h1>
-      <p class="hero-title">{{.Profile.Title}}</p>
-      <p class="hero-subtitle">{{rich .Profile.HeroSubtitle}}</p>
-      <div class="hero-actions">
-        <a class="btn btn-primary btn-lg" href="{{.Nav.Consultancy}}">Work With Me</a>
-        <a class="btn btn-secondary" href="{{.Nav.About}}">Background &amp; Resume</a>
+<section class="home-hero">
+  <div class="container">
+    <div class="home-hero-grid">
+      <div class="home-hero-copy">
+        <p class="eyebrow">{{.Profile.Title}}</p>
+        <h1>{{.Profile.Name}}</h1>
+        {{if .Profile.Tagline}}<p class="home-hero-tagline">{{rich .Profile.Tagline}}</p>{{end}}
+        <p class="hero-subtitle">{{rich .Profile.HeroSubtitle}}</p>
+        {{/* The CTA ladder: consultancy is the one primary action, the
+             background/resume path second (recruiters), courses a text
+             link third — the order itself says where to go first. */}}
+        <div class="hero-actions">
+          <a class="btn btn-primary btn-lg" href="{{.Nav.Consultancy}}">Work with me</a>
+          <a class="btn btn-secondary btn-lg" href="{{.Nav.About}}">Background &amp; resume</a>
+        </div>
+        <p class="hero-tertiary">Learning on your own? <a href="{{.Nav.Courses}}">Browse the courses →</a></p>
       </div>
-      <p class="hero-tertiary">Learning on your own? <a href="{{.Nav.Courses}}">Browse the courses</a> — check the banner above for an active promo code.</p>
-      {{if .Companies}}
-      {{/* Spacing separates the names rather than a punctuation character:
-           any separator drawn between them either orphans at the end of a
-           wrapped line or leads the next one, and neither survives a narrow
-           screen. .hero-provenance is a wrapping flex row (see style.css). */}}
-      <p class="hero-provenance">
-        <span class="hero-provenance-label">Previously at</span>
-        {{range .Companies}}<span class="hero-provenance-item">{{.}}</span>{{end}}
-      </p>
-      {{end}}
+      <div class="home-hero-aside">
+        {{if .Profile.PhotoObject}}
+        <div class="home-hero-photo"><img src="/media/profile-photo" alt="{{.Profile.Name}}" width="352" height="440" fetchpriority="high"></div>
+        {{end}}
+        {{if .Highlights}}
+        <dl class="stat-strip" aria-label="At a glance">
+          {{range .Highlights}}
+          <div class="stat"><dt class="sr-only">{{.Label}}</dt><dd class="stat-value">{{.Value}}</dd><dd class="stat-label" aria-hidden="true">{{.Label}}</dd></div>
+          {{end}}
+        </dl>
+        {{end}}
+      </div>
     </div>
+    {{if .Companies}}
+    <div class="logo-strip">
+      <span class="logo-strip-label">Previously at</span>
+      {{range .Companies}}<span class="logo-strip-item">{{.}}</span>{{end}}
+    </div>
+    {{end}}
   </div>
 </section>
 
 {{if or .Profile.Summary .Skills}}
-<section class="section">
+<section class="section" id="story">
   <div class="container">
-    <div class="section-header-row">
-      <h2 class="section-title">My story</h2>
-      <a class="link-arrow" href="{{.Nav.About}}">Full background →</a>
-    </div>
-
     {{if .Profile.Summary}}
-    <div class="home-bring-summary">
-      {{range $p := splitLines .Profile.Summary}}<p>{{rich $p}}</p>{{end}}
+    {{$paras := splitLines .Profile.Summary}}
+    <div class="story" data-reveal>
+      <div>
+        <p class="eyebrow">My story</p>
+        <h2 class="section-title">Find what's actually broken. Fix the real cause.</h2>
+        <a class="link-arrow" href="{{.Nav.About}}">Full background →</a>
+      </div>
+      <div>
+        {{range $i, $p := $paras}}{{if eq $i 0}}<p class="story-lead">{{rich $p}}</p>{{end}}{{end}}
+        {{if gt (len $paras) 1}}
+        <details class="story-more">
+          <summary>Read the full story</summary>
+          {{range $i, $p := $paras}}{{if gt $i 0}}<p>{{rich $p}}</p>{{end}}{{end}}
+        </details>
+        {{end}}
+      </div>
     </div>
     {{end}}
 
     {{if .Skills}}
+    <div class="section-header-row" data-reveal>
+      <div class="section-head">
+        <h2 class="section-title">What I work in</h2>
+        <p class="lead">Open any area for what I've actually built with it, and the tools involved.</p>
+      </div>
+    </div>
     {{template "skills_grid" .Skills}}
     {{end}}
   </div>
 </section>
 {{end}}
 
-<section class="section section-alt">
-  <div class="container cta-inner">
-    <h2>From the same work I do for clients</h2>
-    <p>The courses below teach the same patterns I use on real banking and fintech systems, distilled into something you can work through on your own. If your problem is more specific than a course can cover, that's what 1:1 consultancy is for.</p>
-    <div class="hero-actions">
-      <a class="btn btn-primary" href="{{.Nav.Consultancy}}">View Consultancy</a>
-      <a class="btn btn-secondary" href="{{.Nav.Courses}}">Browse Courses</a>
+<section class="band">
+  <div class="container">
+    <div class="section-head" data-reveal>
+      <p class="eyebrow">Two ways to work with me</p>
+      <h2 class="section-title">From the same work I do for clients</h2>
+      <p class="lead">The patterns I use on real banking and fintech systems — as 1:1 help on your problem, or as courses you work through on your own.</p>
+    </div>
+    <div class="offer-grid">
+      <a class="offer-card" href="{{.Nav.Consultancy}}" data-reveal>
+        <p class="eyebrow">Consultancy</p>
+        <h3>Get a second pair of senior eyes</h3>
+        <ul>
+          <li>Architecture reviews with written findings</li>
+          <li>Fractional advisory for your team</li>
+          <li>A free first call to scope the problem</li>
+        </ul>
+        <span class="link-arrow">See how it works →</span>
+      </a>
+      <a class="offer-card" href="{{.Nav.Courses}}" data-reveal>
+        <p class="eyebrow">Courses</p>
+        <h3>Learn what I've shipped in production</h3>
+        <ul>
+          <li>{{if .CourseCount}}{{.CourseCount}} self-paced courses{{else}}Self-paced courses{{end}}, beginner to advanced</li>
+          <li>Runnable labs and exercises inside every lesson</li>
+          <li>A completion certificate on every course with a quiz</li>
+        </ul>
+        <span class="link-arrow">Browse the courses →</span>
+      </a>
     </div>
   </div>
 </section>
@@ -66,18 +110,20 @@
 {{if .Software}}
 <section class="section">
   <div class="container">
-    <div class="section-header-row">
-      <h2 class="section-title">Software</h2>
+    <div class="section-header-row" data-reveal>
+      <div class="section-head">
+        <h2 class="section-title">Software</h2>
+        <p class="lead">Apps I've built and sell directly — a one-time purchase, no subscription.</p>
+      </div>
       <a class="link-arrow" href="{{.Nav.Software}}">All software →</a>
     </div>
-    <p class="section-lead">Apps and tools I have built and sell directly — download after purchase, no subscription.</p>
     <div class="course-grid">
       {{range .Software}}
-      <a class="course-card" href="/software/{{.Slug}}">
-        <h3>{{.Title}} <span class="optional">{{.Version}}</span></h3>
+      <a class="course-card" href="/software/{{.Slug}}" data-reveal>
+        <div class="course-card-top"><span class="badge">v{{.Version}}</span></div>
+        <h3>{{.Title}}</h3>
         {{if .Summary}}<p>{{.Summary}}</p>{{end}}
-        <div class="course-detail-meta"><span>{{.PriceDisplay}}</span></div>
-        <span class="link-arrow">View &amp; Download →</span>
+        <div class="course-card-foot"><span class="price">{{.PriceDisplay}}</span><span class="link-arrow">Details →</span></div>
       </a>
       {{end}}
     </div>
@@ -86,22 +132,25 @@
 {{end}}
 
 {{if .Articles}}
-<section class="section">
+<section class="section{{if not .Software}}{{else}} section-alt{{end}}">
   <div class="container">
-    <div class="section-header-row">
-      <h2 class="section-title">Technical writing</h2>
+    <div class="section-header-row" data-reveal>
+      <div class="section-head">
+        <h2 class="section-title">Technical writing</h2>
+        <p class="lead">Architecture decisions behind real production systems — event-driven design, resiliency, and the trade-offs that only show up at scale.</p>
+      </div>
       <a class="link-arrow" href="{{.Nav.Articles}}">Read the blog →</a>
     </div>
-    <p class="section-lead">Where I work through the architecture decisions behind real production systems — event-driven design, resiliency, and the trade-offs that only show up at scale.</p>
     <div class="article-grid">
       {{range .Articles}}
-      <a class="article-card" href="/articles/{{.Slug}}">
+      <a class="article-card" href="/articles/{{.Slug}}" data-reveal>
         <div class="article-card-body">
           <h3>{{.Title}}</h3>
           <p>{{rich .Summary}}</p>
         </div>
         <div class="article-card-meta">
-          <span>Read the post →</span>
+          <span>{{if .PublishedDate}}{{formatDateOptional .PublishedDate}}{{end}}</span>
+          <span class="link-arrow">Read →</span>
         </div>
       </a>
       {{end}}
@@ -110,11 +159,15 @@
 </section>
 {{end}}
 
-<section class="section section-alt">
+<section class="section">
   <div class="container">
-    <h2 class="section-title">Get new posts &amp; courses by email</h2>
-    <p class="section-lead">No spam, no automated drip — just a note when something new is published.</p>
-    {{template "subscribe_form" .Subscribe}}
+    <div class="subscribe-panel" data-reveal>
+      <div>
+        <h2>New posts &amp; courses, by email</h2>
+        <p>No spam, no automated drip — just a note when something new is published.</p>
+      </div>
+      {{template "subscribe_form" .Subscribe}}
+    </div>
   </div>
 </section>
 {{end}}

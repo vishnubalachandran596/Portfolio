@@ -5,33 +5,37 @@
   <a href="/exit-preview">Exit preview →</a>
 </div>
 {{end}}
-<header class="site-header">
+<header class="site-header" data-site-header>
   <div class="container header-inner">
     <a class="brand{{if eq .Active "home"}} active{{end}}" href="{{.Nav.Home}}" aria-label="{{.SiteName}} — Home">
       {{if .HasLogo}}
-      <img class="brand-logo" src="/media/logo" alt="{{.SiteName}}" height="32">
+      <img class="brand-logo" src="/media/logo" alt="{{.SiteName}}" height="36">
       {{else}}
-      <span class="brand-full">{{.SiteName}}</span>
       <span class="brand-mark" aria-hidden="true">VB</span>
+      <span class="brand-full">{{.SiteName}}</span>
       {{end}}
     </a>
 
     <nav class="primary-nav" aria-label="Primary">
-      <a href="{{.Nav.About}}" class="{{if eq .Active "about"}}active{{end}}">About Me</a>
-      <a href="{{.Nav.Courses}}" class="{{if eq .Active "courses"}}active{{end}}">Courses</a>
-      <a href="{{.Nav.Software}}" class="{{if eq .Active "software"}}active{{end}}">Software</a>
-      <a href="{{.Nav.Consultancy}}" class="{{if eq .Active "consultancy"}}active{{end}}">Consultancy</a>
-      <a href="{{.Nav.Articles}}" class="{{if eq .Active "articles"}}active{{end}}">Blog</a>
+      <a href="{{.Nav.About}}" class="{{if eq .Active "about"}}active{{end}}"{{if eq .Active "about"}} aria-current="page"{{end}}>About</a>
+      <a href="{{.Nav.Consultancy}}" class="{{if eq .Active "consultancy"}}active{{end}}"{{if eq .Active "consultancy"}} aria-current="page"{{end}}>Consultancy</a>
+      <a href="{{.Nav.Courses}}" class="{{if eq .Active "courses"}}active{{end}}"{{if eq .Active "courses"}} aria-current="page"{{end}}>Courses</a>
+      <a href="{{.Nav.Software}}" class="{{if eq .Active "software"}}active{{end}}"{{if eq .Active "software"}} aria-current="page"{{end}}>Software</a>
+      <a href="{{.Nav.Articles}}" class="{{if eq .Active "articles"}}active{{end}}"{{if eq .Active "articles"}} aria-current="page"{{end}}>Blog</a>
     </nav>
 
     <div class="header-actions">
-      <button type="button" id="theme-toggle" class="icon-btn" aria-label="Toggle dark or light theme">
-        <span class="theme-toggle-icon" aria-hidden="true">◐</span>
+      {{if ne .Active "consultancy"}}<a class="btn btn-primary btn-sm header-cta" href="{{.Nav.Consultancy}}">Work with me</a>{{end}}
+      <button type="button" id="theme-toggle" class="icon-btn" aria-label="Switch between light and dark theme">
+        <span class="theme-toggle-icon" aria-hidden="true">
+          <svg class="theme-icon-moon" viewBox="0 0 20 20" fill="none"><path d="M16.5 12.2A6.6 6.6 0 0 1 7.8 3.5a6.6 6.6 0 1 0 8.7 8.7Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+          <svg class="theme-icon-sun" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="3.4" stroke="currentColor" stroke-width="1.5"/><path d="M10 2.5v1.6M10 15.9v1.6M2.5 10h1.6M15.9 10h1.6M4.7 4.7l1.1 1.1M14.2 14.2l1.1 1.1M4.7 15.3l1.1-1.1M14.2 5.8l1.1-1.1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </span>
       </button>
 
       {{if .IsUser}}
       <div class="header-menu">
-        <button type="button" class="icon-btn" id="notif-toggle" aria-haspopup="true" aria-expanded="false" aria-controls="notif-panel" aria-label="Notifications">
+        <button type="button" class="icon-btn" id="notif-toggle" aria-haspopup="true" aria-expanded="false" aria-controls="notif-panel" aria-label="Notifications{{if .UnreadNotifCount}} ({{.UnreadNotifCount}} unread){{end}}">
           <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M5 8a5 5 0 0 1 10 0c0 3 1 4 1.5 4.5h-13C4 12 5 11 5 8Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M8 15.5a2 2 0 0 0 4 0" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
           {{if .UnreadNotifCount}}<span class="menu-badge">{{.UnreadNotifCount}}</span>{{end}}
         </button>
@@ -53,8 +57,9 @@
         </button>
         <div class="header-dropdown header-dropdown-right" id="profile-panel" hidden>
           {{if .IsUser}}
-          <a class="header-dropdown-item" href="/account#bookings">My Bookings</a>
           <a class="header-dropdown-item" href="/account#courses">My Courses</a>
+          <a class="header-dropdown-item" href="/account#software">My Software</a>
+          <a class="header-dropdown-item" href="/account#bookings">My Bookings</a>
           <a class="header-dropdown-item" href="/account#payments">Payments</a>
           <a class="header-dropdown-item" href="/account#messages">Messages{{if .UnreadNotifCount}} <span class="badge-inline">{{.UnreadNotifCount}}</span>{{end}}</a>
           {{end}}
@@ -67,11 +72,46 @@
           <form method="POST" action="/logout"><button type="submit" class="header-dropdown-item header-dropdown-button">Log Out</button></form>
           {{else}}
           <div class="header-dropdown-divider"></div>
-          <a class="header-dropdown-item header-dropdown-item-accent" href="{{.Nav.Login}}">Login</a>
+          <a class="header-dropdown-item header-dropdown-item-accent" href="{{.Nav.Login}}">Log in</a>
           {{end}}
         </div>
       </div>
+
+      <button type="button" class="icon-btn nav-toggle" id="nav-toggle" aria-controls="mobile-nav" aria-expanded="false" aria-label="Open menu">
+        <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M3.5 6h13M3.5 10h13M3.5 14h13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </button>
     </div>
   </div>
 </header>
+
+{{/* Below 60rem the inline nav is replaced by this sheet, so every
+     primary destination is one tap away on a phone. Rendered once,
+     server-side, with real links (works without JS via the footer). */}}
+<div class="mobile-nav" id="mobile-nav" aria-hidden="true">
+  <div class="mobile-nav-backdrop" data-mobile-nav-close></div>
+  <div class="mobile-nav-panel" role="dialog" aria-modal="true" aria-labelledby="mobile-nav-title">
+    <div class="mobile-nav-head">
+      <span class="mobile-nav-title" id="mobile-nav-title">Menu</span>
+      <button type="button" class="icon-btn" data-mobile-nav-close aria-label="Close menu">
+        <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="m5 5 10 10M15 5 5 15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <nav class="mobile-nav-links" aria-label="Mobile">
+      <a href="{{.Nav.Home}}" class="{{if eq .Active "home"}}active{{end}}">Home</a>
+      <a href="{{.Nav.About}}" class="{{if eq .Active "about"}}active{{end}}">About</a>
+      <a href="{{.Nav.Consultancy}}" class="{{if eq .Active "consultancy"}}active{{end}}">Consultancy</a>
+      <a href="{{.Nav.Courses}}" class="{{if eq .Active "courses"}}active{{end}}">Courses</a>
+      <a href="{{.Nav.Software}}" class="{{if eq .Active "software"}}active{{end}}">Software</a>
+      <a href="{{.Nav.Articles}}" class="{{if eq .Active "articles"}}active{{end}}">Blog</a>
+    </nav>
+    <a class="btn btn-primary btn-lg btn-block mobile-nav-cta" href="{{.Nav.Booking}}">Book a free call</a>
+    <div class="mobile-nav-secondary">
+      <a href="{{.Nav.Contact}}">Contact</a>
+      {{if .ChatbotEnabled}}<a href="{{.Nav.AIAssistant}}">AI Assistant</a>{{end}}
+      <a href="{{.Nav.Search}}">Search</a>
+      {{if .IsUser}}<a href="/account">My account</a>{{end}}
+      {{if not .IsLoggedIn}}<a href="{{.Nav.Login}}">Log in</a>{{end}}
+    </div>
+  </div>
+</div>
 {{end}}

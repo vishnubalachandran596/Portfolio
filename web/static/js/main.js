@@ -1,28 +1,166 @@
 (function () {
   "use strict";
 
-  // --- First-visit splash (once per tab) -------------------------------
-  var splash = document.getElementById("splash-loader");
-  if (splash) {
-    var seen = false;
-    try {
-      seen = sessionStorage.getItem("splash-seen") === "1";
-    } catch (e) {}
-    if (seen) {
-      splash.classList.add("hide");
-    } else {
-      try {
-        sessionStorage.setItem("splash-seen", "1");
-      } catch (e) {}
-      window.addEventListener("load", function () {
-        setTimeout(function () {
-          splash.classList.add("hide");
-        }, 450);
+  // --- Toasts ------------------------------------------------------------
+  // One polite live region (base.html). window.siteToast is shared with
+  // the inline scripts on article/course pages.
+  var toastRegion = document.getElementById("toast-region");
+  function toast(message, kind) {
+    if (!toastRegion || !message) return;
+    var el = document.createElement("div");
+    el.className = "toast" + (kind === "error" ? " toast-error" : "");
+    var dot = document.createElement("span");
+    dot.className = "toast-dot";
+    dot.setAttribute("aria-hidden", "true");
+    el.appendChild(dot);
+    el.appendChild(document.createTextNode(message));
+    toastRegion.appendChild(el);
+    var timer = setTimeout(dismiss, 3200);
+    function dismiss() {
+      clearTimeout(timer);
+      el.classList.add("is-leaving");
+      setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 200);
+    }
+    el.addEventListener("click", dismiss);
+    // Pause while the tab is hidden so a toast is never missed.
+    document.addEventListener("visibilitychange", function onVis() {
+      if (document.hidden) { clearTimeout(timer); } else { timer = setTimeout(dismiss, 2000); }
+      if (!el.parentNode) document.removeEventListener("visibilitychange", onVis);
+    });
+  }
+  window.siteToast = toast;
+
+  var reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  // --- Mobile nav sheet ---------------------------------------------------
+  var navToggle = document.getElementById("nav-toggle");
+  var mobileNav = document.getElementById("mobile-nav");
+  if (navToggle && mobileNav) {
+    var lastFocus = null;
+    var setNav = function (open) {
+      mobileNav.classList.toggle("is-open", open);
+      mobileNav.setAttribute("aria-hidden", open ? "false" : "true");
+      navToggle.setAttribute("aria-expanded", open ? "true" : "false");
+      document.body.classList.toggle("is-locked", open);
+      if (open) {
+        lastFocus = document.activeElement;
+        var first = mobileNav.querySelector(".mobile-nav-links a");
+        if (first) setTimeout(function () { first.focus({ preventScroll: true }); }, 60);
+      } else if (lastFocus && lastFocus.focus) {
+        lastFocus.focus({ preventScroll: true });
+      }
+    };
+    navToggle.addEventListener("click", function () { setNav(!mobileNav.classList.contains("is-open")); });
+    mobileNav.querySelectorAll("[data-mobile-nav-close]").forEach(function (el) {
+      el.addEventListener("click", function () { setNav(false); });
+    });
+    document.addEventListener("keydown", function (e) {
+      if (!mobileNav.classList.contains("is-open")) return;
+      if (e.key === "Escape") { setNav(false); return; }
+      if (e.key === "Tab") {
+        // Keep focus inside the open sheet.
+        var items = mobileNav.querySelectorAll("a[href], button");
+        if (!items.length) return;
+        var firstEl = items[0], lastEl = items[items.length - 1];
+        if (e.shiftKey && document.activeElement === firstEl) { e.preventDefault(); lastEl.focus(); }
+        else if (!e.shiftKey && document.activeElement === lastEl) { e.preventDefault(); firstEl.focus(); }
+      }
+    });
+    window.matchMedia("(min-width: 60rem)").addEventListener("change", function (mq) { if (mq.matches) setNav(false); });
+  }
+
+  // --- Scroll reveal (one-time) ---------------------------------------------
+  // Content is visible without JS; only once this runs does [data-reveal]
+  // start hidden, and each element reveals exactly once.
+  var revealEls = document.querySelectorAll("[data-reveal]");
+  if (revealEls.length && "IntersectionObserver" in window) {
+    document.documentElement.classList.add("js-reveal");
+    var groupIndex = new Map();
+    revealEls.forEach(function (el) {
+      var parent = el.parentElement;
+      var i = groupIndex.get(parent) || 0;
+      el.style.setProperty("--reveal-i", String(Math.min(i, 5)));
+      groupIndex.set(parent, i + 1);
+    });
+    var revealObserver = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (!entry.isIntersecting) return;
+        entry.target.classList.add("is-revealed");
+        revealObserver.unobserve(entry.target);
       });
-      // Never block the page for more than a moment even if load is slow.
-      setTimeout(function () {
-        splash.classList.add("hide");
-      }, 2200);
+    }, { rootMargin: "0px 0px -8% 0px", threshold: 0.05 });
+    revealEls.forEach(function (el) { revealObserver.observe(el); });
+  }
+
+  // --- Mobile buy bar: hide while the real buy card is on screen -----------
+  var buyBar = document.querySelector("[data-buy-bar]");
+  var buyCard = document.getElementById("buy-card");
+  if (buyBar && buyCard && "IntersectionObserver" in window) {
+    new IntersectionObserver(function (entries) {
+      buyBar.classList.toggle("is-hidden", entries[0].isIntersecting);
+    }, { threshold: 0.15 }).observe(buyCard);
+  }
+
+  // --- Code blocks: copy button ---------------------------------------------
+  document.querySelectorAll(".article-body pre, .html-content pre").forEach(function (pre) {
+    if (pre.closest("iframe") || pre.querySelector(".code-toolbar")) return;
+    var bar = document.createElement("div");
+    bar.className = "code-toolbar";
+    var copy = document.createElement("button");
+    copy.type = "button";
+    copy.className = "code-btn";
+    copy.textContent = "Copy";
+    copy.addEventListener("click", function () {
+      var code = pre.querySelector("code") || pre;
+      var text = code.innerText;
+      var done = function () { toast("Code copied"); };
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, done);
+    });
+    bar.appendChild(copy);
+    pre.appendChild(bar);
+  });
+
+  // --- Article table of contents + scroll-spy -------------------------------
+  var tocList = document.querySelector("[data-toc-list]");
+  var tocBody = document.querySelector("[data-toc-source]");
+  if (tocList && tocBody) {
+    var heads = tocBody.querySelectorAll("h2, h3");
+    var used = {};
+    var links = [];
+    heads.forEach(function (h) {
+      var text = (h.textContent || "").trim();
+      if (!text) return;
+      if (!h.id) {
+        var slug = text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60) || "section";
+        var id = slug, n = 2;
+        while (used[id] || document.getElementById(id)) { id = slug + "-" + n++; }
+        h.id = id;
+      }
+      used[h.id] = true;
+      var li = document.createElement("li");
+      var a = document.createElement("a");
+      a.href = "#" + h.id;
+      a.textContent = text;
+      if (h.tagName === "H3") a.className = "toc-sub";
+      li.appendChild(a);
+      tocList.appendChild(li);
+      links.push({ el: h, link: a });
+    });
+    var tocWrap = document.querySelector("[data-toc]");
+    if (links.length >= 2 && tocWrap) {
+      tocWrap.hidden = false;
+      var spy = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (!entry.isIntersecting) return;
+          links.forEach(function (l) { l.link.classList.toggle("is-active", l.el === entry.target); });
+        });
+      }, { rootMargin: "-20% 0px -70% 0px" });
+      links.forEach(function (l) { spy.observe(l.el); });
+      tocList.addEventListener("click", function (e) {
+        var a = e.target.closest("a");
+        var details = tocWrap.querySelector("details");
+        if (a && details && window.innerWidth < 1024) details.open = false;
+      });
     }
   }
 
@@ -30,7 +168,6 @@
   // A light fade-out before navigating to an internal link, and a spinner
   // for anything slower than an instant cache hit, instead of a hard jump.
   var pageLoader = document.getElementById("page-loader");
-  var pageLoaderMark = document.getElementById("page-loader-mark");
   var loaderTimer = null;
   document.addEventListener("click", function (e) {
     var link = e.target.closest && e.target.closest("a[href]");
@@ -51,12 +188,10 @@
     // branded indicator rather than only the browser's own loading bar.
     loaderTimer = setTimeout(function () {
       if (pageLoader) pageLoader.classList.add("active");
-      if (pageLoaderMark) pageLoaderMark.classList.add("active");
-    }, 60);
+    }, 220);
   });
   window.addEventListener("pageshow", function () {
     if (pageLoader) pageLoader.classList.remove("active");
-    if (pageLoaderMark) pageLoaderMark.classList.remove("active");
     if (loaderTimer) clearTimeout(loaderTimer);
   });
 
@@ -145,21 +280,29 @@
   // --- Scroll progress bar + back-to-top -------------------------------
   var progress = document.getElementById("scroll-progress");
   var backToTop = document.getElementById("back-to-top");
+  var siteHeader = document.querySelector("[data-site-header]");
+  var scrollTicking = false;
+  function onScrollRaf() {
+    if (scrollTicking) return;
+    scrollTicking = true;
+    requestAnimationFrame(function () { scrollTicking = false; onScroll(); });
+  }
   function onScroll() {
     var doc = document.documentElement;
     var scrollTop = doc.scrollTop || document.body.scrollTop;
     var height = doc.scrollHeight - doc.clientHeight;
     if (progress) {
-      var pct = height > 0 ? (scrollTop / height) * 100 : 0;
-      progress.style.width = pct + "%";
+      var pct = height > 0 ? scrollTop / height : 0;
+      progress.style.transform = "scaleX(" + pct.toFixed(4) + ")";
     }
-    if (backToTop) backToTop.hidden = scrollTop < 480;
+    if (backToTop) backToTop.hidden = scrollTop < 640;
+    if (siteHeader) siteHeader.classList.toggle("is-scrolled", scrollTop > 8);
   }
-  document.addEventListener("scroll", onScroll, { passive: true });
+  document.addEventListener("scroll", onScrollRaf, { passive: true });
   onScroll();
   if (backToTop) {
     backToTop.addEventListener("click", function () {
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      window.scrollTo({ top: 0, behavior: reduceMotion ? "auto" : "smooth" });
     });
   }
 
@@ -181,6 +324,7 @@
     btn.addEventListener("click", function () {
       var value = btn.getAttribute("data-copy");
       var done = function () {
+        toast("Copied to clipboard");
         btn.textContent = "Copied!";
         btn.classList.add("copied");
         setTimeout(function () {

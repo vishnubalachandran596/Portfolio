@@ -24,7 +24,7 @@ import (
 // also share their row/pagination CSS classes), so a page-size change
 // made for one applies to both rather than needing to stay in sync by
 // hand.
-const catalogPageSize = 5
+const catalogPageSize = 6
 
 // catalogListTitle appends the active tag/page to a list page's <title> --
 // shared by /articles and /courses for the same reason catalogPageSize is

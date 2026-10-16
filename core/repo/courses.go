@@ -21,14 +21,14 @@ func NewCourseRepo(db *sql.DB) *CourseRepo { return &CourseRepo{db: db} }
 
 // content_html is intentionally absent. Lesson bytes live in Storage;
 // selecting that column would pull them onto every catalog query.
-const courseColumns = `id, slug, title, summary, description, level, duration, price_cents, image_url, is_published, sort_order, is_paid, min_price_cents, content_key, content_object, rag_context, tags, created_at, updated_at`
+const courseColumns = `id, slug, title, summary, description, level, duration, price_cents, image_url, is_published, sort_order, is_paid, min_price_cents, content_key, content_object, rag_context, tags, created_at, updated_at, outline`
 
 func scanCourse(row interface{ Scan(...any) error }) (models.Course, error) {
 	var c models.Course
 	var tags []string
 	err := row.Scan(&c.ID, &c.Slug, &c.Title, &c.Summary, &c.Description, &c.Level, &c.Duration,
 		&c.PriceCents, &c.ImageURL, &c.IsPublished, &c.SortOrder,
-		&c.IsPaid, &c.MinPriceCents, &c.ContentKey, &c.ContentObject, &c.RagContext, pq.Array(&tags), &c.CreatedAt, &c.UpdatedAt)
+		&c.IsPaid, &c.MinPriceCents, &c.ContentKey, &c.ContentObject, &c.RagContext, pq.Array(&tags), &c.CreatedAt, &c.UpdatedAt, &c.Outline)
 	c.Tags = tags
 	return c, err
 }
@@ -136,7 +136,7 @@ func (r *CourseRepo) ListPublishedFiltered(ctx context.Context, opt CourseListOp
 	listQuery := fmt.Sprintf(
 		"SELECT c.id, c.slug, c.title, c.summary, c.description, c.level, c.duration, c.price_cents, c.image_url, "+
 			"c.is_published, c.sort_order, c.is_paid, c.min_price_cents, c.content_key, c.content_object, c.rag_context, "+
-			"c.tags, c.created_at, c.updated_at, COALESCE(rc.n, 0) AS review_count, COALESCE(pc.n, 0) + 1 AS enrolled_count "+
+			"c.tags, c.created_at, c.updated_at, c.outline, COALESCE(rc.n, 0) AS review_count, COALESCE(pc.n, 0) + 1 AS enrolled_count "+
 			"%s %s %s LIMIT $%d OFFSET $%d",
 		fromClause, whereClause, orderClause, len(listArgs)-1, len(listArgs))
 
@@ -163,7 +163,7 @@ func (r *CourseRepo) ListPublishedFiltered(ctx context.Context, opt CourseListOp
 			if err := rows.Scan(&c.ID, &c.Slug, &c.Title, &c.Summary, &c.Description, &c.Level, &c.Duration,
 				&c.PriceCents, &c.ImageURL, &c.IsPublished, &c.SortOrder, &c.IsPaid, &c.MinPriceCents,
 				&c.ContentKey, &c.ContentObject, &c.RagContext, pq.Array(&tags), &c.CreatedAt, &c.UpdatedAt,
-				&c.ReviewCount, &c.EnrolledCount); err != nil {
+				&c.Outline, &c.ReviewCount, &c.EnrolledCount); err != nil {
 				return err
 			}
 			c.Tags = tags
@@ -247,6 +247,16 @@ func (r *CourseRepo) Update(ctx context.Context, c models.Course) error {
 // file leaves the existing object where it is.
 func (r *CourseRepo) UpdateContentObject(ctx context.Context, id int64, objectPath string) error {
 	_, err := r.db.ExecContext(ctx, `UPDATE courses SET content_object = $1, updated_at = now() WHERE id = $2`, objectPath, id)
+	return err
+}
+
+// UpdateOutline stores the lesson's derived section titles (see
+// storage.LessonOutline and migration 079). It deliberately leaves
+// updated_at alone: the outline is derived from content that already
+// bumped it when it was uploaded, and the lazy backfill on a detail-page
+// view must not change a course's sitemap lastmod.
+func (r *CourseRepo) UpdateOutline(ctx context.Context, id int64, outline string) error {
+	_, err := r.db.ExecContext(ctx, `UPDATE courses SET outline = $1 WHERE id = $2`, outline, id)
 	return err
 }
 

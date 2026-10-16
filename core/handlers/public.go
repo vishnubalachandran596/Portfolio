@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"fmt"
 	"html/template"
 	"io"
@@ -16,6 +17,7 @@ import (
 	"github.com/vishnubalachandran596/portfolio/core/models"
 	"github.com/vishnubalachandran596/portfolio/core/repo"
 	"github.com/vishnubalachandran596/portfolio/core/resume"
+	"github.com/vishnubalachandran596/portfolio/core/storage"
 )
 
 type HomeData struct {
@@ -31,9 +33,15 @@ type HomeData struct {
 	// downloadable-software teaser card -- same reuse-not-reimplement
 	// pattern as Articles above (a short teaser list, full catalog on its
 	// own page).
-	Software  []models.Software
-	Subscribe SubscribeFormData
-	JSONLD    template.JS
+	Software []models.Software
+	// Highlights feed the hero's stat strip (Admin → Home highlights,
+	// migration 078). When none are published, Home falls back to the
+	// profile's years of experience plus counts it already knows, so the
+	// strip never shows an invented figure.
+	Highlights  []models.ProfileHighlight
+	CourseCount int
+	Subscribe   SubscribeFormData
+	JSONLD      template.JS
 }
 
 // absoluteImageURL is the Person schema's photo URL: the app's own
@@ -51,11 +59,13 @@ func (a *App) Home(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	var (
-		profile  models.Profile
-		skills   []models.SkillGroup
-		exp      []models.Experience
-		articles []models.Article
-		software []models.Software
+		profile    models.Profile
+		skills     []models.SkillGroup
+		exp        []models.Experience
+		articles   []models.Article
+		software   []models.Software
+		highlights []models.ProfileHighlight
+		courses    []models.Course
 	)
 	// The chrome's lookups start here, before the errgroup, so they go out
 	// in the same wave as the page's own rather than as a second wave
@@ -68,6 +78,8 @@ func (a *App) Home(w http.ResponseWriter, r *http.Request) {
 	g.Go(func() (err error) { exp, err = a.Experience.List(gctx); return })
 	g.Go(func() (err error) { articles, err = a.Articles.ListPublished(gctx, 3); return })
 	g.Go(func() (err error) { software, err = a.Software.ListPublished(gctx); return })
+	g.Go(func() (err error) { highlights, err = a.Highlights.ListPublished(gctx); return })
+	g.Go(func() (err error) { courses, err = a.Courses.ListPublished(gctx); return })
 	if err := g.Wait(); err != nil {
 		a.serverError(w, "load home page data", err)
 		return
@@ -100,14 +112,16 @@ func (a *App) Home(w http.ResponseWriter, r *http.Request) {
 	imageURL := absoluteImageURL(base.SiteURL, profile.PhotoObject)
 
 	a.View.Render(w, http.StatusOK, "home", HomeData{
-		BaseData:  base,
-		Profile:   profile,
-		Skills:    skills,
-		Companies: companies,
-		Articles:  articles,
-		Software:  software,
-		Subscribe: SubscribeFormData{Source: "home", Subscribed: r.URL.Query().Get("subscribed") == "1"},
-		JSONLD:    personAndWebsiteJSONLD(profile, base.CanonicalURL, imageURL, sameAs, skills),
+		BaseData:    base,
+		Profile:     profile,
+		Skills:      skills,
+		Companies:   companies,
+		Articles:    articles,
+		Software:    software,
+		Highlights:  homeHighlights(highlights, profile, len(companies), len(courses)),
+		CourseCount: len(courses),
+		Subscribe:   SubscribeFormData{Source: "home", Subscribed: r.URL.Query().Get("subscribed") == "1"},
+		JSONLD:      personAndWebsiteJSONLD(profile, base.CanonicalURL, imageURL, sameAs, skills),
 	})
 }
 
@@ -520,9 +534,22 @@ func (a *App) CourseDetail(w http.ResponseWriter, r *http.Request) {
 	// cookie, and only one goroutine may touch the response headers.
 	var quizCount, reviewCount int
 	var myReview *models.CourseReview
+	var backfilledOutline string
 	g2, g2ctx := errgroup.WithContext(ctx)
 	g2.Go(func() (err error) { quizCount, err = a.QuizQuestions.CountByCourse(g2ctx, course.ID); return })
 	g2.Go(func() (err error) { reviewCount, err = a.CourseReviews.CountByCourse(g2ctx, course.ID); return })
+	if course.Outline == "" && course.ContentObject != "" && a.CourseStorage != nil {
+		// Lazy backfill of "What's inside" (migration 079) for a lesson
+		// uploaded before outlines existed: read it once, store the
+		// derived section titles, and every later view skips this.
+		// Best-effort — a Storage hiccup costs this one view its outline,
+		// never the page.
+		c := course
+		g2.Go(func() error {
+			backfilledOutline = a.backfillCourseOutline(g2ctx, c)
+			return nil
+		})
+	}
 	if loggedIn {
 		g2.Go(func() error {
 			// Best-effort: a buyer's own review prefilling the form is a
@@ -545,6 +572,9 @@ func (a *App) CourseDetail(w http.ResponseWriter, r *http.Request) {
 	if err := g2.Wait(); err != nil {
 		a.serverError(w, "load quiz count", err)
 		return
+	}
+	if backfilledOutline != "" {
+		course.Outline = backfilledOutline
 	}
 
 	base := a.baseFrom(r, pf, course.Title+" — "+a.Cfg.SiteName, course.Summary, "courses")
@@ -611,4 +641,52 @@ func (a *App) NotFound(w http.ResponseWriter, r *http.Request) {
 func (a *App) serverError(w http.ResponseWriter, action string, err error) {
 	log.Printf("%s: %v", action, err)
 	http.Error(w, "Something went wrong. Please try again.", http.StatusInternalServerError)
+}
+
+// backfillCourseOutline reads a stored lesson, derives its outline and
+// saves it. Returns the outline ("" on any failure).
+func (a *App) backfillCourseOutline(ctx context.Context, course models.Course) string {
+	body, err := a.CourseStorage.Open(ctx, course.ContentObject)
+	if err != nil {
+		log.Printf("outline backfill open %s: %v", course.ContentObject, err)
+		return ""
+	}
+	defer body.Close()
+	raw, err := io.ReadAll(io.LimitReader(body, maxCourseUploadBytes+1))
+	if err != nil {
+		return ""
+	}
+	outline := strings.Join(storage.LessonOutline(raw), "\n")
+	if outline == "" {
+		return ""
+	}
+	if err := a.Courses.UpdateOutline(ctx, course.ID, outline); err != nil {
+		log.Printf("outline backfill save %d: %v", course.ID, err)
+	}
+	return outline
+}
+
+// homeHighlights returns the admin-entered highlights, or — when none are
+// published — a fallback built only from facts the database already
+// holds, so the hero's stat strip is never empty and never invented.
+func homeHighlights(published []models.ProfileHighlight, p models.Profile, companies, courses int) []models.ProfileHighlight {
+	if len(published) > 0 {
+		return published
+	}
+	var out []models.ProfileHighlight
+	if p.YearsExperience > 0 {
+		out = append(out, models.ProfileHighlight{Value: strconv.Itoa(p.YearsExperience) + "+", Label: "years building production systems"})
+	}
+	if companies > 0 {
+		out = append(out, models.ProfileHighlight{Value: strconv.Itoa(companies), Label: "companies shipped for"})
+	}
+	if courses > 0 {
+		out = append(out, models.ProfileHighlight{Value: strconv.Itoa(courses), Label: "self-paced courses"})
+	}
+	// The free scoping call is a standing offer (see Consultancy), not a
+	// metric, so it is a safe fourth tile that keeps the 2 × 2 grid whole.
+	if len(out) == 3 {
+		out = append(out, models.ProfileHighlight{Value: "Free", Label: "first call to scope your problem"})
+	}
+	return out
 }

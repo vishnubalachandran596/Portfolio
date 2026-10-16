@@ -141,6 +141,12 @@ func (a *App) Routes() http.Handler {
 	protected.HandleFunc("POST /admin/testimonials/{id}/approve", a.AdminTestimonialApprove)
 	protected.HandleFunc("POST /admin/testimonials/{id}/delete", a.AdminTestimonialDelete)
 
+	protected.HandleFunc("GET /admin/highlights", a.AdminHighlightsList)
+	protected.HandleFunc("GET /admin/highlights/new", a.AdminHighlightNewPage)
+	protected.HandleFunc("POST /admin/highlights/new", a.AdminHighlightSave)
+	protected.HandleFunc("GET /admin/highlights/{id}/edit", a.AdminHighlightEditPage)
+	protected.HandleFunc("POST /admin/highlights/{id}/edit", a.AdminHighlightSave)
+	protected.HandleFunc("POST /admin/highlights/{id}/delete", a.AdminHighlightDelete)
 	protected.HandleFunc("GET /admin/certifications", a.AdminCertificationsList)
 	protected.HandleFunc("GET /admin/certifications/new", a.AdminCertificationNewPage)
 	protected.HandleFunc("POST /admin/certifications/new", a.AdminCertificationSave)

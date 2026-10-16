@@ -1,0 +1,36 @@
+{{define "content"}}
+<section class="section">
+  <div class="container">
+    <div class="section-header-row">
+      <h1>Home highlights</h1>
+      <a class="btn btn-primary" href="/admin/highlights/new">Add highlight</a>
+    </div>
+    <p class="admin-form-note">The stat strip in the home page hero: a short value ("2M+") and what it measures ("transactions a day"). Two or four read best. With none published, Home shows years of experience from the profile instead.</p>
+    {{if .Highlights}}
+    <div class="table-scroll">
+    <table class="admin-table">
+      <thead><tr><th>Value</th><th>Label</th><th>Status</th><th>Sort</th><th></th></tr></thead>
+      <tbody>
+        {{range .Highlights}}
+        <tr>
+          <td><strong>{{.Value}}</strong></td>
+          <td>{{.Label}}</td>
+          <td><span class="status-badge status-{{if .IsPublished}}confirmed{{else}}cancelled{{end}}">{{if .IsPublished}}Published{{else}}Hidden{{end}}</span></td>
+          <td>{{.SortOrder}}</td>
+          <td class="admin-table-actions">
+            <a class="link-button" href="/admin/highlights/{{.ID}}/edit">Edit</a>
+            <form method="POST" action="/admin/highlights/{{.ID}}/delete" onsubmit="return confirm('Delete this highlight?');">
+              <button type="submit" class="link-button danger">Delete</button>
+            </form>
+          </td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+    </div>
+    {{else}}
+    <p class="empty-state">No highlights yet.</p>
+    {{end}}
+  </div>
+</section>
+{{end}}

@@ -1,26 +1,22 @@
 {{/*
-  Sitewide scrolling banner for every currently active, public promo code
-  — {{template "promo_banner" .}}, where . is a BaseData (it reads
-  .PromoCodes, populated by startBaseChrome on every request). Renders
-  nothing at all when there are no active public codes, rather than an
-  empty bar. A private, user-scoped code (AllowedEmails set) never
+  Sitewide promo bar for every currently active, public promo code —
+  {{template "promo_banner" .}}, where . is a BaseData (it reads
+  .PromoCodes, populated on every request). Renders nothing at all when
+  there are no active public codes. A private, user-scoped code never
   reaches .PromoCodes — see PromoCodeRepo.ListActivePublic.
 
   Each code's own BannerText, when set in the admin form, replaces the
-  auto-generated "Use code X for Y% off — Description" line entirely —
-  e.g. "First course free using promocode X on signup".
+  auto-generated "Use code X for Y% off — Description" line entirely.
 
-  The code list is rendered twice in a row (not once) because the CSS
-  marquee (.promo-banner-track, style.css) loops by translateX(-50%) —
-  that only reads as a seamless scroll when the strip is two identical
-  copies back to back, same technique as any CSS-only ticker.
+  Static, not a marquee: a constantly scrolling strip is motion on every
+  page view, and a moving code can't be read or copied comfortably.
+  Several codes wrap onto separate lines.
 */}}
-{{define "promo_banner_item"}}{{if .BannerText}}🎉 {{.BannerText}}{{else}}🎉 Use code <strong>{{.Code}}</strong> for {{.DiscountPercent}}% off{{if .Description}} — {{.Description}}{{end}}{{end}}{{end}}
+{{define "promo_banner_item"}}{{if .BannerText}}{{.BannerText}}{{else}}Use code <strong class="promo-code">{{.Code}}</strong> for {{.DiscountPercent}}% off{{if .Description}} — {{.Description}}{{end}}{{end}}{{end}}
 {{define "promo_banner"}}
 {{if .PromoCodes}}
 <div class="promo-banner" role="note" aria-label="Promo code offers">
   <div class="promo-banner-track">
-    {{range .PromoCodes}}<span class="promo-banner-item">{{template "promo_banner_item" .}}</span>{{end}}
     {{range .PromoCodes}}<span class="promo-banner-item">{{template "promo_banner_item" .}}</span>{{end}}
   </div>
 </div>

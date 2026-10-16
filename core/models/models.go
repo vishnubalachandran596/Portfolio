@@ -3,6 +3,7 @@ package models
 
 import (
 	"fmt"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -158,6 +159,17 @@ type Testimonial struct {
 	CreatedAt   time.Time
 }
 
+// ProfileHighlight is one tile of the home page's stat strip — a short
+// value ("2M+") and what it measures ("transactions a day") — edited at
+// /admin/highlights (migration 078).
+type ProfileHighlight struct {
+	ID          int64
+	Value       string
+	Label       string
+	SortOrder   int
+	IsPublished bool
+}
+
 type HomeFeature struct {
 	ID          int64
 	Title       string
@@ -194,6 +206,9 @@ type Course struct {
 	Tags       []string
 	CreatedAt  time.Time
 	UpdatedAt  time.Time
+	// Outline is the lesson's own section titles, one per line, derived
+	// from the stored lesson HTML (migration 079) — never typed by hand.
+	Outline string
 	// ReviewCount is populated only by CourseRepo.ListPublishedFiltered --
 	// never persisted by Create/Update, since it's a derived count from
 	// course_reviews, not a stored column. Like the course detail page,
@@ -206,6 +221,50 @@ type Course struct {
 	// counter, so it can never drift from what purchases actually says.
 	EnrolledCount int
 }
+
+// OutlineItems splits the stored outline into its section titles.
+func (c Course) OutlineItems() []string {
+	var out []string
+	for _, line := range strings.Split(c.Outline, "\n") {
+		if line = strings.TrimSpace(line); line != "" {
+			out = append(out, line)
+		}
+	}
+	return out
+}
+
+// SectionCount is the number of outline entries — shown on catalogue
+// cards as "N sections" when a lesson has been outlined.
+func (c Course) SectionCount() int { return len(c.OutlineItems()) }
+
+// CodeLanguage picks which compiler (JDoodle embed) a course's reader
+// opens by default: an explicit language tag wins, then keywords in the
+// title, summary and description, then Java — the language most of the
+// catalogue is written in. The reader lets the learner switch anyway.
+func (c Course) CodeLanguage() string {
+	for _, t := range c.Tags {
+		switch strings.ToLower(strings.TrimSpace(t)) {
+		case "python", "pytorch":
+			return "python"
+		case "go", "golang":
+			return "go"
+		case "java":
+			return "java"
+		}
+	}
+	text := " " + c.Title + " " + c.Summary + " " + c.Description + " "
+	lower := strings.ToLower(text)
+	switch {
+	case strings.Contains(lower, "pytorch") || strings.Contains(lower, "python") ||
+		strings.Contains(lower, "genai") || strings.Contains(lower, "rag "):
+		return "python"
+	case goWord.MatchString(text):
+		return "go"
+	}
+	return "java"
+}
+
+var goWord = regexp.MustCompile(`\bGo\b[^-]`)
 
 // IsFree reports whether the course has no listed price.
 func (c Course) IsFree() bool { return !c.IsPaid && c.PriceCents == 0 }
@@ -354,10 +413,44 @@ func FormatMoney(cents int, currency string) string {
 	}
 	whole := cents / 100
 	remainder := cents % 100
+	grouped := groupDigits(whole, currency == "INR")
 	if remainder == 0 {
-		return symbol + strconv.Itoa(whole)
+		return symbol + grouped
 	}
-	return symbol + strconv.Itoa(whole) + fmt.Sprintf(".%02d", remainder)
+	return symbol + grouped + fmt.Sprintf(".%02d", remainder)
+}
+
+// groupDigits inserts thousands separators: Indian grouping (last three
+// digits, then pairs: 1,50,000) when indian is true, western grouping
+// (150,000) otherwise. An audit found the same page rendering ₹150000 next
+// to ₹2,00,000, because the retainer range was a hand-typed string and
+// every computed price skipped grouping.
+func groupDigits(n int, indian bool) string {
+	s := strconv.Itoa(n)
+	neg := strings.HasPrefix(s, "-")
+	s = strings.TrimPrefix(s, "-")
+	if len(s) <= 3 {
+		if neg {
+			return "-" + s
+		}
+		return s
+	}
+	head, tail := s[:len(s)-3], s[len(s)-3:]
+	step := 3
+	if indian {
+		step = 2
+	}
+	var parts []string
+	for len(head) > step {
+		parts = append([]string{head[len(head)-step:]}, parts...)
+		head = head[:len(head)-step]
+	}
+	parts = append([]string{head}, parts...)
+	out := strings.Join(parts, ",") + "," + tail
+	if neg {
+		return "-" + out
+	}
+	return out
 }
 
 // FormatMoneyTotals joins per-currency totals the way the admin ledger
