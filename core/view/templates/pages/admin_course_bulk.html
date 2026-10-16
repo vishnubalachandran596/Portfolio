@@ -1,0 +1,34 @@
+{{define "content"}}
+<section class="section">
+  <div class="container">
+    <h1>Bulk upload lessons</h1>
+    <p class="admin-form-note">Upload one .zip of lesson files named after each course's slug — for example <code>java-fundamentals.html</code>. Each file replaces that course's stored lesson and refreshes its "What's inside" outline. Files that don't match a course are listed and skipped; nothing new is created.</p>
+    {{if .Error}}<div class="alert alert-error">{{.Error}}</div>{{end}}
+    {{if .Results}}
+    <div class="table-scroll">
+    <table class="admin-table">
+      <thead><tr><th>File</th><th>Result</th><th>Details</th></tr></thead>
+      <tbody>
+        {{range .Results}}
+        <tr>
+          <td>{{.File}}</td>
+          <td><span class="status-badge status-{{if eq .Status "updated"}}confirmed{{else}}cancelled{{end}}">{{.Status}}</span></td>
+          <td>{{.Note}}</td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+    </div>
+    {{end}}
+    <form method="POST" action="/admin/courses/bulk-upload" enctype="multipart/form-data" class="admin-form">
+      <label>Lessons archive (.zip, up to 8 MB)
+        <input type="file" name="archive" accept=".zip,application/zip" required>
+      </label>
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary" data-loading-text="Uploading…">Upload lessons</button>
+        <a class="btn btn-secondary" href="/admin/courses">Back to courses</a>
+      </div>
+    </form>
+  </div>
+</section>
+{{end}}

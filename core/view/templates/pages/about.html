@@ -3,7 +3,7 @@
      padding-bottom + padding-top into a reserved blank band between the
      tagline and the bio (the hole on the phone screenshot). Home does not
      share this markup. */}}
-<section class="section page-hero about-intro">
+<section class="section page-hero about-intro" id="story">
   <div class="container">
     <div class="about-hero-row">
       {{if .Profile.PhotoObject}}<img class="about-photo" src="/media/profile-photo" alt="{{.Profile.Name}}" width="160" height="160">{{end}}
@@ -47,8 +47,23 @@
   </div>
 </section>
 
+
+<nav class="page-index" aria-label="On this page">
+  <div class="container">
+    <ul data-page-index>
+      <li><a href="#story">Story</a></li>
+      {{if .Skills}}<li><a href="#skills">Skills</a></li>{{end}}
+      {{if .Experience}}<li><a href="#experience">Experience</a></li>{{end}}
+      {{if .CaseStudies}}<li><a href="#case-studies">Case studies</a></li>{{end}}
+      {{if .Education}}<li><a href="#education">Education</a></li>{{end}}
+      {{if .Certifications}}<li><a href="#certifications">Certifications</a></li>{{end}}
+      {{if .Testimonials}}<li><a href="#testimonials">Testimonials</a></li>{{end}}
+    </ul>
+  </div>
+</nav>
+
 {{if .Skills}}
-<section class="section section-alt">
+<section class="section section-alt" id="skills">
   <div class="container">
     <h2 class="section-title">Skills</h2>
     <p class="section-lead">The areas I work in. Open any one for what I've actually built with it, and the tools involved.</p>
@@ -58,7 +73,7 @@
 {{end}}
 
 {{if .CaseStudies}}
-<section class="section">
+<section class="section" id="case-studies">
   <div class="container">
     <h2 class="section-title">Case studies</h2>
     <div class="feature-grid">
@@ -77,7 +92,7 @@
 {{end}}
 
 {{if .Testimonials}}
-<section class="section section-alt">
+<section class="section section-alt" id="testimonials">
   <div class="container">
     <h2 class="section-title">What people say</h2>
     <div class="testimonial-grid">
@@ -93,12 +108,12 @@
 {{end}}
 
 {{if .Experience}}
-<section class="section">
+<section class="section" id="experience">
   <div class="container">
     <h2 class="section-title">Experience</h2>
     <div class="timeline">
       {{range .Experience}}
-      <article class="timeline-item">
+      <article class="timeline-item" data-reveal>
         <div class="timeline-meta">
           <span class="timeline-dates">{{.StartDate}} – {{.EndDate}}</span>
         </div>
@@ -117,7 +132,7 @@
 {{end}}
 
 {{if .Education}}
-<section class="section section-alt">
+<section class="section section-alt" id="education">
   <div class="container">
     <h2 class="section-title">Education</h2>
     <div class="education-list">
@@ -140,7 +155,7 @@
      empty until real entries are added at /admin/certifications and
      /admin/publications — see migration 046. */}}
 {{if .Certifications}}
-<section class="section">
+<section class="section" id="certifications">
   <div class="container">
     <h2 class="section-title">Certifications</h2>
     <ul class="credential-list">
@@ -185,9 +200,9 @@
 </section>
 {{end}}
 
-<section class="section cta-section">
+<section class="band cta-section">
   <div class="container cta-inner">
-    <h2>I build systems that have to be right, not just available</h2>
+    <h2 class="section-title">I build systems that have to be right, not just available</h2>
     <p>Banking taught me the expensive version of that distinction: money on the line, an audit trail that has to hold up months later, and platforms you cannot take down in order to fix. That's the work I want more of — event-driven systems at transaction scale, migrations that can't drop a record, and the architecture calls that are hard to undo once they ship. If that's the problem in front of you, <a href="{{.Nav.Consultancy}}">1:1 consultancy</a> is the fastest way to work through it; the <a href="{{.Nav.Courses}}">courses</a> cover the same ground on your own time.</p>
     <a class="btn btn-primary btn-lg" href="{{.Nav.Consultancy}}">Work With Me</a>
   </div>

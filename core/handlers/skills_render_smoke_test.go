@@ -88,7 +88,7 @@ func TestSkillsGridCollapsedHasNoFaceSummary(t *testing.T) {
 		t.Error("home: leftover proof-point cards or lead copy")
 	}
 	bring := between(home, "My story", "From the same work I do for clients")
-	if !strings.Contains(bring, "home-bring-summary") || !strings.Contains(bring, "skills-grid") {
+	if !strings.Contains(bring, "story-lead") || !strings.Contains(bring, "skills-grid") {
 		t.Error("home: My story must hold the summary then the skills grid")
 	}
 	if strings.Contains(bring, "feature-grid") {

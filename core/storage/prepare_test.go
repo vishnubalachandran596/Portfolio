@@ -56,7 +56,7 @@ func TestWatermarkScriptIsSingleCenteredLine(t *testing.T) {
 	if strings.Count(got, "ctx.fillText(label") != 1 {
 		t.Fatalf("watermark should draw exactly one line, got %d", strings.Count(got, "ctx.fillText(label"))
 	}
-	if !strings.Contains(got, `"Montserrat"`) {
+	if !strings.Contains(got, `"Inter"`) {
 		t.Fatal("watermark font does not reference the site's own font family")
 	}
 	if !strings.Contains(got, `<canvas id="__access_watermark"`) {

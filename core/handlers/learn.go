@@ -17,6 +17,38 @@ type CourseLearnData struct {
 	Course        models.Course
 	HasQuiz       bool
 	LessonPayload string
+	// Compilers are the JDoodle embeds configured in JDOODLE_EMBED_KEYS,
+	// in a stable order; DefaultLang is the course's own language when an
+	// embed exists for it. Empty Compilers hides the drawer entirely.
+	Compilers   []CompilerOption
+	DefaultLang string
+}
+
+// CompilerOption is one language the reader's compiler drawer can open.
+type CompilerOption struct {
+	Lang  string
+	Label string
+	Key   string
+}
+
+var compilerLabels = map[string]string{"java": "Java", "python": "Python", "go": "Go", "javascript": "JavaScript", "sql": "SQL", "kotlin": "Kotlin", "cpp": "C++"}
+
+func compilerOptions(keys map[string]string) []CompilerOption {
+	var out []CompilerOption
+	order := []string{"java", "python", "go", "javascript", "kotlin", "sql", "cpp"}
+	seen := map[string]bool{}
+	for _, lang := range order {
+		if k, ok := keys[lang]; ok {
+			out = append(out, CompilerOption{Lang: lang, Label: compilerLabels[lang], Key: k})
+			seen[lang] = true
+		}
+	}
+	for lang, k := range keys {
+		if !seen[lang] {
+			out = append(out, CompilerOption{Lang: lang, Label: lang, Key: k})
+		}
+	}
+	return out
 }
 
 // CourseLearn serves a paid course's gated content to a verified
@@ -95,12 +127,28 @@ func (a *App) writeCourseLesson(w http.ResponseWriter, r *http.Request, course m
 		return
 	}
 
+	compilers := compilerOptions(a.Cfg.JDoodleEmbedKeys)
+	defaultLang := ""
+	if len(compilers) > 0 {
+		defaultLang = compilers[0].Lang
+		want := course.CodeLanguage()
+		for _, c := range compilers {
+			if c.Lang == want {
+				defaultLang = want
+			}
+		}
+	}
+
+	base := a.base(r, course.Title+" — Lesson", course.Summary, "courses")
+	base.Immersive = true
 	w.Header().Set("Cache-Control", "no-store, private")
 	w.Header().Set("X-Robots-Tag", "noindex, nofollow")
 	a.View.Render(w, http.StatusOK, "course_learn", CourseLearnData{
-		BaseData:      a.base(r, course.Title+" — Lesson", course.Summary, "courses"),
+		BaseData:      base,
 		Course:        course,
 		HasQuiz:       quizCount > 0,
 		LessonPayload: prepared.Payload,
+		Compilers:     compilers,
+		DefaultLang:   defaultLang,
 	})
 }

@@ -1,5 +1,5 @@
 {{define "content"}}
-<section class="section page-hero page-hero-narrow">
+<section class="page-hero">
   <div class="container">
     <p class="eyebrow">Contact</p>
     <h1>Get in touch</h1>
@@ -7,58 +7,59 @@
   </div>
 </section>
 
-<section class="section">
-  <div class="container contact-grid">
-    <div class="contact-card">
-      <h3>Email</h3>
-      <p>{{.Profile.Email}}</p>
-      {{if .Profile.Email}}<button type="button" class="btn btn-secondary copy-btn" data-copy="{{.Profile.Email}}">Copy email</button>{{end}}
+<section class="section section-tight">
+  <div class="container contact-layout">
+    <div class="form-card" id="message">
+      <h2 class="section-title">Send a message</h2>
+      {{if .Success}}
+      {{/* No transactional email provider exists on this site, so this
+           banner is the only send confirmation a visitor gets. */}}
+      <div class="alert alert-success">Thanks — your message is saved and I'll reply to the email you gave. Want to talk sooner? <a href="{{.Nav.Booking}}">Book a free call</a> and pick a slot yourself.</div>
+      {{end}}
+      {{if .Error}}
+      <div class="alert alert-error">Please fill in your name, a valid email, and a message.</div>
+      {{end}}
+      <form method="POST" action="/contact" class="admin-form">
+        <div class="form-row">
+          <label>Your name
+            <input type="text" name="name" required autocomplete="name">
+          </label>
+          <label>Your email
+            <input type="email" name="email" required autocomplete="email">
+          </label>
+        </div>
+        <label>Contact number <span class="optional">(optional)</span>
+          <input type="tel" name="phone" autocomplete="tel">
+        </label>
+        <label>Message
+          <textarea name="message" rows="6" required></textarea>
+        </label>
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary btn-lg" data-loading-text="Sending…">Send message</button>
+        </div>
+      </form>
     </div>
-    {{if .Profile.LinkedInURL}}
-    <div class="contact-card">
-      <h3>LinkedIn</h3>
-      <p>Connect or message me directly.</p>
-      <a class="btn btn-secondary" href="{{.Profile.LinkedInURL}}" target="_blank" rel="noopener">Open LinkedIn ↗</a>
-    </div>
-    {{end}}
-    <div class="contact-card">
-      <h3>Consultancy</h3>
-      <p>Need real time on a problem, not just an email thread? Book a paid 1:1 session.</p>
-      <a class="btn btn-primary" href="{{.Nav.Consultancy}}">View Consultancy</a>
-    </div>
-  </div>
-</section>
-
-<section class="section section-alt">
-  <div class="container">
-    <h2 class="section-title">Send a message</h2>
-    {{if .Success}}
-    {{/* There's no transactional email provider wired up on this site, so
-         this banner is the only send confirmation a visitor gets — it needs
-         to be unambiguous, and to offer the faster route rather than leave
-         someone waiting and wondering whether to send it again. */}}
-    <div class="alert alert-success">Thanks — your message is saved and I'll reply to the email you gave. Want to talk sooner? <a href="{{.Nav.Booking}}">Book a free call</a> and pick a slot yourself.</div>
-    {{end}}
-    {{if .Error}}
-    <div class="alert alert-error">Please fill in your name, a valid email, and a message.</div>
-    {{end}}
-    <form method="POST" action="/contact" class="admin-form">
-      <label>Your name
-        <input type="text" name="name" required>
-      </label>
-      <label>Your email
-        <input type="email" name="email" required>
-      </label>
-      <label>Contact number <span class="optional">(optional)</span>
-        <input type="tel" name="phone" autocomplete="tel">
-      </label>
-      <label>Message
-        <textarea name="message" rows="5" required></textarea>
-      </label>
-      <div class="form-actions">
-        <button type="submit" class="btn btn-primary" data-loading-text="Sending…">Send Message</button>
+    <aside class="contact-grid" aria-label="Other ways to reach me">
+      <div class="contact-card">
+        <h3>Book a free call</h3>
+        <p>The fastest way to actually talk — pick a slot yourself.</p>
+        <a class="btn btn-primary" href="{{.Nav.Booking}}">See open slots</a>
       </div>
-    </form>
+      {{if .Profile.Email}}
+      <div class="contact-card">
+        <h3>Email</h3>
+        <p>{{.Profile.Email}}</p>
+        <button type="button" class="btn btn-secondary btn-sm copy-btn" data-copy="{{.Profile.Email}}">Copy email</button>
+      </div>
+      {{end}}
+      {{if .Profile.LinkedInURL}}
+      <div class="contact-card">
+        <h3>LinkedIn</h3>
+        <p>Connect or message me directly.</p>
+        <a class="btn btn-secondary btn-sm" href="{{.Profile.LinkedInURL}}" target="_blank" rel="noopener">Open LinkedIn ↗</a>
+      </div>
+      {{end}}
+    </aside>
   </div>
 </section>
 {{end}}

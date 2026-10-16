@@ -2,13 +2,13 @@
 
 {{define "articleThumbsWidget"}}
 {{if .IsUser}}
-<button type="button" class="btn btn-secondary article-thumbs-btn" data-slug="{{.Article.Slug}}" {{if .Voted}}disabled{{end}}>
-  👍 <span class="thumbs-count-num">{{.Article.ThumbsUpCount}}</span>{{if .Voted}} · Thanks!{{end}}
+<button type="button" class="thumbs-count article-thumbs-btn" data-slug="{{.Article.Slug}}" {{if .Voted}}disabled{{end}}>
+  <svg class="thumbs-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M6.5 9 9.4 3.3a1.6 1.6 0 0 1 3 .9L12 7.5h3.6a1.6 1.6 0 0 1 1.6 1.9l-1.1 5.6a1.6 1.6 0 0 1-1.6 1.3H6.5M6.5 9H4v7.3h2.5M6.5 9v7.3" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg> <span class="thumbs-count-num">{{.Article.ThumbsUpCount}}</span>{{if .Voted}} · Thanks!{{end}}
 </button>
 {{else}}
 <div class="article-thumbs-guest">
-  <button type="button" class="btn btn-secondary article-thumbs-guest-toggle" data-slug="{{.Article.Slug}}">
-    👍 <span class="thumbs-count-num">{{.Article.ThumbsUpCount}}</span>
+  <button type="button" class="thumbs-count article-thumbs-guest-toggle" data-slug="{{.Article.Slug}}">
+    <svg class="thumbs-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M6.5 9 9.4 3.3a1.6 1.6 0 0 1 3 .9L12 7.5h3.6a1.6 1.6 0 0 1 1.6 1.9l-1.1 5.6a1.6 1.6 0 0 1-1.6 1.3H6.5M6.5 9H4v7.3h2.5M6.5 9v7.3" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg> <span class="thumbs-count-num">{{.Article.ThumbsUpCount}}</span>
   </button>
   <form class="article-thumbs-guest-form" data-slug="{{.Article.Slug}}" hidden>
     <input type="text" name="name" placeholder="Name (optional)" maxlength="80" autocomplete="name">
@@ -20,55 +20,62 @@
 {{end}}
 
 {{define "content"}}
-<div class="lesson-shell">
-  <div class="lesson-toolbar">
-    <div class="container lesson-toolbar-inner">
-      <p class="eyebrow"><a href="/articles">← Blog</a></p>
-      {{template "articleThumbsWidget" .}}
-    </div>
-  </div>
-  <div class="html-renderer article-renderer" id="html-renderer">
-    <div class="html-renderer-scroll">
-    <article class="html-content article-renderer-inner">
+<article class="article-page">
+  <div class="container article-layout">
+    <aside class="article-toc" data-toc hidden>
+      <p class="toc-title">Contents</p>
+      <ol class="toc-list" data-toc-list></ol>
+    </aside>
+    <div class="article-main">
+  <header class="article-header">
+      <nav class="breadcrumb" aria-label="Breadcrumb"><a href="/articles">Blog</a></nav>
+      {{if .Article.Tags}}<div class="article-tags">{{range .Article.Tags}}<a class="tag-chip" href="/articles?tag={{.}}">{{.}}</a>{{end}}</div>{{end}}
       <h1>{{.Article.Title}}</h1>
-      <div class="article-row-meta">
+      <p class="lead">{{rich .Article.Summary}}</p>
+      <div class="article-byline">
+        <span>By <strong>{{.SiteName}}</strong></span>
         {{if .Article.PublishedDate}}<span>{{formatDateOptional .Article.PublishedDate}}</span>{{end}}
-        <span>By {{.SiteName}}</span>
-        {{range .Article.Tags}}<a class="tag-chip" href="/articles?tag={{.}}">{{.}}</a>{{end}}
-      </div>
-      {{if .Article.CoverImageURL}}
-      <img class="article-cover-image" src="{{.Article.CoverImageURL}}" alt="{{.Article.Title}}" loading="eager">
-      {{end}}
-      <p class="article-lede"><strong>{{rich .Article.Summary}}</strong></p>
-      <div class="article-body">{{articleBody .Article.Body}}</div>
-      <p class="article-thumbs-cta">Found this useful? Give it a thumbs up for more of these contents.</p>
-      <div class="article-detail-actions">
+        <span data-read-time></span>
         {{template "articleThumbsWidget" .}}
       </div>
-    </article>
+  </header>
+      <details class="toc-mobile" data-toc hidden>
+        <summary>Contents</summary>
+        <ol class="toc-list" data-toc-list></ol>
+      </details>
+
+      {{if .Article.CoverImageURL}}<img class="article-cover-image" src="{{.Article.CoverImageURL}}" alt="" loading="eager">{{end}}
+      <div class="html-renderer article-renderer" id="html-renderer">
+        <div class="html-content article-body" data-toc-source>{{articleBody .Article.Body}}</div>
+      </div>
+      <div class="article-end">
+        <p class="article-thumbs-cta">Found this useful? A thumbs-up tells me to write more like it.</p>
+        <div class="article-detail-actions">{{template "articleThumbsWidget" .}}</div>
+        {{if .PaymentsEnabled}}
+        <div class="article-contribute-wrap">
+          <div class="purchase-box article-contribute">
+            {{if .Contributed}}<div class="alert alert-success">Thank you — your contribution is recorded.</div>{{end}}
+            <p class="purchase-box-title">Support this writing</p>
+            <p class="purchase-box-sub">Optional. The article stays free.</p>
+            <div id="contribute-error" class="alert alert-error" hidden></div>
+            {{if not .IsUser}}
+            <label>Email
+              <input type="email" id="contribute-email" required autocomplete="email">
+            </label>
+            {{end}}
+            <label>Amount ({{.ContributeCurrency}})
+              <input type="number" id="contribute-amount" inputmode="numeric" min="{{.ContributeMinWhole}}" step="1" value="5">
+            </label>
+            <button type="button" class="btn btn-primary" id="contribute-btn" data-slug="{{.Article.Slug}}" data-min-cents="{{.ContributeMinCents}}">Contribute</button>
+          </div>
+          <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+        </div>
+        {{end}}
+        <a class="link-arrow" href="/articles">More from the blog →</a>
+      </div>
     </div>
   </div>
-  {{if .PaymentsEnabled}}
-  <div class="article-contribute-wrap">
-    <div class="purchase-box article-contribute">
-      {{if .Contributed}}<div class="alert alert-success">Thank you — your contribution is recorded.</div>{{end}}
-      <p class="purchase-box-title">Contribute</p>
-      <p class="purchase-box-sub">Optional. The article stays free. If it was useful, you can support more writing like this.</p>
-      <div id="contribute-error" class="alert alert-error" hidden></div>
-      {{if not .IsUser}}
-      <label>Email
-        <input type="email" id="contribute-email" required autocomplete="email">
-      </label>
-      {{end}}
-      <label>Amount ({{.ContributeCurrency}})
-        <input type="number" id="contribute-amount" min="{{.ContributeMinWhole}}" step="1" value="5">
-      </label>
-      <button type="button" class="btn btn-primary" id="contribute-btn" data-slug="{{.Article.Slug}}" data-min-cents="{{.ContributeMinCents}}">Contribute</button>
-    </div>
-    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
-  </div>
-  {{end}}
-</div>
+</article>
 {{.Watermark}}
 
 <script>
@@ -119,6 +126,12 @@
   // --- Signed-out: toggle + optional name/email form --------------------
   var toggles = document.querySelectorAll(".article-thumbs-guest-toggle[data-slug]");
   var forms = document.querySelectorAll(".article-thumbs-guest-form[data-slug]");
+  var rt = document.querySelector("[data-read-time]");
+  var bodyEl = document.querySelector("[data-toc-source]");
+  if (rt && bodyEl) {
+    var words = (bodyEl.innerText || "").trim().split(/\s+/).length;
+    rt.textContent = Math.max(1, Math.round(words / 230)) + " min read";
+  }
   function setGuestCount(n) {
     for (var i = 0; i < toggles.length; i++) {
       var el = toggles[i].querySelector(".thumbs-count-num");

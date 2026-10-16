@@ -5,6 +5,7 @@ This file is the entry point for Claude Code. Codex reads `AGENTS.md` and Cursor
 ## Read these two docs first, always
 
 - **`docs/FUNCTIONALITY.md`** — every feature, who can use it, the business rules behind each flow. Read this to understand *what the product does* before touching anything user-facing.
+- **`docs/DESIGN.md`** — the design system: tokens, type, motion rules, components, lesson authoring conventions. Read this before touching anything visual; new UI reuses its tokens and classes.
 - **`docs/ARCHITECTURE.md`** — package layout, the full ER diagram, auth model, payment flows, deployment. Read this to understand *how it's built* before touching anything structural.
 
 They exist specifically so you don't have to reverse-engineer six months of decisions from the source tree alone. Treat them as more authoritative than your own guess about "how this probably works" — if the docs and your read of the code seem to disagree, that's a signal to look closer, not to trust the code and ignore the doc.

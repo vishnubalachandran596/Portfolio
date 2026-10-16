@@ -57,6 +57,28 @@ type Config struct {
 	// the admin UI's own save/delete handlers, which already auto-reindex.
 	// The endpoint is disabled (404) until this is set.
 	ChatbotReindexToken string
+
+	// JDoodleEmbedKeys maps a language ("java", "python", "go") to the key
+	// of a JDoodle embed (https://www.jdoodle.com/embed/v1/<key>). Parsed
+	// from JDOODLE_EMBED_KEYS="java=abc,python=def,go=ghi". The course
+	// reader's compiler drawer renders only for languages listed here, and
+	// not at all when it is empty. Not a secret — the key is in page HTML.
+	JDoodleEmbedKeys map[string]string
+}
+
+// ParseEmbedKeys parses "lang=key,lang=key" into a map, ignoring blanks
+// and malformed pairs.
+func ParseEmbedKeys(raw string) map[string]string {
+	out := map[string]string{}
+	for _, pair := range strings.Split(raw, ",") {
+		k, v, ok := strings.Cut(strings.TrimSpace(pair), "=")
+		k, v = strings.ToLower(strings.TrimSpace(k)), strings.TrimSpace(v)
+		if !ok || k == "" || v == "" {
+			continue
+		}
+		out[k] = v
+	}
+	return out
 }
 
 func Load() (*Config, error) {
@@ -118,6 +140,8 @@ func Load() (*Config, error) {
 		NvidiaAPIKey: getenv("NVIDIA_API_KEY"),
 
 		ChatbotReindexToken: getenv("CHATBOT_REINDEX_TOKEN"),
+
+		JDoodleEmbedKeys: ParseEmbedKeys(getenv("JDOODLE_EMBED_KEYS")),
 	}, nil
 }
 

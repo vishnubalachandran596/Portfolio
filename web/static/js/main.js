@@ -101,6 +101,28 @@
     }, { threshold: 0.15 }).observe(buyCard);
   }
 
+  // --- Sticky page index (About): highlight the section in view ----------
+  var pageIndex = document.querySelector("[data-page-index]");
+  if (pageIndex && "IntersectionObserver" in window) {
+    var idxLinks = Array.prototype.slice.call(pageIndex.querySelectorAll("a"));
+    var setActive = function (id) {
+      idxLinks.forEach(function (a) {
+        var on = a.getAttribute("href") === "#" + id;
+        a.classList.toggle("is-active", on);
+        if (on && a.scrollIntoView && pageIndex.scrollWidth > pageIndex.clientWidth) {
+          pageIndex.scrollTo({ left: a.offsetLeft - 16, behavior: reduceMotion ? "auto" : "smooth" });
+        }
+      });
+    };
+    var idxObs = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) { if (e.isIntersecting) setActive(e.target.id); });
+    }, { rootMargin: "-30% 0px -60% 0px" });
+    idxLinks.forEach(function (a) {
+      var t = document.getElementById(a.getAttribute("href").slice(1));
+      if (t) idxObs.observe(t);
+    });
+  }
+
   // --- Code blocks: copy button ---------------------------------------------
   document.querySelectorAll(".article-body pre, .html-content pre").forEach(function (pre) {
     if (pre.closest("iframe") || pre.querySelector(".code-toolbar")) return;
@@ -121,45 +143,49 @@
   });
 
   // --- Article table of contents + scroll-spy -------------------------------
-  var tocList = document.querySelector("[data-toc-list]");
+  // Fills every [data-toc-list] (a sticky rail on wide screens, an inline
+  // "Contents" disclosure on phones) from the body's own h2/h3 headings.
+  var tocLists = document.querySelectorAll("[data-toc-list]");
   var tocBody = document.querySelector("[data-toc-source]");
-  if (tocList && tocBody) {
+  if (tocLists.length && tocBody) {
     var heads = tocBody.querySelectorAll("h2, h3");
     var used = {};
-    var links = [];
+    var tocEntries = [];
     heads.forEach(function (h) {
       var text = (h.textContent || "").trim();
       if (!text) return;
       if (!h.id) {
-        var slug = text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60) || "section";
-        var id = slug, n = 2;
-        while (used[id] || document.getElementById(id)) { id = slug + "-" + n++; }
+        var base = text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60) || "section";
+        var id = base, n = 2;
+        while (used[id] || document.getElementById(id)) { id = base + "-" + n++; }
         h.id = id;
       }
       used[h.id] = true;
-      var li = document.createElement("li");
-      var a = document.createElement("a");
-      a.href = "#" + h.id;
-      a.textContent = text;
-      if (h.tagName === "H3") a.className = "toc-sub";
-      li.appendChild(a);
-      tocList.appendChild(li);
-      links.push({ el: h, link: a });
+      tocEntries.push({ el: h, links: [] });
+      tocLists.forEach(function (list) {
+        var li = document.createElement("li");
+        var a = document.createElement("a");
+        a.href = "#" + h.id;
+        a.textContent = text;
+        if (h.tagName === "H3") a.className = "toc-sub";
+        li.appendChild(a);
+        list.appendChild(li);
+        tocEntries[tocEntries.length - 1].links.push(a);
+      });
     });
-    var tocWrap = document.querySelector("[data-toc]");
-    if (links.length >= 2 && tocWrap) {
-      tocWrap.hidden = false;
+    if (tocEntries.length >= 2) {
+      document.querySelectorAll("[data-toc]").forEach(function (el) { el.hidden = false; });
       var spy = new IntersectionObserver(function (entries) {
         entries.forEach(function (entry) {
           if (!entry.isIntersecting) return;
-          links.forEach(function (l) { l.link.classList.toggle("is-active", l.el === entry.target); });
+          tocEntries.forEach(function (t) {
+            t.links.forEach(function (a) { a.classList.toggle("is-active", t.el === entry.target); });
+          });
         });
       }, { rootMargin: "-20% 0px -70% 0px" });
-      links.forEach(function (l) { spy.observe(l.el); });
-      tocList.addEventListener("click", function (e) {
-        var a = e.target.closest("a");
-        var details = tocWrap.querySelector("details");
-        if (a && details && window.innerWidth < 1024) details.open = false;
+      tocEntries.forEach(function (t) { spy.observe(t.el); });
+      document.querySelectorAll("details.toc-mobile").forEach(function (d) {
+        d.addEventListener("click", function (e) { if (e.target.closest("a")) d.open = false; });
       });
     }
   }

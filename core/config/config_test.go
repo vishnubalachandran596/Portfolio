@@ -25,3 +25,10 @@ func TestLoadStripsWindowsCarriageReturn(t *testing.T) {
 		t.Fatalf("port %q", cfg.Port)
 	}
 }
+
+func TestParseEmbedKeys(t *testing.T) {
+	got := ParseEmbedKeys(" Java=abc, python = def ,bad,go=,=x")
+	if len(got) != 2 || got["java"] != "abc" || got["python"] != "def" {
+		t.Fatalf("got %#v", got)
+	}
+}

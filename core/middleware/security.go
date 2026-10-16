@@ -10,15 +10,16 @@ import "net/http"
 // Fonts are self-hosted (web/static/fonts/, see style.css) rather than
 // loaded from Google Fonts, so font-src/style-src need no external
 // allowance for them; Razorpay's Checkout widget is the one remaining
-// external origin the site actually loads from.
+// external origin the site actually loads from, plus JDoodle's embed
+// script and iframe for the course reader's compiler drawer.
 func SecurityHeaders(next http.Handler) http.Handler {
 	const csp = "default-src 'self'; " +
-		"script-src 'self' 'unsafe-inline' https://checkout.razorpay.com; " +
+		"script-src 'self' 'unsafe-inline' https://checkout.razorpay.com https://www.jdoodle.com; " +
 		"style-src 'self' 'unsafe-inline'; " +
 		"font-src 'self'; " +
 		"img-src 'self' data: https:; " +
 		"connect-src 'self' https://*.razorpay.com; " +
-		"frame-src 'self' https://*.razorpay.com; " +
+		"frame-src 'self' https://*.razorpay.com https://www.jdoodle.com; " +
 		"object-src 'none'; " +
 		"base-uri 'self'; " +
 		"frame-ancestors 'none'"

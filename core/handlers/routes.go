@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/vishnubalachandran596/portfolio/core/middleware"
 	"github.com/vishnubalachandran596/portfolio/web"
@@ -95,6 +96,8 @@ func (a *App) Routes() http.Handler {
 	protected := http.NewServeMux()
 	protected.HandleFunc("GET /admin/{$}", a.AdminDashboard)
 	protected.HandleFunc("GET /admin/courses", a.AdminCoursesList)
+	protected.HandleFunc("GET /admin/courses/bulk-upload", a.AdminCourseBulkPage)
+	protected.HandleFunc("POST /admin/courses/bulk-upload", a.AdminCourseBulkUpload)
 	protected.HandleFunc("GET /admin/courses/new", a.AdminCourseNewPage)
 	protected.HandleFunc("POST /admin/courses/new", a.AdminCourseSave)
 	protected.HandleFunc("GET /admin/courses/{id}/preview", a.AdminCoursePreview)
@@ -228,6 +231,12 @@ func noindex(next http.Handler) http.Handler {
 func staticCache(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+		// Fonts are fetched in CORS mode, and the sandboxed lesson iframe
+		// has an opaque ("null") origin — without this the lesson text
+		// fell back to system fonts. Public files, so "*" is safe.
+		if strings.HasPrefix(r.URL.Path, "/static/fonts/") {
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+		}
 		next.ServeHTTP(w, r)
 	})
 }

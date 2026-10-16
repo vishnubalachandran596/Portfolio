@@ -1,5 +1,5 @@
 {{define "content"}}
-<section class="section page-hero page-hero-narrow">
+<section class="page-hero page-hero-narrow">
   <div class="container">
     <p class="eyebrow">Account</p>
     <h1>Log in</h1>
@@ -8,7 +8,7 @@
 </section>
 
 <section class="section">
-  <div class="container auth-container">
+  <div class="container auth-container"><div class="auth-card">
     {{if .Error}}<div class="alert alert-error">{{.Error}}</div>{{end}}
 
     {{if .GoogleEnabled}}
@@ -19,6 +19,7 @@
     {{else}}
     <p class="empty-state">Google sign-in isn't configured yet — check back soon.</p>
     {{end}}
-  </div>
+    <p class="auth-fineprint">No password to set up — Google confirms your email, and that's all this site stores.</p>
+  </div></div>
 </section>
 {{end}}

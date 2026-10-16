@@ -49,3 +49,5 @@ Read `docs/FUNCTIONALITY.md` and `docs/ARCHITECTURE.md` before making any change
 - Any real secret in the diff? Check, don't assume.
 - `go build ./... && go vet ./...` clean?
 - If Docker, Compose, the local content directory, the local admin SQL, the local Google redirect URL, or the local `DATABASE_URL` changed, do `.env.example`, `README.md`, `docs/ARCHITECTURE.md`, and Mem0 still describe the same local stack?
+
+Also read `docs/DESIGN.md` (design tokens, motion rules, components) before touching anything visual.

@@ -1,31 +1,32 @@
 {{define "content"}}
-<section class="section page-hero">
+<section class="page-hero">
   <div class="container">
     <p class="eyebrow">Software</p>
-    <h1>Downloadable Software</h1>
-    <p class="hero-subtitle">Apps and tools I've built and sell directly — download after purchase, no subscription.</p>
+    <h1>Software I build and sell</h1>
+    <p class="hero-subtitle">Small, focused apps — a one-time purchase, a download link after checkout, no subscription.</p>
   </div>
 </section>
 
-<section class="section">
+<section class="section section-tight">
   <div class="container">
     {{if .Software}}
     <div class="course-grid">
       {{range .Software}}
-      <div class="course-card">
-        <h3>{{.Title}} <span class="optional">{{.Version}}</span></h3>
+      <article class="course-card" data-reveal>
+        <div class="course-card-top"><span class="badge">v{{.Version}}</span></div>
+        <h3><a href="/software/{{.Slug}}">{{.Title}}</a></h3>
         {{if .Summary}}<p>{{.Summary}}</p>{{end}}
-        <div class="course-detail-meta">
-          <span>{{.PriceDisplay}}</span>
-        </div>
         {{if .Description}}
         <details class="card-expand">
           <summary>Read more</summary>
           {{range $p := splitLines .Description}}<p>{{rich $p}}</p>{{end}}
         </details>
         {{end}}
-        <a class="btn btn-primary" href="/software/{{.Slug}}">Download</a>
-      </div>
+        <div class="course-card-foot">
+          <span class="price">{{.PriceDisplay}}</span>
+          <a class="btn btn-primary btn-sm" href="/software/{{.Slug}}">Details &amp; download</a>
+        </div>
+      </article>
       {{end}}
     </div>
     {{else}}

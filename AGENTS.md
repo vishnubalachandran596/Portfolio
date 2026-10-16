@@ -31,3 +31,5 @@ Before any change: read `docs/FUNCTIONALITY.md` (what the product does) and `doc
 - If Docker, Compose, the local content directory, the local admin SQL, the local Google redirect URL, or the local `DATABASE_URL` changed, do `.env.example`, `README.md`, `docs/ARCHITECTURE.md`, and Mem0 still describe the same local stack?
 
 Full detail and rationale live in `CLAUDE.md` and `.cursor/rules/architecture.mdc` — read those for the complete picture.
+
+Also read `docs/DESIGN.md` (design tokens, motion rules, components) before touching anything visual.

@@ -55,8 +55,14 @@ func PrepareLesson(raw []byte, identity, stylesheet string) (PreparedLesson, err
 		b.WriteString(lessonCSS)
 		b.WriteString("\n</style>")
 	}
+	b.WriteString("<style>")
+	b.WriteString(lessonRuntimeCSS)
+	b.WriteString("</style>")
 	b.WriteString(`</head><body class="html-content article-body">`)
 	b.WriteString(body)
+	b.WriteString("<script>")
+	b.WriteString(lessonRuntimeJS)
+	b.WriteString("</script>")
 	b.WriteString(WatermarkScript(WatermarkLabel, identity))
 	b.WriteString("</body></html>")
 	return PreparedLesson{
@@ -98,8 +104,20 @@ func WatermarkScript(label, copyIdentity string) string {
   function pinned() { return !!document.getElementById('html-renderer'); }
   function canvasEl() { return document.getElementById('__access_watermark'); }
 
+  // A host taller than the viewport (a full-length article) gets a
+  // viewport-sized canvas that sticks while the reader scrolls, instead
+  // of one canvas as tall as the article (which can exceed browser
+  // canvas limits and would put the mark far below the fold).
+  var STICKY = 'position:sticky;top:0;display:block;width:100%;height:100vh;height:100dvh;margin-bottom:-100vh;margin-bottom:-100dvh;z-index:2147483647;pointer-events:none;opacity:.16;';
+  function tall() { return pinned() && hostEl().clientHeight > window.innerHeight * 1.2; }
+
   function mount(c) {
     var host = hostEl();
+    if (tall()) {
+      if (host.firstChild !== c) host.insertBefore(c, host.firstChild);
+      c.setAttribute('style', STICKY);
+      return;
+    }
     if (c.parentNode !== host) host.appendChild(c);
     c.setAttribute('style', pinned() ? PINNED : FIXED);
   }
@@ -107,6 +125,7 @@ func WatermarkScript(label, copyIdentity string) string {
   function size() {
     if (pinned()) {
       var h = hostEl();
+      if (tall()) return { w: h.clientWidth, h: window.innerHeight };
       return { w: h.clientWidth, h: h.clientHeight };
     }
     return { w: window.innerWidth, h: window.innerHeight };
@@ -136,14 +155,14 @@ func WatermarkScript(label, copyIdentity string) string {
     var fontSize = Math.max(15, Math.min(24, diag / 48));
     ctx.save();
     ctx.fillStyle = isDark() ? '#9c8f81' : '#78716c';
-    ctx.font = '600 ' + fontSize + 'px "Montserrat", system-ui, -apple-system, sans-serif';
+    ctx.font = '600 ' + fontSize + 'px "Inter", system-ui, -apple-system, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     var textW = ctx.measureText(label).width;
     var maxTextW = w * 0.85;
     if (textW > maxTextW) {
       fontSize = Math.max(10, fontSize * (maxTextW / textW));
-      ctx.font = '600 ' + fontSize + 'px "Montserrat", system-ui, -apple-system, sans-serif';
+      ctx.font = '600 ' + fontSize + 'px "Inter", system-ui, -apple-system, sans-serif';
     }
     ctx.fillText(label, w / 2, h / 2);
     ctx.restore();

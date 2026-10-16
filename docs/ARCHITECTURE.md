@@ -226,6 +226,14 @@ erDiagram
         text description
         int sort_order
     }
+    profile_highlights {
+        serial id PK
+        text value "e.g. 2M+"
+        text label "e.g. transactions a day"
+        int sort_order
+        bool is_published
+        timestamptz created_at "migration 078; RLS enabled; Home hero stat strip"
+    }
     courses {
         serial id PK
         text slug UK
@@ -247,6 +255,7 @@ erDiagram
         text[] tags "same shape as articles.tags; migration 072; powers the /courses topic filter"
         timestamptz created_at
         timestamptz updated_at
+        text outline "lesson h2 titles, one per line, derived from the stored lesson; migration 079"
     }
     course_updates {
         bigserial id PK
@@ -726,3 +735,15 @@ chatbot_answer_cache    -- id, question_text, answer_text, source_titles[], sour
 ---
 
 *Last updated: October 2026, alongside the RAG chatbot and AI/GenAI course work. Companion doc: `docs/FUNCTIONALITY.md`. If you're an AI agent about to modify this codebase, read both files first — they're written specifically so you don't have to re-derive this context from the source tree.*
+
+## 13. Design system and the course reader
+
+The visual system (tokens, type, motion, components) is documented in `docs/DESIGN.md`; `web/static/css/style.css` is one file built on those tokens, with legacy `--color-*` aliases kept for uploaded lesson/article CSS. Fonts are self-hosted variable woff2 (Inter, JetBrains Mono, plus Cormorant), served from `/static/fonts/` with `Access-Control-Allow-Origin: *` (`staticCache` in `routes.go`) because the sandboxed lesson iframe has an opaque origin and fonts load in CORS mode.
+
+**Course reader** (`GET /courses/{slug}/learn`, `core/handlers/learn.go`, `course_learn.html`). `BaseData.Immersive` puts the page in reader mode (`body.is-immersive` hides the promo bar, footer and floating widgets). The lesson still loads as a base64 `srcdoc` into `<iframe sandbox="allow-scripts">`. `storage.PrepareLesson` now also injects `lessonRuntimeCSS`/`lessonRuntimeJS` (`core/storage/lesson_runtime.go`): the lesson reads its own `h2`/`h3` headings and posts `lesson-toc` and `lesson-progress` to the parent, posts `lesson-run` when a reader presses Run on a code block, and accepts `lesson-goto` and `reader-config` from the parent (checked against `window.parent`). The parent checks `e.source === frame.contentWindow`. The last section read is kept in `localStorage` per course.
+
+**Compiler drawer.** `JDOODLE_EMBED_KEYS` ("java=…,python=…,go=…", `config.ParseEmbedKeys`) lists JDoodle embeds; each JDoodle embed is tied to one saved JDoodle project, so it fixes the language. With none set the drawer and the lesson Run buttons don't render. The drawer creates `<div data-pym-src="https://www.jdoodle.com/embed/v1/<key>">` and loads `jdoodle-pym.min.js` on first open, outside the sandboxed lesson (a nested iframe would inherit the sandbox). The CSP allows `https://www.jdoodle.com` in `script-src` and `frame-src` only. The default language comes from `models.Course.CodeLanguage()` (tags, then keywords, then Java). A Basic embed can't receive code from the host page, so Run copies the snippet to the clipboard and opens the drawer.
+
+**"What's inside" outline.** `storage.LessonOutline` extracts a lesson's `h2` titles (or `h3` when there are none), strips numbering prefixes, drops duplicates and caps at 40. It is written on every lesson upload (single form and bulk) and lazily backfilled by `CourseDetail` the first time a course with a stored lesson has an empty outline (best effort, never fails the page, never bumps `updated_at`).
+
+**Bulk lesson upload** (`GET/POST /admin/courses/bulk-upload`, `admin_course_bulk.go`). One zip (≤ 8 MB; Vercel caps a request body at 4.5 MB in practice) of `{slug}.html` files; each matches an existing course by file name, is stored at `courses/{slug}.html`, gets its outline re-derived, and the chatbot reindex flag is set once. Unknown slugs are reported and skipped.

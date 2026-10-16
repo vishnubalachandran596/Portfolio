@@ -1,19 +1,72 @@
 {{define "content"}}
-<div class="lesson-shell">
-  <div class="lesson-toolbar">
-    <div class="container lesson-toolbar-inner">
-      <p class="eyebrow"><a href="/courses/{{.Course.Slug}}">← {{.Course.Title}}</a></p>
-      <div class="lesson-toolbar-actions">
-        {{if .ChatbotEnabled}}<a class="btn btn-secondary btn-sm" href="{{.Nav.AIAssistant}}">Ask AI Assistant</a>{{end}}
-        {{if .HasQuiz}}<a class="btn btn-secondary btn-sm" href="/courses/{{.Course.Slug}}/quiz">Take the Final Quiz</a>{{end}}
+<div class="reader" data-reader data-slug="{{.Course.Slug}}">
+  <div class="reader-bar">
+    <a class="reader-back" href="/courses/{{.Course.Slug}}" title="Back to the course page">
+      <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M12 15 7 10l5-5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span class="reader-title">{{.Course.Title}}</span>
+    </a>
+    <span class="reader-counter" data-reader-counter aria-live="polite"></span>
+    <div class="reader-actions">
+      <button type="button" class="btn btn-ghost btn-sm reader-toc-toggle" data-reader-toc-toggle aria-controls="reader-toc" aria-expanded="false">
+        <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M4 5h12M4 10h12M4 15h8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        <span class="btn-label">Contents</span>
+      </button>
+      {{if .Compilers}}
+      <button type="button" class="btn btn-secondary btn-sm" data-reader-compiler-toggle aria-controls="reader-compiler" aria-expanded="false">
+        <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="m7 6-4 4 4 4M13 6l4 4-4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span class="btn-label">Compiler</span>
+      </button>
+      {{end}}
+      {{if .ChatbotEnabled}}<a class="btn btn-ghost btn-sm" href="{{.Nav.AIAssistant}}" title="Ask AI Assistant"><svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><rect x="2.5" y="4" width="15" height="10" rx="2" stroke="currentColor" stroke-width="1.5"/><circle cx="7.5" cy="9" r="1" fill="currentColor"/><circle cx="12.5" cy="9" r="1" fill="currentColor"/></svg><span class="btn-label">Ask AI</span></a>{{end}}
+      {{if .HasQuiz}}<a class="btn btn-primary btn-sm" href="/courses/{{.Course.Slug}}/quiz"><span>Quiz</span></a>{{end}}
+    </div>
+    <div class="reader-progress" aria-hidden="true"><span data-reader-progress></span></div>
+  </div>
+
+  <div class="reader-body">
+    <nav class="reader-toc" id="reader-toc" aria-label="Lesson sections" data-reader-toc>
+      <p class="toc-title">In this lesson</p>
+      <ol class="reader-toc-list" data-reader-toc-list></ol>
+      <p class="reader-toc-empty" data-reader-toc-empty hidden>This lesson has no section headings.</p>
+    </nav>
+    <div class="reader-sheet-backdrop" data-reader-backdrop hidden></div>
+
+    <div class="reader-stage html-renderer lesson-renderer" id="html-renderer">
+      <iframe id="lesson-frame" class="lesson-frame" title="{{.Course.Title}}" sandbox="allow-scripts" referrerpolicy="no-referrer"></iframe>
+      <div class="reader-pager">
+        <button type="button" class="btn btn-secondary btn-sm" data-reader-prev disabled><span>← Previous</span></button>
+        <button type="button" class="btn btn-secondary btn-sm" data-reader-next disabled><span>Next section →</span></button>
       </div>
     </div>
-  </div>
-  <div class="html-renderer lesson-renderer" id="html-renderer">
-    <iframe id="lesson-frame" class="lesson-frame" title="{{.Course.Title}}" sandbox="allow-scripts" referrerpolicy="no-referrer"></iframe>
+
+    {{if .Compilers}}
+    <aside class="reader-compiler" id="reader-compiler" aria-label="Compiler" data-reader-compiler hidden>
+      <div class="reader-resize" data-reader-resize aria-hidden="true"></div>
+      <div class="reader-compiler-head">
+        <h2>Compiler</h2>
+        {{if gt (len .Compilers) 1}}
+        <label class="sr-only" for="compiler-lang">Language</label>
+        <select id="compiler-lang" data-compiler-lang>
+          {{range .Compilers}}<option value="{{.Lang}}" data-key="{{.Key}}" {{if eq .Lang $.DefaultLang}}selected{{end}}>{{.Label}}</option>{{end}}
+        </select>
+        {{else}}
+        {{range .Compilers}}<span class="badge" data-compiler-single data-lang="{{.Lang}}" data-key="{{.Key}}">{{.Label}}</span>{{end}}
+        {{end}}
+        <button type="button" class="icon-btn" data-reader-compiler-close aria-label="Close compiler">
+          <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="m5 5 10 10M15 5 5 15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+      <div class="reader-compiler-body" data-compiler-body>
+        <p class="reader-compiler-loading">Loading the compiler…</p>
+      </div>
+      <p class="reader-compiler-hint" data-compiler-hint>Write and run code here while you read. "Run" on a lesson snippet copies it — paste it in with Ctrl/⌘ + V.</p>
+    </aside>
+    {{end}}
   </div>
 </div>
+{{end}}
 
+{{define "scripts"}}
 <script>
 (function () {
   var b = "{{.LessonPayload}}";
@@ -23,19 +76,184 @@
   var html = new TextDecoder("utf-8").decode(bytes);
   var frame = document.getElementById("lesson-frame");
   if (!frame) return;
-  function syncTheme() {
-    try {
-      frame.contentWindow.postMessage({
-        type: "site-theme",
-        theme: document.documentElement.getAttribute("data-theme") || ""
-      }, "*");
-    } catch (err) {}
-  }
-  frame.addEventListener("load", syncTheme);
-  new MutationObserver(syncTheme).observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ["data-theme"]
+
+  var reader = document.querySelector("[data-reader]");
+  var tocList = document.querySelector("[data-reader-toc-list]");
+  var tocEmpty = document.querySelector("[data-reader-toc-empty]");
+  var toc = document.querySelector("[data-reader-toc]");
+  var tocToggle = document.querySelector("[data-reader-toc-toggle]");
+  var backdrop = document.querySelector("[data-reader-backdrop]");
+  var counter = document.querySelector("[data-reader-counter]");
+  var progress = document.querySelector("[data-reader-progress]");
+  var prevBtn = document.querySelector("[data-reader-prev]");
+  var nextBtn = document.querySelector("[data-reader-next]");
+  var compiler = document.querySelector("[data-reader-compiler]");
+  var compilerToggle = document.querySelector("[data-reader-compiler-toggle]");
+  var mobile = window.matchMedia("(max-width: 59.99rem)");
+  var storeKey = "reader:" + reader.getAttribute("data-slug");
+  var sections = [], activeIndex = -1, restored = false;
+
+  function send(msg) { try { frame.contentWindow.postMessage(msg, "*"); } catch (e) {} }
+  function syncTheme() { send({ type: "site-theme", theme: document.documentElement.getAttribute("data-theme") || "" }); }
+
+  frame.addEventListener("load", function () {
+    syncTheme();
+    send({ type: "reader-config", compiler: !!compiler });
   });
+  new MutationObserver(syncTheme).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+
+  function goTo(i) {
+    if (i < 0 || i >= sections.length) return;
+    send({ type: "lesson-goto", id: sections[i].id });
+    if (mobile.matches) setToc(false);
+  }
+
+  function setToc(open) {
+    if (!toc) return;
+    if (mobile.matches) {
+      toc.hidden = !open;
+      if (backdrop) backdrop.hidden = !open && (!compiler || compiler.hidden);
+    } else {
+      toc.hidden = false;
+    }
+    if (tocToggle) tocToggle.setAttribute("aria-expanded", open ? "true" : "false");
+  }
+  setToc(false);
+  mobile.addEventListener("change", function () { setToc(false); });
+  if (tocToggle) tocToggle.addEventListener("click", function () { setToc(toc.hidden); });
+  if (backdrop) backdrop.addEventListener("click", function () { setToc(false); setCompiler(false); });
+  if (prevBtn) prevBtn.addEventListener("click", function () { goTo(activeIndex - 1); });
+  if (nextBtn) nextBtn.addEventListener("click", function () { goTo(activeIndex + 1); });
+
+  // j / k step through sections (ignored while typing in a field).
+  document.addEventListener("keydown", function (e) {
+    var t = e.target;
+    if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT" || t.isContentEditable)) return;
+    if (e.key === "j") goTo(activeIndex + 1);
+    if (e.key === "k") goTo(activeIndex - 1);
+    if (e.key === "Escape") { setToc(false); setCompiler(false); }
+  });
+
+  window.addEventListener("message", function (e) {
+    if (e.source !== frame.contentWindow || !e.data) return;
+    var d = e.data;
+    if (d.type === "lesson-toc") {
+      sections = (d.items || []).filter(function (s) { return s && s.id && s.text; });
+      tocList.innerHTML = "";
+      sections.forEach(function (s, i) {
+        var li = document.createElement("li");
+        var a = document.createElement("a");
+        a.href = "#" + s.id;
+        a.textContent = s.text;
+        a.className = "lvl-" + (s.level === 3 ? 3 : 2);
+        a.addEventListener("click", function (ev) { ev.preventDefault(); goTo(i); });
+        li.appendChild(a);
+        tocList.appendChild(li);
+      });
+      if (tocEmpty) tocEmpty.hidden = sections.length > 0;
+      if (!restored) {
+        restored = true;
+        var last = null;
+        try { last = localStorage.getItem(storeKey); } catch (err) {}
+        if (last) {
+          for (var k = 0; k < sections.length; k++) if (sections[k].id === last) { send({ type: "lesson-goto", id: last }); break; }
+        }
+      }
+    }
+    if (d.type === "lesson-progress") {
+      if (progress) progress.style.transform = "scaleX(" + Math.max(0, Math.min(1, d.pct || 0)).toFixed(4) + ")";
+      var idx = -1;
+      for (var j = 0; j < sections.length; j++) if (sections[j].id === d.active) idx = j;
+      if (idx !== activeIndex) {
+        activeIndex = idx;
+        var links = tocList.querySelectorAll("a");
+        for (var m = 0; m < links.length; m++) links[m].classList.toggle("is-active", m === idx);
+        if (links[idx] && !mobile.matches) links[idx].scrollIntoView({ block: "nearest" });
+        var majors = sections.filter(function (s) { return s.level === 2; });
+        var cur = 0;
+        for (var n = 0; n <= idx; n++) if (sections[n].level === 2) cur++;
+        if (counter) counter.textContent = majors.length ? Math.max(1, cur) + " / " + majors.length : "";
+        try { if (d.active) localStorage.setItem(storeKey, d.active); } catch (err) {}
+      }
+      if (prevBtn) prevBtn.disabled = activeIndex <= 0;
+      if (nextBtn) nextBtn.disabled = activeIndex < 0 || activeIndex >= sections.length - 1;
+    }
+    if (d.type === "lesson-run" && compiler) {
+      setCompiler(true);
+      var done = function () { if (window.siteToast) window.siteToast("Snippet copied — paste it into the compiler"); };
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(d.code || "").then(done, function () { if (window.siteToast) window.siteToast("Copy the snippet from the lesson", "error"); });
+      if (d.lang && langSelect) {
+        var opt = langSelect.querySelector('option[value="' + d.lang.replace(/[^a-z0-9]/g, "") + '"]');
+        if (opt && langSelect.value !== opt.value) { langSelect.value = opt.value; loadEmbed(opt.getAttribute("data-key")); }
+      }
+    }
+  });
+
+  // --- Compiler drawer (JDoodle). The embed script loads on first open. ---
+  var langSelect = document.querySelector("[data-compiler-lang]");
+  var single = document.querySelector("[data-compiler-single]");
+  var body = document.querySelector("[data-compiler-body]");
+  var loadedKey = "";
+  var pymLoaded = false;
+  function currentKey() {
+    if (langSelect) { var o = langSelect.options[langSelect.selectedIndex]; return o ? o.getAttribute("data-key") : ""; }
+    return single ? single.getAttribute("data-key") : "";
+  }
+  function loadEmbed(key) {
+    if (!body || !key || key === loadedKey) return;
+    loadedKey = key;
+    body.innerHTML = "";
+    var holder = document.createElement("div");
+    holder.setAttribute("data-pym-src", "https://www.jdoodle.com/embed/v1/" + encodeURIComponent(key));
+    body.appendChild(holder);
+    if (!pymLoaded) {
+      pymLoaded = true;
+      var s = document.createElement("script");
+      s.src = "https://www.jdoodle.com/assets/jdoodle-pym.min.js";
+      s.async = true;
+      s.onerror = function () { body.innerHTML = '<p class="reader-compiler-loading">The compiler couldn’t load. Check your connection and reopen it.</p>'; loadedKey = ""; pymLoaded = false; };
+      document.body.appendChild(s);
+    } else if (window.pym && typeof window.pym.autoInit === "function") {
+      // pym.js scans for [data-pym-src] on load; a later language switch
+      // asks it to pick up the newly inserted embed.
+      try { window.pym.autoInit(); } catch (e) {}
+    }
+  }
+  function setCompiler(open) {
+    if (!compiler) return;
+    compiler.hidden = !open;
+    if (compilerToggle) compilerToggle.setAttribute("aria-expanded", open ? "true" : "false");
+    if (mobile.matches && backdrop) backdrop.hidden = !open && toc.hidden;
+    if (open) loadEmbed(currentKey());
+  }
+  if (compilerToggle) compilerToggle.addEventListener("click", function () { setCompiler(compiler.hidden); });
+  var closeBtn = document.querySelector("[data-reader-compiler-close]");
+  if (closeBtn) closeBtn.addEventListener("click", function () { setCompiler(false); });
+  if (langSelect) langSelect.addEventListener("change", function () { loadEmbed(currentKey()); });
+
+  // Drag the drawer's left edge to resize it (desktop).
+  var handle = document.querySelector("[data-reader-resize]");
+  if (handle && compiler) {
+    handle.addEventListener("pointerdown", function (e) {
+      handle.setPointerCapture(e.pointerId);
+      handle.classList.add("is-dragging");
+      var startX = e.clientX, startW = compiler.getBoundingClientRect().width;
+      frame.style.pointerEvents = "none";
+      function move(ev) {
+        var w = Math.max(320, Math.min(window.innerWidth * 0.7, startW + (startX - ev.clientX)));
+        compiler.style.width = w + "px";
+      }
+      function up() {
+        handle.classList.remove("is-dragging");
+        frame.style.pointerEvents = "";
+        handle.removeEventListener("pointermove", move);
+        handle.removeEventListener("pointerup", up);
+      }
+      handle.addEventListener("pointermove", move);
+      handle.addEventListener("pointerup", up);
+    });
+  }
+
   frame.srcdoc = html;
 })();
 </script>

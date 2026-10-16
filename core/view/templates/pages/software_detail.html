@@ -1,50 +1,73 @@
 {{define "jsonld"}}<script type="application/ld+json">{{.JSONLD}}</script>{{end}}
 {{define "content"}}
-<section class="section page-hero">
+<section class="product-hero">
   <div class="container">
-    <p class="eyebrow"><a href="{{.Nav.Software}}">← All software</a></p>
-    <h1>{{.Software.Title}} <span class="optional">{{.Software.Version}}</span></h1>
+    <nav class="breadcrumb" aria-label="Breadcrumb"><a href="{{.Nav.Software}}">Software</a><span class="breadcrumb-sep" aria-hidden="true">/</span><span aria-current="page">{{.Software.Title}}</span></nav>
+    <span class="badge">Version {{.Software.Version}}</span>
+    <h1>{{.Software.Title}}</h1>
     {{if .Software.Summary}}<p class="hero-subtitle">{{rich .Software.Summary}}</p>{{end}}
-    <div class="course-detail-meta">
-      <span>{{.Software.PriceDisplay}}</span>
-    </div>
-
-    {{if .PurchaseRequired}}<div class="alert alert-error">Get access below to continue — it only takes a moment.</div>{{end}}
-
-    {{if .HasAccess}}
-    <div class="hero-actions">
-      <a class="btn btn-primary" href="{{.Software.DownloadLink}}" target="_blank" rel="noopener">Download</a>
-    </div>
-    {{if .Software.LicenseTerms}}<p class="course-detail-note">{{.Software.LicenseTerms}}</p>{{end}}
-    {{if .Software.PostPurchaseInstructions}}<p class="course-detail-note">{{.Software.PostPurchaseInstructions}}</p>{{end}}
-    {{else}}
-    <div class="purchase-box" id="purchase-box">
-      <p class="purchase-box-title">Get access</p>
-      <p class="purchase-box-sub">{{.Software.PriceDisplay}} — one-time purchase.</p>
-      <div id="purchase-error" class="alert alert-error" hidden></div>
-      {{if .UserEmail}}
-      <p class="purchase-box-sub">Access will be sent to <strong>{{.UserEmail}}</strong>.</p>
-      {{if .PaymentsEnabled}}
-      <label>Promo code <span class="optional">(optional)</span>
-        <input type="text" id="software-promo-code" autocapitalize="characters">
-      </label>
-      <button type="button" class="btn btn-primary" id="software-purchase-btn" data-slug="{{.Software.Slug}}">{{if gt .Software.PriceCents 0}}Buy Now{{else}}Get Free Access{{end}}</button>
-      {{else}}
-      <p class="purchase-box-sub">Payments aren't enabled yet.</p>
-      {{end}}
-      {{else}}
-      <p class="purchase-box-sub">Sign in with Google to purchase — it's how access gets tied to your account and how promo codes can be checked.</p>
-      <a class="btn btn-primary" href="/login?next=/software/{{.Software.Slug}}">Log in with Google</a>
-      {{end}}
-    </div>
-    {{if .PaymentsEnabled}}<script src="https://checkout.razorpay.com/v1/checkout.js"></script>{{end}}
-    {{end}}
   </div>
 </section>
 
-<section class="section">
-  <div class="container course-description">
-    {{range $p := splitLines .Software.Description}}<p>{{rich $p}}</p>{{end}}
+<section class="section section-tight">
+  <div class="container product-layout">
+    <div class="product-main">
+      {{if .PurchaseRequired}}<div class="alert alert-error">Get access to continue — it only takes a moment.</div>{{end}}
+      <div>
+        <h2>About this software</h2>
+        <div class="prose-block">
+          {{range $p := splitLines .Software.Description}}<p>{{rich $p}}</p>{{end}}
+        </div>
+      </div>
+      {{if .HasAccess}}
+      {{if .Software.LicenseTerms}}<p class="course-detail-note">{{.Software.LicenseTerms}}</p>{{end}}
+      {{if .Software.PostPurchaseInstructions}}<p class="course-detail-note">{{.Software.PostPurchaseInstructions}}</p>{{end}}
+      {{else if .Software.LicenseTerms}}
+      <div>
+        <h2>Licensing</h2>
+        <p class="course-detail-note">{{.Software.LicenseTerms}}</p>
+      </div>
+      {{end}}
+    </div>
+
+    <aside class="product-aside" aria-label="Get access">
+      <div class="buy-card" id="buy-card">
+        <div class="buy-card-price"><span class="price">{{.Software.PriceDisplay}}</span><span>one-time</span></div>
+        {{if .HasAccess}}
+        <a class="btn btn-primary btn-lg btn-block" href="{{.Software.DownloadLink}}" target="_blank" rel="noopener">Download</a>
+        {{else}}
+        <div class="purchase-box" id="purchase-box">
+          <div id="purchase-error" class="alert alert-error" hidden></div>
+          {{if .UserEmail}}
+          <p class="purchase-box-sub">Access goes to <strong>{{.UserEmail}}</strong>.</p>
+          {{if .PaymentsEnabled}}
+          <label>Promo code <span class="optional">(optional)</span>
+            <input type="text" id="software-promo-code" autocapitalize="characters" autocomplete="off">
+          </label>
+          <button type="button" class="btn btn-primary btn-lg" id="software-purchase-btn" data-slug="{{.Software.Slug}}">{{if gt .Software.PriceCents 0}}Buy now{{else}}Get free access{{end}}</button>
+          {{else}}
+          <p class="purchase-box-sub">Payments aren't enabled yet.</p>
+          {{end}}
+          {{else}}
+          <p class="purchase-box-sub">Sign in with Google to purchase — it ties access to your account and lets promo codes be checked.</p>
+          <a class="btn btn-primary btn-lg" href="/login?next=/software/{{.Software.Slug}}">Sign in to buy</a>
+          {{end}}
+        </div>
+        {{if .PaymentsEnabled}}<script src="https://checkout.razorpay.com/v1/checkout.js"></script>{{end}}
+        {{end}}
+        <ul class="buy-card-perks">
+          <li><svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="m5 10.5 3 3 7-7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>One-time purchase, no subscription</span></li>
+          <li><svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="m5 10.5 3 3 7-7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Download link stays in your account</span></li>
+        </ul>
+      </div>
+    </aside>
   </div>
 </section>
+
+{{if not .HasAccess}}
+<div class="buy-bar" data-buy-bar>
+  <div><span class="price">{{.Software.PriceDisplay}}</span><small>one-time purchase</small></div>
+  <a class="btn btn-primary" href="#buy-card">Get access</a>
+</div>
+{{end}}
 {{end}}

@@ -1,11 +1,19 @@
 {{define "content"}}
-<section class="section page-hero not-found">
+<section class="page-hero not-found">
   <div class="container">
     <p class="eyebrow">404</p>
     <h1>Page not found</h1>
-    <p class="hero-subtitle">The page you're looking for doesn't exist or has moved.</p>
-    <div class="hero-actions">
-      <a class="btn btn-primary" href="/">Go home</a>
+    <p class="hero-subtitle">The page you're looking for doesn't exist or has moved. Try one of these, or search the site.</p>
+    <form method="GET" action="/search" class="search-form" role="search">
+      <label class="sr-only" for="nf-q">Search</label>
+      <input type="search" id="nf-q" name="q" placeholder="Search courses, pages…">
+      <button type="submit" class="btn btn-primary">Search</button>
+    </form>
+    <div class="not-found-links">
+      <a class="btn btn-secondary" href="/">Home</a>
+      <a class="btn btn-secondary" href="{{.Nav.Consultancy}}">Consultancy</a>
+      <a class="btn btn-secondary" href="{{.Nav.Courses}}">Courses</a>
+      <a class="btn btn-secondary" href="{{.Nav.Articles}}">Blog</a>
     </div>
   </div>
 </section>
