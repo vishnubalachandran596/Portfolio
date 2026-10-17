@@ -305,6 +305,8 @@ table { font-variant-numeric: tabular-nums; }
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     scroll-behavior: auto !important;
+    /* movement off, fades and colour changes kept (DESIGN.md motion rules) */
+    transition-property: opacity, color, background-color, border-color, box-shadow !important;
   }
 }
 
@@ -416,10 +418,10 @@ table { font-variant-numeric: tabular-nums; }
   color: var(--accent);
   font-weight: 600;
   font-size: 0.9375rem;
-  transition: color var(--dur-fast) ease, gap var(--dur-fast) var(--ease-out);
+  transition: color var(--dur-fast) ease, transform var(--dur-fast) var(--ease-out);
 }
 .link-arrow:hover { color: var(--accent-strong); }
-@media (hover: hover) and (pointer: fine) { .link-arrow:hover { gap: 0.5625rem; } }
+@media (hover: hover) and (pointer: fine) { .link-arrow:hover { transform: translateX(0.1875rem); } }
 .text-link { color: var(--accent); font-weight: 600; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 0.2em; }
 .text-link:hover { color: var(--accent-strong); }
 .empty-state { color: var(--ink-2); padding: var(--space-6) 0; }
@@ -1873,7 +1875,11 @@ body:has(.buy-bar) .site-footer { padding-bottom: 5rem; }
 .article-byline { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-4); font-size: 0.875rem; color: var(--ink-3); }
 .article-byline strong { color: var(--ink); font-weight: 600; }
 .article-layout { display: grid; gap: var(--space-6); grid-template-columns: minmax(0, 1fr); padding-bottom: var(--space-8); }
-@media (min-width: 64rem) { .article-layout { grid-template-columns: 14rem minmax(0, var(--container-prose)); justify-content: center; gap: var(--space-8); } }
+@media (min-width: 64rem) { .article-layout { grid-template-columns: 14rem minmax(0, var(--container-prose)); justify-content: center; gap: var(--space-8); }
+  /* Pin both columns so the body doesn't jump when JS un-hides the contents rail (CLS 0.43 -> 0). */
+  .article-layout > .article-toc { grid-column: 1; grid-row: 1; }
+  .article-layout > .article-main { grid-column: 2; grid-row: 1; }
+}
 .article-layout .article-toc { display: none; }
 @media (min-width: 64rem) { .article-layout .article-toc:not([hidden]) { display: block; padding-top: clamp(2rem, 1.25rem + 3vw, 4rem); } .toc-mobile { display: none !important; } }
 .article-toc { font-size: 0.875rem; }
@@ -2445,6 +2451,27 @@ select { appearance: none; -webkit-appearance: none; padding-right: 2.25rem; bac
 .chatbot-widget--full { position: static; z-index: auto; width: 100%; max-width: 44rem; }
 .chatbot-widget--full .chatbot-panel { position: static; width: 100%; height: 70vh; max-height: 44rem; animation: none; }
 .chatbot-unavailable { color: var(--ink-2); text-align: center; padding: var(--space-6) 0; }
+
+/* ---------------------------------------------------------------------
+   Touch targets — 44 px minimum on touch screens (DESIGN.md philosophy 5).
+   Small visual controls keep their look; an invisible ::after grows the
+   tappable area. Fine pointers keep the compact sizes.
+--------------------------------------------------------------------- */
+@media (pointer: coarse) {
+  .tag-chip, .chip, .skill-card-more, .breadcrumb a, a.link-arrow, .toc-list a { position: relative; }
+  .tag-chip::after, .chip::after, .skill-card-more::after, .breadcrumb a::after, a.link-arrow::after {
+    content: "";
+    position: absolute;
+    inset: -0.625rem -0.25rem;
+  }
+  .breadcrumb a::after { inset: -0.75rem -0.5rem; }
+  .footer-col a { min-height: 2.75rem; min-width: 2.75rem; }
+  .thumbs-count, .story-more summary, .card-expand summary, .pricing-card details summary { min-height: 2.75rem; }
+
+  .btn-sm, .header-cta { min-height: 2.75rem; }
+  .toc-list a { min-height: 2.75rem; display: flex; align-items: center; }
+  .brand { min-height: 2.75rem; min-width: 2.75rem; justify-content: center; }
+}
 
 /* ---------------------------------------------------------------------
    Scroll reveal — one-time, 12px rise + fade. Content is visible by

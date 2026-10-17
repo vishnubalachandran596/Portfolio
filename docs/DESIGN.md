@@ -50,7 +50,10 @@ Prices: always through `models.FormatMoney` (Indian grouping for INR — ₹1,50
 - Exits are faster than entries (`--dur-fast` vs `--dur-base`/`--dur-slow`).
 - Drawers and sheets (mobile nav, reader contents, compiler) use `--ease-drawer`.
 - Scroll reveals: add `data-reveal` to an element. `main.js` hides it only after JS runs (`.js-reveal`), reveals it once (12 px rise + fade), and staggers siblings 50 ms (max 6). No-JS readers and crawlers always see the content.
-- Keyboard-triggered actions don't animate. `prefers-reduced-motion` removes movement and keeps fades.
+- Keyboard-triggered actions don't animate. `prefers-reduced-motion` removes movement and keeps fades: keyframes collapse to ~0 ms and only opacity/colour/border/shadow transitions survive (transform transitions are switched off globally).
+- Animate `transform`/`opacity` only, never width/height/top/gap.
+- Touch targets: on `(pointer: coarse)` small controls (chips, breadcrumb links, `.link-arrow`, `.skill-card-more`) keep their look and gain an invisible `::after` hit area; footer links, `.btn-sm`, TOC links, thumbs and disclosure summaries get `min-height: 2.75rem`. See the "Touch targets" block in `style.css`.
+- Pin grid columns for anything JS un-hides after load (the article contents rail) so the page never shifts.
 - No splash screens and no infinite animation outside a real loading state (the route bar).
 
 ## Components (class → use)
