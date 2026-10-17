@@ -1,19 +1,11 @@
 package handlers
 
 import (
-	"context"
-	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"net/url"
-	"strconv"
-	"strings"
-	"time"
 
-	"github.com/vishnubalachandran596/portfolio/core/coderun"
 	"github.com/vishnubalachandran596/portfolio/core/models"
 	"github.com/vishnubalachandran596/portfolio/core/storage"
 	"github.com/vishnubalachandran596/portfolio/web"
@@ -32,8 +24,8 @@ type CourseLearnData struct {
 }
 
 // CompilerOption is one language the reader's compiler drawer can open.
-// It deliberately carries no embed key: keys never leave the server. The
-// editor posts code to CourseRun, which runs it server-side.
+// It deliberately carries no embed key: keys never appear in page HTML.
+// The drawer asks CourseCompilerEmbed for one when it opens.
 type CompilerOption struct {
 	Lang  string
 	Label string
@@ -59,30 +51,18 @@ func compilerOptions(keys map[string]string) []CompilerOption {
 	return out
 }
 
-const (
-	maxRunCodeBytes   = 20000
-	runsPerMinute     = 8
-	runnerCallTimeout = 56 * time.Second
-)
-
-type runRequest struct {
-	Lang string `json:"lang"`
-	Code string `json:"code"`
-}
-
-// CourseRun runs a snippet from the reader's editor. The browser sends
-// {lang, code}; this checks the learner may read the course, applies the
-// per-learner and daily limits, asks the server-side runner (which drives
-// the JDoodle embed) to run it, and returns the output. The browser never
-// sees an embed key or talks to JDoodle.
-//
-// Guards, in order: a custom header (forces a CORS preflight this route
-// never answers) and a same-origin Sec-Fetch-Site, so another site can't run
-// code with a buyer's cookies; course access; a language the site has an
-// embed for; a size cap; then the limits.
-func (a *App) CourseRun(w http.ResponseWriter, r *http.Request) {
+// CourseCompilerEmbed hands the reader the JDoodle embed address for one
+// language, only to someone who may read this course (a verified purchaser
+// or a logged-in admin), only on a same-origin request, and never cached.
+// This keeps embed keys out of page HTML and out of reach of anyone who
+// hasn't bought the course. A buyer's own browser still loads the embed
+// from jdoodle.com, so the address is visible to that buyer's developer
+// tools — unavoidable for any third-party embed.
+func (a *App) CourseCompilerEmbed(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-store, private")
 	w.Header().Set("X-Robots-Tag", "noindex, nofollow")
+	// A custom header forces a CORS preflight, which this route never
+	// answers, so another site's script can't call it with a buyer's cookies.
 	if r.Header.Get("X-Requested-With") != "vb-compiler" {
 		writeJSON(w, http.StatusForbidden, map[string]string{"error": "forbidden"})
 		return
@@ -91,67 +71,22 @@ func (a *App) CourseRun(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusForbidden, map[string]string{"error": "forbidden"})
 		return
 	}
-	var req runRequest
-	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 2*maxRunCodeBytes)).Decode(&req); err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "That request wasn’t understood."})
-		return
-	}
 	course, err := a.Courses.GetBySlug(r.Context(), r.PathValue("slug"))
 	isAdmin := a.Auth.IsAuthenticated(r) && !a.isPreviewingAsVisitor(r)
 	if err != nil || !course.IsPaid || (!course.IsPublished && !isAdmin) {
 		writeJSON(w, http.StatusNotFound, map[string]string{"error": "not found"})
 		return
 	}
-	ok, _, purchaseID := a.courseAccess(w, r, course)
-	if !ok {
+	if ok, _, _ := a.courseAccess(w, r, course); !ok {
 		writeJSON(w, http.StatusForbidden, map[string]string{"error": "purchase required"})
 		return
 	}
-	lang := strings.ToLower(strings.TrimSpace(req.Lang))
-	if _, has := a.Cfg.JDoodleEmbedKeys[lang]; !has || a.CodeRunner == nil {
-		writeJSON(w, http.StatusNotFound, map[string]string{"error": "There’s no compiler for that language."})
+	key, ok := a.Cfg.JDoodleEmbedKeys[r.URL.Query().Get("lang")]
+	if !ok || key == "" {
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "no compiler for that language"})
 		return
 	}
-	if strings.TrimSpace(req.Code) == "" {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Write some code first."})
-		return
-	}
-	if len(req.Code) > maxRunCodeBytes {
-		writeJSON(w, http.StatusRequestEntityTooLarge, map[string]string{"error": "That’s too much code to run at once."})
-		return
-	}
-
-	actor := "admin"
-	if purchaseID != 0 && !isAdmin {
-		actor = "p" + strconv.FormatInt(purchaseID, 10)
-	}
-	ctx := r.Context()
-	now := time.Now()
-	if n, err := a.CodeRuns.CountByActorSince(ctx, actor, now.Add(-time.Minute)); err == nil && n >= runsPerMinute {
-		writeJSON(w, http.StatusTooManyRequests, map[string]string{"error": "That’s a lot of runs in a minute. Wait a moment and try again."})
-		return
-	}
-	if n, err := a.CodeRuns.CountSince(ctx, now.Add(-24*time.Hour)); err == nil && n >= a.Cfg.CodeRunDailyCap {
-		writeJSON(w, http.StatusTooManyRequests, map[string]string{"error": "The compiler has reached today’s limit. It resets within 24 hours."})
-		return
-	}
-	if err := a.CodeRuns.Record(ctx, course.ID, actor, lang); err != nil {
-		a.serverError(w, "record code run", err)
-		return
-	}
-
-	runCtx, cancel := context.WithTimeout(ctx, runnerCallTimeout)
-	defer cancel()
-	res, err := a.CodeRunner.Run(runCtx, lang, req.Code, isAdmin && r.URL.Query().Get("debug") == "1")
-	switch {
-	case errors.Is(err, coderun.ErrBusy):
-		writeJSON(w, http.StatusTooManyRequests, map[string]string{"error": "The compiler is busy. Try again in a few seconds."})
-	case err != nil:
-		log.Printf("code run %s/%s: %v", course.Slug, lang, err)
-		writeJSON(w, http.StatusBadGateway, map[string]string{"error": "The compiler couldn’t run that right now. Try again in a moment."})
-	default:
-		writeJSON(w, http.StatusOK, res)
-	}
+	writeJSON(w, http.StatusOK, map[string]string{"src": "https://www.jdoodle.com/embed/v1/" + url.PathEscape(key)})
 }
 
 // CourseLearn serves a paid course's gated reader to a verified
@@ -234,10 +169,7 @@ func (a *App) writeCourseReader(w http.ResponseWriter, r *http.Request, course m
 		return
 	}
 
-	var compilers []CompilerOption
-	if a.CodeRunner != nil { // no runner configured: no editor
-		compilers = compilerOptions(a.Cfg.JDoodleEmbedKeys)
-	}
+	compilers := compilerOptions(a.Cfg.JDoodleEmbedKeys)
 	defaultLang := ""
 	if len(compilers) > 0 {
 		defaultLang = compilers[0].Lang

@@ -36,5 +36,3 @@ replay_pid*
 .vercel/
 /content
 
-# Node dependencies of api/run.js (installed by Vercel at build time)
-node_modules/

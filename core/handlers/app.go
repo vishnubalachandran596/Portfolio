@@ -6,12 +6,10 @@ import (
 	"context"
 	"database/sql"
 	"net/http"
-	"strings"
 	"sync"
 	"time"
 
 	"github.com/vishnubalachandran596/portfolio/core/ai"
-	"github.com/vishnubalachandran596/portfolio/core/coderun"
 	"github.com/vishnubalachandran596/portfolio/core/config"
 	"github.com/vishnubalachandran596/portfolio/core/middleware"
 	"github.com/vishnubalachandran596/portfolio/core/models"
@@ -43,8 +41,6 @@ type App struct {
 	Bookings             *repo.BookingRepo
 	Availability         *repo.AvailabilityRepo
 	Admins               *repo.AdminRepo
-	CodeRuns             *repo.CodeRunRepo
-	CodeRunner           *coderun.Client // nil when no runner is configured
 	Purchases            *repo.PurchaseRepo
 	Users                *repo.UserRepo
 	Articles             *repo.ArticleRepo
@@ -189,8 +185,6 @@ func New(cfg *config.Config, db *sql.DB, renderer *view.Renderer) *App {
 		Bookings:             repo.NewBookingRepo(db),
 		Availability:         repo.NewAvailabilityRepo(db),
 		Admins:               repo.NewAdminRepo(db),
-		CodeRuns:             repo.NewCodeRunRepo(db),
-		CodeRunner:           coderun.New(codeRunnerURL(cfg), cfg.JWTSecret),
 		Purchases:            repo.NewPurchaseRepo(db),
 		Users:                repo.NewUserRepo(db),
 		Articles:             repo.NewArticleRepo(db),
@@ -453,14 +447,4 @@ func truncate(s string, n int) string {
 		return s
 	}
 	return s[:n] + "…"
-}
-
-// codeRunnerURL is where the Go app posts runs: CODE_RUNNER_URL, and only
-// that. It is an explicit opt-in: with it empty the reader shows no editor.
-// (api/run.js is deployed with the site, but JDoodle puts a reCAPTCHA in
-// front of runs from its headless browser, so it stays off until a runner
-// that works is chosen. Set CODE_RUNNER_URL to SITE_URL + "/api/run" to try
-// it.)
-func codeRunnerURL(cfg *config.Config) string {
-	return strings.TrimSpace(cfg.CodeRunnerURL)
 }

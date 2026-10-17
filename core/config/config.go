@@ -4,7 +4,6 @@ package config
 import (
 	"fmt"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -61,18 +60,11 @@ type Config struct {
 
 	// JDoodleEmbedKeys maps a language ("java", "python", "go") to the key
 	// of a JDoodle embed. Parsed from JDOODLE_EMBED_KEYS="java=abc,python=def".
-	// The Go app only uses the language names (which languages the reader's
-	// editor offers; none hides it). The key values are read by the code
-	// runner function (api/run.js) from the same variable and never reach
-	// a browser or the page HTML. They are secrets.
+	// The course reader's compiler drawer renders only for languages listed
+	// here, and not at all when it is empty. The key values are secrets: they
+	// are never in page HTML; CourseCompilerEmbed hands one to a verified
+	// buyer or admin when they open the drawer.
 	JDoodleEmbedKeys map[string]string
-
-	// CodeRunnerURL is the code runner's address. Empty means SiteURL +
-	// "/api/run" (the runner is a function of the same Vercel project).
-	CodeRunnerURL string
-	// CodeRunDailyCap is the most runs per rolling 24 hours across all
-	// learners, kept under the JDoodle plan's limit. CODE_RUN_DAILY_CAP.
-	CodeRunDailyCap int
 }
 
 // ParseEmbedKeys parses "lang=key,lang=key" into a map, ignoring blanks
@@ -151,8 +143,6 @@ func Load() (*Config, error) {
 		ChatbotReindexToken: getenv("CHATBOT_REINDEX_TOKEN"),
 
 		JDoodleEmbedKeys: ParseEmbedKeys(getenv("JDOODLE_EMBED_KEYS")),
-		CodeRunnerURL:    getenv("CODE_RUNNER_URL"),
-		CodeRunDailyCap:  atoiDefault(getenv("CODE_RUN_DAILY_CAP"), 900),
 	}, nil
 }
 
@@ -166,12 +156,4 @@ func getenv(key string) string {
 
 func (c *Config) IsProduction() bool {
 	return c.Environment == "production"
-}
-
-// atoiDefault parses a positive integer, falling back to def.
-func atoiDefault(raw string, def int) int {
-	if n, err := strconv.Atoi(strings.TrimSpace(raw)); err == nil && n > 0 {
-		return n
-	}
-	return def
 }
