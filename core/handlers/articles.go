@@ -490,6 +490,7 @@ func (a *App) AdminArticleSave(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	dropPath := ""
 	if len(uploaded) > 0 {
+		uploaded = storage.NormalizeLesson(uploaded) // docs/DESIGN.md "Content updates"
 		path, perr := storage.ArticleObject(article.Slug)
 		if perr != nil {
 			a.serverError(w, "article object path", perr)

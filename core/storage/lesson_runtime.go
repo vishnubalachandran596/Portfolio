@@ -29,6 +29,7 @@ pre{position:relative}
 .lr-code-btn.lr-run{color:var(--accent-strong,#854d0e);border-color:var(--accent,#a16207)}
 .lr-code-btn:active{transform:scale(.95)}
 h2,h3{scroll-margin-top:1rem}
+pre{max-width:100%;overflow-x:auto}
 `
 
 const lessonRuntimeJS = `
@@ -47,6 +48,8 @@ const lessonRuntimeJS = `
     heads.forEach(function (h) {
       var text = (h.textContent || "").replace(/\s+/g, " ").trim();
       if (!text || h.closest("details:not([open]) > :not(summary)")) return;
+      // Headings inside a lesson's own hidden tab panel can't be scrolled to.
+      if (h.getClientRects().length === 0) return;
       // The lesson's own navigation label — mirrors models.IsNavigationHeading.
       if (/^(on this page|in this (lesson|course)|(table of )?contents|toc|navigation|jump to( a section)?):?$/i.test(text)) return;
       var level = h.tagName === "H2" ? 2 : (hasH2 ? 3 : 2);
@@ -81,7 +84,12 @@ const lessonRuntimeJS = `
     window.addEventListener("message", function (e) {
       if (e.source !== parentWin || !e.data) return;
       if (e.data.type === "reader-config") {
-        Array.prototype.forEach.call(document.querySelectorAll(".lr-run"), function (b) { b.hidden = !e.data.compiler; });
+        // A Run button shows only when the reader has a compiler for that
+        // snippet's language (reader sends the list it has embed keys for).
+        var langs = e.data.langs || [];
+        Array.prototype.forEach.call(document.querySelectorAll(".lr-run"), function (b) {
+          b.hidden = !e.data.compiler || langs.indexOf(b.getAttribute("data-lang")) < 0;
+        });
       }
       if (e.data.type === "lesson-goto") {
         var el = document.getElementById(e.data.id);
@@ -98,7 +106,15 @@ const lessonRuntimeJS = `
       var io = new IntersectionObserver(function (entries) {
         entries.forEach(function (en) { if (en.isIntersecting) { en.target.classList.add("lr-in"); io.unobserve(en.target); } });
       }, { rootMargin: "0px 0px -6% 0px" });
-      blocks.forEach(function (el) { el.classList.add("lr-reveal"); io.observe(el); });
+      // Inside sections, the units a reader scans — concept cards, labs,
+      // walkthroughs, figures, tables, code — reveal individually (capped).
+      // A top-level block that contains such units is not faded as a whole,
+      // so a long section never sits invisible while its first card shows.
+      var unitSel = ".concept-card, .lab-block, .walkthrough, figure, table, pre, .callout, .recap, .objectives, h2, h3";
+      var inner = Array.prototype.slice.call(root.querySelectorAll(unitSel), 0, 600)
+        .filter(function (el) { return el.parentElement !== root && el.getBoundingClientRect().top > window.innerHeight && !(el.parentElement && el.parentElement.closest(unitSel)); });
+      blocks = blocks.filter(function (el) { return !el.querySelector(unitSel); });
+      blocks.concat(inner).forEach(function (el) { el.classList.add("lr-reveal"); io.observe(el); });
     }
 
     // Code blocks: copy + run in the reader's compiler.
@@ -115,7 +131,8 @@ const lessonRuntimeJS = `
       run.className = "lr-code-btn lr-run";
       run.textContent = "Run";
       run.title = "Open this snippet in the compiler";
-      run.hidden = true; // shown once the reader says a compiler exists
+      run.hidden = true; // shown once the reader says a compiler exists for lang
+      run.setAttribute("data-lang", lang === "js" || lang === "node" ? "javascript" : (lang === "py" || lang === "python3" ? "python" : lang));
       run.addEventListener("click", function () { post({ type: "lesson-run", code: code.innerText, lang: lang }); });
       bar.appendChild(run);
       pre.appendChild(bar);

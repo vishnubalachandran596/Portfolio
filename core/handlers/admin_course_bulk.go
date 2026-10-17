@@ -105,6 +105,7 @@ func (a *App) AdminCourseBulkUpload(w http.ResponseWriter, r *http.Request) {
 			results = append(results, res)
 			continue
 		}
+		body = storage.NormalizeLesson(body) // docs/DESIGN.md "Content updates"
 		objectPath, err := storage.CourseObject(course.Slug)
 		if err != nil {
 			res.Status, res.Note = "skipped", "invalid slug"

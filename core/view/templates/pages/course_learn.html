@@ -98,7 +98,7 @@
 
   frame.addEventListener("load", function () {
     syncTheme();
-    send({ type: "reader-config", compiler: !!compiler });
+    send({ type: "reader-config", compiler: !!compiler, langs: langSelect ? Array.prototype.map.call(langSelect.options, function (o) { return o.value; }) : [] });
   });
   new MutationObserver(syncTheme).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
 

@@ -11,7 +11,15 @@ The companion to `docs/FUNCTIONALITY.md` (what the product does) and `docs/ARCHI
 5. **Mobile is the primary layout.** Designed at 390 px first; 44 px touch targets; then widened.
 6. **Fast is a feature.** No splash screen, no layout shift, self-hosted fonts, no JS framework (CLAUDE.md rule 6).
 
-References used when this system was built (Oct 2026): UI UX Pro Max (its generator independently proposed this site's stone + gold palette and Cormorant pairing — the reason the identity was evolved, not replaced), Emil Kowalski's design-engineering skills (the motion rules below), Watermelon UI (interaction patterns rebuilt in vanilla CSS/JS: pill pagination, filter chips, toasts), and the Brand-building personal-brand skill (proof before pitch).
+### Design references (the owner's chosen sources — consult them for every redesign or content update)
+
+| Reference | Link | What this site takes from it |
+| --- | --- | --- |
+| UI UX Pro Max | https://github.com/nextlevelbuilder/ui-ux-pro-max-skill | Its design-system generator independently proposed this site's stone + gold palette and the Cormorant pairing — the reason the identity was evolved, not replaced. Use its checklists (contrast, touch targets, hierarchy) on any new screen. |
+| Emil Kowalski — design engineering skills | https://github.com/emilkowalski/skills | The motion rules below: custom ease-out curves, sub-300 ms UI timing, scale 0.97 on press, reveals once, reduced motion. |
+| Watermelon UI | https://21st.dev/@quantvansh | Interaction patterns (pill pagination, filter chips, toasts, drawers), rebuilt in vanilla CSS/JS because CLAUDE.md rule 6 rules out React. |
+| Brand-building skills | https://github.com/arnabbagxd/Brand-building-skills | Positioning and voice: one point of view up front, proof (numbers, names, outcomes) before pitch. |
+| "Whisk" | — | Named by the owner; no matching skill repo has been identified yet. Ask before assuming one. |
 
 ## Tokens
 
@@ -63,6 +71,22 @@ Prices: always through `models.FormatMoney` (Indian grouping for INR — ₹1,50
 ## Course reader
 
 `course_learn.html` frames the sandboxed lesson iframe (still `sandbox="allow-scripts"`, no same-origin) with a contents rail (bottom sheet on phones), a progress bar, a section counter, previous/next, `j`/`k` keys and a JDoodle compiler drawer. The lesson side is `core/storage/lesson_runtime.go`, injected by `PrepareLesson`; it posts headings and scroll progress up and accepts "go to section" down, so the reader never reads the lesson DOM. See ARCHITECTURE.md §13.
+
+## Content updates (courses and articles) — the strategy
+
+Every course lesson and article follows the same path, so the content can never drift back to per-file themes:
+
+1. **Source of truth.** Lessons live in Storage at `courses/{slug}.html` (bucket `course-content`), articles at `articles/{slug}.html` (bucket `articles`). The repo holds no content (CLAUDE.md rule 8).
+2. **One normalizer.** `storage.NormalizeLesson` (`core/storage/normalize.go`) runs on every upload: the course form, Admin → Courses → Bulk upload, and the article form. Offline edits go through `go run ./cmd/lessonfmt -out DIR files...`. It is idempotent and stamps `<!-- vb:normalized v1 -->`. What it does:
+   - Maps the lesson's own `:root` palette onto the site tokens (renamed `--l-*`), so components keep their rules but take the site's colours, type and dark mode. It also drops Google Fonts `@import`s, which the CSP blocks anyway.
+   - Removes in-lesson "On this page" / "Contents" blocks, because the reader's contents rail replaces them.
+   - Strips section numbers from `<h2>`, because the reader and the outline number sections.
+   - Labels code blocks `language-java|go|python|javascript|sql|bash` when the signal is unambiguous. Runnable languages get a Run button.
+3. **Dark "app" lessons** with hard-coded dark panels declare `<!-- vb:theme dark -->`. They then render in the site's dark palette in both schemes, and their teal/navy literals are recoloured to the site's dark surfaces and gold.
+4. **Per-course fixes** that the normalizer can't make generically (a grid that blows out on phones, a fixed-width diagram) are small CSS rules appended to that lesson's `<style>`, each with a `/* vb: … */` comment saying why.
+5. **Motion and navigation come from the reader**, not the lesson. `lesson_runtime.go` builds the contents from `h2`/`h3`, skips headings in hidden tab panels, and reveals concept cards, labs, figures, tables and code once as they scroll in. A Run button appears only for languages that have a JDoodle embed key (`JDOODLE_EMBED_KEYS`).
+6. **Verify before upload.** Render every changed lesson through `PrepareLesson` and check it at 390 px and desktop, in light and dark: no horizontal overflow, no console errors, Inter as the body font. Keep the originals as a rollback copy (a zip in the Drive folder `Portfolio`).
+7. **After upload:** clear `courses.outline` for the changed courses so the detail page re-derives "What's inside", and flag the chatbot reindex.
 
 ## Lesson authoring conventions
 

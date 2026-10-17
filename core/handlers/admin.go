@@ -350,6 +350,9 @@ func (a *App) AdminCourseSave(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if len(uploaded) > 0 {
+		// Every lesson is stored in the site's content conventions
+		// (docs/DESIGN.md "Content updates").
+		uploaded = storage.NormalizeLesson(uploaded)
 		var previous string
 		if isEdit {
 			if existing, gerr := a.Courses.GetByID(ctx, id); gerr == nil {
