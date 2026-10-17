@@ -28,11 +28,15 @@ var (
 
 // Result is what a run printed.
 type Result struct {
-	OK       bool            `json:"ok"`
-	TimedOut bool            `json:"timedOut"`
-	Output   string          `json:"output"`
-	MS       int             `json:"ms"`
-	Trace    json.RawMessage `json:"trace,omitempty"`
+	OK       bool   `json:"ok"`
+	TimedOut bool   `json:"timedOut"`
+	Output   string `json:"output"`
+	MS       int    `json:"ms"`
+	// Debug-only (admins, ?debug=1): the raw embed messages, the embed's
+	// visible text and a base64 JPEG of the page.
+	Trace   json.RawMessage `json:"trace,omitempty"`
+	DomText *string         `json:"domText,omitempty"`
+	Shot    string          `json:"shot,omitempty"`
 }
 
 // Client signs and sends run requests.
