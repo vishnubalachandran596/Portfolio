@@ -173,6 +173,9 @@
       if (prevBtn) prevBtn.disabled = activeIndex <= 0;
       if (nextBtn) nextBtn.disabled = activeIndex < 0 || activeIndex >= sections.length - 1;
     }
+    if (d.type === "lesson-copy") {
+      copyText(String(d.code || ""));
+    }
     if (d.type === "lesson-run" && compiler) {
       // Switch to the snippet's language, then hand JDoodle the code and run it.
       if (d.lang && langSelect) {
@@ -183,6 +186,20 @@
     }
   });
 
+  // The lesson iframe is sandboxed (no clipboard), so snippet Copy buttons
+  // ask this page to copy.
+  function copyText(text) {
+    function fallback() {
+      var t = document.createElement("textarea");
+      t.value = text; t.setAttribute("readonly", ""); t.style.cssText = "position:fixed;top:0;opacity:0";
+      document.body.appendChild(t); t.select();
+      try { document.execCommand("copy"); } catch (e) {}
+      t.remove();
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).catch(fallback);
+    else fallback();
+  }
+
   // --- Compiler drawer (JDoodle). The embed script loads on first open. ---
   var langSelect = document.querySelector("[data-compiler-lang]");
   var single = document.querySelector("[data-compiler-single]");
@@ -191,6 +208,7 @@
   var loadSeq = 0;          // ignores a slow answer for a language since switched away from
   var embedReady = false;   // JDoodle posts {onLoad} once the embed listens
   var pendingRun = false;   // execute as soon as it is ready
+  var pendingCode = null;   // snippet waiting to be placed in the embed
   var pymScript = null;
   function currentLang() {
     if (langSelect) return langSelect.value || "";
@@ -249,14 +267,25 @@
       return;
     }
     pendingRun = true;
+    pendingCode = code;
     loadEmbed(lang, code);
+    // The embed's ready message is not always seen, and the starting-code
+    // hand-off through the holder can be missed. So also push the code once
+    // the embed object exists, a few times, until it reports ready.
+    [800, 2000, 4000, 7000].forEach(function (ms) {
+      setTimeout(function () {
+        var i = embedInstance();
+        if (i && pendingCode !== null && !embedReady) { try { i.sendMessage("setCode", pendingCode); } catch (e) {} }
+      }, ms);
+    });
   }
   window.addEventListener("message", function (e) {
     if (e.origin !== "https://www.jdoodle.com" || !e.data || !e.data.onLoad) return;
     embedReady = true;
+    var inst = embedInstance();
+    if (inst && pendingCode !== null) { inst.sendMessage("setCode", pendingCode); pendingCode = null; }
     if (pendingRun) {
       pendingRun = false;
-      var inst = embedInstance();
       if (inst) inst.sendMessage("execute");
     }
   });

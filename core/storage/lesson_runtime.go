@@ -129,6 +129,17 @@ const lessonRuntimeJS = `
       var lang = m ? m[1].toLowerCase() : "";
       var bar = document.createElement("div");
       bar.className = "lr-code-bar";
+      var copy = document.createElement("button");
+      copy.type = "button";
+      copy.className = "lr-code-btn lr-copy";
+      copy.textContent = "Copy";
+      copy.title = "Copy this snippet";
+      copy.addEventListener("click", function () {
+        post({ type: "lesson-copy", code: (code.innerText || code.textContent) });
+        copy.textContent = "Copied";
+        setTimeout(function () { copy.textContent = "Copy"; }, 1500);
+      });
+      bar.appendChild(copy);
       var run = document.createElement("button");
       run.type = "button";
       run.className = "lr-code-btn lr-run";
@@ -136,7 +147,7 @@ const lessonRuntimeJS = `
       run.title = "Open this snippet in the compiler";
       run.hidden = true; // shown once the reader says a compiler exists for lang
       run.setAttribute("data-lang", lang === "js" || lang === "node" ? "javascript" : (lang === "py" || lang === "python3" ? "python" : (lang === "sh" || lang === "shell" || lang === "zsh" ? "bash" : lang)));
-      run.addEventListener("click", function () { post({ type: "lesson-run", code: code.innerText, lang: lang }); });
+      run.addEventListener("click", function () { post({ type: "lesson-run", code: (code.innerText || code.textContent), lang: run.getAttribute("data-lang") }); });
       bar.appendChild(run);
       pre.appendChild(bar);
     });
