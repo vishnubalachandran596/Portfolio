@@ -10,16 +10,19 @@ import "net/http"
 // Fonts are self-hosted (web/static/fonts/, see style.css) rather than
 // loaded from Google Fonts, so font-src/style-src need no external
 // allowance for them; Razorpay's Checkout widget is the one remaining
-// external origin the site actually loads from, plus JDoodle's embed
-// script and iframe for the course reader's compiler drawer.
+// external origin the site actually loads from. There is deliberately no
+// 'unsafe-eval' here: the only document that needs it (a lesson running a
+// learner's code in its labs) gets its own sandboxed policy, see lessonCSP
+// in core/handlers/learn.go. The course reader's editor talks to this
+// site only; JDoodle is reached by the server-side runner, not the browser.
 func SecurityHeaders(next http.Handler) http.Handler {
 	const csp = "default-src 'self'; " +
-		"script-src 'self' 'unsafe-inline' https://checkout.razorpay.com https://www.jdoodle.com; " +
+		"script-src 'self' 'unsafe-inline' https://checkout.razorpay.com; " +
 		"style-src 'self' 'unsafe-inline'; " +
 		"font-src 'self'; " +
 		"img-src 'self' data: https:; " +
 		"connect-src 'self' https://*.razorpay.com; " +
-		"frame-src 'self' https://*.razorpay.com https://www.jdoodle.com; " +
+		"frame-src 'self' https://*.razorpay.com; " +
 		"object-src 'none'; " +
 		"base-uri 'self'; " +
 		"frame-ancestors 'none'"

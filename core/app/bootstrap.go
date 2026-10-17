@@ -8,9 +8,9 @@ import (
 	"context"
 	"database/sql"
 	"log"
+	"strings"
 	"time"
 
-	"github.com/vishnubalachandran596/portfolio/core/authutil"
 	"github.com/vishnubalachandran596/portfolio/core/config"
 	"github.com/vishnubalachandran596/portfolio/core/db"
 	"github.com/vishnubalachandran596/portfolio/core/handlers"
@@ -48,35 +48,29 @@ func Bootstrap() (*handlers.App, func(), error) {
 
 	a := handlers.New(cfg, conn, renderer)
 
-	if err := bootstrapAdmin(ctx, conn, cfg.AdminEmail, cfg.AdminPassword); err != nil {
+	if err := bootstrapAdmin(ctx, conn, cfg.AdminEmail); err != nil {
 		log.Printf("admin bootstrap: %v", err)
 	}
 
 	return a, cleanup, nil
 }
 
-// bootstrapAdmin creates the first admin account from
-// ADMIN_BOOTSTRAP_EMAIL/ADMIN_BOOTSTRAP_PASSWORD when no admin exists yet.
-// It is a no-op once at least one admin has been created, so it's safe to
-// leave the env vars set permanently.
-func bootstrapAdmin(ctx context.Context, conn *sql.DB, email, password string) error {
-	if email == "" || password == "" {
+// bootstrapAdmin makes sure ADMIN_BOOTSTRAP_EMAIL is on the admin list on
+// every start, so the owner is always an admin and always has every course.
+// No password is stored: admin sign-in compares the typed password with
+// ADMIN_BOOTSTRAP_PASSWORD (a Vercel secret) at login, so changing the
+// variable and redeploying changes the password.
+func bootstrapAdmin(ctx context.Context, conn *sql.DB, email string) error {
+	email = strings.ToLower(strings.TrimSpace(email))
+	if email == "" {
 		return nil
 	}
-	var count int
-	if err := conn.QueryRowContext(ctx, `SELECT count(*) FROM admins`).Scan(&count); err != nil {
-		return err
-	}
-	if count > 0 {
-		return nil
-	}
-	hash, err := authutil.HashPassword(password)
+	res, err := conn.ExecContext(ctx, `INSERT INTO admins (email, name) VALUES ($1, '') ON CONFLICT (email) DO NOTHING`, email)
 	if err != nil {
 		return err
 	}
-	_, err = conn.ExecContext(ctx, `INSERT INTO admins (email, password_hash, name) VALUES ($1, $2, '') ON CONFLICT (email) DO NOTHING`, email, hash)
-	if err == nil {
-		log.Printf("bootstrapped admin account for %s", email)
+	if n, _ := res.RowsAffected(); n > 0 {
+		log.Printf("added %s to the admin list", email)
 	}
-	return err
+	return nil
 }

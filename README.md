@@ -79,10 +79,10 @@ docker compose up --build
 ```
 
 The app applies its SQL migrations on startup. Those migrations create the
-schema only. If `ADMIN_BOOTSTRAP_EMAIL` and `ADMIN_BOOTSTRAP_PASSWORD` are
-set and no admin exists yet, it creates the first admin account. The same
-placeholder account is in `docker/local-admin.sql` (`admin@example.com` /
-`change-this-password`). That file is not a migration. After the stack has
+schema only. If `ADMIN_BOOTSTRAP_EMAIL` is set, the app adds it to the admin
+list on every start. `/admin/login` accepts an admin email plus the value of
+`ADMIN_BOOTSTRAP_PASSWORD`. The same placeholder account is in
+`docker/local-admin.sql` (`admin@example.com` / `change-this-password`). That file is not a migration. After the stack has
 started once, apply it with the same command in PowerShell, Command
 Prompt, and Mac Terminal:
 
@@ -133,13 +133,9 @@ database (`docker compose up db`) and point `DATABASE_URL` at `localhost`
 instead of `db`, then `go run ./cmd/server`. Leave `LOCAL_CONTENT_DIR` as
 the host path. That path needs Go 1.24+.
 
-**Change the bootstrap admin password after first login** — there's no
-in-app password-change form yet; rotate it directly:
-
-```sql
--- generate a bcrypt hash for the new password with any bcrypt tool, then:
-UPDATE admins SET password_hash = '<new-bcrypt-hash>' WHERE email = 'admin@example.com';
-```
+**Changing the admin password** — change `ADMIN_BOOTSTRAP_PASSWORD` (in
+`.env` locally, or the Vercel variable) and restart or redeploy. The password
+is never stored in the database, so there is no hash to update.
 
 ### Running tests / checks
 
@@ -174,9 +170,10 @@ gofmt -l .   # should print nothing
    - `APP_ENV=production`
    - `SITE_NAME` — display name
    - `SITE_URL` — your production URL
-   - `ADMIN_BOOTSTRAP_EMAIL` / `ADMIN_BOOTSTRAP_PASSWORD` — creates the
-     first admin on the next cold start; safe to leave set (it's a no-op
-     once an admin exists), but consider removing after first login.
+   - `ADMIN_BOOTSTRAP_EMAIL` / `ADMIN_BOOTSTRAP_PASSWORD` — the owner's
+     admin email (added to the admin list on every start) and the admin
+     password for `/admin/login`. Keep them set; mark the password
+     Sensitive. Changing it and redeploying changes the password.
 4. Deploy. On the function's first invocation it applies migrations and
    bootstraps the admin account automatically.
 
@@ -252,8 +249,8 @@ requires a Google-authenticated account; there is no guest-checkout path.
   in a unique-origin iframe (`sandbox="allow-scripts"`, no
   `allow-same-origin`) so the parent cannot read the lesson DOM. Uploaded
   `<style>` is stripped so any tags follow the site typography. The
-  document is a base64 payload, so view-source of the outer page does not
-  show the lesson markup. A new lesson is uploaded from the admin course
+  document is served by its own gated route to the iframe only, so
+  view-source of the outer page does not show the lesson markup. A new lesson is uploaded from the admin course
   form. Articles use the same pane and a renderer-scoped watermark; their
   HTML stays in the page so they can be indexed.
 - **On "no one can copy the content":** be realistic about this — nothing

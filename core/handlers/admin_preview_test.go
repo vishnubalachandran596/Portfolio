@@ -22,6 +22,7 @@ func TestAdminPreviewRequiresLogin(t *testing.T) {
 		"/admin/resumes/zafin-lead-product-engineer-i",
 		"/admin/articles/4/preview",
 		"/admin/courses/3/preview",
+		"/admin/courses/3/preview/lesson",
 	} {
 		rec := httptest.NewRecorder()
 		req := httptest.NewRequest(http.MethodGet, path, nil)

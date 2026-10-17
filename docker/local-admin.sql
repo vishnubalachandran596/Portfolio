@@ -6,8 +6,9 @@
 -- Email and password are the placeholders in .env.example:
 --   admin@example.com
 --   change-this-password
--- The hash below is bcrypt of that placeholder. It is not a production
--- credential. Replace the password after you log in.
+-- The password is not stored in the database: /admin/login compares what you
+-- type with ADMIN_BOOTSTRAP_PASSWORD. The row only puts the email on the
+-- admin list.
 --
 -- Google visitor login is not a row in this database. .env.example sets
 -- the local placeholder redirect URL. Add that exact URL as an authorized
@@ -26,14 +27,10 @@
 -- Git Bash on Windows rewrites /local-admin.sql. Prefix the command with
 -- MSYS_NO_PATHCONV=1 there.
 --
--- First start also creates this account when ADMIN_BOOTSTRAP_EMAIL and
--- ADMIN_BOOTSTRAP_PASSWORD are set and admins is empty. Running this
--- again does not change an existing row.
+-- Every start also adds ADMIN_BOOTSTRAP_EMAIL to the admin list, so this
+-- file is only needed if you want the row before the app has started.
+-- Running it again does not change an existing row.
 
-INSERT INTO admins (email, password_hash, name)
-VALUES (
-    'admin@example.com',
-    '$2b$10$hCXMlgXSwCPvM5gWvBlJu.as9t/AEUGndmF4jYkpzFi9GUuFGjT6.',
-    'Admin'
-)
+INSERT INTO admins (email, name)
+VALUES ('admin@example.com', 'Admin')
 ON CONFLICT (email) DO NOTHING;

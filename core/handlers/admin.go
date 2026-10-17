@@ -39,8 +39,12 @@ func (a *App) AdminLoginSubmit(w http.ResponseWriter, r *http.Request) {
 	email := strings.TrimSpace(strings.ToLower(r.FormValue("email")))
 	password := r.FormValue("password")
 
+	// The password is the ADMIN_BOOTSTRAP_PASSWORD environment secret and
+	// nothing stored: it is checked first, in constant time, then the email
+	// has to be on the admin list. One generic error covers both.
+	passwordOK := authutil.SecretEquals(password, a.Cfg.AdminPassword)
 	admin, err := a.Admins.GetByEmail(r.Context(), email)
-	if err != nil || !authutil.CheckPassword(admin.PasswordHash, password) {
+	if !passwordOK || err != nil {
 		http.Redirect(w, r, "/admin/login?error=Invalid+email+or+password", http.StatusSeeOther)
 		return
 	}

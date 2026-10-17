@@ -90,5 +90,21 @@ func (a *App) AdminCoursePreview(w http.ResponseWriter, r *http.Request) {
 		a.NotFound(w, r)
 		return
 	}
-	a.writeCourseLesson(w, r, course, "Admin preview")
+	a.writeCourseReader(w, r, course, "/admin/courses/"+strconv.FormatInt(course.ID, 10)+"/preview/lesson")
+}
+
+// AdminCourseLessonDocument is the lesson document the admin preview's
+// iframe loads (see CourseLessonDocument).
+func (a *App) AdminCourseLessonDocument(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	if err != nil {
+		a.NotFound(w, r)
+		return
+	}
+	course, err := a.Courses.GetByID(r.Context(), id)
+	if err != nil || course.ContentObject == "" {
+		a.NotFound(w, r)
+		return
+	}
+	a.writeLessonDocument(w, r, course, "Admin preview")
 }

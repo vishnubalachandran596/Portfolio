@@ -14,7 +14,7 @@
       {{if .Compilers}}
       <button type="button" class="btn btn-secondary btn-sm" data-reader-compiler-toggle aria-controls="reader-compiler" aria-expanded="false">
         <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="m7 6-4 4 4 4M13 6l4 4-4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        <span class="btn-label">Compiler</span>
+        <span class="btn-label">Editor</span>
       </button>
       {{end}}
       {{if .ChatbotEnabled}}<a class="btn btn-ghost btn-sm" href="{{.Nav.AIAssistant}}" title="Ask AI Assistant"><svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><rect x="2.5" y="4" width="15" height="10" rx="2" stroke="currentColor" stroke-width="1.5"/><circle cx="7.5" cy="9" r="1" fill="currentColor"/><circle cx="12.5" cy="9" r="1" fill="currentColor"/></svg><span class="btn-label">Ask AI</span></a>{{end}}
@@ -40,10 +40,10 @@
     </div>
 
     {{if .Compilers}}
-    <aside class="reader-compiler" id="reader-compiler" aria-label="Compiler" data-reader-compiler hidden>
+    <aside class="reader-compiler" id="reader-compiler" aria-label="Code editor" data-reader-compiler hidden>
       <div class="reader-resize" data-reader-resize aria-hidden="true"></div>
       <div class="reader-compiler-head">
-        <h2>Compiler</h2>
+        <h2>Editor</h2>
         {{if gt (len .Compilers) 1}}
         <label class="sr-only" for="compiler-lang">Language</label>
         <select id="compiler-lang" data-compiler-lang>
@@ -52,14 +52,26 @@
         {{else}}
         {{range .Compilers}}<span class="badge" data-compiler-single data-lang="{{.Lang}}">{{.Label}}</span>{{end}}
         {{end}}
-        <button type="button" class="icon-btn" data-reader-compiler-close aria-label="Close compiler">
+        <button type="button" class="btn btn-primary btn-sm" data-ed-run title="Run (Ctrl or ⌘ + Enter)"><span>Run</span></button>
+        <button type="button" class="icon-btn" data-reader-compiler-close aria-label="Close editor">
           <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="m5 5 10 10M15 5 5 15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
         </button>
       </div>
-      <div class="reader-compiler-body" data-compiler-body>
-        <p class="reader-compiler-loading">Loading the compiler…</p>
+      <div class="ed" data-ed>
+        <div class="ed-code">
+          <div class="ed-gutter" data-ed-gutter aria-hidden="true"></div>
+          <textarea class="ed-input" data-ed-input spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" wrap="off" aria-label="Code"></textarea>
+        </div>
+        <div class="ed-out">
+          <div class="ed-out-head">
+            <span data-ed-status role="status" aria-live="polite">Output</span>
+            <button type="button" class="ed-link" data-ed-reset>Reset</button>
+            <button type="button" class="ed-link" data-ed-clear>Clear</button>
+          </div>
+          <pre class="ed-output" data-ed-output tabindex="0" aria-label="Program output"></pre>
+        </div>
       </div>
-      <p class="reader-compiler-hint" data-compiler-hint>Write and run code here while you read. "Run" on a lesson snippet loads it here and runs it.</p>
+      <p class="reader-compiler-hint" data-compiler-hint>Write code here and press Run. “Run” on a lesson snippet loads it into the editor and runs it. Tab indents; Esc then Tab leaves the box.</p>
     </aside>
     {{end}}
   </div>
@@ -69,11 +81,6 @@
 {{define "scripts"}}
 <script>
 (function () {
-  var b = "{{.LessonPayload}}";
-  var bin = atob(b);
-  var bytes = new Uint8Array(bin.length);
-  for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-  var html = new TextDecoder("utf-8").decode(bytes);
   var frame = document.getElementById("lesson-frame");
   if (!frame) return;
 
@@ -98,7 +105,7 @@
 
   frame.addEventListener("load", function () {
     syncTheme();
-    send({ type: "reader-config", compiler: !!compiler, langs: langSelect ? Array.prototype.map.call(langSelect.options, function (o) { return o.value; }) : [] });
+    send({ type: "reader-config", compiler: !!compiler, langs: langSelect ? Array.prototype.map.call(langSelect.options, function (o) { return o.value; }) : (single ? [single.getAttribute("data-lang")] : []) });
   });
   new MutationObserver(syncTheme).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
 
@@ -179,7 +186,7 @@
       if (nextBtn) nextBtn.disabled = activeIndex < 0 || activeIndex >= sections.length - 1;
     }
     if (d.type === "lesson-run" && compiler) {
-      // Switch to the snippet's language, then hand JDoodle the code and run it.
+      // Switch to the snippet's language, load the code into the editor and run it.
       if (d.lang && langSelect) {
         var opt = langSelect.querySelector('option[value="' + d.lang.replace(/[^a-z0-9]/g, "") + '"]');
         if (opt) langSelect.value = opt.value;
@@ -188,94 +195,133 @@
     }
   });
 
-  // --- Compiler drawer (JDoodle). The embed script loads on first open. ---
+  // --- Code editor drawer. Code goes to the server (CourseRun), which runs
+  // it through JDoodle; this page never talks to JDoodle or sees a key. ---
   var langSelect = document.querySelector("[data-compiler-lang]");
   var single = document.querySelector("[data-compiler-single]");
-  var body = document.querySelector("[data-compiler-body]");
-  var loadedLang = "";
-  var loadSeq = 0;          // ignores a slow answer for a language since switched away from
-  var embedReady = false;   // JDoodle posts {onLoad} once the embed listens
-  var pendingRun = false;   // execute as soon as it is ready
-  var pymScript = null;
+  var input = document.querySelector("[data-ed-input]");
+  var gutter = document.querySelector("[data-ed-gutter]");
+  var outEl = document.querySelector("[data-ed-output]");
+  var statusEl = document.querySelector("[data-ed-status]");
+  var runBtn = document.querySelector("[data-ed-run]");
+  var slug = reader.getAttribute("data-slug");
+  var STARTERS = {
+    java: 'public class Main {\n    public static void main(String[] args) {\n        System.out.println("Hello, world");\n    }\n}\n',
+    python: 'print("Hello, world")\n',
+    go: 'package main\n\nimport "fmt"\n\nfunc main() {\n\tfmt.Println("Hello, world")\n}\n',
+    bash: 'echo "Hello, world"\n',
+    javascript: 'console.log("Hello, world");\n'
+  };
+  var loadedLang = "", running = false, tabTrap = true;
   function currentLang() {
     if (langSelect) return langSelect.value || "";
     return single ? single.getAttribute("data-lang") : "";
   }
-  function compilerFailed(msg) {
-    body.innerHTML = '<p class="reader-compiler-loading"></p>';
-    body.firstChild.textContent = msg;
-    loadedLang = ""; pendingRun = false;
+  function storeKey2(lang) { return "vb-ed:" + slug + ":" + lang; }
+  function saveCode() {
+    if (!loadedLang) return;
+    try { localStorage.setItem(storeKey2(loadedLang), input.value); } catch (err) {}
   }
-  // JDoodle's embed script registers every [data-pym-src] on the page when it
-  // runs, and answers the embed's request for its starting code from the
-  // holder's text. So each (re)load inserts a fresh holder carrying the code,
-  // then a fresh copy of the script (served from cache after the first).
-  // The embed address is fetched from the server when the drawer opens:
-  // keys are never in this page's HTML, and only a buyer (or admin) gets one.
-  function loadEmbed(lang, code) {
-    if (!body || !lang) return;
-    if (lang === loadedLang && code === undefined) return;
+  function paintGutter() {
+    var n = input.value.split("\n").length, out = "";
+    for (var i = 1; i <= n; i++) out += i + "\n";
+    gutter.textContent = out;
+    gutter.scrollTop = input.scrollTop;
+  }
+  function setCode(code) { input.value = code; paintGutter(); saveCode(); }
+  function loadLang(lang) {
+    if (!input || !lang) return;
+    saveCode();
     loadedLang = lang;
-    embedReady = false;
-    var seq = ++loadSeq;
-    body.innerHTML = '<p class="reader-compiler-loading">Loading the compiler…</p>';
-    fetch("/courses/" + encodeURIComponent(reader.getAttribute("data-slug")) + "/learn/compiler?lang=" + encodeURIComponent(lang), {
-      credentials: "same-origin", cache: "no-store", headers: { "X-Requested-With": "vb-compiler" }
-    }).then(function (res) { return res.ok ? res.json() : Promise.reject(res.status); }).then(function (data) {
-      if (seq !== loadSeq) return;
-      if (!data || typeof data.src !== "string" || data.src.indexOf("https://www.jdoodle.com/embed/") !== 0) return compilerFailed("The compiler isn’t available right now.");
-      body.innerHTML = "";
-      var holder = document.createElement("div");
-      holder.setAttribute("data-pym-src", data.src);
-      if (code) holder.textContent = code;
-      body.appendChild(holder);
-      if (pymScript) pymScript.remove();
-      pymScript = document.createElement("script");
-      pymScript.src = "https://www.jdoodle.com/assets/jdoodle-pym.min.js";
-      pymScript.async = true;
-      pymScript.onerror = function () { compilerFailed("The compiler couldn’t load. Check your connection and reopen it."); };
-      document.body.appendChild(pymScript);
-    }).catch(function () { if (seq === loadSeq) compilerFailed("The compiler couldn’t load. Refresh the page and try again."); });
+    var saved = null;
+    try { saved = localStorage.getItem(storeKey2(lang)); } catch (err) {}
+    input.value = saved != null ? saved : (STARTERS[lang] || "");
+    paintGutter();
+    outEl.textContent = ""; outEl.classList.remove("is-error");
+    statusEl.textContent = "Output";
   }
-  function embedInstance() {
-    var list = window.pym && window.pym.autoInitInstances;
-    return list && list.length ? list[list.length - 1] : null;
+  function show(text, isError, status) {
+    outEl.textContent = text;
+    outEl.classList.toggle("is-error", !!isError);
+    statusEl.textContent = status;
   }
+  function runCode() {
+    if (!input || running) return;
+    var lang = currentLang(), code = input.value;
+    if (!code.trim()) return show("Write some code first.", true, "Nothing to run");
+    running = true; runBtn.disabled = true;
+    show("", false, "Running…");
+    var t0 = Date.now();
+    fetch("/courses/" + encodeURIComponent(slug) + "/learn/run", {
+      method: "POST", credentials: "same-origin", cache: "no-store",
+      headers: { "Content-Type": "application/json", "X-Requested-With": "vb-compiler" },
+      body: JSON.stringify({ lang: lang, code: code })
+    }).then(function (res) {
+      return res.json().catch(function () { return {}; }).then(function (data) { return { ok: res.ok, data: data }; });
+    }).then(function (r) {
+      var secs = ((Date.now() - t0) / 1000).toFixed(1) + " s";
+      if (!r.ok) return show(r.data && r.data.error ? r.data.error : "The compiler isn’t available right now.", true, "Couldn’t run");
+      var d = r.data;
+      if (d.timedOut) return show((d.output ? d.output + "\n\n" : "") + "The run took too long and was stopped.", true, "Timed out");
+      show(d.output && d.output.trim() ? d.output : "(no output)", false, "Done · " + secs);
+    }).catch(function () {
+      show("Check your connection and try again.", true, "Couldn’t run");
+    }).then(function () { running = false; runBtn.disabled = false; });
+  }
+  if (input) {
+    input.addEventListener("input", function () { paintGutter(); saveCode(); });
+    input.addEventListener("scroll", function () { gutter.scrollTop = input.scrollTop; });
+    input.addEventListener("keydown", function (e) {
+      if ((e.ctrlKey || e.metaKey) && e.key === "Enter") { e.preventDefault(); return runCode(); }
+      if (e.key === "Escape") { tabTrap = false; return; }
+      if (e.key === "Tab" && !e.shiftKey && tabTrap) {
+        e.preventDefault();
+        var unit = currentLang() === "go" ? "\t" : "    ";
+        var s = input.selectionStart, t = input.selectionEnd;
+        input.setRangeText(unit, s, t, "end");
+        paintGutter(); saveCode();
+        return;
+      }
+      if (e.key === "Enter" && !e.ctrlKey && !e.metaKey && !e.shiftKey && !e.isComposing) {
+        // Keep the current line's indentation on the next line.
+        var pos = input.selectionStart, before = input.value.slice(0, pos);
+        var line = before.slice(before.lastIndexOf("\n") + 1);
+        var indent = (line.match(/^[ \t]*/) || [""])[0];
+        if (/[{(\[:]\s*$/.test(line)) indent += currentLang() === "go" ? "\t" : "    ";
+        e.preventDefault();
+        input.setRangeText("\n" + indent, pos, input.selectionEnd, "end");
+        paintGutter(); saveCode();
+        return;
+      }
+      tabTrap = true;
+    });
+  }
+  if (runBtn) runBtn.addEventListener("click", runCode);
+  var clearBtn = document.querySelector("[data-ed-clear]");
+  if (clearBtn) clearBtn.addEventListener("click", function () { show("", false, "Output"); });
+  var resetBtn = document.querySelector("[data-ed-reset]");
+  if (resetBtn) resetBtn.addEventListener("click", function () { setCode(STARTERS[currentLang()] || ""); show("", false, "Output"); });
+  // A lesson snippet's Run: switch language, load the code, open and run.
   function runSnippet(code) {
     if (!compiler) return;
-    var lang = currentLang();
     compiler.hidden = false;
     if (compilerToggle) compilerToggle.setAttribute("aria-expanded", "true");
     if (mobile.matches && backdrop) backdrop.hidden = false;
-    var inst = embedInstance();
-    if (lang === loadedLang && embedReady && inst) {
-      inst.sendMessage("setCode", code);
-      inst.sendMessage("execute");
-      return;
-    }
-    pendingRun = true;
-    loadEmbed(lang, code);
+    loadLang(currentLang());
+    setCode(code);
+    runCode();
   }
-  window.addEventListener("message", function (e) {
-    if (e.origin !== "https://www.jdoodle.com" || !e.data || !e.data.onLoad) return;
-    embedReady = true;
-    if (pendingRun) {
-      pendingRun = false;
-      var inst = embedInstance();
-      if (inst) inst.sendMessage("execute");
-    }
-  });
   function setCompiler(open) {
     if (!compiler) return;
     compiler.hidden = !open;
     if (compilerToggle) compilerToggle.setAttribute("aria-expanded", open ? "true" : "false");
     if (mobile.matches && backdrop) backdrop.hidden = !open && toc.hidden;
-    if (open) loadEmbed(currentLang());
+    if (open && !loadedLang) loadLang(currentLang());
   }
   if (compilerToggle) compilerToggle.addEventListener("click", function () { setCompiler(compiler.hidden); });
   var closeBtn = document.querySelector("[data-reader-compiler-close]");
   if (closeBtn) closeBtn.addEventListener("click", function () { setCompiler(false); });
-  if (langSelect) langSelect.addEventListener("change", function () { loadEmbed(currentLang()); });
+  if (langSelect) langSelect.addEventListener("change", function () { loadLang(currentLang()); });
 
   // Drag the drawer's left edge to resize it (desktop).
   var handle = document.querySelector("[data-reader-resize]");
@@ -300,7 +346,7 @@
     });
   }
 
-  frame.srcdoc = html;
+  frame.src = "{{.LessonURL}}";
 })();
 </script>
 {{end}}

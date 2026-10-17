@@ -1,0 +1,10 @@
+{
+  "name": "portfolio-code-runner",
+  "private": true,
+  "description": "Dependencies of api/run.js, the server-side code runner. The Go app is the rest of the project.",
+  "engines": { "node": "22.x" },
+  "dependencies": {
+    "@sparticuz/chromium": "152.0.0",
+    "puppeteer-core": "25.12.0"
+  }
+}

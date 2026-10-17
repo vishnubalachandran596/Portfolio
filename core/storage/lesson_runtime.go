@@ -120,6 +120,9 @@ const lessonRuntimeJS = `
     // Code blocks: copy + run in the reader's compiler.
     Array.prototype.forEach.call(body.querySelectorAll("pre"), function (pre) {
       if (pre.querySelector(".lr-code-bar") || pre.closest(".lab-block, .lab-editor")) return;
+      // An empty <pre> is a placeholder a lesson fills later (program output,
+      // a result box), not a snippet to run.
+      if (!(pre.textContent || "").trim()) return;
       var code = pre.querySelector("code") || pre;
       var cls = (code.className || "") + " " + (pre.className || "");
       var m = cls.match(/(?:language|lang)-([a-z0-9+#]+)/i);

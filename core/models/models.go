@@ -10,12 +10,14 @@ import (
 	"time"
 )
 
+// Admin is one email on the admin list. There is no per-admin password:
+// sign-in is the admin email plus the ADMIN_BOOTSTRAP_PASSWORD secret, and a
+// visitor signed in with Google as an admin email gets admin access too.
 type Admin struct {
-	ID           int64
-	Email        string
-	PasswordHash string
-	Name         string
-	CreatedAt    time.Time
+	ID        int64
+	Email     string
+	Name      string
+	CreatedAt time.Time
 }
 
 type Profile struct {

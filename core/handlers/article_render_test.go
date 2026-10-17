@@ -119,9 +119,9 @@ func TestCourseLearnTemplateUsesSiteChrome(t *testing.T) {
 			Active: "courses", AssetVersion: "test",
 			Nav: NavLinks{Home: "/", Courses: "/courses", Articles: "/articles"},
 		},
-		Course:        models.Course{Slug: "java-fundamentals", Title: "Java Fundamentals"},
-		HasQuiz:       true,
-		LessonPayload: "ZmFrZQ==",
+		Course:    models.Course{Slug: "java-fundamentals", Title: "Java Fundamentals"},
+		HasQuiz:   true,
+		LessonURL: "/courses/java-fundamentals/learn/lesson",
 	})
 	body := rec.Body.String()
 	if strings.Contains(body, "<!-- render error:") {
@@ -133,8 +133,11 @@ func TestCourseLearnTemplateUsesSiteChrome(t *testing.T) {
 	if strings.Contains(body, "allow-same-origin") {
 		t.Fatal("allow-same-origin would let the parent read the lesson DOM")
 	}
-	if !strings.Contains(body, "ZmFrZQ==") {
-		t.Fatal("payload missing")
+	if !strings.Contains(body, `java-fundamentals\/learn\/lesson`) {
+		t.Fatal("lesson document URL missing")
+	}
+	if strings.Contains(body, "srcdoc") {
+		t.Fatal("lesson must load from its gated route, not an inline srcdoc (inline documents inherit the site CSP)")
 	}
 	if !strings.Contains(body, `href="/courses/java-fundamentals/quiz"`) {
 		t.Fatal("quiz link missing")

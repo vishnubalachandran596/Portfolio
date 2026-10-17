@@ -5,7 +5,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/vishnubalachandran596/portfolio/core/authutil"
 	"github.com/vishnubalachandran596/portfolio/core/models"
 	"github.com/vishnubalachandran596/portfolio/core/repo"
 )
@@ -256,17 +255,7 @@ func (a *App) AdminUserPromote(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	randomPassword, err := authutil.RandomHex(32)
-	if err != nil {
-		a.serverError(w, "generate admin password", err)
-		return
-	}
-	hash, err := authutil.HashPassword(randomPassword)
-	if err != nil {
-		a.serverError(w, "hash admin password", err)
-		return
-	}
-	if _, err := a.Admins.Create(ctx, user.Email, hash, user.Name); err != nil {
+	if _, err := a.Admins.Create(ctx, user.Email, user.Name); err != nil {
 		a.serverError(w, "promote user", err)
 		return
 	}
@@ -297,6 +286,12 @@ func (a *App) AdminUserDemote(w http.ResponseWriter, r *http.Request) {
 	admin, err := a.Admins.GetByEmail(ctx, user.Email)
 	if err != nil {
 		http.Redirect(w, r, "/admin/users/"+strconv.FormatInt(id, 10), http.StatusSeeOther)
+		return
+	}
+	// The configured owner email is re-added on every start, so removing it
+	// here would not stick; refuse instead of pretending.
+	if a.Cfg.AdminEmail != "" && strings.EqualFold(admin.Email, a.Cfg.AdminEmail) {
+		http.Redirect(w, r, "/admin/users/"+strconv.FormatInt(id, 10)+"?error=The+owner+admin+email+is+set+in+ADMIN_BOOTSTRAP_EMAIL+and+can%27t+be+removed+here", http.StatusSeeOther)
 		return
 	}
 	all, err := a.Admins.ListAll(ctx)

@@ -1,19 +1,18 @@
 package storage
 
 import (
-	"encoding/base64"
 	"encoding/json"
 	"html"
 	"strings"
 )
 
 // PreparedLesson is a complete iframe document (site CSS + stripped
-// body + watermark) as a base64 payload. The learn page assigns it to
-// srcdoc; view-source of the outer page does not contain the lesson
-// tags, and the iframe is sandboxed without allow-same-origin so the
+// body + watermark). The learn page loads it into a sandboxed iframe from
+// the gated lesson route, so the outer page source does not contain the
+// lesson tags, and the iframe is sandboxed without allow-same-origin so the
 // parent cannot read the lesson DOM.
 type PreparedLesson struct {
-	Payload string
+	Document string
 }
 
 // WatermarkLabel is the visible mark on gated lessons and article pages.
@@ -65,9 +64,7 @@ func PrepareLesson(raw []byte, identity, stylesheet string) (PreparedLesson, err
 	b.WriteString("</script>")
 	b.WriteString(WatermarkScript(WatermarkLabel, identity))
 	b.WriteString("</body></html>")
-	return PreparedLesson{
-		Payload: base64.StdEncoding.EncodeToString([]byte(b.String())),
-	}, nil
+	return PreparedLesson{Document: b.String()}, nil
 }
 
 // WatermarkScript returns a self-contained <canvas>/<script> block that

@@ -14,8 +14,8 @@ func NewAdminRepo(db *sql.DB) *AdminRepo { return &AdminRepo{db: db} }
 
 func (r *AdminRepo) GetByEmail(ctx context.Context, email string) (models.Admin, error) {
 	var a models.Admin
-	err := r.db.QueryRowContext(ctx, `SELECT id, email, password_hash, name, created_at FROM admins WHERE email = $1`, email).
-		Scan(&a.ID, &a.Email, &a.PasswordHash, &a.Name, &a.CreatedAt)
+	err := r.db.QueryRowContext(ctx, `SELECT id, email, name, created_at FROM admins WHERE email = $1`, email).
+		Scan(&a.ID, &a.Email, &a.Name, &a.CreatedAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		return models.Admin{}, ErrNotFound
 	}
@@ -24,8 +24,8 @@ func (r *AdminRepo) GetByEmail(ctx context.Context, email string) (models.Admin,
 
 func (r *AdminRepo) GetByID(ctx context.Context, id int64) (models.Admin, error) {
 	var a models.Admin
-	err := r.db.QueryRowContext(ctx, `SELECT id, email, password_hash, name, created_at FROM admins WHERE id = $1`, id).
-		Scan(&a.ID, &a.Email, &a.PasswordHash, &a.Name, &a.CreatedAt)
+	err := r.db.QueryRowContext(ctx, `SELECT id, email, name, created_at FROM admins WHERE id = $1`, id).
+		Scan(&a.ID, &a.Email, &a.Name, &a.CreatedAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		return models.Admin{}, ErrNotFound
 	}
@@ -38,25 +38,20 @@ func (r *AdminRepo) Count(ctx context.Context) (int, error) {
 	return n, err
 }
 
-func (r *AdminRepo) Create(ctx context.Context, email, passwordHash, name string) (int64, error) {
+func (r *AdminRepo) Create(ctx context.Context, email, name string) (int64, error) {
 	var id int64
 	err := r.db.QueryRowContext(ctx, `
-		INSERT INTO admins (email, password_hash, name) VALUES ($1,$2,$3) RETURNING id`,
-		email, passwordHash, name,
+		INSERT INTO admins (email, name) VALUES ($1,$2) RETURNING id`,
+		email, name,
 	).Scan(&id)
 	return id, err
-}
-
-func (r *AdminRepo) UpdatePassword(ctx context.Context, id int64, passwordHash string) error {
-	_, err := r.db.ExecContext(ctx, `UPDATE admins SET password_hash = $1 WHERE id = $2`, passwordHash, id)
-	return err
 }
 
 // ListAll returns every admin account — used to check whether a given
 // visitor email is already an admin, and to guard against demoting the
 // last one.
 func (r *AdminRepo) ListAll(ctx context.Context) ([]models.Admin, error) {
-	rows, err := r.db.QueryContext(ctx, `SELECT id, email, password_hash, name, created_at FROM admins ORDER BY created_at`)
+	rows, err := r.db.QueryContext(ctx, `SELECT id, email, name, created_at FROM admins ORDER BY created_at`)
 	if err != nil {
 		return nil, err
 	}
@@ -65,7 +60,7 @@ func (r *AdminRepo) ListAll(ctx context.Context) ([]models.Admin, error) {
 	var out []models.Admin
 	for rows.Next() {
 		var a models.Admin
-		if err := rows.Scan(&a.ID, &a.Email, &a.PasswordHash, &a.Name, &a.CreatedAt); err != nil {
+		if err := rows.Scan(&a.ID, &a.Email, &a.Name, &a.CreatedAt); err != nil {
 			return nil, err
 		}
 		out = append(out, a)

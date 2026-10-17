@@ -6,10 +6,12 @@ import (
 	"context"
 	"database/sql"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/vishnubalachandran596/portfolio/core/ai"
+	"github.com/vishnubalachandran596/portfolio/core/coderun"
 	"github.com/vishnubalachandran596/portfolio/core/config"
 	"github.com/vishnubalachandran596/portfolio/core/middleware"
 	"github.com/vishnubalachandran596/portfolio/core/models"
@@ -41,6 +43,8 @@ type App struct {
 	Bookings             *repo.BookingRepo
 	Availability         *repo.AvailabilityRepo
 	Admins               *repo.AdminRepo
+	CodeRuns             *repo.CodeRunRepo
+	CodeRunner           *coderun.Client // nil when no runner is configured
 	Purchases            *repo.PurchaseRepo
 	Users                *repo.UserRepo
 	Articles             *repo.ArticleRepo
@@ -185,6 +189,8 @@ func New(cfg *config.Config, db *sql.DB, renderer *view.Renderer) *App {
 		Bookings:             repo.NewBookingRepo(db),
 		Availability:         repo.NewAvailabilityRepo(db),
 		Admins:               repo.NewAdminRepo(db),
+		CodeRuns:             repo.NewCodeRunRepo(db),
+		CodeRunner:           coderun.New(codeRunnerURL(cfg), cfg.JWTSecret),
 		Purchases:            repo.NewPurchaseRepo(db),
 		Users:                repo.NewUserRepo(db),
 		Articles:             repo.NewArticleRepo(db),
@@ -447,4 +453,17 @@ func truncate(s string, n int) string {
 		return s
 	}
 	return s[:n] + "…"
+}
+
+// codeRunnerURL is where the Go app posts runs: CODE_RUNNER_URL when set,
+// otherwise the runner function of this same deployment (SITE_URL/api/run).
+// Empty (no SITE_URL either) leaves the editor without a runner.
+func codeRunnerURL(cfg *config.Config) string {
+	if cfg.CodeRunnerURL != "" {
+		return cfg.CodeRunnerURL
+	}
+	if site := strings.TrimRight(cfg.SiteURL, "/"); site != "" {
+		return site + "/api/run"
+	}
+	return ""
 }

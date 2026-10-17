@@ -48,7 +48,7 @@ Prices: always through `models.FormatMoney` (Indian grouping for INR — ₹1,50
 - Every pressable element scales to 0.97 on `:active`. Hover styles live inside `@media (hover: hover) and (pointer: fine)`.
 - Entering things use `--ease-out` and start from `scale(0.96)` + opacity, never `scale(0)`; popovers grow from their trigger.
 - Exits are faster than entries (`--dur-fast` vs `--dur-base`/`--dur-slow`).
-- Drawers and sheets (mobile nav, reader contents, compiler) use `--ease-drawer`.
+- Drawers and sheets (mobile nav, reader contents, code editor) use `--ease-drawer`.
 - Scroll reveals: add `data-reveal` to an element. `main.js` hides it only after JS runs (`.js-reveal`), reveals it once (12 px rise + fade), and staggers siblings 50 ms (max 6). No-JS readers and crawlers always see the content.
 - Keyboard-triggered actions don't animate. `prefers-reduced-motion` removes movement and keeps fades.
 - No splash screens and no infinite animation outside a real loading state (the route bar).
@@ -70,7 +70,7 @@ Prices: always through `models.FormatMoney` (Indian grouping for INR — ₹1,50
 
 ## Course reader
 
-`course_learn.html` frames the sandboxed lesson iframe (still `sandbox="allow-scripts"`, no same-origin) with a contents rail (bottom sheet on phones), a progress bar, a section counter, previous/next, `j`/`k` keys and a JDoodle compiler drawer. The lesson side is `core/storage/lesson_runtime.go`, injected by `PrepareLesson`; it posts headings and scroll progress up and accepts "go to section" down, so the reader never reads the lesson DOM. See ARCHITECTURE.md §13.
+`course_learn.html` frames the sandboxed lesson iframe (still `sandbox="allow-scripts"`, no same-origin) with a contents rail (bottom sheet on phones), a progress bar, a section counter, previous/next, `j`/`k` keys and the site's own code editor drawer (server-side runs through JDoodle). The lesson side is `core/storage/lesson_runtime.go`, injected by `PrepareLesson`; it posts headings and scroll progress up and accepts "go to section" down, so the reader never reads the lesson DOM. See ARCHITECTURE.md §13.
 
 ## Content updates (courses and articles) — the strategy
 

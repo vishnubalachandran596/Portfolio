@@ -1,7 +1,6 @@
 package storage
 
 import (
-	"encoding/base64"
 	"strings"
 	"testing"
 )
@@ -12,10 +11,7 @@ func TestPrepareLessonHidesMarkupAndKeepsLessonStyles(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if strings.Contains(got.Payload, "Secret lesson body") {
-		t.Fatal("lesson text is visible in the payload")
-	}
-	decoded := decodePayload(t, got.Payload)
+	decoded := got.Document
 	if !strings.Contains(decoded, "Secret lesson body about heap internals") {
 		t.Fatal("decoded lesson lost the body")
 	}
@@ -87,13 +83,4 @@ func TestPrepareLessonEscapesIdentity(t *testing.T) {
 	if !strings.Contains(got, `a\u003cb\u003e@evil.com`) {
 		t.Fatal("identity was not escaped")
 	}
-}
-
-func decodePayload(t *testing.T, payload string) string {
-	t.Helper()
-	raw, err := base64.StdEncoding.DecodeString(payload)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return string(raw)
 }
