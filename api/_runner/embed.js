@@ -94,6 +94,10 @@ async function run(browser, { key, code, origin, debug }) {
     }
     if (!text && lastResult) text = lastResult.text;
     const res = { ok: completed, timedOut: !completed, output: text, ms: Date.now() - started, trace: msgs };
+    // JDoodle shows a reCAPTCHA to some automated browsers (datacenter
+    // addresses especially). It is a deliberate anti-bot check: report it,
+    // never try to get past it.
+    res.blocked = !completed && page.frames().some((fr) => /recaptcha|captcha/i.test(fr.url()));
     if (debug) {
       // What the embed itself shows, for working out its message shapes.
       const f = page.frames().find((fr) => fr.url().startsWith(JDOODLE + '/embed/'));

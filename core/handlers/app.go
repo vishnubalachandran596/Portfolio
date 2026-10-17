@@ -455,15 +455,12 @@ func truncate(s string, n int) string {
 	return s[:n] + "…"
 }
 
-// codeRunnerURL is where the Go app posts runs: CODE_RUNNER_URL when set,
-// otherwise the runner function of this same deployment (SITE_URL/api/run).
-// Empty (no SITE_URL either) leaves the editor without a runner.
+// codeRunnerURL is where the Go app posts runs: CODE_RUNNER_URL, and only
+// that. It is an explicit opt-in: with it empty the reader shows no editor.
+// (api/run.js is deployed with the site, but JDoodle puts a reCAPTCHA in
+// front of runs from its headless browser, so it stays off until a runner
+// that works is chosen. Set CODE_RUNNER_URL to SITE_URL + "/api/run" to try
+// it.)
 func codeRunnerURL(cfg *config.Config) string {
-	if cfg.CodeRunnerURL != "" {
-		return cfg.CodeRunnerURL
-	}
-	if site := strings.TrimRight(cfg.SiteURL, "/"); site != "" {
-		return site + "/api/run"
-	}
-	return ""
+	return strings.TrimSpace(cfg.CodeRunnerURL)
 }

@@ -234,7 +234,10 @@ func (a *App) writeCourseReader(w http.ResponseWriter, r *http.Request, course m
 		return
 	}
 
-	compilers := compilerOptions(a.Cfg.JDoodleEmbedKeys)
+	var compilers []CompilerOption
+	if a.CodeRunner != nil { // no runner configured: no editor
+		compilers = compilerOptions(a.Cfg.JDoodleEmbedKeys)
+	}
 	defaultLang := ""
 	if len(compilers) > 0 {
 		defaultLang = compilers[0].Lang

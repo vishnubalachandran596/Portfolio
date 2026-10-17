@@ -91,6 +91,7 @@ module.exports = async (req, res) => {
     const origin = (process.env.SITE_URL || 'https://www.vishnubalachandran.com').replace(/\/+$/, '');
     const browser = await getBrowser();
     const r = await run(browser, { key, code, origin, debug: msg.debug === true });
+    if (r.blocked) return send(res, 503, { error: 'captcha' });
     const out = { ok: r.ok, timedOut: r.timedOut, output: r.output.slice(0, 20000), ms: r.ms };
     if (msg.debug === true) { out.trace = r.trace.filter((m) => typeof m !== 'string' || !m.includes('heightxPYMx')); out.domText = r.domText; out.shot = r.shot; }
     return send(res, 200, out);
