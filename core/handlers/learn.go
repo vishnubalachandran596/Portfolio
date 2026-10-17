@@ -31,11 +31,11 @@ type CompilerOption struct {
 	Key   string
 }
 
-var compilerLabels = map[string]string{"java": "Java", "python": "Python", "go": "Go", "javascript": "JavaScript", "sql": "SQL", "kotlin": "Kotlin", "cpp": "C++"}
+var compilerLabels = map[string]string{"java": "Java", "python": "Python", "go": "Go", "javascript": "JavaScript", "sql": "SQL", "kotlin": "Kotlin", "cpp": "C++", "bash": "Bash"}
 
 func compilerOptions(keys map[string]string) []CompilerOption {
 	var out []CompilerOption
-	order := []string{"java", "python", "go", "javascript", "kotlin", "sql", "cpp"}
+	order := []string{"java", "python", "go", "javascript", "bash", "kotlin", "sql", "cpp"}
 	seen := map[string]bool{}
 	for _, lang := range order {
 		if k, ok := keys[lang]; ok {

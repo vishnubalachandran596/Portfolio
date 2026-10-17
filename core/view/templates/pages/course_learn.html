@@ -59,7 +59,7 @@
       <div class="reader-compiler-body" data-compiler-body>
         <p class="reader-compiler-loading">Loading the compiler…</p>
       </div>
-      <p class="reader-compiler-hint" data-compiler-hint>Write and run code here while you read. "Run" on a lesson snippet copies it — paste it in with Ctrl/⌘ + V.</p>
+      <p class="reader-compiler-hint" data-compiler-hint>Write and run code here while you read. "Run" on a lesson snippet loads it here and runs it.</p>
     </aside>
     {{end}}
   </div>
@@ -179,13 +179,12 @@
       if (nextBtn) nextBtn.disabled = activeIndex < 0 || activeIndex >= sections.length - 1;
     }
     if (d.type === "lesson-run" && compiler) {
-      setCompiler(true);
-      var done = function () { if (window.siteToast) window.siteToast("Snippet copied — paste it into the compiler"); };
-      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(d.code || "").then(done, function () { if (window.siteToast) window.siteToast("Copy the snippet from the lesson", "error"); });
+      // Switch to the snippet's language, then hand JDoodle the code and run it.
       if (d.lang && langSelect) {
         var opt = langSelect.querySelector('option[value="' + d.lang.replace(/[^a-z0-9]/g, "") + '"]');
-        if (opt && langSelect.value !== opt.value) { langSelect.value = opt.value; loadEmbed(opt.getAttribute("data-key")); }
+        if (opt) langSelect.value = opt.value;
       }
+      runSnippet(String(d.code || ""));
     }
   });
 
@@ -194,31 +193,62 @@
   var single = document.querySelector("[data-compiler-single]");
   var body = document.querySelector("[data-compiler-body]");
   var loadedKey = "";
-  var pymLoaded = false;
+  var embedReady = false;   // JDoodle posts {onLoad} once the embed listens
+  var pendingRun = false;   // execute as soon as it is ready
+  var pymScript = null;
   function currentKey() {
     if (langSelect) { var o = langSelect.options[langSelect.selectedIndex]; return o ? o.getAttribute("data-key") : ""; }
     return single ? single.getAttribute("data-key") : "";
   }
-  function loadEmbed(key) {
-    if (!body || !key || key === loadedKey) return;
+  // JDoodle's embed script registers every [data-pym-src] on the page when it
+  // runs, and answers the embed's request for its starting code from the
+  // holder's text. So each (re)load inserts a fresh holder carrying the code,
+  // then a fresh copy of the script (served from cache after the first).
+  function loadEmbed(key, code) {
+    if (!body || !key) return;
+    if (key === loadedKey && code === undefined) return;
     loadedKey = key;
+    embedReady = false;
     body.innerHTML = "";
     var holder = document.createElement("div");
     holder.setAttribute("data-pym-src", "https://www.jdoodle.com/embed/v1/" + encodeURIComponent(key));
+    if (code) holder.textContent = code;
     body.appendChild(holder);
-    if (!pymLoaded) {
-      pymLoaded = true;
-      var s = document.createElement("script");
-      s.src = "https://www.jdoodle.com/assets/jdoodle-pym.min.js";
-      s.async = true;
-      s.onerror = function () { body.innerHTML = '<p class="reader-compiler-loading">The compiler couldn’t load. Check your connection and reopen it.</p>'; loadedKey = ""; pymLoaded = false; };
-      document.body.appendChild(s);
-    } else if (window.pym && typeof window.pym.autoInit === "function") {
-      // pym.js scans for [data-pym-src] on load; a later language switch
-      // asks it to pick up the newly inserted embed.
-      try { window.pym.autoInit(); } catch (e) {}
-    }
+    if (pymScript) pymScript.remove();
+    pymScript = document.createElement("script");
+    pymScript.src = "https://www.jdoodle.com/assets/jdoodle-pym.min.js";
+    pymScript.async = true;
+    pymScript.onerror = function () { body.innerHTML = '<p class="reader-compiler-loading">The compiler couldn’t load. Check your connection and reopen it.</p>'; loadedKey = ""; pendingRun = false; };
+    document.body.appendChild(pymScript);
   }
+  function embedInstance() {
+    var list = window.pym && window.pym.autoInitInstances;
+    return list && list.length ? list[list.length - 1] : null;
+  }
+  function runSnippet(code) {
+    if (!compiler) return;
+    var key = currentKey();
+    compiler.hidden = false;
+    if (compilerToggle) compilerToggle.setAttribute("aria-expanded", "true");
+    if (mobile.matches && backdrop) backdrop.hidden = false;
+    var inst = embedInstance();
+    if (key === loadedKey && embedReady && inst) {
+      inst.sendMessage("setCode", code);
+      inst.sendMessage("execute");
+      return;
+    }
+    pendingRun = true;
+    loadEmbed(key, code);
+  }
+  window.addEventListener("message", function (e) {
+    if (e.origin !== "https://www.jdoodle.com" || !e.data || !e.data.onLoad) return;
+    embedReady = true;
+    if (pendingRun) {
+      pendingRun = false;
+      var inst = embedInstance();
+      if (inst) inst.sendMessage("execute");
+    }
+  });
   function setCompiler(open) {
     if (!compiler) return;
     compiler.hidden = !open;

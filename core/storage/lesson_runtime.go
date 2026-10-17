@@ -132,7 +132,7 @@ const lessonRuntimeJS = `
       run.textContent = "Run";
       run.title = "Open this snippet in the compiler";
       run.hidden = true; // shown once the reader says a compiler exists for lang
-      run.setAttribute("data-lang", lang === "js" || lang === "node" ? "javascript" : (lang === "py" || lang === "python3" ? "python" : lang));
+      run.setAttribute("data-lang", lang === "js" || lang === "node" ? "javascript" : (lang === "py" || lang === "python3" ? "python" : (lang === "sh" || lang === "shell" || lang === "zsh" ? "bash" : lang)));
       run.addEventListener("click", function () { post({ type: "lesson-run", code: code.innerText, lang: lang }); });
       bar.appendChild(run);
       pre.appendChild(bar);
