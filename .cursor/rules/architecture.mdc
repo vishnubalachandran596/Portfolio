@@ -28,7 +28,7 @@ Read `docs/FUNCTIONALITY.md` and `docs/ARCHITECTURE.md` before making any change
    ```
    Applying a migration manually (e.g. via an MCP tool) to unblock work mid-session does **not** make the checked-in file safe — it still runs for real on the next cold start, and re-running a non-idempotent `ADD CONSTRAINT` is exactly what caused the outage (migration 034, hotfixed in `7601c8a`).
 
-5. **Never commit secrets.** `.env`/`.env.local` stay gitignored. `.env.example` only ever holds placeholders. Before pushing anything config-adjacent, check the diff for a real-looking credential and stop if you find one instead of pushing it.
+5. **Never commit secrets.** `.env`/`.env.local` stay gitignored. `.env.example` only ever holds placeholders. Before pushing anything config-adjacent, check the diff for a real-looking credential and stop if you find one instead of pushing it. Third-party keys — even ones that end up public in page HTML, like the JDoodle embed keys — live only in Vercel environment variables. Never write their values into code, docs, commit messages, or Mem0.
 
 6. **Payment/access confirmation is server-side only** — HMAC-verify before granting anything, never trust a client-reported success.
 

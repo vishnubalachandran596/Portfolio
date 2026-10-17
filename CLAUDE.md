@@ -65,6 +65,7 @@ This app runs as a single stateless serverless function (Vercel) that can have a
 - `.env.example` documents every variable with a placeholder or dummy value — never a real one, even a "harmless-looking" one from a test account. Before adding a new env var, add it to `.env.example` with a clear comment on what it's for and where to get it, matching the existing file's style.
 - Before any commit or push, if you touched config, deployment, or anything credential-adjacent, re-check `git status`/`git diff` for anything that looks like a real secret — a connection string with an actual password, an API key that isn't obviously a placeholder — and stop to flag it rather than pushing it.
 - Never log a secret, even at debug level, and never echo one into a commit message, a code comment, or this repo's own documentation.
+- Third-party keys — even ones that end up public in page HTML, like the JDoodle embed keys — live only in Vercel environment variables. Never write their values into code, docs, commit messages, or Mem0.
 
 ### 6. Keep it consistent with what's already here
 
