@@ -39,3 +39,10 @@ func TestLessonOutlineStripsNumbering(t *testing.T) {
 		t.Fatalf("got %#v want %#v", got, want)
 	}
 }
+
+func TestLessonOutlineSkipsNavigationHeadings(t *testing.T) {
+	got := LessonOutline([]byte(`<h2>On this page</h2><h2>Contents:</h2><h2>Generics</h2>`))
+	if !reflect.DeepEqual(got, []string{"Generics"}) {
+		t.Fatalf("got %#v", got)
+	}
+}

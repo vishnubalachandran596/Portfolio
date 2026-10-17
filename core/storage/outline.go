@@ -4,6 +4,8 @@ import (
 	"html"
 	"regexp"
 	"strings"
+
+	"github.com/vishnubalachandran596/portfolio/core/models"
 )
 
 var (
@@ -41,7 +43,7 @@ func LessonOutline(raw []byte) []string {
 		text := html.UnescapeString(tagPattern.ReplaceAllString(m[1], " "))
 		text = strings.TrimSpace(spacePattern.ReplaceAllString(text, " "))
 		text = strings.TrimSpace(numberPrefix.ReplaceAllString(text, ""))
-		if text == "" || len(text) > 140 || seen[strings.ToLower(text)] {
+		if text == "" || len(text) > 140 || seen[strings.ToLower(text)] || models.IsNavigationHeading(text) {
 			continue
 		}
 		seen[strings.ToLower(text)] = true

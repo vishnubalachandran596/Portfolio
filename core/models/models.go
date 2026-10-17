@@ -226,11 +226,27 @@ type Course struct {
 func (c Course) OutlineItems() []string {
 	var out []string
 	for _, line := range strings.Split(c.Outline, "\n") {
-		if line = strings.TrimSpace(line); line != "" {
+		if line = strings.TrimSpace(line); line != "" && !IsNavigationHeading(line) {
 			out = append(out, line)
 		}
 	}
 	return out
+}
+
+// IsNavigationHeading reports whether a lesson heading labels the
+// lesson's own navigation ("On this page", "Contents") rather than a
+// section of material. storage.LessonOutline skips these when it
+// extracts an outline, and OutlineItems filters them again so outlines
+// stored before the check existed render clean without a data rewrite.
+// (Found by the Oct 2026 SEO pass: every course's "What's inside" list
+// opened with "On this page".)
+func IsNavigationHeading(s string) bool {
+	switch strings.ToLower(strings.Trim(strings.TrimSpace(s), ":")) {
+	case "on this page", "in this lesson", "in this course", "contents",
+		"table of contents", "toc", "navigation", "jump to", "jump to a section":
+		return true
+	}
+	return false
 }
 
 // SectionCount is the number of outline entries — shown on catalogue

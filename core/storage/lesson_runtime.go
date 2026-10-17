@@ -47,6 +47,8 @@ const lessonRuntimeJS = `
     heads.forEach(function (h) {
       var text = (h.textContent || "").replace(/\s+/g, " ").trim();
       if (!text || h.closest("details:not([open]) > :not(summary)")) return;
+      // The lesson's own navigation label — mirrors models.IsNavigationHeading.
+      if (/^(on this page|in this (lesson|course)|(table of )?contents|toc|navigation|jump to( a section)?):?$/i.test(text)) return;
       var level = h.tagName === "H2" ? 2 : (hasH2 ? 3 : 2);
       if (!h.id) {
         var base = slug(text), id = base, n = 2;

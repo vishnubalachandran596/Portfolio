@@ -22,3 +22,11 @@ func TestFormatMoneyGrouping(t *testing.T) {
 		}
 	}
 }
+
+func TestOutlineItemsDropsNavigationHeadings(t *testing.T) {
+	c := Course{Outline: "On this page\nGenerics\n\nStreams"}
+	got := c.OutlineItems()
+	if len(got) != 2 || got[0] != "Generics" || got[1] != "Streams" {
+		t.Fatalf("OutlineItems = %#v", got)
+	}
+}

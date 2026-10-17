@@ -248,7 +248,7 @@ func (a *App) LLMsTxt(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(&b, "- [Home](%s/): Overview, current work, and primary ways to engage\n", base)
 	fmt.Fprintf(&b, "- [About](%s/about): Background, skills, and experience\n", base)
 	fmt.Fprintf(&b, "- [Resume PDF](%s/resume.pdf): Downloadable resume generated from the live profile\n", base)
-	fmt.Fprintf(&b, "- [Consultancy](%s/consultancy): Fixed-price architecture reviews, fractional advisory retainers, and hourly sessions\n", base)
+	fmt.Fprintf(&b, "- [Consultancy](%s/consultancy): Architecture reviews, fractional advisory retainers, and a free first call\n", base)
 	fmt.Fprintf(&b, "- [Courses](%s/courses): Practical courses on Java, architecture, system design, and distributed systems\n", base)
 	fmt.Fprintf(&b, "- [Software](%s/software): Downloadable apps and tools, sold directly\n", base)
 	fmt.Fprintf(&b, "- [Articles](%s/articles): Original writing on software architecture, distributed systems, and engineering careers\n", base)

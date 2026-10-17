@@ -66,7 +66,7 @@ func consultancyFAQ(auditDisplay, retainerDisplay string) []FAQItem {
 // integration exists anywhere on this site except course purchases
 // (checkout.go) — see docs/ARCHITECTURE.md §6.
 func (a *App) ConsultancyPage(w http.ResponseWriter, r *http.Request) {
-	base := a.base(r, "Technical Consultant — Architecture Reviews & Fractional Advisory | "+a.Cfg.SiteName, "Hire a technical consultant for a fixed-price architecture review, an ongoing fractional advisory retainer, or a 1:1 hourly session — from an 8+ year banking and fintech platform architect.", "consultancy")
+	base := a.base(r, "Technical Consultant — Architecture Reviews & Fractional Advisory | "+a.Cfg.SiteName, "Architecture reviews with written findings and fractional advisory retainers from an 8+ year banking and fintech platform architect. The first call is free.", "consultancy")
 
 	caseStudies, err := a.CaseStudies.ListPublished(r.Context())
 	if err != nil {
