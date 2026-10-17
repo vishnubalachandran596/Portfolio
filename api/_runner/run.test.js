@@ -68,7 +68,7 @@ test('run() loads the embed, sends the code and returns the output', { skip: !pr
   process.env.JDOODLE_BASE = `http://127.0.0.1:${srv.address().port}`;
   delete require.cache[require.resolve('./embed.js')];
   const { run } = require('./embed.js');
-  const puppeteer = require('puppeteer-core');
+  const puppeteer = (await import('puppeteer-core')).default;
   const browser = await puppeteer.launch({ executablePath: process.env.CHROMIUM_PATH, headless: 'shell', args: ['--no-sandbox', '--no-proxy-server'] });
   try {
     const r = await run(browser, { key: 'k', code: 'print("hi")', origin: process.env.JDOODLE_BASE });

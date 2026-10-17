@@ -26,11 +26,13 @@ function parseKeys(raw) {
 }
 
 async function launch() {
-  const puppeteer = require('puppeteer-core');
+  // puppeteer-core and @sparticuz/chromium are ES modules; this file is
+  // CommonJS, and require() of an ES module fails on Vercel's Node 22.
+  const puppeteer = (await import('puppeteer-core')).default;
   if (process.env.CHROMIUM_PATH) {
     return puppeteer.launch({ executablePath: process.env.CHROMIUM_PATH, headless: 'shell', args: ['--no-sandbox'] });
   }
-  const chromium = require('@sparticuz/chromium');
+  const chromium = (await import('@sparticuz/chromium')).default;
   return puppeteer.launch({
     executablePath: await chromium.executablePath(),
     args: chromium.args,
