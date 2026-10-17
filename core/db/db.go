@@ -165,7 +165,9 @@ func Migrate(ctx context.Context, conn *sql.DB) error {
 			return fmt.Errorf("apply migration %s: %w", name, err)
 		}
 		if _, err := tx.ExecContext(ctx,
-			`INSERT INTO schema_migrations (version) VALUES ($1)`, name,
+			// ON CONFLICT: concurrent cold starts can race to apply the same
+			// (idempotent) file; the loser must not turn that into a fatal 500.
+			`INSERT INTO schema_migrations (version) VALUES ($1) ON CONFLICT (version) DO NOTHING`, name,
 		); err != nil {
 			tx.Rollback()
 			return fmt.Errorf("record migration %s: %w", name, err)
