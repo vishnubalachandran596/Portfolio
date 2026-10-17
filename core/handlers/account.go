@@ -19,6 +19,9 @@ type AccountCourse struct {
 	CourseSlug  string
 	PaidAt      string
 	Amount      string
+	// AdminAccess marks a course listed because the viewer is the site
+	// admin (courseAccess grants admins every course), not a purchase.
+	AdminAccess bool
 }
 
 // AccountSoftware pairs a paid software purchase with the software item
@@ -165,6 +168,21 @@ func (a *App) AccountPage(w http.ResponseWriter, r *http.Request) {
 			Amount:      models.FormatMoney(p.AmountCents, p.Currency),
 			ReceiptURL:  "/account/purchases/" + strconv.FormatInt(p.ID, 10) + "/receipt.pdf",
 		})
+	}
+	// The site admin can open every paid course (courseAccess), so My
+	// Courses lists all of them, with the ones actually bought shown first.
+	if a.Auth.IsAuthenticated(r) && !a.isPreviewingAsVisitor(r) {
+		owned := map[string]bool{}
+		for _, c := range data.Courses {
+			owned[c.CourseSlug] = true
+		}
+		if all, err := a.Courses.ListAll(ctx); err == nil {
+			for _, c := range all {
+				if c.IsPaid && !owned[c.Slug] {
+					data.Courses = append(data.Courses, AccountCourse{CourseTitle: c.Title, CourseSlug: c.Slug, AdminAccess: true})
+				}
+			}
+		}
 	}
 	for _, c := range contribs {
 		article, err := a.Articles.GetByID(ctx, c.ArticleID)

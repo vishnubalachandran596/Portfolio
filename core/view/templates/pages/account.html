@@ -15,7 +15,7 @@
       {{range .Courses}}
       <a class="course-card" href="/courses/{{.CourseSlug}}/learn">
         <h3>{{.CourseTitle}}</h3>
-        <p>Purchased {{if .PaidAt}}{{.PaidAt}}{{else}}recently{{end}}{{if .Amount}} · {{.Amount}}{{end}}</p>
+        {{if .AdminAccess}}<p>Admin access</p>{{else}}<p>Purchased {{if .PaidAt}}{{.PaidAt}}{{else}}recently{{end}}{{if .Amount}} · {{.Amount}}{{end}}</p>{{end}}
         <span class="link-arrow">Continue learning →</span>
       </a>
       {{end}}
