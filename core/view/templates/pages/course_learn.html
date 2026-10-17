@@ -47,10 +47,10 @@
         {{if gt (len .Compilers) 1}}
         <label class="sr-only" for="compiler-lang">Language</label>
         <select id="compiler-lang" data-compiler-lang>
-          {{range .Compilers}}<option value="{{.Lang}}" data-key="{{.Key}}" {{if eq .Lang $.DefaultLang}}selected{{end}}>{{.Label}}</option>{{end}}
+          {{range .Compilers}}<option value="{{.Lang}}" {{if eq .Lang $.DefaultLang}}selected{{end}}>{{.Label}}</option>{{end}}
         </select>
         {{else}}
-        {{range .Compilers}}<span class="badge" data-compiler-single data-lang="{{.Lang}}" data-key="{{.Key}}">{{.Label}}</span>{{end}}
+        {{range .Compilers}}<span class="badge" data-compiler-single data-lang="{{.Lang}}">{{.Label}}</span>{{end}}
         {{end}}
         <button type="button" class="icon-btn" data-reader-compiler-close aria-label="Close compiler">
           <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="m5 5 10 10M15 5 5 15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
@@ -192,34 +192,50 @@
   var langSelect = document.querySelector("[data-compiler-lang]");
   var single = document.querySelector("[data-compiler-single]");
   var body = document.querySelector("[data-compiler-body]");
-  var loadedKey = "";
+  var loadedLang = "";
+  var loadSeq = 0;          // ignores a slow answer for a language since switched away from
   var embedReady = false;   // JDoodle posts {onLoad} once the embed listens
   var pendingRun = false;   // execute as soon as it is ready
   var pymScript = null;
-  function currentKey() {
-    if (langSelect) { var o = langSelect.options[langSelect.selectedIndex]; return o ? o.getAttribute("data-key") : ""; }
-    return single ? single.getAttribute("data-key") : "";
+  function currentLang() {
+    if (langSelect) return langSelect.value || "";
+    return single ? single.getAttribute("data-lang") : "";
+  }
+  function compilerFailed(msg) {
+    body.innerHTML = '<p class="reader-compiler-loading"></p>';
+    body.firstChild.textContent = msg;
+    loadedLang = ""; pendingRun = false;
   }
   // JDoodle's embed script registers every [data-pym-src] on the page when it
   // runs, and answers the embed's request for its starting code from the
   // holder's text. So each (re)load inserts a fresh holder carrying the code,
   // then a fresh copy of the script (served from cache after the first).
-  function loadEmbed(key, code) {
-    if (!body || !key) return;
-    if (key === loadedKey && code === undefined) return;
-    loadedKey = key;
+  // The embed address is fetched from the server when the drawer opens:
+  // keys are never in this page's HTML, and only a buyer (or admin) gets one.
+  function loadEmbed(lang, code) {
+    if (!body || !lang) return;
+    if (lang === loadedLang && code === undefined) return;
+    loadedLang = lang;
     embedReady = false;
-    body.innerHTML = "";
-    var holder = document.createElement("div");
-    holder.setAttribute("data-pym-src", "https://www.jdoodle.com/embed/v1/" + encodeURIComponent(key));
-    if (code) holder.textContent = code;
-    body.appendChild(holder);
-    if (pymScript) pymScript.remove();
-    pymScript = document.createElement("script");
-    pymScript.src = "https://www.jdoodle.com/assets/jdoodle-pym.min.js";
-    pymScript.async = true;
-    pymScript.onerror = function () { body.innerHTML = '<p class="reader-compiler-loading">The compiler couldn’t load. Check your connection and reopen it.</p>'; loadedKey = ""; pendingRun = false; };
-    document.body.appendChild(pymScript);
+    var seq = ++loadSeq;
+    body.innerHTML = '<p class="reader-compiler-loading">Loading the compiler…</p>';
+    fetch("/courses/" + encodeURIComponent(reader.getAttribute("data-slug")) + "/learn/compiler?lang=" + encodeURIComponent(lang), {
+      credentials: "same-origin", cache: "no-store", headers: { "X-Requested-With": "vb-compiler" }
+    }).then(function (res) { return res.ok ? res.json() : Promise.reject(res.status); }).then(function (data) {
+      if (seq !== loadSeq) return;
+      if (!data || typeof data.src !== "string" || data.src.indexOf("https://www.jdoodle.com/embed/") !== 0) return compilerFailed("The compiler isn’t available right now.");
+      body.innerHTML = "";
+      var holder = document.createElement("div");
+      holder.setAttribute("data-pym-src", data.src);
+      if (code) holder.textContent = code;
+      body.appendChild(holder);
+      if (pymScript) pymScript.remove();
+      pymScript = document.createElement("script");
+      pymScript.src = "https://www.jdoodle.com/assets/jdoodle-pym.min.js";
+      pymScript.async = true;
+      pymScript.onerror = function () { compilerFailed("The compiler couldn’t load. Check your connection and reopen it."); };
+      document.body.appendChild(pymScript);
+    }).catch(function () { if (seq === loadSeq) compilerFailed("The compiler couldn’t load. Refresh the page and try again."); });
   }
   function embedInstance() {
     var list = window.pym && window.pym.autoInitInstances;
@@ -227,18 +243,18 @@
   }
   function runSnippet(code) {
     if (!compiler) return;
-    var key = currentKey();
+    var lang = currentLang();
     compiler.hidden = false;
     if (compilerToggle) compilerToggle.setAttribute("aria-expanded", "true");
     if (mobile.matches && backdrop) backdrop.hidden = false;
     var inst = embedInstance();
-    if (key === loadedKey && embedReady && inst) {
+    if (lang === loadedLang && embedReady && inst) {
       inst.sendMessage("setCode", code);
       inst.sendMessage("execute");
       return;
     }
     pendingRun = true;
-    loadEmbed(key, code);
+    loadEmbed(lang, code);
   }
   window.addEventListener("message", function (e) {
     if (e.origin !== "https://www.jdoodle.com" || !e.data || !e.data.onLoad) return;
@@ -254,12 +270,12 @@
     compiler.hidden = !open;
     if (compilerToggle) compilerToggle.setAttribute("aria-expanded", open ? "true" : "false");
     if (mobile.matches && backdrop) backdrop.hidden = !open && toc.hidden;
-    if (open) loadEmbed(currentKey());
+    if (open) loadEmbed(currentLang());
   }
   if (compilerToggle) compilerToggle.addEventListener("click", function () { setCompiler(compiler.hidden); });
   var closeBtn = document.querySelector("[data-reader-compiler-close]");
   if (closeBtn) closeBtn.addEventListener("click", function () { setCompiler(false); });
-  if (langSelect) langSelect.addEventListener("change", function () { loadEmbed(currentKey()); });
+  if (langSelect) langSelect.addEventListener("change", function () { loadEmbed(currentLang()); });
 
   // Drag the drawer's left edge to resize it (desktop).
   var handle = document.querySelector("[data-reader-resize]");
