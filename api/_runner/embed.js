@@ -44,7 +44,7 @@ function outputOf(d) {
   return null;
 }
 
-async function run(browser, { key, code, origin }) {
+async function run(browser, { key, code, origin, debug }) {
   const page = await browser.newPage(); if (process.env.RUNNER_DEBUG) { page.on('request', r => console.error('req', r.url())); page.on('requestfailed', r => console.error('fail', r.url(), r.failure() && r.failure().errorText)); page.on('console', m => console.error('console', m.text())); }
   try {
     await page.setRequestInterception(true);
@@ -93,7 +93,14 @@ async function run(browser, { key, code, origin }) {
       else lastResult = o;
     }
     if (!text && lastResult) text = lastResult.text;
-    return { ok: completed, timedOut: !completed, output: text, ms: Date.now() - started, trace: msgs };
+    const res = { ok: completed, timedOut: !completed, output: text, ms: Date.now() - started, trace: msgs };
+    if (debug) {
+      // What the embed itself shows, for working out its message shapes.
+      const f = page.frames().find((fr) => fr.url().startsWith(JDOODLE + '/embed/'));
+      res.domText = f ? await f.evaluate(() => document.body.innerText.slice(0, 3000)).catch((e) => 'ERR ' + e.message) : null;
+      res.shot = (await page.screenshot({ type: 'jpeg', quality: 55, encoding: 'base64' }).catch(() => null));
+    }
+    return res;
   } finally {
     await page.close().catch(() => {});
   }

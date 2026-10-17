@@ -90,9 +90,9 @@ module.exports = async (req, res) => {
   try {
     const origin = (process.env.SITE_URL || 'https://www.vishnubalachandran.com').replace(/\/+$/, '');
     const browser = await getBrowser();
-    const r = await run(browser, { key, code, origin });
+    const r = await run(browser, { key, code, origin, debug: msg.debug === true });
     const out = { ok: r.ok, timedOut: r.timedOut, output: r.output.slice(0, 20000), ms: r.ms };
-    if (msg.debug === true) out.trace = r.trace;
+    if (msg.debug === true) { out.trace = r.trace.filter((m) => typeof m !== 'string' || !m.includes('heightxPYMx')); out.domText = r.domText; out.shot = r.shot; }
     return send(res, 200, out);
   } catch (e) {
     browserPromise = null; // a crashed browser is relaunched next time
