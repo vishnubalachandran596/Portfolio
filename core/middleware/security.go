@@ -17,7 +17,7 @@ import "net/http"
 // in core/handlers/learn.go.
 func SecurityHeaders(next http.Handler) http.Handler {
 	const csp = "default-src 'self'; " +
-		"script-src 'self' 'unsafe-inline' https://checkout.razorpay.com https://www.jdoodle.com; " +
+		"script-src 'self' 'unsafe-inline' https://checkout.razorpay.com https://cdn.razorpay.com https://www.jdoodle.com; " +
 		"style-src 'self' 'unsafe-inline'; " +
 		"font-src 'self'; " +
 		"img-src 'self' data: https:; " +
