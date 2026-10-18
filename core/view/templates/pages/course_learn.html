@@ -263,7 +263,9 @@
     var inst = embedInstance();
     if (lang === loadedLang && embedReady && inst) {
       inst.sendMessage("setCode", code);
-      inst.sendMessage("execute");
+      // Give the embed a moment to apply the new code before running it;
+      // executing in the same tick can run the previous code (or nothing).
+      setTimeout(function () { inst.sendMessage("execute"); }, 400);
       return;
     }
     pendingRun = true;
@@ -286,7 +288,7 @@
     if (inst && pendingCode !== null) { inst.sendMessage("setCode", pendingCode); pendingCode = null; }
     if (pendingRun) {
       pendingRun = false;
-      if (inst) inst.sendMessage("execute");
+      if (inst) setTimeout(function () { inst.sendMessage("execute"); }, 400);
     }
   });
   function setCompiler(open) {
