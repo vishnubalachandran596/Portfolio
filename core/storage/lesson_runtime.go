@@ -97,6 +97,16 @@ const lessonRuntimeJS = `
       }
     });
 
+    // In-lesson links (#id) scroll inside the sandboxed lesson document.
+    document.addEventListener("click", function (e) {
+      var a = e.target.closest && e.target.closest('a[href^="#"]');
+      if (!a) return;
+      var t = document.getElementById(decodeURIComponent(a.getAttribute("href").slice(1)));
+      if (!t) return;
+      e.preventDefault();
+      t.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+    });
+
     // One-time reveals for top-level content blocks below the fold.
     if ("IntersectionObserver" in window) {
       var root = body.children.length === 1 && body.firstElementChild.children.length > 3 ? body.firstElementChild : body;
