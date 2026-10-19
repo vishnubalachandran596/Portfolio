@@ -4,14 +4,15 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"html"
 	"log"
 	"net/http"
-	"net/url"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/vishnubalachandran596/portfolio/core/middleware"
+	"github.com/vishnubalachandran596/portfolio/core/models"
 	"github.com/vishnubalachandran596/portfolio/core/repo"
 )
 
@@ -97,113 +98,145 @@ func (a *App) pageURL(r *http.Request, path string) string {
 	return scheme + "://" + sub + "." + a.Cfg.Domain + path
 }
 
-// canonicalURLForRequest builds the canonical URL for a page, keeping only
-// the query parameters that identify genuinely different indexable
-// content: "tag" (a real content filter — /courses?tag=java lists a
-// different set of courses than /courses itself) and "page" beyond the
-// first (each page of a paginated list is its own distinct set of items,
-// which is also Google's own current guidance: a self-referential
-// canonical per page, rather than collapsing every page onto page 1).
-// "sort" is deliberately dropped — it only reorders the identical set of
-// items, so the sorted view is correctly the *same* page, not a new one.
-// "q" is dropped too, but for a different reason: a site-internal search
-// result isn't content worth a canonical identity at all — see the
-// noindex handling next to this function's two call sites (ArticlesPage,
-// CoursesList) for why that one is excluded from indexing entirely
-// rather than just left out of the canonical.
+// canonicalURLForRequest builds the canonical URL for a page. Listing
+// filters never get their own canonical identity: "tag" (a topic filter),
+// "sort" (a reorder of the same items) and "q" (site-internal search, which
+// is also sent noindex, see robotsMetaForRequest) all canonicalise to the
+// bare listing path, so filtered views collapse into the page they are a
+// variant of. Only "page" beyond the first is kept: each page of a
+// paginated list holds a genuinely different set of items, and Google's
+// guidance is a self-referential canonical per page rather than collapsing
+// page 2 onto page 1.
 //
-// Before this existed, every filtered/paginated/sorted variant of
-// /courses and /articles declared canonical straight to the bare list
-// page. That was a real indexing bug, not just untidy: Google crawls
-// these pages for real (the topic nav and pagination controls are
-// ordinary internal <a href> links), finds genuinely different course/
-// article listings at each one, and disagrees with a canonical that
-// claims they're all the same page as the unfiltered list — which is
-// exactly Search Console's "Duplicate, Google chose different canonical
-// than user" report. Confirmed live (Oct 2026): /courses?tag=java and
-// /articles?tag=Kafka both declared canonical to their bare list page
-// while showing a different course/article set than that page shows.
+// History: an earlier version (Oct 2026) kept "tag" in the canonical so
+// /courses?tag=java was self-canonical. The SEO audit of 19 Oct 2026
+// reversed that: those pages are near-duplicates of the listing they
+// filter, linked from every course card, and indexing them dilutes the
+// listing. seo_canonical_test.go records the current rule.
 func canonicalURLForRequest(base string, r *http.Request) string {
-	q := r.URL.Query()
 	u := base + r.URL.Path
-	var extra []string
-	if tag := strings.TrimSpace(q.Get("tag")); tag != "" {
-		extra = append(extra, "tag="+url.QueryEscape(tag))
-	}
-	if page, _ := strconv.Atoi(q.Get("page")); page > 1 {
-		extra = append(extra, "page="+strconv.Itoa(page))
-	}
-	if len(extra) > 0 {
-		u += "?" + strings.Join(extra, "&")
+	if page, _ := strconv.Atoi(r.URL.Query().Get("page")); page > 1 {
+		u += "?page=" + strconv.Itoa(page)
 	}
 	return u
 }
 
+// sitemapStaticPaths are the static, indexable pages. /ai-assistant (a thin
+// app shell) and /resume.pdf are deliberately absent: neither is a landing
+// page worth indexing. A page whose page_seo row says noindex is dropped
+// as well, so the sitemap never advertises a URL that asks not to be indexed.
+var sitemapStaticPaths = []string{
+	"/", "/about", "/courses", "/software", "/consultancy", "/articles",
+	"/contact", "/privacy", "/terms", "/refund", "/cookies",
+}
+
+// staticLastmod returns the real "last edited" time of a static page: the
+// newest of its page_seo edit and the live content the page is built from
+// (courses for /courses, the profile for /about, and so on). The zero time
+// means "unknown", and the caller then omits <lastmod> altogether — a
+// made-up date teaches crawlers to ignore the field.
+func staticLastmod(path string, d repo.SitemapDates, page *models.PageSEO) time.Time {
+	var t time.Time
+	bump := func(c time.Time) {
+		if c.After(t) {
+			t = c
+		}
+	}
+	if page != nil {
+		bump(page.UpdatedAt)
+	}
+	switch path {
+	case "/":
+		bump(d.ProfileUpdated)
+		bump(d.LatestCourse)
+		bump(d.LatestArticle)
+	case "/about", "/consultancy", "/contact":
+		bump(d.ProfileUpdated)
+	case "/courses":
+		bump(d.LatestCourse)
+	case "/software":
+		bump(d.LatestSoftware)
+	case "/articles":
+		bump(d.LatestArticle)
+	}
+	return t
+}
+
+type sitemapEntry struct {
+	loc     string
+	lastmod time.Time
+}
+
+// renderSitemap writes the sitemap XML. Priority is omitted on purpose
+// (Google ignores it); lastmod is written only when known.
+func renderSitemap(entries []sitemapEntry) string {
+	var b strings.Builder
+	b.WriteString(`<?xml version="1.0" encoding="UTF-8"?>` + "\n")
+	b.WriteString(`<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">` + "\n")
+	for _, e := range entries {
+		b.WriteString("  <url><loc>" + html.EscapeString(e.loc) + "</loc>")
+		if !e.lastmod.IsZero() {
+			b.WriteString("<lastmod>" + e.lastmod.Format("2006-01-02") + "</lastmod>")
+		}
+		b.WriteString("</url>\n")
+	}
+	b.WriteString(`</urlset>`)
+	return b.String()
+}
+
 func (a *App) Sitemap(w http.ResponseWriter, r *http.Request) {
-	courses, err := a.Courses.ListPublished(r.Context())
+	ctx := r.Context()
+	courses, err := a.Courses.ListPublished(ctx)
 	if err != nil {
 		a.serverError(w, "load courses for sitemap", err)
 		return
 	}
-	software, err := a.Software.ListPublished(r.Context())
+	software, err := a.Software.ListPublished(ctx)
 	if err != nil {
 		a.serverError(w, "load software for sitemap", err)
 		return
 	}
-	articlesResult, err := a.Articles.ListPublishedFiltered(r.Context(), repo.ArticleListOptions{PageSize: 10000})
+	articlesResult, err := a.Articles.ListPublishedFiltered(ctx, repo.ArticleListOptions{PageSize: 10000})
 	if err != nil {
 		a.serverError(w, "load articles for sitemap", err)
 		return
 	}
-	articles := articlesResult.Articles
-
-	var b strings.Builder
-	b.WriteString(`<?xml version="1.0" encoding="UTF-8"?>` + "\n")
-	b.WriteString(`<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">` + "\n")
-
-	staticPaths := []struct {
-		path     string
-		priority string
-	}{
-		{"/", "1.0"},
-		{"/about", "0.9"},
-		{"/resume.pdf", "0.5"},
-		{"/courses", "0.9"},
-		{"/software", "0.7"},
-		{"/consultancy", "0.8"},
-		{"/articles", "0.6"},
-		{"/contact", "0.5"},
-		{"/privacy", "0.2"},
-		{"/terms", "0.2"},
-		{"/refund", "0.2"},
-		{"/cookies", "0.2"},
+	dates, err := a.SEO.SitemapDates(ctx)
+	if err != nil {
+		a.serverError(w, "load sitemap dates", err)
+		return
 	}
-	for _, p := range staticPaths {
-		fmt.Fprintf(&b, "  <url><loc>%s</loc><priority>%s</priority></url>\n", a.pageURL(r, p.path), p.priority)
-	}
-	// /ai-assistant only lists (and only works) once the chatbot itself is
-	// configured -- same "absent until NVIDIA_API_KEY is set" gate as the
-	// floating widget, so the sitemap never points at a page with no chat
-	// to show.
-	if a.Nvidia.Enabled() {
-		fmt.Fprintf(&b, "  <url><loc>%s</loc><priority>%s</priority></url>\n", a.pageURL(r, "/ai-assistant"), "0.6")
+	// Overrides are optional: a failed lookup only costs the noindex
+	// filter and page_seo lastmod, never the sitemap.
+	overrides, _ := a.SEO.ListPages(ctx)
+
+	var entries []sitemapEntry
+	for _, path := range sitemapStaticPaths {
+		var page *models.PageSEO
+		if p, ok := overrides[path]; ok {
+			if p.Noindex {
+				continue
+			}
+			page = &p
+		}
+		entries = append(entries, sitemapEntry{a.pageURL(r, path), staticLastmod(path, dates, page)})
 	}
 	for _, c := range courses {
-		fmt.Fprintf(&b, "  <url><loc>%s</loc><lastmod>%s</lastmod><priority>0.7</priority></url>\n",
-			a.pageURL(r, "/courses/"+c.Slug), c.UpdatedAt.Format("2006-01-02"))
+		entries = append(entries, sitemapEntry{a.pageURL(r, "/courses/"+c.Slug), c.UpdatedAt})
 	}
-	for _, art := range articles {
-		fmt.Fprintf(&b, "  <url><loc>%s</loc><lastmod>%s</lastmod><priority>0.6</priority></url>\n",
-			a.pageURL(r, "/articles/"+art.Slug), art.CreatedAt.Format("2006-01-02"))
+	for _, art := range articlesResult.Articles {
+		lastmod, ok := dates.Articles[art.Slug]
+		if !ok {
+			lastmod = art.CreatedAt
+		}
+		entries = append(entries, sitemapEntry{a.pageURL(r, "/articles/"+art.Slug), lastmod})
 	}
 	for _, sw := range software {
-		fmt.Fprintf(&b, "  <url><loc>%s</loc><lastmod>%s</lastmod><priority>0.6</priority></url>\n",
-			a.pageURL(r, "/software/"+sw.Slug), sw.UpdatedAt.Format("2006-01-02"))
+		entries = append(entries, sitemapEntry{a.pageURL(r, "/software/"+sw.Slug), sw.UpdatedAt})
 	}
-	b.WriteString(`</urlset>`)
 
 	w.Header().Set("Content-Type", "application/xml; charset=utf-8")
-	w.Write([]byte(b.String()))
+	w.Write([]byte(renderSitemap(entries)))
 }
 
 func (a *App) Robots(w http.ResponseWriter, r *http.Request) {

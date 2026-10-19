@@ -61,6 +61,10 @@
         <input type="number" name="sort_order" value="{{.Software.SortOrder}}">
       </label>
 
+      <hr class="admin-form-divider">
+      <h2 class="admin-form-subhead">SEO</h2>
+      {{template "admin_seo_fields" .SEO}}
+
       <div class="form-actions">
         <button type="submit" class="btn btn-primary" data-loading-text="Saving…">Save Software</button>
         <a class="btn btn-secondary" href="/admin/software">Cancel</a>

@@ -36,6 +36,7 @@ type AdminSoftwareFormData struct {
 	Software models.Software
 	IsNew    bool
 	Error    string
+	SEO      models.SEOFields
 }
 
 func (a *App) AdminSoftwareNewPage(w http.ResponseWriter, r *http.Request) {
@@ -60,9 +61,11 @@ func (a *App) AdminSoftwareEditPage(w http.ResponseWriter, r *http.Request) {
 		a.serverError(w, "load software", err)
 		return
 	}
+	seo, _ := a.SEO.GetFields(r.Context(), repo.SEOSoftware, id)
 	a.View.Render(w, http.StatusOK, "admin_software_form", AdminSoftwareFormData{
 		BaseData: a.base(r, "Edit Software — Admin", "", "admin"),
 		Software: sw,
+		SEO:      seo,
 	})
 }
 
@@ -111,6 +114,7 @@ func (a *App) AdminSoftwareSave(w http.ResponseWriter, r *http.Request) {
 		a.View.Render(w, http.StatusUnprocessableEntity, "admin_software_form", AdminSoftwareFormData{
 			BaseData: a.base(r, "Software — Admin", "", "admin"),
 			Software: sw,
+			SEO:      seoFieldsFromForm(r),
 			IsNew:    id == 0,
 			Error:    "Title is required.",
 		})
@@ -120,7 +124,7 @@ func (a *App) AdminSoftwareSave(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	var err error
 	if id == 0 {
-		_, err = a.Software.Create(ctx, sw)
+		id, err = a.Software.Create(ctx, sw)
 	} else {
 		err = a.Software.Update(ctx, sw)
 	}
@@ -128,6 +132,7 @@ func (a *App) AdminSoftwareSave(w http.ResponseWriter, r *http.Request) {
 		a.serverError(w, "save software", err)
 		return
 	}
+	a.saveSEOFields(ctx, repo.SEOSoftware, id, r)
 	a.markChatbotReindexPending(ctx)
 	http.Redirect(w, r, "/admin/software", http.StatusSeeOther)
 }

@@ -77,7 +77,6 @@ func (a *App) ConsultancyPage(w http.ResponseWriter, r *http.Request) {
 	auditDisplay := models.AuditPriceDisplay()
 	retainerDisplay := models.RetainerRangeDisplay()
 	faq := consultancyFAQ(auditDisplay, retainerDisplay)
-	description := "1:1 technical consultancy for architecture reviews, system design decisions, and fractional advisory, from a Java technical expert in banking and fintech platforms."
 
 	a.View.Render(w, http.StatusOK, "consultancy", ConsultancyData{
 		BaseData:             base,
@@ -85,7 +84,7 @@ func (a *App) ConsultancyPage(w http.ResponseWriter, r *http.Request) {
 		RetainerRangeDisplay: retainerDisplay,
 		FAQ:                  faq,
 		CaseStudies:          caseStudies,
-		JSONLD:               consultancyJSONLD(base.CanonicalURL, base.SiteName, description, retainerDisplay, faq),
+		JSONLD:               consultancyJSONLD(base.CanonicalURL, base.SiteName, base.MetaDescription, retainerDisplay, faq),
 	})
 }
 

@@ -2509,3 +2509,8 @@ select { appearance: none; -webkit-appearance: none; padding-right: 2.25rem; bac
   .lesson-frame { height: auto; min-height: 40rem; }
 }
 .auth-divider { border: 0; border-top: 1px solid var(--line); margin: var(--space-5) 0; }
+
+/* Admin SEO fields: advisory character counter under title/description. */
+.seo-counter { font-size: 0.8125rem; font-weight: 400; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.seo-counter-over { color: var(--danger); font-weight: 600; }
+.seo-page-form { margin-bottom: var(--space-5); padding-bottom: var(--space-5); border-bottom: 1px solid var(--line); }

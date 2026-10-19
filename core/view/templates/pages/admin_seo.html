@@ -1,0 +1,25 @@
+{{define "content"}}
+<section class="section">
+  <div class="container">
+    <h1>SEO</h1>
+    <p class="admin-form-note">Title, description and share image for each static page. Leave a field blank to keep the page's built-in default. Courses, articles and software have their own SEO fields on their edit forms. Changes apply on the next page load.</p>
+    {{if .Saved}}<div class="alert alert-success">Saved {{.Saved}}.</div>{{end}}
+    {{if .Error}}<div class="alert alert-error">{{.Error}}</div>{{end}}
+    {{range .Pages}}
+    <form method="POST" action="/admin/seo" class="admin-form seo-page-form">
+      <input type="hidden" name="path" value="{{.Path}}">
+      <h2 class="admin-form-subhead">{{.Label}} <span class="optional"><a href="{{.Path}}" target="_blank" rel="noopener">{{.Path}}</a></span></h2>
+      {{template "admin_seo_fields" .Fields}}
+      <label class="checkbox-label">
+        <input type="checkbox" name="noindex" value="1"{{if .Noindex}} checked{{end}}>
+        Keep this page out of search results (noindex) and out of the sitemap
+      </label>
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary" data-loading-text="Saving…">Save</button>
+        {{if .HasOverride}}<button type="submit" name="reset" value="1" class="btn btn-secondary">Reset to default</button>{{end}}
+      </div>
+    </form>
+    {{end}}
+  </div>
+</section>
+{{end}}

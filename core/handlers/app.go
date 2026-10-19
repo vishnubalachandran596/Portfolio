@@ -5,7 +5,9 @@ package handlers
 import (
 	"context"
 	"database/sql"
+	"html/template"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -46,6 +48,7 @@ type App struct {
 	Users             *repo.UserRepo
 	AuthThrottle      *repo.AuthThrottleRepo
 	Licences          *repo.LicenceRepo
+	SEO               *repo.SEORepo
 	// LicenceSigner is nil until LICENCE_SIGNING_KEY_B64 and LICENCE_KID are set.
 	LicenceSigner        *licence.Signer
 	Articles             *repo.ArticleRepo
@@ -121,6 +124,17 @@ type BaseData struct {
 	// .is-immersive, which hides the promo bar, footer and floating
 	// widgets so the lesson can fill the viewport under the header.
 	Immersive bool
+	// RobotsMeta, when set, renders <meta name="robots" content="…">.
+	// Set by baseFrom for pages wrapped in the noindex middleware (the
+	// header alone is invisible to anyone reading the HTML), for a
+	// page_seo noindex override, and for internal-search listing views.
+	RobotsMeta string
+	// NoCanonical drops <link rel="canonical"> and og:url — set on 404s,
+	// which must not declare themselves canonical.
+	NoCanonical bool
+	// BreadcrumbJSONLD is an optional BreadcrumbList block, emitted in
+	// the head by base.html when a handler sets it.
+	BreadcrumbJSONLD template.JS
 }
 
 // SubscribeFormData backs the shared subscribe_form partial embedded on
@@ -187,6 +201,7 @@ func New(cfg *config.Config, db *sql.DB, renderer *view.Renderer) *App {
 		Auth:                 auth,
 		AuthThrottle:         repo.NewAuthThrottleRepo(db),
 		Licences:             repo.NewLicenceRepo(db),
+		SEO:                  repo.NewSEORepo(db),
 		Profile:              repo.NewProfileRepo(db),
 		Skills:               repo.NewSkillGroupRepo(db),
 		Experience:           repo.NewExperienceRepo(db),
@@ -266,6 +281,10 @@ type basePrefetch struct {
 	userName      string
 	notifications []NotificationItem
 	promoCodes    []models.PromoCode
+
+	// pageSEO is the page_seo override for a static page, nil when the
+	// path has none (or is not a static SEO page at all).
+	pageSEO *models.PageSEO
 }
 
 // startBase begins the lookups every page's chrome needs, for a handler
@@ -331,6 +350,15 @@ func (a *App) startBaseChrome(r *http.Request) *basePrefetch {
 	// missing banner on one request is a fine outcome, so this never
 	// fails the render.
 	ctx := r.Context()
+	if pageSEOApplies(r) {
+		pf.wg.Add(1)
+		go func() {
+			defer pf.wg.Done()
+			if p, err := a.SEO.GetPage(ctx, r.URL.Path); err == nil {
+				pf.pageSEO = &p
+			}
+		}()
+	}
 	pf.wg.Add(1)
 	go func() {
 		defer pf.wg.Done()
@@ -368,6 +396,20 @@ func (a *App) baseFrom(r *http.Request, pf *basePrefetch, title, metaDescription
 			unreadCount++
 		}
 	}
+	ogImage := base + defaultOGImagePath
+	robots := robotsMetaForRequest(r)
+	if p := pf.pageSEO; p != nil {
+		title = p.Title(title)
+		if d := strings.TrimSpace(p.MetaDescription); d != "" {
+			metaDescription = d
+		}
+		if img := p.Image(""); img != "" {
+			ogImage = absoluteURL(base, img)
+		}
+		if p.Noindex && robots == "" {
+			robots = "noindex, follow"
+		}
+	}
 	return BaseData{
 		SiteName:        a.Cfg.SiteName,
 		Title:           title,
@@ -375,7 +417,8 @@ func (a *App) baseFrom(r *http.Request, pf *basePrefetch, title, metaDescription
 		Active:          active,
 		SiteURL:         a.Cfg.SiteURL,
 		CanonicalURL:    canonicalURLForRequest(base, r),
-		OGImageURL:      base + "/static/img/og-image.png",
+		OGImageURL:      ogImage,
+		RobotsMeta:      robots,
 		Nav: NavLinks{
 			Home:        a.pageURL(r, "/"),
 			About:       a.pageURL(r, "/about"),
