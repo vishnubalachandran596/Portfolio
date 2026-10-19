@@ -62,12 +62,15 @@ func TestAmountNeverFromClient(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	start := strings.Index(string(js), `getElementById("purchase-btn")`)
-	end := strings.Index(string(js), "Optional article contribution")
-	if start < 0 || end < start {
+	src := string(js)
+	start := strings.Index(src, `getElementById("purchase-btn")`)
+	mid := strings.Index(src, "Optional contribution after finishing a course")
+	sw := strings.Index(src, `getElementById("software-purchase-btn")`)
+	end := strings.Index(src, "Optional article contribution")
+	if start < 0 || mid < start || sw < mid || end < sw {
 		t.Fatal("could not locate course and software checkout code in main.js")
 	}
-	if strings.Contains(string(js)[start:end], "amount_cents") {
+	if strings.Contains(src[start:mid], "amount_cents") || strings.Contains(src[sw:end], "amount_cents") {
 		t.Error("main.js course/software checkout must not send amount_cents")
 	}
 }
@@ -90,11 +93,13 @@ func TestGuestCheckoutTemplatesRender(t *testing.T) {
 		want []string
 	}{
 		{"course_detail", CourseDetailData{BaseData: base, Course: course, PaymentsEnabled: true, ResolvedMinCents: 149900, ResolvedMinWhole: 1499, ResolvedMinDisplay: "Rs 1,499"},
-			[]string{`id="purchase-email"`, "claim code"}},
+			[]string{`id="purchase-email"`, "claim code", "purchase-promo-apply", "You pay"}},
 		{"course_detail", CourseDetailData{BaseData: base, Course: course, PaymentsEnabled: true, ResolvedMinCents: 149900, ResolvedMinDisplay: "Rs 1,499", UserEmail: "me@example.com"},
 			[]string{"me@example.com"}},
 		{"software_detail", SoftwareDetailData{BaseData: base, Software: sw, PaymentsEnabled: true},
-			[]string{`id="software-email"`}},
+			[]string{"Sign in to buy"}},
+		{"quiz_result", QuizResultData{BaseData: base, Course: course, Attempt: models.QuizAttempt{Passed: true, ScorePercent: 90}, PaymentsEnabled: true},
+			[]string{"course-contribute-btn", "Download Certificate"}},
 		{"purchase_success", PurchaseSuccessData{BaseData: base, Kind: "course", Title: "Java", Receipt: "C000012", Email: "g@example.com", Amount: "Rs 1,499", ClaimCode: "ABCDE-FGHIJ-KLMNO-PQRST", NextURL: "/courses/java/learn", NextText: "Open the course"},
 			[]string{"ABCDE-FGHIJ-KLMNO-PQRST", "/account/claim", "C000012"}},
 		{"purchase_success", PurchaseSuccessData{BaseData: base, Kind: "software", Title: "Temple", Receipt: "S000003", Email: "g@example.com", Amount: "Rs 2,000", Attached: true, Licence: true, NextURL: "/software/temple", NextText: "Go"},

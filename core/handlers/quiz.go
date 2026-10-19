@@ -86,6 +86,8 @@ type QuizResultData struct {
 	BaseData
 	Course  models.Course
 	Attempt models.QuizAttempt
+	// PaymentsEnabled gates the optional contribution box.
+	PaymentsEnabled bool
 }
 
 func (a *App) QuizSubmit(w http.ResponseWriter, r *http.Request) {
@@ -151,6 +153,8 @@ func (a *App) QuizSubmit(w http.ResponseWriter, r *http.Request) {
 		BaseData: a.base(r, "Quiz Results — "+course.Title+" — "+a.Cfg.SiteName, "", "courses"),
 		Course:   course,
 		Attempt:  attempt,
+
+		PaymentsEnabled: a.Razorpay.Enabled() && !isAdmin,
 	})
 }
 

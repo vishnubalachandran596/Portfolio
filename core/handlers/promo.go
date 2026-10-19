@@ -13,6 +13,9 @@ import (
 // now (not found, expired, exhausted, inactive, or not scoped to this
 // product/course) — deliberately not distinguished for the buyer, so a
 // scoping check can't be used to enumerate valid codes.
+// errPromoMessage is what the buyer is told for any rejected code.
+const errPromoMessage = "That promo code is not valid: it may be misspelt, expired, used up, already used on this account, or not for this course."
+
 var errPromoInvalid = errors.New("promo code is invalid or expired")
 
 // resolvePromoCode looks up a promo code by its submitted text and, if

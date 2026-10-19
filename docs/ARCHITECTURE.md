@@ -38,7 +38,7 @@ core/
   app/          Bootstrap() — the one place that wires config+DB+renderer into handlers.App
   licence/      Ed25519 licence-key signer (Temple Accounts): payload, signing, Device ID normalisation, key-pair generation. Pure functions, no I/O
   authutil/     visitor password hashing (bcrypt wrapper), SecretEquals (constant-time secret compare, used for the admin password) + RandomHex, the one shared source of cryptographically random tokens (OAuth state, access tokens, cert codes, placeholder passwords)
-  certificate/  PDF quiz-completion certificate generator
+  certificate/  PDF certificate generator, ASCII sanitising rule (ascii.go), code helpers
   config/       env-var loading (Config struct)
   storage/      private Supabase Storage client for lesson HTML, article HTML, role-resume PDFs, the profile photo, and the site logo
   db/           DB connection + migration runner
@@ -261,7 +261,7 @@ erDiagram
         bool is_published
         int sort_order
         bool is_paid
-        int min_price_cents "INR paise, 0 = free -- courses sell in INR only since Oct 2026, migration 062"
+        int min_price_cents "the course fixed price, INR paise (0 = free); the only checkout amount source (models.Course.FixedPriceCents); courses sell in INR only, migration 062"
         text content_key
         text content_html "legacy column, left empty"
         text content_object "private Storage path courses/{slug}.html"
@@ -317,7 +317,7 @@ erDiagram
     purchases {
         serial id PK
         bigint course_id FK
-        bigint user_id FK "nullable column, but always populated since Oct 2026 — checkout requires a Google-authenticated account; ON DELETE SET NULL"
+        bigint user_id FK "NULL for a guest purchase until claimed (migration 087); ON DELETE SET NULL"
         text email
         int amount_cents
         text currency
@@ -331,6 +331,8 @@ erDiagram
         int discount_cents
         timestamptz created_at
         timestamptz paid_at
+        text claim_code "unclaimed guest purchases only, upper-case hex, unique where non-empty, wiped when claimed; migration 087"
+        timestamptz claimed_at "migration 087"
         note "CHECK (status <> paid OR paid_at IS NOT NULL)"
     }
     software {
@@ -342,7 +344,7 @@ erDiagram
         text description "full write-up -- shown in full on the product page, and inline behind the catalog card's 'Read more' expand"
         text rag_context "admin-editable passage for the AI chatbot's RAG index; see §12"
         text download_link "external URL, e.g. a Google Drive folder -- never a Storage path, there is no file hosted on this site"
-        int price_cents "INR, fixed price -- not pay-what-you-want like courses"
+        int price_cents "INR, fixed price"
         text license_terms "admin-editable, e.g. 'Licensed per device'; shown on the product page and the receipt"
         text post_purchase_instructions "admin-editable, e.g. how to request a license key by email; shown on the product page and the receipt"
         bool is_published
@@ -395,6 +397,8 @@ erDiagram
         int discount_cents
         timestamptz created_at
         timestamptz paid_at
+        text claim_code "as purchases; migration 087"
+        timestamptz claimed_at "migration 087"
         note "mirrors purchases field-for-field with software_id in place of course_id; migration 075"
     }
     bookings {
@@ -573,7 +577,9 @@ Handler files, by area:
 | File | Covers |
 |---|---|
 | `public.go` | Home (incl. subscribe-form data), About (incl. case studies), Resume, CoursesList (incl. subscribe-form data), CourseDetail, Sitemap-adjacent data |
-| `checkout.go` | Course purchase order/verify, `courseAccess()` gate |
+| `checkout.go` | Course purchase order/verify (fixed price, guest or signed in), `courseAccess()` gate |
+| `purchase_common.go` | `resolveBuyer` (account or email-only guest; courses), `finalAmountCents`, course success page (`/courses/{slug}/enrolled`), `/account/claim` |
+| `course_contribute.go` | Optional post-course contribution order/verify, promo quote (`CheckoutQuote`) |
 | `software.go` | Public Software list/detail |
 | `software_checkout.go` | Software purchase order/verify (fixed price), `softwareAccess()` gate |
 | `admin_software.go` | Admin CRUD for Software |
@@ -586,7 +592,7 @@ Handler files, by area:
 | `account.go` | `/account` page + PDF receipts + testimonial submission |
 | `booking_reschedule.go` | Both admin- and self-service booking reschedule flows |
 | `learn.go` | Gated course content serving inside the site chrome + watermark injection |
-| `quiz.go` | Quiz taking, scoring, certificate download |
+| `quiz.go` | Quiz taking, scoring, certificate download, public certificate verification (`/certificate/verify/{code}`) |
 | `course_reviews.go` | Verified-buyer review submit (private rating/comment) + its admin-only list view |
 | `auth.go` | Login page, Google OAuth start/callback, logout |
 | `legal.go` | Generic static legal-page handler factory |
@@ -645,9 +651,11 @@ Admin login (`/admin/login`) takes an admin email plus the password and compares
 
 **Promo codes are product-scoped** (`promo_codes.product`, a `CHECK` of `'course' | 'consultancy' | 'software'`). `resolvePromoCode()` (`core/handlers/promo.go`) is one shared function, not three near-duplicates — it branches internally only where the products genuinely differ: course-ID scoping (`promo_code_courses`) only applies to the course product (a `software` promo code has no equivalent per-item scoping — it applies to any software purchase, the same default an empty course-ID list already means for courses), and per-user redemption counting branches between `PurchaseRepo.CountUserRedemptions` (courses) and `SoftwarePurchaseRepo.CountUserRedemptions` (software), since paid purchases of each product live in their own table.
 
-**To add a new fixed-price paid product**, `checkout.go`'s `CheckoutCreateOrder`/`CheckoutVerify` + `purchases` table (pay-what-you-want) and `software_checkout.go`'s `SoftwareCheckoutOrder`/`SoftwareCheckoutVerify` + `software_purchases` table (fixed price) are the two live reference implementations for a Razorpay create/verify pair in this codebase — pick whichever pricing model fits and copy that one's shape into its own new file(s), per the layering rule in §2 above.
+**To add a new fixed-price paid product**, `checkout.go`'s `CheckoutCreateOrder`/`CheckoutVerify` + `purchases` table (fixed price, guest or signed in) and `software_checkout.go`'s `SoftwareCheckoutOrder`/`SoftwareCheckoutVerify` + `software_purchases` table (fixed price) are the two live reference implementations for a Razorpay create/verify pair in this codebase — pick whichever pricing model fits and copy that one's shape into its own new file(s), per the layering rule in §2 above.
 
 ---
+
+**Guest checkout and claim codes (migration `087`).** `purchases` and `software_purchases` gain `claim_code TEXT NOT NULL DEFAULT ''` (unique where non-empty) and `claimed_at`. A purchase made without an account has `user_id` NULL and a random claim code (`authutil.NewClaimCode`: 20 upper-case hex characters, stored without separators). Claim codes are issued for **course** purchases only (software checkout stays login-required; its `claim_code` columns exist for symmetry and stay empty). `core/repo/claims.go` (`ClaimRepo`) attaches purchases atomically: `ClaimByCode` (used by `/account/claim`, throttled with `auth_throttle` kind `claim`) and `AttachByEmail` (called only from the Google callback after Google has verified the email; a typed or password-signup email must never reach it). Both update only rows still having `user_id IS NULL` and a non-empty code, wipe the code in the same statement, and move the matching `licences` row (software) in the same transaction. Course prices are fixed: `models.Course.FixedPriceCents()` (column `min_price_cents`) is the only amount source; no amount is read from the request. Guest checkout starts are throttled per IP in `auth_throttle` kind `checkout`. `POST /courses/{slug}/checkout/quote` previews the promo summary via `resolvePromoCode`. The optional post-course contribution (`course_contribute.go`, table `course_contributions`, repo `CourseContributionRepo`, migration 087) is a third Razorpay create/verify pair modelled on `article_checkout.go`: access-gated by `courseAccess`, amount range-checked server-side, paid only after signature verification.
 
 ## 7. Templates / rendering (`core/view`)
 

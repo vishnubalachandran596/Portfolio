@@ -42,15 +42,15 @@
           {{if .UserEmail}}
           <p class="purchase-box-sub">Access goes to <strong>{{.UserEmail}}</strong>.</p>
           {{else}}
-          <label>Your email <span class="optional">no account needed; this is where your purchase is recorded</span>
-            <input type="email" id="software-email" autocomplete="email" inputmode="email" maxlength="254" placeholder="you@example.com">
-          </label>
+          <p class="purchase-box-sub">Sign in or create an account to purchase.</p>
+          <a class="btn btn-primary btn-lg" href="/login?next=/software/{{.Software.Slug}}">Sign in to buy</a>
           {{end}}
+          {{if .UserEmail}}
           <label>Promo code <span class="optional">(optional)</span>
             <input type="text" id="software-promo-code" autocapitalize="characters" autocomplete="off">
           </label>
           <button type="button" class="btn btn-primary btn-lg" id="software-purchase-btn" data-slug="{{.Software.Slug}}">{{if gt .Software.PriceCents 0}}Buy now{{else}}Get free access{{end}}</button>
-          {{if not .UserEmail}}<p class="purchase-box-sub">After payment you get a claim code to attach this purchase to an account later. We send no emails, so keep it safe.</p>{{end}}
+          {{end}}
           <p class="purchase-box-sub">One-time price. See the <a class="text-link" href="{{.Nav.Refund}}">refund policy</a>.</p>
         </div>
         {{if .PaymentsEnabled}}<script src="https://checkout.razorpay.com/v1/checkout.js"></script>{{end}}

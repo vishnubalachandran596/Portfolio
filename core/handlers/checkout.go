@@ -62,7 +62,7 @@ func (a *App) CheckoutCreateOrder(w http.ResponseWriter, r *http.Request) {
 
 	discountCents, promo, perr := a.resolvePromoCode(r.Context(), r.FormValue("promo_code"), models.PromoProductCourse, course.ID, userID, email, baseCents)
 	if perr != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "That promo code isn't valid."})
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": errPromoMessage})
 		return
 	}
 	amountCents := finalAmountCents(baseCents, discountCents)

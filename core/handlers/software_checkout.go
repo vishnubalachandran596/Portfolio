@@ -20,8 +20,8 @@ func softwareAccessCookieName(softwareID int64) string {
 // SoftwareCheckoutOrder creates a Razorpay order for a fixed-price
 // software purchase. Like CheckoutCreateOrder, the amount is never taken
 // from the client: it's always the software's own PriceCents, less any
-// valid promo discount. A visitor who isn't signed in checks out as a
-// guest with just an email (see resolveBuyer) and gets a claim code.
+// valid promo discount. Software checkout stays login-required (the
+// email-only guest checkout is for courses only).
 func (a *App) SoftwareCheckoutOrder(w http.ResponseWriter, r *http.Request) {
 	slug := r.PathValue("slug")
 	sw, err := a.Software.GetBySlug(r.Context(), slug)
@@ -34,17 +34,23 @@ func (a *App) SoftwareCheckoutOrder(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Invalid form submission."})
 		return
 	}
-	buyer, ok := a.resolveBuyer(w, r)
+	uid, ok := a.Auth.UserID(r)
 	if !ok {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "Please log in to continue.", "login_required": "1"})
 		return
 	}
-	uid, email := buyer.UserID, buyer.Email
+	user, err := a.Users.GetByID(r.Context(), uid)
+	if err != nil {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "Please log in to continue.", "login_required": "1"})
+		return
+	}
+	email := user.Email
 	currency := models.CurrencyINR
 	baseCents := sw.PriceCents
 
 	discountCents, promo, perr := a.resolvePromoCode(r.Context(), r.FormValue("promo_code"), models.PromoProductSoftware, 0, uid, email, baseCents)
 	if perr != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "That promo code isn't valid."})
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": errPromoMessage})
 		return
 	}
 	amountCents := finalAmountCents(baseCents, discountCents)
@@ -55,11 +61,6 @@ func (a *App) SoftwareCheckoutOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	claimCode, err := buyer.newClaimCode()
-	if err != nil {
-		a.serverError(w, "generate claim code", err)
-		return
-	}
 	purchase := models.SoftwarePurchase{
 		SoftwareID:    sw.ID,
 		UserID:        uid,
@@ -68,7 +69,6 @@ func (a *App) SoftwareCheckoutOrder(w http.ResponseWriter, r *http.Request) {
 		Currency:      currency,
 		AccessToken:   token,
 		DiscountCents: discountCents,
-		ClaimCode:     claimCode,
 	}
 	if promo != nil {
 		purchase.PromoCodeID = &promo.ID
@@ -102,7 +102,7 @@ func (a *App) SoftwareCheckoutOrder(w http.ResponseWriter, r *http.Request) {
 		a.setAccessCookie(w, softwareAccessCookieName(sw.ID), token)
 		writeJSON(w, http.StatusOK, map[string]any{
 			"free":     true,
-			"redirect": "/software/" + slug + "/purchased",
+			"redirect": "/software/" + slug,
 		})
 		return
 	}
@@ -190,12 +190,12 @@ func (a *App) SoftwareCheckoutVerify(w http.ResponseWriter, r *http.Request) {
 	if purchase.PromoCode != "" {
 		promoLine = fmt.Sprintf("\nPromo: %s (-%s)", purchase.PromoCode, models.FormatMoney(purchase.DiscountCents, purchase.Currency))
 	}
-	a.Telegram.Send(fmt.Sprintf("💾 Software purchase%s\nSoftware: %s %s\nEmail: %s\nAmount: %s%s",
-		guestTag(purchase.UserID), sw.Title, sw.Version, purchase.Email, models.FormatMoney(purchase.AmountCents, purchase.Currency), promoLine))
+	a.Telegram.Send(fmt.Sprintf("💾 Software purchase\nSoftware: %s %s\nEmail: %s\nAmount: %s%s",
+		sw.Title, sw.Version, purchase.Email, models.FormatMoney(purchase.AmountCents, purchase.Currency), promoLine))
 
 	a.setAccessCookie(w, softwareAccessCookieName(sw.ID), purchase.AccessToken)
 
-	writeJSON(w, http.StatusOK, map[string]string{"redirect": "/software/" + slug + "/purchased"})
+	writeJSON(w, http.StatusOK, map[string]string{"redirect": "/software/" + slug})
 }
 
 // softwareAccess reports whether the current request may see a paid

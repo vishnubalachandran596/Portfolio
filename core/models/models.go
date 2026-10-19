@@ -986,6 +986,22 @@ type SoftwarePurchase struct {
 	ClaimedAt         *time.Time
 }
 
+// CourseContribution is the optional voluntary payment a learner can make
+// after finishing a course. The course price itself stays fixed.
+type CourseContribution struct {
+	ID                int64
+	CourseID          int64
+	UserID            int64
+	Email             string
+	AmountCents       int
+	Currency          string
+	Status            string
+	RazorpayOrderID   string
+	RazorpayPaymentID string
+	CreatedAt         time.Time
+	PaidAt            *time.Time
+}
+
 // QuizPassPercent is the minimum score required to pass a course's final
 // quiz and unlock a completion certificate.
 const QuizPassPercent = 70

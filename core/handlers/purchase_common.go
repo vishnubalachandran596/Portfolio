@@ -165,39 +165,6 @@ func (a *App) CoursePurchaseSuccess(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// SoftwarePurchaseSuccess is CoursePurchaseSuccess for software.
-func (a *App) SoftwarePurchaseSuccess(w http.ResponseWriter, r *http.Request) {
-	slug := r.PathValue("slug")
-	sw, err := a.Software.GetBySlug(r.Context(), slug)
-	if err != nil {
-		a.NotFound(w, r)
-		return
-	}
-	c, cerr := r.Cookie(softwareAccessCookieName(sw.ID))
-	if cerr != nil {
-		http.Redirect(w, r, "/software/"+slug, http.StatusSeeOther)
-		return
-	}
-	p, err := a.SoftwarePurchases.GetPaidByAccessToken(r.Context(), c.Value)
-	if err != nil || p.SoftwareID != sw.ID {
-		http.Redirect(w, r, "/software/"+slug, http.StatusSeeOther)
-		return
-	}
-	a.renderPurchaseSuccess(w, r, PurchaseSuccessData{
-		Kind:      "software",
-		Title:     sw.Title,
-		Receipt:   fmt.Sprintf("S%06d", p.ID),
-		Email:     p.Email,
-		Amount:    models.FormatMoney(p.AmountCents, p.Currency),
-		PromoLine: promoLineOf(p.PromoCode, p.DiscountCents, p.Currency),
-		ClaimCode: claimDisplay(p.UserID, p.ClaimCode),
-		Attached:  p.UserID != 0,
-		NextURL:   "/software/" + slug,
-		NextText:  "Go to the download page",
-		Licence:   sw.LicenceProduct != "",
-	})
-}
-
 func claimDisplay(userID int64, code string) string {
 	if userID != 0 || code == "" {
 		return ""
