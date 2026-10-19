@@ -218,6 +218,7 @@ type AdminCourseFormData struct {
 	Course models.Course
 	IsNew  bool
 	Error  string
+	SEO    models.SEOFields
 }
 
 func (a *App) AdminCourseNewPage(w http.ResponseWriter, r *http.Request) {
@@ -242,9 +243,11 @@ func (a *App) AdminCourseEditPage(w http.ResponseWriter, r *http.Request) {
 		a.serverError(w, "load course", err)
 		return
 	}
+	seo, _ := a.SEO.GetFields(r.Context(), repo.SEOCourse, id)
 	a.View.Render(w, http.StatusOK, "admin_course_form", AdminCourseFormData{
 		BaseData: a.base(r, "Edit Course — Admin", "", "admin"),
 		Course:   course,
+		SEO:      seo,
 	})
 }
 
@@ -296,6 +299,7 @@ func (a *App) AdminCourseSave(w http.ResponseWriter, r *http.Request) {
 		formData := AdminCourseFormData{
 			BaseData: a.base(r, "Course — Admin", "", "admin"),
 			Course:   course,
+			SEO:      seoFieldsFromForm(r),
 			IsNew:    id == 0,
 			Error:    "Title is required.",
 		}
@@ -313,6 +317,7 @@ func (a *App) AdminCourseSave(w http.ResponseWriter, r *http.Request) {
 			formData := AdminCourseFormData{
 				BaseData: a.base(r, "Course — Admin", "", "admin"),
 				Course:   course,
+				SEO:      seoFieldsFromForm(r),
 				IsNew:    id == 0,
 				Error:    "Course content must be an .html file.",
 			}
@@ -328,6 +333,7 @@ func (a *App) AdminCourseSave(w http.ResponseWriter, r *http.Request) {
 			formData := AdminCourseFormData{
 				BaseData: a.base(r, "Course — Admin", "", "admin"),
 				Course:   course,
+				SEO:      seoFieldsFromForm(r),
 				IsNew:    id == 0,
 				Error:    "Course content must be 8MB or smaller.",
 			}
@@ -339,6 +345,7 @@ func (a *App) AdminCourseSave(w http.ResponseWriter, r *http.Request) {
 			formData := AdminCourseFormData{
 				BaseData: a.base(r, "Course — Admin", "", "admin"),
 				Course:   course,
+				SEO:      seoFieldsFromForm(r),
 				IsNew:    id == 0,
 				Error:    "Course storage is not configured on this server.",
 			}
@@ -370,12 +377,14 @@ func (a *App) AdminCourseSave(w http.ResponseWriter, r *http.Request) {
 		formData := AdminCourseFormData{
 			BaseData: a.base(r, "Course — Admin", "", "admin"),
 			Course:   course,
+			SEO:      seoFieldsFromForm(r),
 			IsNew:    id == 0,
 			Error:    "Could not save course — the slug may already be in use.",
 		}
 		a.View.Render(w, http.StatusUnprocessableEntity, "admin_course_form", formData)
 		return
 	}
+	a.saveSEOFields(ctx, repo.SEOCourse, id, r)
 	if len(uploaded) > 0 {
 		// Every lesson is stored in the site's content conventions
 		// (docs/DESIGN.md "Content updates").

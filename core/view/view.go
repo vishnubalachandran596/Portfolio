@@ -131,6 +131,7 @@ func New() (*Renderer, error) {
 	adminLayout := []string{
 		"templates/layout/admin_base.html",
 		"templates/layout/adminnav.html",
+		"templates/layout/admin_seo_fields.html",
 	}
 
 	publicPages := []string{
@@ -205,6 +206,7 @@ func New() (*Renderer, error) {
 		"templates/pages/admin_course_reviews_list.html",
 		"templates/pages/admin_chatbot.html",
 		"templates/pages/admin_quiz_form.html",
+		"templates/pages/admin_seo.html",
 	}
 
 	r := &Renderer{pages: map[string]renderEntry{}}

@@ -367,15 +367,28 @@ type CoursesListData struct {
 	Subscribe  SubscribeFormData
 }
 
+// coursesPageSize is large enough that the whole catalog renders on one
+// page: /courses is a single indexable hub, not a paginated archive.
+const coursesPageSize = 100
+
 func (a *App) CoursesList(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	q := r.URL.Query()
 	previewAll := a.Auth.IsAuthenticated(r) && !a.isPreviewingAsVisitor(r)
 
-	page, _ := strconv.Atoi(q.Get("page"))
-	if page < 1 {
-		page = 1
+	// Every course fits on one page (coursesPageSize), so ?page= has no
+	// meaning here: redirect it permanently to the same view without it
+	// rather than serve a duplicate of the listing.
+	if _, has := q["page"]; has {
+		q.Del("page")
+		target := r.URL.Path
+		if enc := q.Encode(); enc != "" {
+			target += "?" + enc
+		}
+		http.Redirect(w, r, target, http.StatusMovedPermanently)
+		return
 	}
+	page := 1
 	sort := q.Get("sort")
 	if sort != "reviews_desc" && sort != "newest" {
 		sort = "recommended"
@@ -385,7 +398,7 @@ func (a *App) CoursesList(w http.ResponseWriter, r *http.Request) {
 		Tag:                strings.TrimSpace(q.Get("tag")),
 		Sort:               sort,
 		Page:               page,
-		PageSize:           catalogPageSize,
+		PageSize:           coursesPageSize,
 		IncludeUnpublished: previewAll,
 	}
 
@@ -415,7 +428,7 @@ func (a *App) CoursesList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	totalPages := (result.Total + catalogPageSize - 1) / catalogPageSize
+	totalPages := (result.Total + coursesPageSize - 1) / coursesPageSize
 	if totalPages < 1 {
 		totalPages = 1
 	}
@@ -444,6 +457,7 @@ func (a *App) CoursesList(w http.ResponseWriter, r *http.Request) {
 		NextPage:   page + 1,
 		Subscribe:  SubscribeFormData{Source: "courses", Subscribed: q.Get("subscribed") == "1"},
 	}
+	data.BreadcrumbJSONLD = breadcrumbJSONLD(a.trail(r, crumb{"Courses", a.pageURL(r, "/courses")}))
 	for _, c := range allSrc {
 		switch c.Track() {
 		case models.CourseTrackStart:
@@ -494,6 +508,7 @@ type CourseDetailData struct {
 func (a *App) CourseDetail(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	slug := r.PathValue("slug")
+	seoWait := a.seoFieldsAsync(ctx, repo.SEOCourse, slug)
 
 	// Wave one: everything that only needs the request — the course row,
 	// the chrome, and the signed-in visitor's email for the checkout form.
@@ -579,14 +594,19 @@ func (a *App) CourseDetail(w http.ResponseWriter, r *http.Request) {
 		course.PreviewReady = backfilledPreview
 	}
 
-	base := a.baseFrom(r, pf, course.Title+" — "+a.Cfg.SiteName, course.Summary, "courses")
+	seo := seoWait()
+	description := seo.Description(course.Summary, course.Description)
+	base := a.baseFrom(r, pf, seo.Title(course.Title+" — "+a.Cfg.SiteName), description, "courses")
+	base.OGImageURL = ogImageFor(a.baseURL(r), seo, course.ImageURL)
+	base.BreadcrumbJSONLD = breadcrumbJSONLD(a.trail(r,
+		crumb{"Courses", a.pageURL(r, "/courses")}, crumb{course.Title, base.CanonicalURL}))
 
 	minCents := course.MinPriceCents
 
 	a.View.Render(w, http.StatusOK, "course_detail", CourseDetailData{
 		BaseData:           base,
 		Course:             course,
-		JSONLD:             courseJSONLD(course.Title, course.Summary, base.CanonicalURL, a.Cfg.SiteName),
+		JSONLD:             courseJSONLD(course, description, base.CanonicalURL, base.OGImageURL, a.Cfg.SiteName),
 		PaymentsEnabled:    a.Razorpay.Enabled(),
 		RazorpayKeyID:      a.Razorpay.KeyID,
 		PurchaseRequired:   r.URL.Query().Get("purchase") == "required",
@@ -640,7 +660,9 @@ func (a *App) NotFound(w http.ResponseWriter, r *http.Request) {
 	if a.redirectRenamed(w, r) {
 		return
 	}
-	a.View.Render(w, http.StatusNotFound, "not_found", a.base(r, "Page not found — "+a.Cfg.SiteName, "", ""))
+	base := a.base(r, "Page not found — "+a.Cfg.SiteName, "", "")
+	base.NoCanonical = true // a 404 must not declare itself canonical
+	a.View.Render(w, http.StatusNotFound, "not_found", base)
 }
 
 func (a *App) serverError(w http.ResponseWriter, action string, err error) {

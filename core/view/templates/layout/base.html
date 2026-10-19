@@ -7,7 +7,8 @@
 <meta name="description" content="{{.MetaDescription}}">
 <meta name="theme-color" content="#faf9f7" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#14110e" media="(prefers-color-scheme: dark)">
-<link rel="canonical" href="{{.CanonicalURL}}">
+{{if not .NoCanonical}}<link rel="canonical" href="{{.CanonicalURL}}">{{end}}
+{{if .RobotsMeta}}<meta name="robots" content="{{.RobotsMeta}}">{{end}}
 <link rel="icon" href="/static/img/favicon.svg" type="image/svg+xml">
 <link rel="alternate icon" href="/static/img/favicon.ico">
 <link rel="apple-touch-icon" href="/static/img/apple-touch-icon.png">
@@ -23,7 +24,7 @@
 <meta property="og:site_name" content="{{.SiteName}}">
 <meta property="og:title" content="{{.Title}}">
 <meta property="og:description" content="{{.MetaDescription}}">
-<meta property="og:url" content="{{.CanonicalURL}}">
+{{if not .NoCanonical}}<meta property="og:url" content="{{.CanonicalURL}}">{{end}}
 <meta property="og:image" content="{{.OGImageURL}}">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="{{.Title}}">
@@ -31,6 +32,7 @@
 <meta name="twitter:image" content="{{.OGImageURL}}">
 
 {{block "jsonld" .}}{{end}}
+{{if .BreadcrumbJSONLD}}<script type="application/ld+json">{{.BreadcrumbJSONLD}}</script>{{end}}
 </head>
 <body data-active="{{.Active}}"{{if .Immersive}} class="is-immersive"{{end}}>
 <div id="page-loader" class="page-loader" aria-hidden="true"><span></span></div>

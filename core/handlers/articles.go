@@ -156,6 +156,7 @@ type ArticleDetailData struct {
 // what lets articles appear in the sitemap and actually get indexed.
 func (a *App) ArticleDetailPage(w http.ResponseWriter, r *http.Request) {
 	slug := r.PathValue("slug")
+	seoWait := a.seoFieldsAsync(r.Context(), repo.SEOArticle, slug)
 	pf := a.startBase(r)
 	article, err := a.Articles.GetBySlug(r.Context(), slug)
 	if err != nil {
@@ -181,14 +182,19 @@ func (a *App) ArticleDetailPage(w http.ResponseWriter, r *http.Request) {
 		a.serverError(w, "load article html", err)
 		return
 	}
-	base := a.baseFrom(r, pf, article.Title+" — "+a.Cfg.SiteName, article.Summary, "articles")
+	seo := seoWait()
+	description := seo.Description(article.Summary, "")
+	base := a.baseFrom(r, pf, seo.Title(article.Title+" — "+a.Cfg.SiteName), description, "articles")
+	base.OGImageURL = ogImageFor(a.baseURL(r), seo, article.CoverImageURL)
+	base.BreadcrumbJSONLD = breadcrumbJSONLD(a.trail(r,
+		crumb{"Blog", a.pageURL(r, "/articles")}, crumb{article.Title, base.CanonicalURL}))
 	currency := models.CurrencyINR
 	a.View.Render(w, http.StatusOK, "article_detail", ArticleDetailData{
 		BaseData:           base,
 		Article:            article,
 		Watermark:          template.HTML(storage.WatermarkScript(storage.WatermarkLabel, "")),
 		Voted:              voted,
-		JSONLD:             articleJSONLD(article, base.CanonicalURL, a.Cfg.SiteName),
+		JSONLD:             articleJSONLD(article, base.CanonicalURL, a.Cfg.SiteName, description, base.OGImageURL),
 		PaymentsEnabled:    a.Razorpay.Enabled(),
 		ContributeCurrency: currency,
 		ContributeMinCents: models.ArticleContributeMinCents,
@@ -325,6 +331,7 @@ type AdminArticleFormData struct {
 	Contributions     []adminArticleContribution
 	PaidCount         int
 	ContributionTotal string
+	SEO               models.SEOFields
 }
 
 func (a *App) AdminArticleNewPage(w http.ResponseWriter, r *http.Request) {
@@ -357,6 +364,8 @@ func (a *App) AdminArticleEditPage(w http.ResponseWriter, r *http.Request) {
 	g, gctx := errgroup.WithContext(r.Context())
 	g.Go(func() (err error) { votes, err = a.ArticleVotes.ListByArticle(gctx, article.ID); return })
 	g.Go(func() (err error) { contrib, err = a.ArticleContributions.ListByArticle(gctx, article.ID); return })
+	var articleSEO models.SEOFields
+	g.Go(func() error { articleSEO, _ = a.SEO.GetFields(gctx, repo.SEOArticle, article.ID); return nil })
 	if err := g.Wait(); err != nil {
 		a.serverError(w, "load article engagement", err)
 		return
@@ -386,6 +395,7 @@ func (a *App) AdminArticleEditPage(w http.ResponseWriter, r *http.Request) {
 
 	a.View.Render(w, http.StatusOK, "admin_article_form", AdminArticleFormData{
 		BaseData:          a.base(r, "Edit Article — Admin", "", "admin"),
+		SEO:               articleSEO,
 		Article:           article,
 		Votes:             votes,
 		Contributions:     rows,
@@ -540,6 +550,7 @@ func (a *App) AdminArticleSave(w http.ResponseWriter, r *http.Request) {
 		a.renderArticleForm(w, r, article, id == 0, "Could not save article — the URL slug may already be in use.")
 		return
 	}
+	a.saveSEOFields(ctx, repo.SEOArticle, id, r)
 	if dropPath != "" && a.CourseStorage != nil {
 		if err := a.CourseStorage.Delete(ctx, dropPath); err != nil {
 			log.Printf("delete article object %s: %v", dropPath, err)
@@ -556,6 +567,7 @@ func (a *App) renderArticleForm(w http.ResponseWriter, r *http.Request, article 
 		Article:  article,
 		IsNew:    isNew,
 		Error:    msg,
+		SEO:      seoFieldsFromForm(r),
 	})
 }
 

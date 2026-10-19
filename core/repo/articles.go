@@ -229,7 +229,7 @@ func (r *ArticleRepo) Create(ctx context.Context, a models.Article) (int64, erro
 
 func (r *ArticleRepo) Update(ctx context.Context, a models.Article) error {
 	_, err := r.db.ExecContext(ctx, `
-		UPDATE articles SET slug=$1, title=$2, summary=$3, body=$4, content_object=$5, cover_image_url=$6, tags=$7, published_date=$8, is_published=$9, sort_order=$10
+		UPDATE articles SET slug=$1, title=$2, summary=$3, body=$4, content_object=$5, cover_image_url=$6, tags=$7, published_date=$8, is_published=$9, sort_order=$10, updated_at=now()
 		WHERE id=$11`,
 		a.Slug, a.Title, a.Summary, a.Body, a.ContentObject, a.CoverImageURL, pq.Array(a.Tags), a.PublishedDate, a.IsPublished, a.SortOrder, a.ID,
 	)

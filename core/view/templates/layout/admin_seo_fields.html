@@ -1,0 +1,20 @@
+{{/* Shared SEO inputs for the course, article and software admin forms and
+     the per-page rows on /admin/seo. Called with a models.SEOFields. The
+     counters are advisory (admin.js fills them from data-count-max); empty
+     fields fall back to the title pattern / summary / site default. */}}
+{{define "admin_seo_fields"}}
+<label>SEO title <span class="optional">(aim for 60 characters or fewer; blank uses the default title)</span>
+  <input type="text" name="seo_title" value="{{.SEOTitle}}" data-count-max="60">
+  <span class="seo-counter" data-counter-for="seo_title" aria-live="polite"></span>
+</label>
+<label>Meta description <span class="optional">(aim for 160 characters or fewer; blank uses the summary, then a trimmed description)</span>
+  <textarea name="meta_description" rows="3" data-count-max="160">{{.MetaDescription}}</textarea>
+  <span class="seo-counter" data-counter-for="meta_description" aria-live="polite"></span>
+</label>
+<label>Primary keyword <span class="optional">(the search phrase this page should rank for; for your reference, not shown to visitors)</span>
+  <input type="text" name="primary_keyword" value="{{.PrimaryKeyword}}">
+</label>
+<label>Social share image <span class="optional">(absolute URL or a site path such as /static/img/og-image.png; blank uses the cover image, then the site default)</span>
+  <input type="text" name="og_image" value="{{.OGImage}}">
+</label>
+{{end}}

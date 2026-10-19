@@ -2521,3 +2521,8 @@ select { appearance: none; -webkit-appearance: none; padding-right: 2.25rem; bac
 .booking-code { font-family: var(--font-mono, ui-monospace, monospace); letter-spacing: 0.08em; }
 .booking-manage-link { overflow-wrap: anywhere; word-break: break-all; }
 .booking-contact[tabindex]:focus { outline: none; }
+
+/* Admin SEO fields: advisory character counter under title/description. */
+.seo-counter { font-size: 0.8125rem; font-weight: 400; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.seo-counter-over { color: var(--danger); font-weight: 600; }
+.seo-page-form { margin-bottom: var(--space-5); padding-bottom: var(--space-5); border-bottom: 1px solid var(--line); }

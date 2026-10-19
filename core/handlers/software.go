@@ -24,6 +24,7 @@ func (a *App) SoftwareList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	base := a.baseFrom(r, pf, "Software — "+a.Cfg.SiteName, "Downloadable apps and tools, built and sold directly.", "software")
+	base.BreadcrumbJSONLD = breadcrumbJSONLD(a.trail(r, crumb{"Software", a.pageURL(r, "/software")}))
 	a.View.Render(w, http.StatusOK, "software_list", SoftwareListData{BaseData: base, Software: list})
 }
 
@@ -41,6 +42,7 @@ type SoftwareDetailData struct {
 func (a *App) SoftwareDetail(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	slug := r.PathValue("slug")
+	seoWait := a.seoFieldsAsync(ctx, repo.SEOSoftware, slug)
 
 	pf := a.startBase(r)
 	sw, err := a.Software.GetBySlug(ctx, slug)
@@ -67,21 +69,21 @@ func (a *App) SoftwareDetail(w http.ResponseWriter, r *http.Request) {
 
 	hasAccess := a.softwareAccess(w, r, sw)
 
-	// Summary, not Description -- Description runs to ~1,000 chars and
-	// Google truncates/ignores an over-long meta description (seen live:
-	// the stats/listing audit flagged this page's snippet going stale/
-	// inconsistent because of it). Fall back to Description only if a
-	// software item predates the Summary field and has none set.
-	metaDescription := sw.Summary
-	if metaDescription == "" {
-		metaDescription = sw.Description
-	}
-	base := a.baseFrom(r, pf, sw.Title+" — "+a.Cfg.SiteName, metaDescription, "software")
+	// Fallback chain: meta_description, then Summary, then a truncated
+	// Description -- never the full ~1,000-char Description, which Google
+	// truncates or ignores (seen live: the listing audit flagged this
+	// page's snippet going stale because of it).
+	seo := seoWait()
+	description := seo.Description(sw.Summary, sw.Description)
+	base := a.baseFrom(r, pf, seo.Title(sw.Title+" — "+a.Cfg.SiteName), description, "software")
+	base.OGImageURL = ogImageFor(a.baseURL(r), seo, "")
+	base.BreadcrumbJSONLD = breadcrumbJSONLD(a.trail(r,
+		crumb{"Software", a.pageURL(r, "/software")}, crumb{sw.Title, base.CanonicalURL}))
 
 	a.View.Render(w, http.StatusOK, "software_detail", SoftwareDetailData{
 		BaseData:         base,
 		Software:         sw,
-		JSONLD:           softwareApplicationJSONLD(sw, base.CanonicalURL),
+		JSONLD:           softwareApplicationJSONLD(sw, base.CanonicalURL, description, base.OGImageURL),
 		PaymentsEnabled:  a.Razorpay.Enabled(),
 		RazorpayKeyID:    a.Razorpay.KeyID,
 		PurchaseRequired: r.URL.Query().Get("purchase") == "required",

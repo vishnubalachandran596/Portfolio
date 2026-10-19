@@ -236,6 +236,8 @@ func (a *App) Routes() http.Handler {
 	protected.HandleFunc("GET /admin/profile", a.AdminProfilePage)
 	protected.HandleFunc("POST /admin/profile", a.AdminProfileSave)
 	protected.HandleFunc("GET /admin/preview-visitor", a.AdminPreviewAsVisitor)
+	protected.HandleFunc("GET /admin/seo", a.AdminSEOPage)
+	protected.HandleFunc("POST /admin/seo", a.AdminSEOSave)
 	adminMux.Handle("/admin/", a.Auth.RequireAdmin(protected))
 
 	mux.Handle("/admin/", noindex(adminMux))
@@ -249,7 +251,7 @@ func (a *App) Routes() http.Handler {
 	return middleware.Logging(middleware.SecurityHeaders(
 		middleware.CanonicalHost(a.Cfg.SiteURL)(
 			middleware.DomainRouter(a.Cfg.Domain)(
-				middleware.SameOrigin(siteHost)(a.Auth.Attach(mux))))))
+				middleware.SameOrigin(siteHost)(middleware.LegacyRedirects(a.Auth.Attach(mux)))))))
 }
 
 // noindex tags every response under a handler as non-indexable — used for
@@ -258,7 +260,7 @@ func (a *App) Routes() http.Handler {
 func noindex(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("X-Robots-Tag", "noindex, nofollow")
-		next.ServeHTTP(w, r)
+		next.ServeHTTP(w, markNoindex(r))
 	})
 }
 

@@ -24,6 +24,7 @@ func toJSONLD(v any) template.JS {
 type personSchema struct {
 	Context     string   `json:"@context"`
 	Type        string   `json:"@type"`
+	ID          string   `json:"@id,omitempty"`
 	Name        string   `json:"name"`
 	JobTitle    string   `json:"jobTitle,omitempty"`
 	Description string   `json:"description,omitempty"`
@@ -142,7 +143,9 @@ func consultancyJSONLD(pageURL, providerName, description, priceRange string, fa
 
 // knowsAbout is the keyword set surfaced in the Person schema's
 // knowsAbout, derived from the skill groups the home page has already
-// loaded — each group's category plus its individual skills.
+// loaded — each group's individual skills. The group headings (e.g.
+// "Languages & Frameworks") are section labels, not skills, so they are
+// left out.
 //
 // This used to be a hardcoded slice maintained separately in Go, and it
 // had drifted: the skill groups were re-cut and an AI/agentic-engineering
@@ -153,30 +156,58 @@ func consultancyJSONLD(pageURL, providerName, description, priceRange string, fa
 func knowsAbout(skills []models.SkillGroup) []string {
 	out := make([]string, 0, len(skills)*4)
 	for _, g := range skills {
-		if g.Category != "" {
-			out = append(out, g.Category)
-		}
 		out = append(out, g.Items...)
 	}
 	return out
 }
 
+type schemaRef struct {
+	Type string `json:"@type"`
+	Name string `json:"name"`
+	URL  string `json:"url,omitempty"`
+}
+
+type offerSchema struct {
+	Type          string `json:"@type"`
+	Price         string `json:"price"`
+	PriceCurrency string `json:"priceCurrency"`
+	Availability  string `json:"availability,omitempty"`
+	URL           string `json:"url,omitempty"`
+}
+
+type courseInstanceSchema struct {
+	Type       string `json:"@type"`
+	CourseMode string `json:"courseMode"`
+}
+
 type courseSchema struct {
-	Context     string `json:"@context"`
-	Type        string `json:"@type"`
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	URL         string `json:"url"`
-	Provider    struct {
-		Type string `json:"@type"`
-		Name string `json:"name"`
-	} `json:"provider"`
+	Context           string                 `json:"@context"`
+	Type              string                 `json:"@type"`
+	Name              string                 `json:"name"`
+	Description       string                 `json:"description"`
+	URL               string                 `json:"url"`
+	Image             string                 `json:"image,omitempty"`
+	Keywords          string                 `json:"keywords,omitempty"`
+	EducationalLevel  string                 `json:"educationalLevel,omitempty"`
+	Provider          schemaRef              `json:"provider"`
+	Offers            *offerSchema           `json:"offers,omitempty"`
+	HasCourseInstance []courseInstanceSchema `json:"hasCourseInstance,omitempty"`
+}
+
+// priceString renders a minor-unit amount the way schema.org wants a
+// price: a plain decimal, no currency symbol or grouping.
+func priceString(cents int) string {
+	if cents%100 == 0 {
+		return strconv.Itoa(cents / 100)
+	}
+	return strconv.FormatFloat(float64(cents)/100, 'f', 2, 64)
 }
 
 func personAndWebsiteJSONLD(profile models.Profile, homeURL, imageURL string, sameAs []string, skills []models.SkillGroup) template.JS {
 	person := personSchema{
 		Context:     "https://schema.org",
 		Type:        "Person",
+		ID:          homeURL + "#person",
 		Name:        profile.Name,
 		JobTitle:    profile.Title,
 		Description: profile.HeroSubtitle,
@@ -198,12 +229,20 @@ func personAndWebsiteJSONLD(profile models.Profile, homeURL, imageURL string, sa
 		Name:    profile.Name,
 		URL:     homeURL,
 	}
+	// The Service block is derived from the profile rather than carrying
+	// its own copy: the description is the profile's summary (falling back
+	// to the hero subtitle), so editing the profile in the admin console
+	// updates the structured data too.
+	serviceDescription := profile.Summary
+	if serviceDescription == "" {
+		serviceDescription = profile.HeroSubtitle
+	}
 	service := serviceSchema{
 		Context:     "https://schema.org",
 		Type:        "Service",
 		ServiceType: "Technical Consulting",
-		Name:        "Technical Consulting — Architecture, System Design & Engineering Leadership",
-		Description: "1:1 technical consultancy for architecture reviews, system design decisions, and engineering leadership, from a Java technical expert with 8+ years in banking and fintech platforms.",
+		Name:        "Technical consulting by " + profile.Name,
+		Description: serviceDescription,
 		AreaServed:  "Worldwide",
 	}
 	service.Provider.Type = "Person"
@@ -217,35 +256,37 @@ func personAndWebsiteJSONLD(profile models.Profile, homeURL, imageURL string, sa
 // articleSchema marks up a blog post as a BlogPosting — the page search
 // engines index, and the page the writing actually lives on.
 type articleSchema struct {
-	Context       string `json:"@context"`
-	Type          string `json:"@type"`
-	Headline      string `json:"headline"`
-	Description   string `json:"description"`
-	URL           string `json:"url"`
-	Image         string `json:"image,omitempty"`
-	DatePublished string `json:"datePublished,omitempty"`
-	Keywords      string `json:"keywords,omitempty"`
-	Author        struct {
-		Type string `json:"@type"`
-		Name string `json:"name"`
-	} `json:"author"`
+	Context          string    `json:"@context"`
+	Type             string    `json:"@type"`
+	Headline         string    `json:"headline"`
+	Description      string    `json:"description"`
+	URL              string    `json:"url"`
+	MainEntityOfPage schemaRef `json:"mainEntityOfPage"`
+	Image            string    `json:"image,omitempty"`
+	DatePublished    string    `json:"datePublished,omitempty"`
+	Keywords         string    `json:"keywords,omitempty"`
+	Author           schemaRef `json:"author"`
+	Publisher        schemaRef `json:"publisher"`
 }
 
-// articleJSONLD marks an article up as a BlogPosting. This used to be
-// gated on the article having a body of its own, because the site also
-// carried curated link-outs — a one-line summary of someone else's post,
-// which would have been thin and misleading structured data to claim as
-// original. That second kind of article no longer exists (migration 040),
-// so every article is genuinely this site's own writing and the gate is
-// gone with it.
-func articleJSONLD(a models.Article, pageURL, authorName string) template.JS {
+// articleJSONLD marks an article up as a BlogPosting. description and
+// image are the already-resolved SEO values (meta_description fallback
+// chain, og_image fallback), so the structured data always agrees with the
+// tags in the page head. This used to be gated on the article having a
+// body of its own, because the site also carried curated link-outs — that
+// second kind of article no longer exists (migration 040), so every
+// article is genuinely this site's own writing and the gate is gone.
+func articleJSONLD(a models.Article, pageURL, authorName, description, image string) template.JS {
 	s := articleSchema{
-		Context:     "https://schema.org",
-		Type:        "BlogPosting",
-		Headline:    a.Title,
-		Description: a.Summary,
-		URL:         pageURL,
-		Image:       a.CoverImageURL,
+		Context:          "https://schema.org",
+		Type:             "BlogPosting",
+		Headline:         a.Title,
+		Description:      description,
+		URL:              pageURL,
+		MainEntityOfPage: schemaRef{Type: "WebPage", Name: a.Title, URL: pageURL},
+		Image:            image,
+		Author:           schemaRef{Type: "Person", Name: authorName},
+		Publisher:        schemaRef{Type: "Person", Name: authorName},
 	}
 	if a.PublishedDate != nil {
 		s.DatePublished = a.PublishedDate.Format("2006-01-02")
@@ -253,49 +294,108 @@ func articleJSONLD(a models.Article, pageURL, authorName string) template.JS {
 	if len(a.Tags) > 0 {
 		s.Keywords = strings.Join(a.Tags, ", ")
 	}
-	s.Author.Type = "Person"
-	s.Author.Name = authorName
 	return toJSONLD(s)
 }
 
-func courseJSONLD(title, description, url, providerName string) template.JS {
-	c := courseSchema{
-		Context:     "https://schema.org",
-		Type:        "Course",
-		Name:        title,
-		Description: description,
-		URL:         url,
+// courseJSONLD builds the Course block from the course row itself: title,
+// resolved description and image, tags as keywords, level, an INR Offer
+// priced from the stored minimum, and an online CourseInstance. Nothing
+// here is literal copy.
+func courseJSONLD(c models.Course, description, pageURL, image, providerName string) template.JS {
+	s := courseSchema{
+		Context:          "https://schema.org",
+		Type:             "Course",
+		Name:             c.Title,
+		Description:      description,
+		URL:              pageURL,
+		Image:            image,
+		EducationalLevel: c.Level,
+		Provider:         schemaRef{Type: "Person", Name: providerName},
+		HasCourseInstance: []courseInstanceSchema{
+			{Type: "CourseInstance", CourseMode: "online"},
+		},
 	}
-	c.Provider.Type = "Person"
-	c.Provider.Name = providerName
-	return toJSONLD(c)
+	if len(c.Tags) > 0 {
+		s.Keywords = strings.Join(c.Tags, ", ")
+	}
+	price := 0
+	if c.IsPaid {
+		price = c.MinPriceCents
+		if price == 0 {
+			price = c.PriceCents
+		}
+	}
+	s.Offers = &offerSchema{
+		Type:          "Offer",
+		Price:         priceString(price),
+		PriceCurrency: models.CurrencyINR,
+		Availability:  "https://schema.org/InStock",
+		URL:           pageURL,
+	}
+	return toJSONLD(s)
 }
 
 type softwareApplicationSchema struct {
-	Context         string `json:"@context"`
-	Type            string `json:"@type"`
-	Name            string `json:"name"`
-	Description     string `json:"description"`
-	URL             string `json:"url"`
-	SoftwareVersion string `json:"softwareVersion,omitempty"`
-	Offers          struct {
-		Type          string `json:"@type"`
-		Price         string `json:"price"`
-		PriceCurrency string `json:"priceCurrency"`
-	} `json:"offers"`
+	Context         string      `json:"@context"`
+	Type            string      `json:"@type"`
+	Name            string      `json:"name"`
+	Description     string      `json:"description"`
+	URL             string      `json:"url"`
+	Image           string      `json:"image,omitempty"`
+	SoftwareVersion string      `json:"softwareVersion,omitempty"`
+	Offers          offerSchema `json:"offers"`
 }
 
-func softwareApplicationJSONLD(sw models.Software, url string) template.JS {
+func softwareApplicationJSONLD(sw models.Software, pageURL, description, image string) template.JS {
 	s := softwareApplicationSchema{
 		Context:         "https://schema.org",
 		Type:            "SoftwareApplication",
 		Name:            sw.Title,
-		Description:     sw.Description,
-		URL:             url,
+		Description:     description,
+		URL:             pageURL,
+		Image:           image,
 		SoftwareVersion: sw.Version,
+		Offers: offerSchema{
+			Type:          "Offer",
+			Price:         priceString(sw.PriceCents),
+			PriceCurrency: models.CurrencyINR,
+			Availability:  "https://schema.org/InStock",
+			URL:           pageURL,
+		},
 	}
-	s.Offers.Type = "Offer"
-	s.Offers.Price = strconv.Itoa(sw.PriceCents / 100)
-	s.Offers.PriceCurrency = models.CurrencyINR
 	return toJSONLD(s)
+}
+
+// crumb is one BreadcrumbList step.
+type crumb struct {
+	Name string
+	URL  string
+}
+
+type breadcrumbItemSchema struct {
+	Type     string `json:"@type"`
+	Position int    `json:"position"`
+	Name     string `json:"name"`
+	Item     string `json:"item"`
+}
+
+type breadcrumbSchema struct {
+	Context         string                 `json:"@context"`
+	Type            string                 `json:"@type"`
+	ItemListElement []breadcrumbItemSchema `json:"itemListElement"`
+}
+
+// breadcrumbJSONLD builds a BreadcrumbList from the trail a handler
+// already knows (Home > Courses > this course). Names come from the
+// database rows or the nav labels; URLs are absolute.
+func breadcrumbJSONLD(trail []crumb) template.JS {
+	items := make([]breadcrumbItemSchema, 0, len(trail))
+	for i, c := range trail {
+		items = append(items, breadcrumbItemSchema{Type: "ListItem", Position: i + 1, Name: c.Name, Item: c.URL})
+	}
+	return toJSONLD(breadcrumbSchema{
+		Context:         "https://schema.org",
+		Type:            "BreadcrumbList",
+		ItemListElement: items,
+	})
 }

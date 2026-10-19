@@ -64,7 +64,7 @@ func (a *App) AdminArticlePreview(w http.ResponseWriter, r *http.Request) {
 		BaseData:  base,
 		Article:   article,
 		Watermark: template.HTML(storage.WatermarkScript(storage.WatermarkLabel, "Admin preview")),
-		JSONLD:    articleJSONLD(article, base.CanonicalURL, a.Cfg.SiteName),
+		JSONLD:    articleJSONLD(article, base.CanonicalURL, a.Cfg.SiteName, article.Summary, base.OGImageURL),
 	})
 }
 

@@ -5,26 +5,24 @@ import (
 	"testing"
 )
 
-// TestCanonicalURLForRequest guards against the regression that caused
-// Search Console's "Duplicate, Google chose different canonical than
-// user" report (Oct 2026): /courses?tag=java and /articles?tag=Kafka
-// both declared canonical straight to their bare list page despite
-// showing a different set of items. tag and page>1 must stay in the
-// canonical; sort and q must not, for the reasons in
-// canonicalURLForRequest's own doc comment.
+// TestCanonicalURLForRequest pins the listing canonical rule from the SEO
+// audit of 19 Oct 2026: tag, sort and q variants canonicalise to the bare
+// listing (they are near-duplicates of it); only page > 1 keeps its own
+// self-referential canonical, because each page lists different items.
 func TestCanonicalURLForRequest(t *testing.T) {
 	cases := []struct {
 		url  string
 		want string
 	}{
 		{"/courses", "https://example.com/courses"},
-		{"/courses?tag=Java", "https://example.com/courses?tag=Java"},
+		{"/courses?tag=Java", "https://example.com/courses"},
 		{"/courses?page=2", "https://example.com/courses?page=2"},
-		{"/courses?tag=Java&page=2", "https://example.com/courses?tag=Java&page=2"},
+		{"/articles?tag=Java&page=2", "https://example.com/articles?page=2"},
 		{"/courses?sort=newest", "https://example.com/courses"},
 		{"/courses?q=kafka", "https://example.com/courses"},
 		{"/courses?page=1", "https://example.com/courses"},
-		{"/articles?tag=Kafka+Streams", "https://example.com/articles?tag=Kafka+Streams"},
+		{"/articles?tag=Kafka+Streams", "https://example.com/articles"},
+		{"/courses/java-fundamentals?utm_source=x", "https://example.com/courses/java-fundamentals"},
 	}
 	for _, c := range cases {
 		r := httptest.NewRequest("GET", c.url, nil)

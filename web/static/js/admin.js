@@ -33,3 +33,22 @@
     backdrop.addEventListener("click", closeSidebar);
   }
 })();
+
+// Advisory character counters for the SEO fields (title <= 60,
+// description <= 160): any input with data-count-max gets its sibling
+// .seo-counter filled in and turned "over" when the limit is passed.
+(function () {
+  "use strict";
+  document.querySelectorAll("[data-count-max]").forEach(function (field) {
+    var max = parseInt(field.getAttribute("data-count-max"), 10);
+    var out = field.parentNode.querySelector(".seo-counter");
+    if (!out || !max) { return; }
+    function update() {
+      var n = field.value.length;
+      out.textContent = n + " / " + max + " characters";
+      out.classList.toggle("seo-counter-over", n > max);
+    }
+    field.addEventListener("input", update);
+    update();
+  });
+})();
