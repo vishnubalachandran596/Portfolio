@@ -44,7 +44,7 @@ core/
   db/           DB connection + migration runner
   geo/          visitor country detection from request headers
   handlers/     ALL HTTP handlers + App struct (the biggest package — see §4)
-  middleware/   auth (admin+user sessions), domain/subdomain routing, security headers, logging
+  middleware/   auth (admin+user sessions), domain/subdomain routing, legacy/trailing-slash redirects, security headers, logging
   models/       every domain struct + business-rule methods (pricing display, status enums, etc.)
   notify/       Telegram notification sender
   oauth/        Google OAuth2 client
@@ -117,6 +117,16 @@ erDiagram
         bool google_verified "Google has proven control of the email"
         text security_question "one of the fixed list"
         text security_answer_hash "bcrypt of the normalised answer"
+    }
+    page_seo {
+        text path PK "static page path: /, /about, /courses, ... (models.StaticSEOPages)"
+        text seo_title "empty = built-in title"
+        text meta_description "empty = built-in description"
+        text primary_keyword "author reference, never rendered"
+        text og_image "absolute URL or site path; empty = site default"
+        bool noindex "meta robots noindex, follow + dropped from the sitemap"
+        timestamptz updated_at
+        note "migration 085; RLS enabled; rows hold overrides only, never committed seed copy"
     }
     auth_throttle {
         text kind PK "login | reset | signup | admin"
@@ -250,6 +260,7 @@ erDiagram
     }
     courses {
         serial id PK
+        text seo_title "migration 085; with meta_description, primary_keyword, og_image (all NOT NULL DEFAULT ''): empty = fallback chain, same four columns on articles and software"
         text slug UK
         text title
         text summary
@@ -457,6 +468,7 @@ erDiagram
     }
     articles {
         serial id PK
+        timestamptz updated_at "migration 085; NULL until edited after it; sitemap lastmod = COALESCE(updated_at, created_at)"
         text slug UK
         text title
         text summary
@@ -590,8 +602,10 @@ Handler files, by area:
 | `course_reviews.go` | Verified-buyer review submit (private rating/comment) + its admin-only list view |
 | `auth.go` | Login page, Google OAuth start/callback, logout |
 | `legal.go` | Generic static legal-page handler factory |
-| `seo.go` | `baseURL`/`pageURL` helpers, Sitemap, Robots, LLMsTxt, IndexNow key + submit, Search |
-| `schema.go` | JSON-LD builders (Person/Website/Service on Home; ProfessionalService + FAQPage on Consultancy; Article; Course) |
+| `seo.go` | `baseURL`/`pageURL` helpers, canonical rule (`canonicalURLForRequest`), Sitemap (`renderSitemap`, `staticLastmod`), Robots, LLMsTxt, IndexNow key + submit, Search |
+| `seo_fields.go` | SEO plumbing: `ogImageFor`/`absoluteURL`, `markNoindex`/`robotsMetaForRequest`, `pageSEOApplies`, `seoFieldsAsync`, breadcrumb `trail` |
+| `admin_seo.go` | `/admin/seo` page (one form per static page, `page_seo` upsert/reset) and the shared `seoFieldsFromForm`/`saveSEOFields` used by the course, article and software forms |
+| `schema.go` | JSON-LD builders, all fed from DB rows (Person/Website/Service on Home; ProfessionalService + FAQPage on Consultancy; BlogPosting; Course + Offer; SoftwareApplication + Offer; BreadcrumbList) |
 | `admin.go` | Admin login, dashboard, course CRUD, bookings, purchases, availability, profile, preview-as-visitor |
 | `media.go` | Image-upload validation (`readImageUpload`, `sniffImageExt`) shared by the profile photo and logo; public `GET /media/profile-photo` and `GET /media/logo` streaming handlers |
 | `admin_content.go` | Admin CRUD for skills, experience, testimonials |
@@ -662,6 +676,19 @@ Custom template functions (`view.go`'s `funcs` map): `currentYear`, `formatDate`
 Every page's `*Data` struct embeds `handlers.BaseData` (site name, title, meta description, canonical URL, nav links, login/admin state, notifications, `AssetVersion`). A page that needs JSON-LD defines a `{{define "jsonld"}}` block that `base.html` calls via `{{block "jsonld" .}}{{end}}`.
 
 ---
+
+## 7b. SEO in the database (migration 085)
+
+**No SEO copy lives in code or in the repo.** Two stores, both edited in the admin console:
+
+- `page_seo` (RLS enabled) holds per-path overrides for the static pages listed in `models.StaticSEOPages`. A page with no row renders its built-in title/description unchanged. `startBaseChrome` looks the row up concurrently with the rest of the chrome, only when `pageSEOApplies(r)` (a static path, no `tag`/`q`/`page>1`), so no other route pays for the query. `baseFrom` then applies title, description, OG image and `noindex` (rendered as `<meta name="robots" content="noindex, follow">`).
+- `courses`, `articles` and `software` each carry `seo_title`, `meta_description`, `primary_keyword`, `og_image` (all `NOT NULL DEFAULT ''`). They are read and written only through `repo.SEORepo` (`GetFields`, `GetFieldsBySlug`, `SetFields`), deliberately **not** through `CourseRepo`/`ArticleRepo`/`SoftwareRepo`, so the catalog column lists and scans are unchanged. Detail handlers start `seoFieldsAsync` alongside their own queries (best-effort: a failure just means the fallback chain).
+
+**Fallback chain** (`models.SEOFields`, unit-tested in `core/models/seo_test.go`), so new content needs no code change: title = `seo_title` then the existing `"<title> — <site>"` pattern; description = `meta_description` then `summary` (markdown markers stripped) then `description` truncated to 160 at a word boundary; image = `og_image` then the item's cover image then `/static/img/og-image.png`. The 60/160 limits are advisory, shown as live counters (`data-count-max`, `admin.js`), never enforced.
+
+**JSON-LD** is generated by `schema.go` from the same resolved values: `courseJSONLD` (Course with INR Offer from `min_price_cents`, tags as keywords, level, online instance), `articleJSONLD` (BlogPosting), `softwareApplicationJSONLD`, `personAndWebsiteJSONLD` (Person with a stable `#person` `@id`; the Service block and `knowsAbout` come from the profile and skill items, never literal copy), `consultancyJSONLD`, and `breadcrumbJSONLD` (assigned to `BaseData.BreadcrumbJSONLD` by the listing and detail handlers, emitted by `base.html`).
+
+**Technical rules:** canonical drops `tag`, `sort`, `q`; keeps only `page>1` (`canonicalURLForRequest`). 404 renders set `BaseData.NoCanonical` (no `rel=canonical`, no `og:url`). `noindex(...)` in `routes.go` now also marks the request context so `baseFrom` emits the robots meta tag next to the `X-Robots-Tag` header. `GET /courses?page=` 301-redirects (all courses render on one page, `coursesPageSize`). `middleware.LegacyRedirects` (innermost wrapper in `Routes()`) 308-redirects trailing slashes and 301-redirects `/blog[/...]` to `/articles[/...]`, `/course/...` to `/courses/...`, `/book` to `/booking`; `/admin` and `/static` are exempt. The sitemap carries no `priority`, omits `/ai-assistant` and `/resume.pdf`, drops any page whose `page_seo.noindex` is set, and writes `lastmod` only when known (`staticLastmod`: newest of the page's `page_seo` edit and the content it lists; article lastmod is `COALESCE(articles.updated_at, created_at)`, set by `ArticleRepo.Update`; course/software use `updated_at`, which `UpdateOutline` deliberately does not bump).
 
 ## 8. Domain routing (`core/middleware/domain.go`, `canonical.go`)
 
