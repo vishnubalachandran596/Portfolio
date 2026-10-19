@@ -18,7 +18,7 @@
       <p>When: <strong>{{.When}}</strong> ({{.Duration}} minutes)</p>
       <p>Status: <span class="status-badge status-{{.Booking.Status}}">{{.Booking.Status}}</span></p>
       {{if .Booking.Message}}<p>Topic: {{.Booking.Message}}</p>{{end}}
-      {{if .Active}}
+      {{if .CanChange}}
       <div class="reschedule-notice-actions">
         <a class="btn btn-primary btn-sm" href="/booking/manage/{{.Token}}/reschedule">Reschedule</a>
         <form method="POST" action="/booking/manage/{{.Token}}/cancel" onsubmit="return confirm('Cancel this booking?');">

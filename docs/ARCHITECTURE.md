@@ -404,7 +404,7 @@ erDiagram
         text email
         text phone
         text message
-        timestamptz slot_start UK
+        timestamptz slot_start "partial UNIQUE where status <> cancelled (uq_bookings_active_slot)"
         timestamptz slot_end
         text status "pending_payment | confirmed | cancelled"
         int amount_cents
@@ -417,8 +417,10 @@ erDiagram
         bigint promo_code_id FK "nullable"
         text promo_code
         int discount_cents
+        text booking_code "BK-XXXXXX, partial UNIQUE where <> empty; migration 089"
+        text manage_token_hash "SHA-256 of the private manage token, partial UNIQUE; the token itself is never stored"
         timestamptz created_at
-        note "amount_cents/currency/discount_cents/promo_code* are always 0/empty now — hourly consultancy has no payment step; razorpay_order_id is only a unique token for MarkPaid to scope its update to, never a real Razorpay reference"
+        note "no-overlap: EXCLUDE USING gist (tstzrange(slot_start, slot_end) WITH &&) WHERE status <> cancelled (bookings_no_overlap, migration 089, skipped with a NOTICE if old rows already overlap). amount_cents/currency/discount_cents/promo_code* are always 0/empty now — hourly consultancy has no payment step; razorpay_order_id is only a unique token for MarkPaid to scope its update to, never a real Razorpay reference"
     }
     audit_requests {
         bigserial id PK
@@ -567,7 +569,7 @@ Those chrome lookups used to run as a **second sequential wave** after each page
 
 Anonymous `/about` is therefore one wave of eight errgroup lookups. Anonymous `/` is one wave of four. `/articles` is one wave of the filtered page (count + rows, themselves concurrent under an errgroup inside `ArticleRepo.ListPublishedFiltered`), the topic list, and chrome. List queries select `articleListColumns` — everything except `body`, which only the article's own page needs. `/courses` is the same three-way shape as `/articles` — `CourseRepo.ListPublishedFiltered` (filtered/sorted/paginated page, its own count+rows concurrent), `ListAllTags`, and the full unfiltered catalog that backs the always-complete "Where to start" tracks — plus chrome, all in one wave. `ListPublishedFiltered`'s query carries two `LEFT JOIN` aggregate subqueries, neither backed by a stored column on `courses`: `review_count` (from `course_reviews`, the only review signal ever shown publicly — never the rating value, see migration 064) and `enrolled_count` (`1 + COUNT(purchases WHERE status = 'paid')` per course — the `+1` is a display floor so a brand-new course never reads "0 enrolled"). Both are computed live on every request rather than maintained as incrementing counters, so neither can drift from what `course_reviews`/`purchases` actually contain, and `checkout.go` needed no changes to make an existing or new purchase count — it already does, automatically, the next time the query runs. `/resume.pdf` has no chrome. A role that has its own file is one lookup plus the Storage read. Every other request loads the default row (`role_key` `default`) and reads that object. With no default file stored it is one wave of four and generates a PDF. The Person schema's `knowsAbout` is derived from the skill groups the home page has already loaded, not a separately maintained keyword list.
 
-`App.Routes()` (in `routes.go`) builds the full `http.Handler`: one public `ServeMux`, one admin-auth `ServeMux`, one `RequireAdmin`-wrapped protected `ServeMux` for the rest of `/admin/`, composed and wrapped in `middleware.Logging(middleware.SecurityHeaders(middleware.CanonicalHost(siteURL)(middleware.DomainRouter(domain)(mux))))`. Public utility and gated routes that can render HTML but are not Google landing pages (`/search`, `/login`, `/booking`, `/account`, admin, and gated course learn/quiz/certificate pages) are wrapped with the shared `noindex` helper rather than added to the sitemap. See `docs/FUNCTIONALITY.md` for what each route does; the exact route table (method + path + handler) is the source of truth in `routes.go` itself — don't let this doc's prose drift from it, read `routes.go` directly for the literal list.
+`App.Routes()` (in `routes.go`) builds the full `http.Handler`: one public `ServeMux`, one admin-auth `ServeMux`, one `RequireAdmin`-wrapped protected `ServeMux` for the rest of `/admin/`, composed and wrapped in `middleware.Logging(middleware.SecurityHeaders(middleware.CanonicalHost(siteURL)(middleware.DomainRouter(domain)(mux))))`. Public utility and gated routes that can render HTML but are not Google landing pages (`/search`, `/login`, `/booking/manage/{token}`, `/account`, admin, and gated course learn/quiz/certificate pages) are wrapped with the shared `noindex` helper rather than added to the sitemap. See `docs/FUNCTIONALITY.md` for what each route does; the exact route table (method + path + handler) is the source of truth in `routes.go` itself — don't let this doc's prose drift from it, read `routes.go` directly for the literal list.
 
 Handler files, by area:
 | File | Covers |
@@ -577,14 +579,15 @@ Handler files, by area:
 | `software.go` | Public Software list/detail |
 | `software_checkout.go` | Software purchase order/verify (fixed price), `softwareAccess()` gate |
 | `admin_software.go` | Admin CRUD for Software |
-| `consultancy.go` | Consultancy page (tiers, FAQ, case studies, JSON-LD), Booking page/confirm (free, no payment gateway), Contact page/submit |
+| `consultancy.go` | Consultancy page (tiers, FAQ, case studies, JSON-LD), public Booking page/confirm (no login, free, no payment gateway; honeypot + `auth_throttle` kind `booking`), Contact page/submit |
 | `admin_contact.go` | Admin contact-messages list + mark-read |
 | `admin_credentials.go` | Admin CRUD for Certifications and Speaking & Publications |
 | `admin_case_studies.go` | Admin CRUD for Case Studies |
 | `newsletter.go` | Public `POST /subscribe` (capture only, no confirmation email) + admin subscribers list/delete |
 | `articles.go` | Public article list (incl. subscribe-form data)/detail/thumbs-up + Admin article CRUD |
 | `account.go` | `/account` page + PDF receipts + testimonial submission |
-| `booking_reschedule.go` | Both admin- and self-service booking reschedule flows |
+| `booking_reschedule.go` | Admin and signed-in booking reschedule flows, `availableDays` (30 days) and `bookableSlotError`, the single server-side gate for any requested slot |
+| `booking_manage.go` | Token-based manage page for no-login bookings: view, cancel, reschedule (`manageGuard` sets noindex, no-store, no-referrer) |
 | `learn.go` | Gated course content serving inside the site chrome + watermark injection |
 | `quiz.go` | Quiz taking, scoring, certificate download |
 | `course_reviews.go` | Verified-buyer review submit (private rating/comment) + its admin-only list view |
@@ -621,7 +624,7 @@ Both live in `core/middleware/auth.go`, sharing one `Auth` struct (one JWT secre
 
 **Sessions stay stateless** (a signed HS256 JWT cookie, HttpOnly, Secure in production, SameSite=Lax, 7-day expiry; the parser accepts HS256 only). The user cookie carries `tv`, the user's `token_version`; `Auth.SetVerifiers` (wired in `handlers.New`) re-checks every cookie against Postgres, so a password reset or change (`UserRepo.SetPassword` bumps the version) signs every old session out, and an admin removed from `admins` loses access immediately instead of at cookie expiry. `Auth.Attach` memoises that lookup once per request (an anonymous request costs no query). `middleware.SameOrigin` blocks cross-site POSTs (CSRF) for the whole mux; requests with no `Origin` header, such as the token-guarded reindex call, pass.
 
-**Throttling** is in Postgres (`auth_throttle`, `repo.AuthThrottleRepo`) because serverless instances share no memory: five failures per email or per client IP lock that key for 1 minute, doubling per further failure up to 60 minutes; the window resets after an hour of quiet. Kinds: `login`, `reset`, `signup` (10 per IP per hour, honeypot field too) and `admin`. Keys are SHA-256 digests, never raw emails or IPs.
+**Throttling** is in Postgres (`auth_throttle`, `repo.AuthThrottleRepo`) because serverless instances share no memory: five failures per email or per client IP lock that key for 1 minute, doubling per further failure up to 60 minutes; the window resets after an hour of quiet. Kinds: `login`, `reset`, `signup` (10 per IP per hour, honeypot field too), `admin` and `booking` (public booking: 6 per IP, 3 per email, honeypot too). Keys are SHA-256 digests, never raw emails or IPs.
 
 Admin login (`/admin/login`) takes an admin email plus the password and compares the password, in constant time (`authutil.SecretEquals`), with the `ADMIN_BOOTSTRAP_PASSWORD` environment secret. **No admin password or hash is stored in the database** (migration 080 dropped `admins.password_hash`); the `admins` table is only the list of admin emails, and one password covers all of them. `ADMIN_BOOTSTRAP_EMAIL` is added to that list on every start (`bootstrapAdmin` in `core/app/bootstrap.go`) and cannot be demoted from the console. Changing the variable and redeploying changes the password. An unset variable disables password login (Google sign-in as an admin email still works). Any user can be promoted to admin from `/admin/users`.
 
@@ -637,7 +640,7 @@ Admin login (`/admin/login`) takes an admin email plus the password and compares
 
 **Software purchase** (`POST /software/{slug}/checkout/order` → `.../verify`, `software_purchases` table, `core/handlers/software_checkout.go`) follows the *exact same* create/verify/HMAC/cookie/$0-skip shape as course purchase, copied field-for-field rather than branched into `checkout.go` — the one real difference is pricing: a software item sells at one fixed price (`software.price_cents`), set and edited only in the admin console, never supplied by the client. A verified purchase doesn't unlock in-browser content the way a course does — it reveals `software.download_link` (an external URL, e.g. a Google Drive folder) plus the admin-editable `license_terms`/`post_purchase_instructions` free-text fields, on the software's own detail page and in the buyer's `/account` "My Software" section and PDF receipt.
 
-**Consultancy hourly** (`POST /booking/confirm`, `bookings` table) is a plain "reserve the slot, confirm it" flow with no price and no payment step of any kind — `BookingConfirm` in `consultancy.go` calls `BookingRepo.CreatePending` then `MarkPaid` back to back, purely to reuse the existing slot-race protection (the unique constraint on `slot_start`), not because anything is actually "paid." A synthetic `razorpay_order_id` (`"free-"+token`) only exists so `MarkPaid` has something unambiguous to scope its update to.
+**Consultancy hourly** (`POST /booking/confirm`, `bookings` table) is public (no login) and is a plain "reserve the slot, confirm it" flow with no price and no payment step of any kind. `BookingConfirm` validates, throttles, then calls `BookingRepo.CreatePublic`, which inserts the row already `confirmed` with a `BK-XXXXXX` code and the SHA-256 of a one-time manage token. The slot race is decided by the database: the partial unique index `uq_bookings_active_slot` plus the `bookings_no_overlap` exclusion constraint (migration `089`) reject a second live booking for the same or an overlapping time (`isUniqueViolation` maps SQLSTATE 23505 and 23P01 to `ErrSlotTaken`). `CreatePending`/`MarkPaid` remain in the repo but nothing calls them. The token is returned to the browser once and never stored in clear; `/booking/manage/{token}` looks the booking up by hash (`booking_manage.go`). Throttling uses `auth_throttle` kind `booking`: 6 attempts per hashed IP and 3 per hashed email before the growing lock; an attempt counts once it passes validation, success or not.
 
 **Architecture Review and Fractional Advisory** have no create/verify endpoints at all — both route to `/contact` from `consultancy.html`, to be scoped and invoiced outside this site. The `audit_requests` table and `AuditRequestRepo.ListAll` still exist, read-only, purely so the admin payments ledger (`admin_payments.go`) can keep showing the real historical Architecture Review purchases from when self-checkout briefly existed; nothing writes to that table anymore. **Do not copy `audit_requests.go`'s shape for a new paid product — it is dead code, kept only for that historical ledger.**
 

@@ -23,7 +23,7 @@ type BookingManageData struct {
 	Booking        models.Booking
 	When           string
 	Duration       int
-	Active         bool // confirmed and still in the future
+	CanChange      bool // confirmed and still in the future
 	Notice         string
 	Error          string
 	Days           []scheduler.DaySlots
@@ -61,13 +61,13 @@ func (a *App) loadManaged(w http.ResponseWriter, r *http.Request) (models.Bookin
 
 func (a *App) manageData(r *http.Request, b models.Booking, token string) BookingManageData {
 	d := BookingManageData{
-		BaseData: a.base(r, "Your booking "+b.Code+" — "+a.Cfg.SiteName, "", "consultancy"),
-		Token:    token,
-		Booking:  b,
-		When:     b.SlotStart.In(a.Timezone).Format("Mon, Jan 2 2006 · 3:04 PM MST"),
-		Duration: int(b.SlotEnd.Sub(b.SlotStart).Minutes()),
-		Active:   b.Status == models.BookingStatusConfirmed && b.SlotStart.After(time.Now()),
-		Error:    r.URL.Query().Get("error"),
+		BaseData:  a.base(r, "Your booking "+b.Code+" — "+a.Cfg.SiteName, "", "consultancy"),
+		Token:     token,
+		Booking:   b,
+		When:      b.SlotStart.In(a.Timezone).Format("Mon, Jan 2 2006 · 3:04 PM MST"),
+		Duration:  int(b.SlotEnd.Sub(b.SlotStart).Minutes()),
+		CanChange: b.Status == models.BookingStatusConfirmed && b.SlotStart.After(time.Now()),
+		Error:     r.URL.Query().Get("error"),
 	}
 	switch r.URL.Query().Get("notice") {
 	case "rescheduled":
@@ -116,7 +116,7 @@ func (a *App) BookingManageReschedulePage(w http.ResponseWriter, r *http.Request
 		return
 	}
 	d := a.manageData(r, b, token)
-	if !d.Active {
+	if !d.CanChange {
 		http.Redirect(w, r, managePath(token), http.StatusSeeOther)
 		return
 	}
