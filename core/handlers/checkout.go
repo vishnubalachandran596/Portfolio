@@ -28,10 +28,11 @@ func writeJSON(w http.ResponseWriter, status int, v any) {
 }
 
 // CheckoutCreateOrder creates a Razorpay order for a paid course. The
-// buyer picks an amount client-side (pay-what-you-want, floored at the
-// course's minimum); we re-validate that floor server-side — never trust
-// a client-supplied amount below the minimum, though paying *more* is
-// always fine.
+// amount is ALWAYS the course's own fixed price from the database (set in
+// the admin console), less any valid promo discount: no amount is ever read
+// from the request, so a tampered form cannot change what is charged.
+// A visitor who is not signed in checks out as a guest with just an email
+// and gets a claim code to attach the purchase to an account later.
 func (a *App) CheckoutCreateOrder(w http.ResponseWriter, r *http.Request) {
 	slug := r.PathValue("slug")
 	course, err := a.Courses.GetBySlug(r.Context(), slug)
@@ -50,40 +51,21 @@ func (a *App) CheckoutCreateOrder(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Invalid form submission."})
 		return
 	}
-	// A Google-verified account is mandatory for every checkout — paid or
-	// free — both so a purchase can always be tied to a real account (no
-	// drifting "my courses" list) and so a promo code's one-redemption-
-	// per-user rule below has something stable to key off. There is no
-	// guest-checkout path anymore.
-	uid, ok := a.Auth.UserID(r)
+	buyer, ok := a.resolveBuyer(w, r)
 	if !ok {
-		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "Please log in with Google to continue.", "login_required": "1"})
 		return
 	}
-	userID := uid
-	user, err := a.Users.GetByID(r.Context(), uid)
-	if err != nil {
-		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "Please log in with Google to continue.", "login_required": "1"})
-		return
-	}
-	email := user.Email
+	userID, email := buyer.UserID, buyer.Email
 	// Courses sell in INR only — see models.CurrencyINR.
-	currency, minCents := models.CurrencyINR, course.MinPriceCents
+	currency := models.CurrencyINR
+	baseCents := course.FixedPriceCents()
 
-	amountCents, _ := strconv.Atoi(r.FormValue("amount_cents"))
-	if amountCents < minCents {
-		amountCents = minCents
-	}
-
-	discountCents, promo, perr := a.resolvePromoCode(r.Context(), r.FormValue("promo_code"), models.PromoProductCourse, course.ID, userID, email, amountCents)
+	discountCents, promo, perr := a.resolvePromoCode(r.Context(), r.FormValue("promo_code"), models.PromoProductCourse, course.ID, userID, email, baseCents)
 	if perr != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "That promo code isn't valid."})
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": errPromoMessage})
 		return
 	}
-	amountCents -= discountCents
-	if amountCents < 0 {
-		amountCents = 0
-	}
+	amountCents := finalAmountCents(baseCents, discountCents)
 
 	token, err := generateAccessToken()
 	if err != nil {
@@ -91,6 +73,11 @@ func (a *App) CheckoutCreateOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	claimCode, err := buyer.newClaimCode()
+	if err != nil {
+		a.serverError(w, "generate claim code", err)
+		return
+	}
 	purchase := models.Purchase{
 		CourseID:      course.ID,
 		UserID:        userID,
@@ -99,6 +86,7 @@ func (a *App) CheckoutCreateOrder(w http.ResponseWriter, r *http.Request) {
 		Currency:      currency,
 		AccessToken:   token,
 		DiscountCents: discountCents,
+		ClaimCode:     claimCode,
 	}
 	if promo != nil {
 		purchase.PromoCodeID = &promo.ID
@@ -109,10 +97,9 @@ func (a *App) CheckoutCreateOrder(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// A $0 course (the default — every course is "contribute as you like")
+	// A course that costs nothing after a 100%-off promo (or is priced at 0)
 	// never touches Razorpay at all: it's recorded straight as paid, and
-	// the visitor gets instant access. Razorpay is only involved once a
-	// visitor actually chooses to contribute something.
+	// the visitor gets instant access.
 	if amountCents == 0 {
 		purchase.RazorpayOrderID = "free-" + token
 		if _, err := a.Purchases.Create(r.Context(), purchase); err != nil {
@@ -128,24 +115,16 @@ func (a *App) CheckoutCreateOrder(w http.ResponseWriter, r *http.Request) {
 				log.Printf("increment promo redemption: %v", err)
 			}
 		}
-		http.SetCookie(w, &http.Cookie{
-			Name:     accessCookieName(course.ID),
-			Value:    token,
-			Path:     "/",
-			HttpOnly: true,
-			Secure:   a.Cfg.IsProduction(),
-			SameSite: http.SameSiteLaxMode,
-			Expires:  time.Now().AddDate(2, 0, 0),
-		})
+		a.setAccessCookie(w, accessCookieName(course.ID), token)
 		writeJSON(w, http.StatusOK, map[string]any{
 			"free":     true,
-			"redirect": "/courses/" + slug + "/learn",
+			"redirect": "/courses/" + slug + "/enrolled",
 		})
 		return
 	}
 
 	if !a.Razorpay.Enabled() {
-		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "Contributions aren't enabled yet — leave the amount at 0 for free access."})
+		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "Payments aren't enabled yet."})
 		return
 	}
 
@@ -225,20 +204,12 @@ func (a *App) CheckoutVerify(w http.ResponseWriter, r *http.Request) {
 	if purchase.PromoCode != "" {
 		promoLine = fmt.Sprintf("\nPromo: %s (-%s)", purchase.PromoCode, models.FormatMoney(purchase.DiscountCents, purchase.Currency))
 	}
-	a.Telegram.Send(fmt.Sprintf("💰 Course purchase\nCourse: %s\nEmail: %s\nAmount: %s%s",
-		course.Title, purchase.Email, models.FormatMoney(purchase.AmountCents, purchase.Currency), promoLine))
+	a.Telegram.Send(fmt.Sprintf("💰 Course purchase%s\nCourse: %s\nEmail: %s\nAmount: %s%s",
+		guestTag(purchase.UserID), course.Title, purchase.Email, models.FormatMoney(purchase.AmountCents, purchase.Currency), promoLine))
 
-	http.SetCookie(w, &http.Cookie{
-		Name:     accessCookieName(course.ID),
-		Value:    purchase.AccessToken,
-		Path:     "/",
-		HttpOnly: true,
-		Secure:   a.Cfg.IsProduction(),
-		SameSite: http.SameSiteLaxMode,
-		Expires:  time.Now().AddDate(2, 0, 0),
-	})
+	a.setAccessCookie(w, accessCookieName(course.ID), purchase.AccessToken)
 
-	writeJSON(w, http.StatusOK, map[string]string{"redirect": "/courses/" + slug + "/learn"})
+	writeJSON(w, http.StatusOK, map[string]string{"redirect": "/courses/" + slug + "/enrolled"})
 }
 
 // courseAccess reports whether the current request may view a paid
@@ -273,15 +244,7 @@ func (a *App) courseAccess(w http.ResponseWriter, r *http.Request, course models
 	}
 
 	if fromQuery {
-		http.SetCookie(w, &http.Cookie{
-			Name:     accessCookieName(course.ID),
-			Value:    token,
-			Path:     "/",
-			HttpOnly: true,
-			Secure:   a.Cfg.IsProduction(),
-			SameSite: http.SameSiteLaxMode,
-			Expires:  time.Now().AddDate(2, 0, 0),
-		})
+		a.setAccessCookie(w, accessCookieName(course.ID), token)
 	}
 	return true, purchase.Email, purchase.ID
 }

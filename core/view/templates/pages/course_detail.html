@@ -98,20 +98,24 @@
         <div class="purchase-box" id="purchase-box">
           <div id="purchase-error" class="alert alert-error" hidden></div>
           {{if .UserEmail}}
-          <p class="purchase-box-sub">Access goes to <strong>{{.UserEmail}}</strong>. The minimum is {{.ResolvedMinDisplay}}, or use a promo code for free access.</p>
-          <label>Contribution (INR) <span class="optional">{{if .PaymentsEnabled}}minimum {{.ResolvedMinDisplay}}{{else}}payments aren't enabled yet — enrol free below{{end}}</span>
-            <input type="number" id="purchase-amount" inputmode="numeric" min="{{.ResolvedMinWhole}}" step="1" value="{{.ResolvedMinWhole}}" {{if not .PaymentsEnabled}}disabled{{end}}>
+          <p class="purchase-box-sub">Access goes to <strong>{{.UserEmail}}</strong>.</p>
+          {{else}}
+          <label>Your email <span class="optional">no account needed; this is where your access is recorded</span>
+            <input type="email" id="purchase-email" autocomplete="email" inputmode="email" maxlength="254" placeholder="you@example.com">
           </label>
-          {{if .PaymentsEnabled}}
+          {{end}}
           <label>Promo code <span class="optional">(optional)</span>
             <input type="text" id="purchase-promo-code" autocapitalize="characters" autocomplete="off">
           </label>
-          {{end}}
-          <button type="button" class="btn btn-primary btn-lg" id="purchase-btn" data-slug="{{.Course.Slug}}" data-min-cents="{{.ResolvedMinCents}}">{{if gt .ResolvedMinCents 0}}Continue{{else}}Get free access{{end}}</button>
-          {{else}}
-          <p class="purchase-box-sub">Sign in with Google to enrol — it ties access to your account and lets promo codes be checked.</p>
-          <a class="btn btn-primary btn-lg" href="/login?next=/courses/{{.Course.Slug}}">Sign in to enrol</a>
-          {{end}}
+          <button type="button" class="btn btn-secondary" id="purchase-promo-apply">Apply code</button>
+          <dl class="receipt-list" id="purchase-summary" aria-live="polite">
+            <div><dt>Course price</dt><dd id="sum-price">{{.ResolvedMinDisplay}}</dd></div>
+            <div id="sum-discount-row" hidden><dt>Promo discount</dt><dd id="sum-discount"></dd></div>
+            <div><dt>You pay</dt><dd id="sum-total">{{.ResolvedMinDisplay}}</dd></div>
+          </dl>
+          <button type="button" class="btn btn-primary btn-lg" id="purchase-btn" data-slug="{{.Course.Slug}}" data-free="{{if gt .ResolvedMinCents 0}}0{{else}}1{{end}}" data-pay-label="Pay">{{if gt .ResolvedMinCents 0}}Pay {{.ResolvedMinDisplay}}{{else}}Get free access{{end}}</button>
+          {{if not .UserEmail}}<p class="purchase-box-sub">After payment you get a claim code to attach this purchase to an account later. We send no emails, so keep it safe.</p>{{end}}
+          <p class="purchase-box-sub">Fixed price, one-time. See the <a class="text-link" href="{{.Nav.Refund}}">refund policy</a>.</p>
         </div>
         {{if .PaymentsEnabled}}<script src="https://checkout.razorpay.com/v1/checkout.js"></script>{{end}}
         {{end}}

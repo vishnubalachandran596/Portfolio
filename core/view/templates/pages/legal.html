@@ -17,9 +17,9 @@
     <h2>Information we collect</h2>
     <p>We collect only what's needed to operate the site:</p>
     <ul>
-      <li><strong>Account information:</strong> the name, email address, and a securely hashed password (never stored in plain text) you provide when creating an account — required to book consultancy or purchase a course.</li>
+      <li><strong>Account information:</strong> the name, email address, and a securely hashed password (never stored in plain text) you provide when creating an account. An account is needed to book consultancy, take a course quiz or manage software licences; it is not needed to buy a course.</li>
       <li><strong>Consultancy bookings:</strong> the time slot you selected, an optional message, and payment status (pending/confirmed), tied to your account.</li>
-      <li><strong>Course purchases:</strong> the email address and amount you enter when unlocking a paid course, and payment status (paid/failed). We never see or store your card details — payment is handled entirely by Razorpay's own checkout, which runs in its own secure window and passes us only a payment confirmation.</li>
+      <li><strong>Course and software purchases:</strong> the email address you enter (or your account email), the fixed price charged, any promo code, and payment status (paid/failed). A course purchase made without an account also stores a random claim code that lets you attach it to an account later. We send no emails. We never see or store your card details — payment is handled entirely by Razorpay's own checkout, which runs in its own secure window and passes us only a payment confirmation.</li>
       <li><strong>Article contributions:</strong> the email address and amount you enter when optionally supporting an article, with payment status and the time it was paid, tied to your account (or a guest account created from that email). We never see or store your card details — same Razorpay checkout as courses.</li>
       <li><strong>Admin account:</strong> if you're the site administrator, your email and a securely hashed password.</li>
       <li><strong>Cookies:</strong> a cookie-consent preference, your login session cookie, a per-course access token (only if you've purchased a paid course), and — for the administrator only — a separate admin session cookie. See our <a href="{{.Nav.Cookies}}">Cookie Policy</a> for details.</li>
@@ -47,13 +47,19 @@
     <p>By using this site you agree to these terms. This site is operated by {{.ContactName}}{{if .ContactLoc}}, based in {{.ContactLoc}}{{end}}, as a personal portfolio, course listing, and session-booking site.</p>
 
     <h2>Accounts</h2>
-    <p>An account is required to book consultancy or purchase a course. Keep your password confidential; you're responsible for activity under your account.</p>
+    <p>You can buy a course as a guest with just an email address (software purchases need an account). After paying you are shown a claim code; keep it safe, because this site sends no emails. Enter it at <em>Claim a purchase</em> in your account, or sign in with Google using the same email, to attach the purchase to your account. An account is needed to book consultancy, take a course quiz and manage software licences. Keep your password confidential; you're responsible for activity under your account, and anyone who holds a claim code can claim the purchase it belongs to.</p>
 
     <h2>Consultancy bookings</h2>
     <p>A consultancy slot is reserved the moment you start checkout, and confirmed the moment payment clears — the current price is always shown before you pay. Please arrive on time and provide accurate contact information so we can reach you if plans change.</p>
 
     <h2>Courses</h2>
-    <p>Course listings describe content, level, and duration as accurately as possible. Course availability and content may change; we'll do our best to communicate material changes in advance. For a paid course, access is personal to the account that unlocked it — please don't share your access link or re-post the course content elsewhere; it's licensed to you, not for redistribution.</p>
+    <p>Course listings describe content, level, and duration as accurately as possible. Course availability and content may change; we'll do our best to communicate material changes in advance. Every paid course has a single fixed price, shown before you pay; a valid promo code can only lower it. For a paid course, access is personal to the buyer (the account, or the guest purchase, that unlocked it) — please don't share your access link or re-post the course content elsewhere; it's licensed to you, not for redistribution.</p>
+
+    <h2>Software and licences</h2>
+    <p>Software is sold at a fixed price shown before you pay. Where a product uses licence keys, each paid purchase includes one licence. You generate its key from your account by entering the Device ID of your computer, and the key works only on that computer and the app version you chose. Do not share or resell keys; a licence may be revoked for misuse.</p>
+
+    <h2>Certificates</h2>
+    <p>A certificate is issued only after you pass the course's final quiz (pass mark shown on the quiz). It states that you cleared the quiz and are certified in the course, carries a certificate code, and can be checked by anyone on the public verification page. It is a record of passing this course's quiz, not an accredited qualification.</p>
 
     <h2>Article contributions</h2>
     <p>Articles on this site are free to read. An optional contribution at the end of a post does not unlock extra content — it is a voluntary payment. You may contribute more than once.</p>
@@ -73,8 +79,11 @@
 
     {{if eq .Slug "refund"}}
     <h2>Paid courses</h2>
-    <p>Some courses are unlocked with a pay-what-you-want contribution (with a stated minimum, shown before you pay) rather than a fixed price. Because access to the full course content is granted immediately on payment, contributions are <strong>non-refundable</strong> once the course has been unlocked, except where the content is materially broken or inaccessible through a fault on our side — in that case, contact us and we'll make it right, including a refund if we can't fix it.</p>
+    <p>Each paid course has one fixed price, shown before you pay. Because access to the full course content is granted immediately on payment, purchases are <strong>non-refundable</strong> once the course has been unlocked, except where the content is materially broken or inaccessible through a fault on our side — in that case, contact us and we'll make it right, including a refund if we can't fix it.</p>
     <p>There are no hidden fees: the amount you agree to pay in the checkout window is exactly what's charged, nothing added afterward.</p>
+
+    <h2>Software</h2>
+    <p>Software is sold at a fixed price shown before you pay. Because the download and licence are available immediately on payment, purchases are <strong>non-refundable</strong> once the download or a licence key has been issued, except where the software is materially broken and we cannot fix it on our side; contact us and we'll make it right, including a refund if we can't.</p>
 
     <h2>Consultancy bookings</h2>
     <p>Consultancy is a paid, hourly 1:1 session — the price shown before you pay is exactly what's charged. If you cancel or need to reschedule with reasonable notice (at least 24 hours before your slot), we'll move your session to another open slot at no extra cost, or refund it in full. Cancellations with less notice, or a no-show, are non-refundable, since the slot was held for you and couldn't be offered to someone else. If a session can't go ahead for a reason on our side, it's rescheduled or refunded in full.</p>
@@ -92,7 +101,7 @@
     <ul>
       <li><strong>Cookie consent preference</strong> — remembers that you've seen and dismissed the cookie banner, stored in your browser.</li>
       <li><strong>Login session</strong> — an HttpOnly, secure session cookie issued when you log into your account, used to keep you signed in for booking and course access. You only receive this if you create an account.</li>
-      <li><strong>Course access token</strong> — issued only after you've purchased a paid course, so you don't have to re-authenticate to view it.</li>
+      <li><strong>Course and software access token</strong> — issued only after you've purchased a paid course or software (including as a guest), so you don't have to re-authenticate to view it.</li>
       <li><strong>Admin session</strong> — a separate HttpOnly, secure session cookie issued only when the site administrator logs in, used purely to keep that admin session authenticated.</li>
     </ul>
     <p>We do not use third-party advertising or tracking cookies.</p>

@@ -1,0 +1,40 @@
+{{define "content"}}
+<section class="page-hero page-hero-narrow">
+  <div class="container">
+    <p class="eyebrow">Payment received</p>
+    <h1>Thank you</h1>
+    <p class="hero-subtitle">{{.Title}}</p>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <div class="auth-card purchase-success">
+      <dl class="receipt-list">
+        <div><dt>Receipt number</dt><dd class="mono">{{.Receipt}}</dd></div>
+        <div><dt>Email</dt><dd>{{.Email}}</dd></div>
+        <div><dt>Amount paid</dt><dd>{{.Amount}}</dd></div>
+        {{if .PromoLine}}<div><dt>Discount</dt><dd>{{.PromoLine}}</dd></div>{{end}}
+      </dl>
+
+      {{if .ClaimCode}}
+      <div class="claim-box">
+        <h2>Your claim code</h2>
+        <p>We do not send emails, so this page is your only copy. <strong>Save it now</strong> (write it down, screenshot it, or print this page). You need it to attach this purchase to your account.</p>
+        <input type="text" readonly class="claim-code mono" value="{{.ClaimCode}}" onclick="this.select()" aria-label="Claim code">
+        <ol class="claim-steps">
+          <li>Sign up or log in on this site.</li>
+          <li>Open <a href="/account/claim">Claim a purchase</a> and enter the code. It works once.</li>
+          <li>Or sign in with Google using <strong>{{.Email}}</strong>, and it is attached automatically.</li>
+        </ol>
+        <p class="field-help">Until you claim it, this browser keeps access.{{if .Licence}} Your licence key is created from your account page after you claim the purchase.{{end}} Anyone who has the code can claim the purchase, so keep it private.</p>
+      </div>
+      {{else if .Attached}}
+      <p>This purchase is attached to your account.{{if .Licence}} Open <a href="/account/licences">My licences</a> to get your key.{{end}}</p>
+      {{end}}
+
+      <p><a class="btn btn-primary btn-lg" href="{{.NextURL}}">{{.NextText}}</a></p>
+    </div>
+  </div>
+</section>
+{{end}}

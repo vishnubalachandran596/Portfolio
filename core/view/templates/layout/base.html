@@ -5,7 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>{{.Title}}</title>
 <meta name="description" content="{{.MetaDescription}}">
-<meta name="theme-color" content="#faf9f7" media="(prefers-color-scheme: light)">
+{{if .NoIndex}}<meta name="robots" content="noindex, nofollow">
+{{end}}<meta name="theme-color" content="#faf9f7" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#14110e" media="(prefers-color-scheme: dark)">
 {{if not .NoCanonical}}<link rel="canonical" href="{{.CanonicalURL}}">{{end}}
 {{if .RobotsMeta}}<meta name="robots" content="{{.RobotsMeta}}">{{end}}

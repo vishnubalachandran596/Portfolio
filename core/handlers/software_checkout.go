@@ -18,11 +18,10 @@ func softwareAccessCookieName(softwareID int64) string {
 }
 
 // SoftwareCheckoutOrder creates a Razorpay order for a fixed-price
-// software purchase. Unlike CheckoutCreateOrder (courses, pay-what-you-
-// want), the amount is never taken from the client — it's always the
-// software's own PriceCents, less any valid promo discount. Mirrors
-// CheckoutCreateOrder's structure otherwise, including the login
-// requirement and the $0-after-discount free path.
+// software purchase. Like CheckoutCreateOrder, the amount is never taken
+// from the client: it's always the software's own PriceCents, less any
+// valid promo discount. Software checkout stays login-required (the
+// email-only guest checkout is for courses only).
 func (a *App) SoftwareCheckoutOrder(w http.ResponseWriter, r *http.Request) {
 	slug := r.PathValue("slug")
 	sw, err := a.Software.GetBySlug(r.Context(), slug)
@@ -37,27 +36,24 @@ func (a *App) SoftwareCheckoutOrder(w http.ResponseWriter, r *http.Request) {
 	}
 	uid, ok := a.Auth.UserID(r)
 	if !ok {
-		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "Please log in with Google to continue.", "login_required": "1"})
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "Please log in to continue.", "login_required": "1"})
 		return
 	}
 	user, err := a.Users.GetByID(r.Context(), uid)
 	if err != nil {
-		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "Please log in with Google to continue.", "login_required": "1"})
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "Please log in to continue.", "login_required": "1"})
 		return
 	}
 	email := user.Email
 	currency := models.CurrencyINR
-	amountCents := sw.PriceCents
+	baseCents := sw.PriceCents
 
-	discountCents, promo, perr := a.resolvePromoCode(r.Context(), r.FormValue("promo_code"), models.PromoProductSoftware, 0, uid, email, amountCents)
+	discountCents, promo, perr := a.resolvePromoCode(r.Context(), r.FormValue("promo_code"), models.PromoProductSoftware, 0, uid, email, baseCents)
 	if perr != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "That promo code isn't valid."})
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": errPromoMessage})
 		return
 	}
-	amountCents -= discountCents
-	if amountCents < 0 {
-		amountCents = 0
-	}
+	amountCents := finalAmountCents(baseCents, discountCents)
 
 	token, err := generateAccessToken()
 	if err != nil {
@@ -103,15 +99,7 @@ func (a *App) SoftwareCheckoutOrder(w http.ResponseWriter, r *http.Request) {
 				log.Printf("increment promo redemption: %v", err)
 			}
 		}
-		http.SetCookie(w, &http.Cookie{
-			Name:     softwareAccessCookieName(sw.ID),
-			Value:    token,
-			Path:     "/",
-			HttpOnly: true,
-			Secure:   a.Cfg.IsProduction(),
-			SameSite: http.SameSiteLaxMode,
-			Expires:  time.Now().AddDate(2, 0, 0),
-		})
+		a.setAccessCookie(w, softwareAccessCookieName(sw.ID), token)
 		writeJSON(w, http.StatusOK, map[string]any{
 			"free":     true,
 			"redirect": "/software/" + slug,
@@ -205,15 +193,7 @@ func (a *App) SoftwareCheckoutVerify(w http.ResponseWriter, r *http.Request) {
 	a.Telegram.Send(fmt.Sprintf("💾 Software purchase\nSoftware: %s %s\nEmail: %s\nAmount: %s%s",
 		sw.Title, sw.Version, purchase.Email, models.FormatMoney(purchase.AmountCents, purchase.Currency), promoLine))
 
-	http.SetCookie(w, &http.Cookie{
-		Name:     softwareAccessCookieName(sw.ID),
-		Value:    purchase.AccessToken,
-		Path:     "/",
-		HttpOnly: true,
-		Secure:   a.Cfg.IsProduction(),
-		SameSite: http.SameSiteLaxMode,
-		Expires:  time.Now().AddDate(2, 0, 0),
-	})
+	a.setAccessCookie(w, softwareAccessCookieName(sw.ID), purchase.AccessToken)
 
 	writeJSON(w, http.StatusOK, map[string]string{"redirect": "/software/" + slug})
 }
@@ -244,15 +224,7 @@ func (a *App) softwareAccess(w http.ResponseWriter, r *http.Request, sw models.S
 	}
 
 	if fromQuery {
-		http.SetCookie(w, &http.Cookie{
-			Name:     softwareAccessCookieName(sw.ID),
-			Value:    token,
-			Path:     "/",
-			HttpOnly: true,
-			Secure:   a.Cfg.IsProduction(),
-			SameSite: http.SameSiteLaxMode,
-			Expires:  time.Now().AddDate(2, 0, 0),
-		})
+		a.setAccessCookie(w, softwareAccessCookieName(sw.ID), token)
 	}
 	return true
 }

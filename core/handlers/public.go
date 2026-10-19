@@ -601,7 +601,7 @@ func (a *App) CourseDetail(w http.ResponseWriter, r *http.Request) {
 	base.BreadcrumbJSONLD = breadcrumbJSONLD(a.trail(r,
 		crumb{"Courses", a.pageURL(r, "/courses")}, crumb{course.Title, base.CanonicalURL}))
 
-	minCents := course.MinPriceCents
+	minCents := course.FixedPriceCents()
 
 	a.View.Render(w, http.StatusOK, "course_detail", CourseDetailData{
 		BaseData:           base,

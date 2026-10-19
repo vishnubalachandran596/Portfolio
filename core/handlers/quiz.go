@@ -203,6 +203,8 @@ type QuizResultData struct {
 	Used    int
 	Left    int // -1 = unlimited
 	PassPct int
+	// PaymentsEnabled gates the optional contribution box.
+	PaymentsEnabled bool
 }
 
 func (a *App) QuizSubmit(w http.ResponseWriter, r *http.Request) {
@@ -252,12 +254,13 @@ func (a *App) QuizSubmit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	a.View.Render(w, http.StatusOK, "quiz_result", QuizResultData{
-		BaseData: a.base(r, "Quiz Results — "+course.Title+" — "+a.Cfg.SiteName, "", "courses"),
-		Course:   course,
-		Attempt:  attempt,
-		Used:     used,
-		Left:     quizLeft(used, limit),
-		PassPct:  models.QuizPassPercent,
+		BaseData:        a.base(r, "Quiz Results — "+course.Title+" — "+a.Cfg.SiteName, "", "courses"),
+		Course:          course,
+		Attempt:         attempt,
+		Used:            used,
+		Left:            quizLeft(used, limit),
+		PassPct:         models.QuizPassPercent,
+		PaymentsEnabled: a.Razorpay.Enabled() && !isAdmin,
 	})
 }
 
@@ -294,12 +297,15 @@ func (a *App) CertificateDownload(w http.ResponseWriter, r *http.Request) {
 	}
 
 	pdfBytes, err := certificate.Generate(certificate.Data{
-		RecipientName: name,
+		RecipientName: certificate.RecipientName(name, email),
 		CourseTitle:   course.Title,
 		IssuedAt:      attempt.CreatedAt,
 		Code:          attempt.CertificateCode,
 		SiteName:      a.Cfg.SiteName,
 		IssuerName:    issuer,
+		ScorePercent:  attempt.ScorePercent,
+		PassPercent:   models.QuizPassPercent,
+		VerifyURL:     strings.TrimRight(a.Cfg.SiteURL, "/") + "/certificate/verify/" + attempt.CertificateCode,
 	})
 	if err != nil {
 		a.serverError(w, "generate certificate", err)
@@ -309,6 +315,51 @@ func (a *App) CertificateDownload(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/pdf")
 	w.Header().Set("Content-Disposition", `attachment; filename="certificate-`+course.Slug+`.pdf"`)
 	w.Write(pdfBytes)
+}
+
+// CertificateVerifyData drives the public certificate verification page.
+type CertificateVerifyData struct {
+	BaseData
+	Valid  bool
+	Name   string
+	Course string
+	Date   string
+	Score  int
+	Pass   int
+	Code   string
+}
+
+// CertificateVerify is the public page a certificate's printed code and URL
+// point to. It confirms a certificate exists (a recorded, passed, non-admin
+// quiz attempt) and shows only the printed facts: name, course, date and
+// score. It is noindex and the response is identical in shape for unknown
+// codes, so it reveals nothing beyond what the certificate itself shows.
+func (a *App) CertificateVerify(w http.ResponseWriter, r *http.Request) {
+	code := certificate.NormalizeCode(r.PathValue("code"))
+	d := CertificateVerifyData{Code: certificate.FormatCode(code), Pass: models.QuizPassPercent}
+	status := http.StatusNotFound
+	if code != "" {
+		attempt, err := a.QuizAttempts.GetByCertificateCode(r.Context(), code)
+		if err != nil && err != repo.ErrNotFound {
+			a.serverError(w, "verify certificate", err)
+			return
+		}
+		// Admin attempts are testing only and never verify as real.
+		if err == nil && attempt.Passed && !attempt.IsAdmin {
+			if course, cerr := a.Courses.GetByID(r.Context(), attempt.CourseID); cerr == nil {
+				d.Valid = true
+				d.Name = certificate.RecipientName(attempt.Name, attempt.Email)
+				d.Course = certificate.SanitizeText(course.Title)
+				d.Date = certificate.DateText(attempt.CreatedAt)
+				d.Score = attempt.ScorePercent
+				status = http.StatusOK
+			}
+		}
+	}
+	d.BaseData = a.base(r, "Verify certificate - "+a.Cfg.SiteName, "Check that a certificate was genuinely issued.", "")
+	d.NoIndex = true
+	w.Header().Set("Cache-Control", "no-store")
+	a.View.Render(w, status, "certificate_verify", d)
 }
 
 func generateCertificateCode() (string, error) {

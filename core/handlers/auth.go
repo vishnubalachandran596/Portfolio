@@ -164,6 +164,12 @@ func (a *App) GoogleLoginCallback(w http.ResponseWriter, r *http.Request) {
 		a.serverError(w, "mark google verified", verr)
 		return
 	}
+	// Only now - Google has just proven this email - are guest purchases
+	// made with it attached to the account. A typed or password-signup email
+	// is never trusted for this. Best-effort: never block a login over it.
+	if _, aerr := a.Claims.AttachByEmail(ctx, user.ID, email); aerr != nil {
+		log.Printf("attach guest purchases by verified email: %v", aerr)
+	}
 	tv, _ := a.Users.TokenVersion(ctx, user.ID)
 	a.Auth.IssueUserSession(w, user.ID, tv)
 

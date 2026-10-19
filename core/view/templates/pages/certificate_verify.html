@@ -1,0 +1,28 @@
+{{define "content"}}
+<section class="page-hero page-hero-narrow">
+  <div class="container">
+    <p class="eyebrow">Certificate verification</p>
+    <h1>{{if .Valid}}Certificate verified{{else}}Certificate not found{{end}}</h1>
+    {{if .Valid}}<p class="hero-subtitle">This certificate was issued by {{.SiteName}} after the learner cleared the final quiz.</p>
+    {{else}}<p class="hero-subtitle">No certificate matches that code. Check the code printed on the certificate and try again.</p>{{end}}
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <div class="auth-card purchase-success">
+      {{if .Valid}}
+      <dl class="receipt-list">
+        <div><dt>Awarded to</dt><dd>{{.Name}}</dd></div>
+        <div><dt>Certified in</dt><dd>{{.Course}}</dd></div>
+        <div><dt>Final quiz score</dt><dd>{{.Score}} percent (pass mark {{.Pass}} percent)</dd></div>
+        <div><dt>Date of issue</dt><dd>{{.Date}}</dd></div>
+        <div><dt>Certificate code</dt><dd class="mono">{{.Code}}</dd></div>
+      </dl>
+      {{else}}
+      <p class="field-help">Codes look like XXXX-XXXX-XXXX-XXXX and are printed at the bottom of every certificate.</p>
+      {{end}}
+    </div>
+  </div>
+</section>
+{{end}}

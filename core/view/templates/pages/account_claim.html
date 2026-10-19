@@ -1,0 +1,27 @@
+{{define "content"}}
+<section class="page-hero page-hero-narrow">
+  <div class="container">
+    <p class="eyebrow">Account</p>
+    <h1>Claim a purchase</h1>
+    <p class="hero-subtitle">Bought as a guest? Enter the claim code shown on your payment confirmation page to attach the purchase to this account.</p>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container auth-container"><div class="auth-card">
+    {{range .Claimed}}
+    <div class="alert alert-success" role="status">Added to your account: <strong>{{.Title}}</strong>.
+      {{if eq .Kind "course"}}<a href="/courses/{{.Slug}}/learn">Open the course</a>{{else}}<a href="/account/licences">Open My licences</a>{{end}}
+    </div>
+    {{end}}
+    {{if .Error}}<div class="alert alert-error" role="alert">{{.Error}}</div>{{end}}
+    <form method="POST" action="/account/claim" class="auth-form">
+      <label>Claim code
+        <input type="text" name="code" class="mono" autocomplete="off" spellcheck="false" autocapitalize="characters" maxlength="40" placeholder="XXXXX-XXXXX-XXXXX-XXXXX" required>
+      </label>
+      <button type="submit" class="btn btn-primary" data-loading-text="Checking…">Claim purchase</button>
+    </form>
+    <p class="auth-fineprint">Signing in with Google using the same email you paid with also attaches it automatically. <a href="/account">Back to my account</a></p>
+  </div></div>
+</section>
+{{end}}

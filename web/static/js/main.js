@@ -400,9 +400,8 @@
   if (purchaseBtn) {
     purchaseBtn.addEventListener("click", function () {
       var slug = purchaseBtn.getAttribute("data-slug");
-      var minCents = parseInt(purchaseBtn.getAttribute("data-min-cents"), 10) || 0;
+      var isFree = purchaseBtn.getAttribute("data-free") === "1";
       var emailInput = document.getElementById("purchase-email");
-      var amountInput = document.getElementById("purchase-amount");
       var promoInput = document.getElementById("purchase-promo-code");
       var errorBox = document.getElementById("purchase-error");
 
@@ -418,17 +417,16 @@
         showError("Please enter a valid email.");
         return;
       }
-      var amount = Math.round(parseFloat(amountInput ? amountInput.value : "0") * 100);
-      if (isNaN(amount) || amount < minCents) amount = minCents;
-      var defaultLabel = amount > 0 ? "Continue" : "Get Free Access";
+      var defaultLabel = purchaseBtn.textContent;
 
       if (errorBox) errorBox.hidden = true;
       purchaseBtn.disabled = true;
-      purchaseBtn.textContent = amount > 0 ? "Starting checkout…" : "Getting access…";
+      purchaseBtn.textContent = isFree ? "Getting access…" : "Starting checkout…";
 
+      // The price is never sent: the server charges the course's own fixed
+      // price (less a valid promo code) and ignores any amount field.
       var form = new FormData();
       form.append("email", email);
-      form.append("amount_cents", String(amount));
       form.append("promo_code", promoInput ? promoInput.value.trim() : "");
 
       fetch("/courses/" + slug + "/checkout/order", { method: "POST", body: form })
@@ -490,6 +488,119 @@
           showError(err.message || "Could not start checkout.");
           purchaseBtn.disabled = false;
           purchaseBtn.textContent = defaultLabel;
+        });
+    });
+  }
+
+  // --- Promo code preview for the course order summary -----------------------
+  var promoApply = document.getElementById("purchase-promo-apply");
+  if (promoApply && purchaseBtn) {
+    promoApply.addEventListener("click", function () {
+      var errorBox = document.getElementById("purchase-error");
+      var emailInput = document.getElementById("purchase-email");
+      var promoInput = document.getElementById("purchase-promo-code");
+      var form = new FormData();
+      form.append("email", emailInput ? emailInput.value.trim() : "");
+      form.append("promo_code", promoInput ? promoInput.value.trim() : "");
+      fetch("/courses/" + purchaseBtn.getAttribute("data-slug") + "/checkout/quote", { method: "POST", body: form })
+        .then(function (res) {
+          return res.json().then(function (data) {
+            if (!res.ok) throw new Error(data.error || "Could not check the code.");
+            return data;
+          });
+        })
+        .then(function (q) {
+          if (errorBox) errorBox.hidden = true;
+          document.getElementById("sum-price").textContent = q.price;
+          document.getElementById("sum-discount-row").hidden = !(q.discount_cents > 0);
+          document.getElementById("sum-discount").textContent = "-" + q.discount + (q.percent ? " (" + q.percent + "% off)" : "");
+          document.getElementById("sum-total").textContent = q.total;
+          purchaseBtn.textContent = q.total_cents > 0 ? "Pay " + q.total : "Get free access";
+        })
+        .catch(function (err) {
+          if (errorBox) {
+            errorBox.textContent = err.message;
+            errorBox.hidden = false;
+          }
+        });
+    });
+  }
+
+  // --- Optional contribution after finishing a course (Razorpay) -----------
+  var courseContributeBtn = document.getElementById("course-contribute-btn");
+  if (courseContributeBtn) {
+    courseContributeBtn.addEventListener("click", function () {
+      var slug = courseContributeBtn.getAttribute("data-slug");
+      var amountInput = document.getElementById("course-contribute-amount");
+      var errorBox = document.getElementById("course-contribute-error");
+      function showError(msg) {
+        if (errorBox) {
+          errorBox.textContent = msg;
+          errorBox.hidden = false;
+        }
+      }
+      var amount = Math.round(parseFloat(amountInput ? amountInput.value : "0") * 100);
+      if (isNaN(amount) || amount < 100) {
+        showError("Enter an amount of at least 1.");
+        return;
+      }
+      if (errorBox) errorBox.hidden = true;
+      courseContributeBtn.disabled = true;
+      var form = new FormData();
+      form.append("amount_cents", String(amount));
+      fetch("/courses/" + slug + "/contribute/order", { method: "POST", body: form })
+        .then(function (res) {
+          return res.json().then(function (data) {
+            if (!res.ok) throw new Error(data.error || "Could not start checkout.");
+            return data;
+          });
+        })
+        .then(function (order) {
+          var rzp = new Razorpay({
+            key: order.key_id,
+            amount: order.amount,
+            currency: order.currency,
+            name: order.course_name,
+            description: "Voluntary contribution",
+            order_id: order.order_id,
+            prefill: { email: order.email },
+            handler: function (response) {
+              fetch("/courses/" + slug + "/contribute/verify", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  razorpay_order_id: response.razorpay_order_id,
+                  razorpay_payment_id: response.razorpay_payment_id,
+                  razorpay_signature: response.razorpay_signature,
+                }),
+              })
+                .then(function (res) {
+                  return res.json();
+                })
+                .then(function (result) {
+                  if (result.ok) {
+                    courseContributeBtn.textContent = "Thank you!";
+                  } else {
+                    showError(result.error || "Payment could not be verified.");
+                    courseContributeBtn.disabled = false;
+                  }
+                })
+                .catch(function () {
+                  showError("Payment could not be verified. Contact support with your payment ID.");
+                  courseContributeBtn.disabled = false;
+                });
+            },
+            modal: {
+              ondismiss: function () {
+                courseContributeBtn.disabled = false;
+              },
+            },
+          });
+          rzp.open();
+        })
+        .catch(function (err) {
+          showError(err.message || "Could not start checkout.");
+          courseContributeBtn.disabled = false;
         });
     });
   }

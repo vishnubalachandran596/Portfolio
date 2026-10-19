@@ -349,7 +349,18 @@ func (c Course) PriceDisplay() string {
 	return FormatMoney(c.PriceCents, CurrencyINR)
 }
 
-// MinPriceDisplay renders the minimum price for a paid course.
+// FixedPriceCents is what a paid course costs, in paise: the single fixed
+// price set in the admin console (stored in the legacy min_price_cents
+// column). It is the ONLY source of a course checkout amount; a client
+// never supplies one. A promo code can only reduce it.
+func (c Course) FixedPriceCents() int {
+	if c.MinPriceCents < 0 {
+		return 0
+	}
+	return c.MinPriceCents
+}
+
+// MinPriceDisplay renders the fixed price for a paid course.
 func (c Course) MinPriceDisplay() string { return FormatMoney(c.MinPriceCents, CurrencyINR) }
 
 // MinPriceWhole is the minimum price in whole rupees (e.g. 35 for ₹35),
@@ -786,6 +797,10 @@ type Purchase struct {
 	DiscountCents int
 	CreatedAt     time.Time
 	PaidAt        *time.Time
+	// ClaimCode is set only on a guest purchase (UserID 0) until it is
+	// attached to an account; "" afterwards. See authutil.NewClaimCode.
+	ClaimCode string
+	ClaimedAt *time.Time
 }
 
 const (
@@ -998,6 +1013,24 @@ type SoftwarePurchase struct {
 	PromoCode         string
 	PromoText         string
 	DiscountCents     int
+	CreatedAt         time.Time
+	PaidAt            *time.Time
+	ClaimCode         string
+	ClaimedAt         *time.Time
+}
+
+// CourseContribution is the optional voluntary payment a learner can make
+// after finishing a course. The course price itself stays fixed.
+type CourseContribution struct {
+	ID                int64
+	CourseID          int64
+	UserID            int64
+	Email             string
+	AmountCents       int
+	Currency          string
+	Status            string
+	RazorpayOrderID   string
+	RazorpayPaymentID string
 	CreatedAt         time.Time
 	PaidAt            *time.Time
 }

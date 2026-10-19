@@ -16,6 +16,18 @@
       <a class="btn btn-primary" href="/courses/{{.Course.Slug}}/certificate">Download Certificate (PDF)</a>
       <a class="btn btn-secondary" href="/courses/{{.Course.Slug}}/learn">Back to course</a>
     </div>
+    {{if .PaymentsEnabled}}
+    <div class="auth-card purchase-success" id="contribute-box">
+      <h2>Optional: support this course</h2>
+      <p class="field-help">The course price is fixed and you have already paid it. If it helped you, you can add a voluntary contribution of any amount. There is no obligation.</p>
+      <div id="course-contribute-error" class="alert alert-error" hidden></div>
+      <label>Amount (INR)
+        <input type="number" id="course-contribute-amount" inputmode="numeric" min="1" max="100000" step="1" value="199">
+      </label>
+      <button type="button" class="btn btn-secondary" id="course-contribute-btn" data-slug="{{.Course.Slug}}">Contribute</button>
+    </div>
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    {{end}}
     {{else}}
     <div class="alert alert-error">You didn't reach {{.PassPct}}% this time.{{if eq .Left 0}} You have no attempts left; contact the course instructor if you need another.{{else}} Review the course, then start your next attempt whenever you're ready.{{end}}</div>
     <div class="form-actions">
