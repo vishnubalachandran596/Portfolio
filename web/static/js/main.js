@@ -693,6 +693,13 @@
         });
         btn.classList.add("selected");
         selectedSlot = btn.getAttribute("data-slot");
+        var localNote = document.getElementById("local-time-note");
+        if (localNote) {
+          try {
+            var lt = new Date(selectedSlot).toLocaleString([], { weekday: "short", hour: "numeric", minute: "2-digit", timeZoneName: "short" });
+            localNote.textContent = " — your time: " + lt;
+          } catch (e) {}
+        }
         if (selectedLabel) selectedLabel.textContent = btn.getAttribute("data-label");
         bookingContact.hidden = false;
         bookingContact.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -701,8 +708,10 @@
 
     confirmBtn.addEventListener("click", function () {
       var errorBox = document.getElementById("booking-error");
-      var messageInput = document.getElementById("booking-message");
-      var phoneInput = document.getElementById("booking-phone");
+      function val(id) {
+        var el = document.getElementById(id);
+        return el ? el.value.trim() : "";
+      }
       function showError(msg) {
         if (errorBox) {
           errorBox.textContent = msg;
@@ -713,9 +722,14 @@
         showError("Please pick a time slot first.");
         return;
       }
-      var phone = phoneInput ? phoneInput.value.trim() : "";
-      if (!phone) {
-        showError("Please enter a contact number.");
+      var name = val("booking-name");
+      var email = val("booking-email");
+      if (name.length < 2) {
+        showError("Please enter your name.");
+        return;
+      }
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+        showError("Please enter a valid email address.");
         return;
       }
       if (errorBox) errorBox.hidden = true;
@@ -725,8 +739,11 @@
 
       var form = new FormData();
       form.append("slot", selectedSlot);
-      form.append("phone", phone);
-      form.append("message", messageInput ? messageInput.value : "");
+      form.append("name", name);
+      form.append("email", email);
+      form.append("phone", val("booking-phone"));
+      form.append("message", val("booking-message"));
+      form.append("website", val("booking-website")); // honeypot
 
       fetch("/booking/confirm", { method: "POST", body: form })
         .then(function (res) {
@@ -736,7 +753,39 @@
           });
         })
         .then(function (result) {
-          window.location.href = result.redirect;
+          if (!result.manage_path) {
+            window.location.href = result.redirect || "/booking";
+            return;
+          }
+          // The manage link is shown once, here, and never stored by the
+          // server in clear. Keep a copy in this browser as a convenience.
+          var link = window.location.origin + result.manage_path;
+          try {
+            localStorage.setItem("vb_last_booking", JSON.stringify({ code: result.code, link: link, when: result.when }));
+          } catch (e) {}
+          var done = document.getElementById("booking-done");
+          var picker = document.getElementById("booking-picker");
+          document.getElementById("done-when").textContent = result.when;
+          document.getElementById("done-code").textContent = result.code;
+          var a = document.getElementById("done-link");
+          a.href = link;
+          a.textContent = link;
+          var copy = document.getElementById("done-copy");
+          if (copy) {
+            copy.addEventListener("click", function () {
+              if (navigator.clipboard) {
+                navigator.clipboard.writeText(link).then(function () {
+                  copy.textContent = "Copied";
+                });
+              }
+            });
+          }
+          if (picker) picker.hidden = true;
+          if (done) {
+            done.hidden = false;
+            done.focus();
+            done.scrollIntoView({ behavior: "smooth", block: "center" });
+          }
         })
         .catch(function (err) {
           showError(err.message || "Could not confirm the booking.");

@@ -2509,3 +2509,10 @@ select { appearance: none; -webkit-appearance: none; padding-right: 2.25rem; bac
   .lesson-frame { height: auto; min-height: 40rem; }
 }
 .auth-divider { border: 0; border-top: 1px solid var(--line); margin: var(--space-5) 0; }
+
+/* Public booking: honeypot kept off-screen (not display:none, which some bots skip),
+   and the on-screen booking code / private manage link. */
+.hp-field { position: absolute; left: -62rem; width: 0.0625rem; height: 0.0625rem; overflow: hidden; }
+.booking-code { font-family: var(--font-mono, ui-monospace, monospace); letter-spacing: 0.08em; }
+.booking-manage-link { overflow-wrap: anywhere; word-break: break-all; }
+.booking-contact[tabindex]:focus { outline: none; }

@@ -73,6 +73,7 @@ type AccountData struct {
 
 type AccountBooking struct {
 	ID             int64
+	Code           string
 	When           string
 	Status         string
 	WasRescheduled bool
@@ -130,6 +131,7 @@ func (a *App) AccountPage(w http.ResponseWriter, r *http.Request) {
 	for _, b := range bookings {
 		row := AccountBooking{
 			ID:     b.ID,
+			Code:   b.Code,
 			When:   b.SlotStart.In(a.Timezone).Format("Mon, Jan 2 2006 · 3:04 PM"),
 			Status: b.Status,
 		}

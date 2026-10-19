@@ -72,11 +72,31 @@ func expandRule(rule models.AvailabilityRule, day time.Time, loc *time.Location)
 		step = 30 * time.Minute
 	}
 
+	// Public booking hours are a hard clamp on top of the admin rules: a
+	// rule can narrow the day but never open slots outside 10:00-20:00.
+	open := time.Date(day.Year(), day.Month(), day.Day(), models.BookingFirstStartHour, 0, 0, 0, loc)
+	closeAt := time.Date(day.Year(), day.Month(), day.Day(), models.BookingLastEndHour, 0, 0, 0, loc)
+	if start.Before(open) {
+		start = open
+	}
+	if end.After(closeAt) {
+		end = closeAt
+	}
+
 	var slots []models.TimeSlot
 	for t := start; t.Add(step).Compare(end) <= 0; t = t.Add(step) {
 		slots = append(slots, models.TimeSlot{Start: t, End: t.Add(step), Available: true})
 	}
 	return slots
+}
+
+// WithinBookingHours reports whether a slot that starts at start and lasts
+// d lies inside the public booking day (10:00 to 20:00 in loc).
+func WithinBookingHours(start time.Time, d time.Duration, loc *time.Location) bool {
+	l := start.In(loc)
+	open := time.Date(l.Year(), l.Month(), l.Day(), models.BookingFirstStartHour, 0, 0, 0, loc)
+	closeAt := time.Date(l.Year(), l.Month(), l.Day(), models.BookingLastEndHour, 0, 0, 0, loc)
+	return !l.Before(open) && !l.Add(d).After(closeAt)
 }
 
 func parseClock(hhmm string, day time.Time, loc *time.Location) (time.Time, error) {

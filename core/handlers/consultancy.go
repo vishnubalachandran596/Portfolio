@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
+	"net/mail"
 	"strings"
 	"time"
 
+	"github.com/vishnubalachandran596/portfolio/core/authutil"
 	"github.com/vishnubalachandran596/portfolio/core/models"
 	"github.com/vishnubalachandran596/portfolio/core/repo"
 	"github.com/vishnubalachandran596/portfolio/core/scheduler"
@@ -92,14 +94,24 @@ func (a *App) ConsultancyPage(w http.ResponseWriter, r *http.Request) {
 type BookingData struct {
 	BaseData
 	Days      []scheduler.DaySlots
-	Success   bool
 	Error     string
 	UserEmail string
 	UserName  string
 }
 
-// BookingPage requires a logged-in visitor (see RequireUser in routes.go).
-// The hourly session is a free scheduled call — no price, no payment step.
+// Throttle limits for public booking. Every attempt that reaches the insert
+// counts (success or not), so a bot cannot fill the calendar: the lock
+// starts at the limit and then doubles up to an hour.
+const (
+	throttleBooking       = "booking"
+	bookingMaxPerIP       = 6
+	bookingMaxPerEmail    = 3
+	bookingMaxFieldLength = 1000
+)
+
+// BookingPage is open to everyone: no login is needed to book. The hourly
+// session is a free scheduled call — no price, no payment step. A signed-in
+// visitor just gets their name and email pre-filled.
 func (a *App) BookingPage(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	days, err := a.availableDays(r)
@@ -108,7 +120,7 @@ func (a *App) BookingPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	base := a.base(r, "Book Consultancy — "+a.Cfg.SiteName, "Book a free 1:1 consultancy call.", "consultancy")
+	base := a.base(r, "Book a Free Consultancy Call — "+a.Cfg.SiteName, "Book a free 1:1 consultancy call. No account needed: pick an hourly slot in the next 30 days.", "consultancy")
 
 	userEmail, userNameVal := "", ""
 	if uid, ok := a.Auth.UserID(r); ok {
@@ -121,51 +133,64 @@ func (a *App) BookingPage(w http.ResponseWriter, r *http.Request) {
 	a.View.Render(w, http.StatusOK, "booking", BookingData{
 		BaseData:  base,
 		Days:      days,
-		Success:   r.URL.Query().Get("booked") == "1",
 		Error:     r.URL.Query().Get("error"),
 		UserEmail: userEmail,
 		UserName:  userNameVal,
 	})
 }
 
-// BookingConfirm reserves the chosen slot and confirms it immediately —
-// no payment gateway involved at all. Still goes through
-// CreatePending -> MarkPaid (the same pair a paid booking would have
-// used) rather than a new code path, so the slot-race protection (the
-// unique constraint on slot_start) applies exactly the same way; a
-// synthetic, unique razorpay_order_id ("free-"+token) is only there to
-// give MarkPaid something unambiguous to scope its update to — nothing
-// ever gets checked against Razorpay.
+func bookingJSONError(w http.ResponseWriter, status int, msg string) {
+	writeJSON(w, status, map[string]string{"error": msg})
+}
+
+// BookingConfirm reserves the chosen slot for anyone (no login). The slot is
+// claimed by the database — a unique index on the live slot start plus a
+// no-overlap exclusion constraint — so two simultaneous requests cannot both
+// win; the loser sees "just booked". The site sends no email: the response
+// carries the booking code and the private manage token, which is shown once
+// and kept only as a hash.
 func (a *App) BookingConfirm(w http.ResponseWriter, r *http.Request) {
-	uid, ok := a.Auth.UserID(r)
-	if !ok {
-		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "Please log in to book a session."})
+	ctx := r.Context()
+
+	// This form is submitted via fetch() with a FormData body (multipart), so
+	// ParseMultipartForm is required — plain ParseForm never reads it.
+	if err := r.ParseMultipartForm(1 << 20); err != nil && err != http.ErrNotMultipart {
+		bookingJSONError(w, http.StatusBadRequest, "Invalid form submission.")
 		return
 	}
-	ctx := r.Context()
-	user, err := a.Users.GetByID(ctx, uid)
-	if err != nil {
-		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "Please log in to book a session."})
+	// Honeypot: real visitors never fill this hidden field. Answer as if it
+	// worked so a bot learns nothing.
+	if r.FormValue("website") != "" {
+		writeJSON(w, http.StatusOK, map[string]any{"redirect": "/booking"})
 		return
 	}
 
-	// See the matching comment in checkout.go's CheckoutCreateOrder: this
-	// form is submitted via fetch() with a FormData body (multipart), so
-	// ParseMultipartForm is required — plain ParseForm never reads it.
-	if err := r.ParseMultipartForm(1 << 20); err != nil && err != http.ErrNotMultipart {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Invalid form submission."})
-		return
-	}
+	name := strings.TrimSpace(r.FormValue("name"))
+	email := strings.ToLower(strings.TrimSpace(r.FormValue("email")))
 	phone := strings.TrimSpace(r.FormValue("phone"))
-	if phone == "" {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Please enter a contact number."})
+	message := strings.TrimSpace(r.FormValue("message"))
+	if n := len([]rune(name)); n < 2 || n > 100 {
+		bookingJSONError(w, http.StatusBadRequest, "Please enter your name.")
 		return
 	}
-	message := strings.TrimSpace(r.FormValue("message"))
-	slotRaw := strings.TrimSpace(r.FormValue("slot"))
-	slotStart, err := time.Parse(time.RFC3339, slotRaw)
+	if addr, err := mail.ParseAddress(email); err != nil || addr.Address != email || len(email) > 254 {
+		bookingJSONError(w, http.StatusBadRequest, "Please enter a valid email address.")
+		return
+	}
+	if len(phone) > 30 || len([]rune(message)) > bookingMaxFieldLength {
+		bookingJSONError(w, http.StatusBadRequest, "Your phone number or message is too long.")
+		return
+	}
+	slotStart, err := time.Parse(time.RFC3339, strings.TrimSpace(r.FormValue("slot")))
 	if err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "That time slot is no longer valid, please pick another."})
+		bookingJSONError(w, http.StatusBadRequest, "That time slot is no longer valid, please pick another.")
+		return
+	}
+
+	ik := authutil.HashKey(authutil.ClientIP(r))
+	ek := authutil.HashKey(email)
+	if until, locked := a.throttled(r, throttleBooking, ik, ek); locked {
+		bookingJSONError(w, http.StatusTooManyRequests, lockedMessage(until))
 		return
 	}
 
@@ -174,45 +199,46 @@ func (a *App) BookingConfirm(w http.ResponseWriter, r *http.Request) {
 		a.serverError(w, "load availability", err)
 		return
 	}
-	if !a.slotIsOffered(rules, slotStart) || slotStart.Before(time.Now()) {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "That time slot is not available, please pick another."})
+	msg, slotMinutes := a.bookableSlotError(rules, slotStart)
+	if msg != "" {
+		bookingJSONError(w, http.StatusBadRequest, msg)
 		return
 	}
-	slotMinutes := models.ConsultancyDurationMinutes
-	for _, rr := range rules {
-		if rr.Weekday == slotStart.In(a.Timezone).Weekday() {
-			slotMinutes = rr.SlotMinutes
-			break
-		}
-	}
-
-	token, terr := generateAccessToken()
-	if terr != nil {
-		a.serverError(w, "generate booking token", terr)
+	if n, err := a.Bookings.CountActiveByEmail(ctx, email); err != nil {
+		a.serverError(w, "count bookings", err)
+		return
+	} else if n >= models.BookingMaxActivePerEmail {
+		bookingJSONError(w, http.StatusConflict, fmt.Sprintf("That email already has %d upcoming bookings. Cancel or reschedule one from its manage link first.", n))
 		return
 	}
-	orderID := "free-" + token
 
+	token, err := authutil.RandomHex(24)
+	if err != nil {
+		a.serverError(w, "generate manage token", err)
+		return
+	}
 	booking := models.Booking{
-		UserID:          uid,
-		Name:            user.Name,
-		Email:           user.Email,
-		Phone:           phone,
-		Message:         message,
-		SlotStart:       slotStart,
-		SlotEnd:         slotStart.Add(time.Duration(slotMinutes) * time.Minute),
-		RazorpayOrderID: orderID,
+		Name:      name,
+		Email:     email,
+		Phone:     phone,
+		Message:   message,
+		SlotStart: slotStart,
+		SlotEnd:   slotStart.Add(time.Duration(slotMinutes) * time.Minute),
 	}
-	if _, err := a.Bookings.CreatePending(ctx, booking); err != nil {
+	if uid, ok := a.Auth.UserID(r); ok {
+		booking.UserID = uid // links the booking to /account for signed-in users
+	}
+
+	a.recordFailure(r, throttleBooking, bookingMaxPerIP, ik)
+	a.recordFailure(r, throttleBooking, bookingMaxPerEmail, ek)
+
+	_, code, err := a.Bookings.CreatePublic(ctx, booking, authutil.HashKey(token))
+	if err != nil {
 		if err == repo.ErrSlotTaken {
-			writeJSON(w, http.StatusConflict, map[string]string{"error": "That time was just booked by someone else, please pick another."})
+			bookingJSONError(w, http.StatusConflict, "That time was just booked by someone else, please pick another.")
 			return
 		}
 		a.serverError(w, "reserve booking", err)
-		return
-	}
-	if err := a.Bookings.MarkPaid(ctx, orderID, ""); err != nil {
-		a.serverError(w, "confirm booking", err)
 		return
 	}
 
@@ -220,10 +246,14 @@ func (a *App) BookingConfirm(w http.ResponseWriter, r *http.Request) {
 	if phone != "" {
 		phoneLine = "\nPhone: " + phone
 	}
-	a.Telegram.Send(fmt.Sprintf("📅 Consultancy call booked\nName: %s\nEmail: %s%s\nWhen: %s",
-		user.Name, user.Email, phoneLine, slotStart.In(a.Timezone).Format("Mon, Jan 2 · 3:04 PM MST")))
+	a.Telegram.Send(fmt.Sprintf("📅 Consultancy call booked (%s)\nName: %s\nEmail: %s%s\nWhen: %s",
+		code, name, email, phoneLine, slotStart.In(a.Timezone).Format("Mon, Jan 2 · 3:04 PM MST")))
 
-	writeJSON(w, http.StatusOK, map[string]any{"redirect": "/booking?booked=1"})
+	writeJSON(w, http.StatusOK, map[string]any{
+		"code":        code,
+		"when":        slotStart.In(a.Timezone).Format("Mon, Jan 2 2006 · 3:04 PM MST"),
+		"manage_path": "/booking/manage/" + token,
+	})
 }
 
 type ContactData struct {

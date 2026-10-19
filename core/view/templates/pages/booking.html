@@ -2,21 +2,29 @@
 <section class="page-hero">
   <div class="container">
     <p class="eyebrow"><a href="{{.Nav.Consultancy}}">← Consultancy</a></p>
-    <h1>Book a consultancy call</h1>
-    <p class="hero-subtitle">One hour of 1:1 consultancy, discussion, or brainstorming — <strong>free</strong>. Pick an open slot below and your call is confirmed instantly. Times shown in India Standard Time (IST).</p>
+    <h1>Book a free consultancy call</h1>
+    <p class="hero-subtitle">One hour of 1:1 consultancy, discussion, or brainstorming — <strong>free</strong>, and <strong>no account needed</strong>. Pick an open hourly slot in the next 30 days (10:00 to 20:00 India Standard Time) and your call is confirmed instantly.</p>
   </div>
 </section>
 
 <section class="section">
   <div class="container">
-    {{if .Success}}
-    <div class="alert alert-success">Your call is booked! You'll hear back at {{.UserEmail}}.</div>
-    {{end}}
     {{if .Error}}
     <div class="alert alert-error">{{.Error}}</div>
     {{end}}
 
+    <div id="booking-done" class="booking-contact" hidden tabindex="-1">
+      <h2>Your call is booked</h2>
+      <p>When: <strong id="done-when"></strong> (IST)</p>
+      <p>Booking code: <strong id="done-code" class="booking-code"></strong></p>
+      <p>Your private link to view, cancel or reschedule this booking:</p>
+      <p><a id="done-link" class="booking-manage-link"></a></p>
+      <div class="alert alert-error"><strong>Save this link and code now.</strong> This site sends no emails, so this is the only time the link is shown. Anyone with the link can change the booking.</div>
+      <button type="button" class="btn btn-secondary" id="done-copy">Copy link</button>
+    </div>
+
     {{if .Days}}
+    <div id="booking-picker">
     <div class="days-scroller">
       {{range .Days}}
       <div class="day-column">
@@ -35,16 +43,26 @@
     </div>
 
     <div class="booking-contact" id="booking-contact" hidden>
-      <p>Selected time: <strong id="selected-slot-label"></strong></p>
+      <p>Selected time: <strong id="selected-slot-label"></strong> <span class="optional">(IST<span id="local-time-note"></span>)</span></p>
       <p class="booking-price-line">Free — confirmed instantly.</p>
-      <label>Contact number
-        <input type="tel" id="booking-phone" autocomplete="tel" required>
+      <label>Your name
+        <input type="text" id="booking-name" autocomplete="name" maxlength="100" value="{{.UserName}}" required>
       </label>
-      <label>Anything you'd like to cover? <span class="optional">(optional)</span>
+      <label>Email address
+        <input type="email" id="booking-email" autocomplete="email" maxlength="254" value="{{.UserEmail}}" required>
+      </label>
+      <label>Phone <span class="optional">(optional)</span>
+        <input type="tel" id="booking-phone" autocomplete="tel" maxlength="30">
+      </label>
+      <label>Topic — what would you like to cover? <span class="optional">(optional)</span>
         <textarea id="booking-message" rows="3" maxlength="1000"></textarea>
       </label>
+      <div class="hp-field" aria-hidden="true">
+        <label>Leave this empty <input type="text" id="booking-website" name="website" tabindex="-1" autocomplete="off"></label>
+      </div>
       <div id="booking-error" class="alert alert-error" hidden></div>
       <button type="button" class="btn btn-primary" id="booking-confirm-btn">Schedule the Call</button>
+    </div>
     </div>
     {{else}}
     <p class="empty-state">No availability is configured right now — check back soon.</p>
