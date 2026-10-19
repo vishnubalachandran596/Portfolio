@@ -67,10 +67,11 @@
     {{end}}
     <div class="table-scroll">
     <table class="admin-table">
-      <thead><tr><th>When</th><th>Status</th><th></th></tr></thead>
+      <thead><tr><th>Code</th><th>When</th><th>Status</th><th></th></tr></thead>
       <tbody>
         {{range .Bookings}}
         <tr>
+          <td>{{.Code}}</td>
           <td>{{.When}}</td>
           <td><span class="status-badge status-{{.Status}}">{{.Status}}</span></td>
           <td>{{if eq .Status "confirmed"}}<a class="link-button" href="/account/bookings/{{.ID}}/reschedule">Reschedule</a>{{end}}</td>

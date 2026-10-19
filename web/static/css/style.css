@@ -2514,3 +2514,10 @@ select { appearance: none; -webkit-appearance: none; padding-right: 2.25rem; bac
 .preview-stage { border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface); overflow: hidden; }
 .preview-frame { display: block; width: 100%; height: 75vh; height: 75dvh; min-height: 30rem; border: 0; background: transparent; }
 .preview-cta { margin-top: 1.5rem; }
+
+/* Public booking: honeypot kept off-screen (not display:none, which some bots skip),
+   and the on-screen booking code / private manage link. */
+.hp-field { position: absolute; left: -62rem; width: 0.0625rem; height: 0.0625rem; overflow: hidden; }
+.booking-code { font-family: var(--font-mono, ui-monospace, monospace); letter-spacing: 0.08em; }
+.booking-manage-link { overflow-wrap: anywhere; word-break: break-all; }
+.booking-contact[tabindex]:focus { outline: none; }

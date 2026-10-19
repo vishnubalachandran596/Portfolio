@@ -1,0 +1,38 @@
+{{define "content"}}
+<section class="page-hero">
+  <div class="container">
+    <p class="eyebrow"><a href="/booking/manage/{{.Token}}">← Your booking {{.Booking.Code}}</a></p>
+    <h1>Pick a different time</h1>
+    <p class="hero-subtitle">Your session is {{.When}}. Pick another open hourly slot in the next 30 days — times shown in India Standard Time (IST).</p>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    {{if .Error}}<div class="alert alert-error">{{.Error}}</div>{{end}}
+    {{if .Days}}
+    <div class="days-scroller">
+      {{range .Days}}
+      <div class="day-column">
+        <h3>{{.Label}}</h3>
+        <div class="slot-list">
+          {{range .Slots}}
+          {{if .Available}}
+          <form method="POST" action="/booking/manage/{{$.Token}}/reschedule">
+            <input type="hidden" name="slot" value="{{.Start.Format "2006-01-02T15:04:05Z07:00"}}">
+            <button type="submit" class="slot-btn">{{formatTime .Start}}</button>
+          </form>
+          {{else}}
+          <button type="button" class="slot-btn disabled" disabled>{{formatTime .Start}}</button>
+          {{end}}
+          {{end}}
+        </div>
+      </div>
+      {{end}}
+    </div>
+    {{else}}
+    <p class="empty-state">No availability is configured right now — check back soon.</p>
+    {{end}}
+  </div>
+</section>
+{{end}}

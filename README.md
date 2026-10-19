@@ -198,14 +198,16 @@ rows yourself. Everything below is editable from `/admin`:
 - **Courses** (`/admin/courses`) — create/edit/delete/publish courses
   shown on `/courses`.
 - **Bookings** (`/admin/bookings`) — view every consultancy booking and
-  its payment status (pending payment/confirmed/cancelled).
+  its status (confirmed/cancelled) and its `BK-` code.
 - **Availability** (`/admin/availability`) — the weekly recurring rules
   (day, time window, slot length) that generate the bookable slots shown
-  on `/booking`. The chosen slot is re-validated server-side against
-  these rules on every checkout, and a unique DB constraint on the slot
-  start time means two visitors can never both pay for the same slot.
+  on `/booking` (hourly, 10:00-20:00 IST, next 30 days). The chosen slot is
+  re-validated server-side against these rules on every booking, and a
+  unique index plus a no-overlap exclusion constraint in the database mean
+  two visitors can never hold the same or overlapping slots.
 
-Booking a consultancy session or buying a course requires an account
+Booking the free consultancy call needs no account (a private manage link is
+shown on screen once, since the site sends no email). Buying a course requires an account
 (`/login`, email + password — `core/repo/users.go`). Logging in with the
 email/password that matches the `admins` table opens the admin dashboard
 *and* a matching visitor session in one step, so the site owner can browse
@@ -292,18 +294,19 @@ The same thing is also exposed in the admin portal: the course edit form
 when filled in, calls the identical `CourseUpdateRepo.Create` under the
 hood. Leaving it blank saves the course silently.
 
-## Consultancy (paid 1:1 booking)
+## Consultancy (free 1:1 booking, no login)
 
-`/consultancy` is the only page with a "Book Now" call to action; it links
-to `/booking`, which requires login and shows the price up front (₹3,000/hr
-India, $40/hr elsewhere — `models.ConsultancyRegionalPrice`, the same
-geo-header-driven regional pricing pattern as courses) before any slot is
-picked. Picking a slot reserves it (`status='pending_payment'`) the moment
-a Razorpay order is created — the same unique-slot-start constraint used
-for the old free flow now doubles as the anti-double-booking guarantee
-during checkout — and confirms it once the payment signature verifies
-(`core/handlers/consultancy.go`). An abandoned checkout frees the slot
-automatically 20 minutes later; no cleanup job needed.
+`/consultancy` links to `/booking`, which is open to everyone: pick an hourly
+slot (starts 10:00 to 19:00 IST, next 30 days, within the admin availability
+rules), give a name, email and optional topic, and the call is confirmed at
+once. There is no price and no payment step for the hourly call. The slot is
+claimed by the database (a unique index on the live slot start plus a
+no-overlap exclusion constraint, migration `089`), so two simultaneous
+requests cannot both win. The site sends no email: the confirmation shows a
+`BK-XXXXXX` code and a private manage link (`/booking/manage/{token}`, stored
+only as a hash) to view, cancel or reschedule. Abuse protection is a
+honeypot field plus database throttling (`auth_throttle`, kind `booking`).
+Details in `docs/FUNCTIONALITY.md` (Booking) and `docs/ARCHITECTURE.md` (§6).
 
 ## Domain architecture (www canonical, optional page-group subdomains)
 
@@ -318,7 +321,7 @@ page-group subdomains:
 | `www.yourdomain.com` | The full path-based site (canonical; never redirected) |
 | `about.yourdomain.com` | About Me |
 | `courses.yourdomain.com` | Courses list/detail, checkout, and gated paid-course content |
-| `consultancy.yourdomain.com` | The consultancy page and the (login-required) booking/checkout flow |
+| `consultancy.yourdomain.com` | The consultancy page and the public (no-login) booking flow |
 | `contact.yourdomain.com` | Contact |
 | `admin.yourdomain.com` | The admin portal |
 

@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"net/http"
+	"net/url"
 	"strconv"
 	"time"
 
@@ -10,9 +11,9 @@ import (
 	"github.com/vishnubalachandran596/portfolio/core/scheduler"
 )
 
-// availableDays computes the next two weeks of bookable slots from the
+// availableDays computes the next 30 days of bookable slots from the
 // active availability rules minus what's already taken — shared by the
-// booking page and both reschedule flows.
+// booking page and every reschedule flow.
 func (a *App) availableDays(r *http.Request) ([]scheduler.DaySlots, error) {
 	ctx := r.Context()
 	rules, err := a.Availability.ListActive(ctx)
@@ -20,12 +21,39 @@ func (a *App) availableDays(r *http.Request) ([]scheduler.DaySlots, error) {
 		return nil, err
 	}
 	from := time.Now().In(a.Timezone)
-	to := from.AddDate(0, 0, 15)
+	to := from.AddDate(0, 0, models.BookingWindowDays+1)
 	taken, err := a.Bookings.BookedSlots(ctx, from, to)
 	if err != nil {
 		return nil, err
 	}
-	return scheduler.ComputeDays(rules, taken, a.Timezone, 14), nil
+	return scheduler.ComputeDays(rules, taken, a.Timezone, models.BookingWindowDays), nil
+}
+
+// bookableSlotError is the single server-side gate for a requested slot
+// (new booking and every reschedule): it must be one the rules actually
+// offer, inside the 10:00-20:00 IST day, in the future and no more than 30
+// days ahead. It returns the visitor-facing reason, or "" when the slot is
+// fine, plus the slot length in minutes.
+func (a *App) bookableSlotError(rules []models.AvailabilityRule, slotStart time.Time) (string, int) {
+	minutes := models.ConsultancyDurationMinutes
+	local := slotStart.In(a.Timezone)
+	for _, rr := range rules {
+		if rr.Weekday == local.Weekday() && rr.SlotMinutes > 0 {
+			minutes = rr.SlotMinutes
+			break
+		}
+	}
+	now := time.Now()
+	switch {
+	case !slotStart.After(now):
+		return "That time has already passed, please pick another.", minutes
+	case slotStart.After(now.AddDate(0, 0, models.BookingWindowDays)):
+		return "Bookings open up to 30 days ahead, please pick an earlier day.", minutes
+	case !a.slotIsOffered(rules, slotStart),
+		!scheduler.WithinBookingHours(slotStart, time.Duration(minutes)*time.Minute, a.Timezone):
+		return "That time slot is not available, please pick another.", minutes
+	}
+	return "", minutes
 }
 
 // --- Admin: reschedule any booking --------------------------------------
@@ -223,8 +251,8 @@ func (a *App) AccountRescheduleSubmit(w http.ResponseWriter, r *http.Request) {
 		a.serverError(w, "load availability", err)
 		return
 	}
-	if !a.slotIsOffered(rules, newStart) || newStart.Before(time.Now()) {
-		http.Redirect(w, r, "/account/bookings/"+strconv.FormatInt(id, 10)+"/reschedule?error=That+time+is+not+available", http.StatusSeeOther)
+	if msg, _ := a.bookableSlotError(rules, newStart); msg != "" {
+		http.Redirect(w, r, "/account/bookings/"+strconv.FormatInt(id, 10)+"/reschedule?error="+url.QueryEscape(msg), http.StatusSeeOther)
 		return
 	}
 	duration := booking.SlotEnd.Sub(booking.SlotStart)

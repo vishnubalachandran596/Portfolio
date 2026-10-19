@@ -2,6 +2,7 @@
 package models
 
 import (
+	"crypto/rand"
 	"fmt"
 	"regexp"
 	"sort"
@@ -523,7 +524,36 @@ type Booking struct {
 	PromoCodeID            *int64
 	PromoCode              string
 	DiscountCents          int
-	CreatedAt              time.Time
+	// Code is the on-screen reference (BK-XXXXXX) shown at booking time;
+	// the site sends no email, so it is how a visitor and the admin refer
+	// to a booking. It grants no access — the private manage link does.
+	Code      string
+	CreatedAt time.Time
+}
+
+// Public booking window (W3): hourly slots starting 10:00 to 19:00 IST,
+// i.e. the day runs 10:00 to 20:00, bookable up to 30 days ahead.
+const (
+	BookingFirstStartHour = 10
+	BookingLastEndHour    = 20
+	BookingWindowDays     = 30
+	// BookingMaxActivePerEmail stops one address hoarding the calendar.
+	BookingMaxActivePerEmail = 3
+)
+
+const bookingCodeAlphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789" // no 0/O/1/I
+
+// NewBookingCode returns a fresh "BK-XXXXXX" reference.
+func NewBookingCode() (string, error) {
+	buf := make([]byte, 6)
+	if _, err := rand.Read(buf); err != nil {
+		return "", err
+	}
+	out := make([]byte, 6)
+	for i, b := range buf {
+		out[i] = bookingCodeAlphabet[int(b)%len(bookingCodeAlphabet)]
+	}
+	return "BK-" + string(out), nil
 }
 
 // ContactMessage is a submission from the /contact page's form — a

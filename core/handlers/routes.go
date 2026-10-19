@@ -48,8 +48,14 @@ func (a *App) Routes() http.Handler {
 	mux.HandleFunc("POST /courses/{slug}/review", a.CourseReviewSubmit)
 	mux.Handle("GET /courses/{slug}/certificate", noindex(http.HandlerFunc(a.CertificateDownload)))
 	mux.HandleFunc("GET /consultancy", a.ConsultancyPage)
-	mux.Handle("GET /booking", noindex(a.Auth.RequireUser(http.HandlerFunc(a.BookingPage))))
+	// Public booking: no login. /booking is indexable; the private manage
+	// links are noindex, uncached and send no Referer (booking_manage.go).
+	mux.HandleFunc("GET /booking", a.BookingPage)
 	mux.HandleFunc("POST /booking/confirm", a.BookingConfirm)
+	mux.Handle("GET /booking/manage/{token}", manageGuard(http.HandlerFunc(a.BookingManagePage)))
+	mux.Handle("POST /booking/manage/{token}/cancel", manageGuard(http.HandlerFunc(a.BookingManageCancel)))
+	mux.Handle("GET /booking/manage/{token}/reschedule", manageGuard(http.HandlerFunc(a.BookingManageReschedulePage)))
+	mux.Handle("POST /booking/manage/{token}/reschedule", manageGuard(http.HandlerFunc(a.BookingManageRescheduleSubmit)))
 	mux.HandleFunc("GET /articles", a.ArticlesPage)
 	mux.HandleFunc("GET /articles/{slug}", a.ArticleDetailPage)
 	mux.HandleFunc("POST /articles/{slug}/thumbs-up", a.ArticleThumbsUp)

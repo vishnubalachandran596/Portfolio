@@ -144,6 +144,8 @@ func New() (*Renderer, error) {
 		"templates/pages/course_preview.html",
 		"templates/pages/consultancy.html",
 		"templates/pages/booking.html",
+		"templates/pages/booking_manage.html",
+		"templates/pages/booking_manage_reschedule.html",
 		"templates/pages/articles_list.html",
 		"templates/pages/article_detail.html",
 		"templates/pages/contact.html",

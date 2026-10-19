@@ -14,7 +14,7 @@ type BookingRepo struct{ db *sql.DB }
 
 func NewBookingRepo(db *sql.DB) *BookingRepo { return &BookingRepo{db: db} }
 
-const bookingColumns = `id, user_id, name, email, phone, message, slot_start, slot_end, status, amount_cents, currency, razorpay_order_id, razorpay_payment_id, previous_slot_start, rescheduled_at, reschedule_acknowledged, promo_code_id, promo_code, discount_cents, created_at`
+const bookingColumns = `id, user_id, name, email, phone, message, slot_start, slot_end, status, amount_cents, currency, razorpay_order_id, razorpay_payment_id, previous_slot_start, rescheduled_at, reschedule_acknowledged, promo_code_id, promo_code, discount_cents, booking_code, created_at`
 
 func scanBooking(row interface{ Scan(...any) error }) (models.Booking, error) {
 	var b models.Booking
@@ -23,7 +23,7 @@ func scanBooking(row interface{ Scan(...any) error }) (models.Booking, error) {
 	var promoCodeID sql.NullInt64
 	err := row.Scan(&b.ID, &userID, &b.Name, &b.Email, &b.Phone, &b.Message, &b.SlotStart, &b.SlotEnd, &b.Status,
 		&b.AmountCents, &b.Currency, &b.RazorpayOrderID, &b.RazorpayPaymentID,
-		&prevSlot, &rescheduledAt, &b.RescheduleAcknowledged, &promoCodeID, &b.PromoCode, &b.DiscountCents, &b.CreatedAt)
+		&prevSlot, &rescheduledAt, &b.RescheduleAcknowledged, &promoCodeID, &b.PromoCode, &b.DiscountCents, &b.Code, &b.CreatedAt)
 	b.UserID = userID.Int64
 	if prevSlot.Valid {
 		b.PreviousSlotStart = &prevSlot.Time
@@ -60,6 +60,101 @@ func (r *BookingRepo) CreatePending(ctx context.Context, b models.Booking) (int6
 		return 0, ErrSlotTaken
 	}
 	return id, err
+}
+
+// CreatePublic inserts a confirmed booking for the no-login flow. The slot is
+// claimed by the DB itself (partial unique index on the start plus the
+// no-overlap exclusion constraint), so two simultaneous requests for the same
+// or an overlapping time cannot both succeed: the loser gets ErrSlotTaken.
+// tokenHash is the SHA-256 of the private manage token, which is never
+// stored in clear. It returns the new row's id and its BK-XXXXXX code.
+func (r *BookingRepo) CreatePublic(ctx context.Context, b models.Booking, tokenHash string) (int64, string, error) {
+	var userID any
+	if b.UserID > 0 {
+		userID = b.UserID
+	}
+	for attempt := 0; attempt < 5; attempt++ {
+		code, err := models.NewBookingCode()
+		if err != nil {
+			return 0, "", err
+		}
+		var id int64
+		err = r.db.QueryRowContext(ctx, `
+			INSERT INTO bookings (user_id, name, email, phone, message, slot_start, slot_end, status, booking_code, manage_token_hash)
+			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id`,
+			userID, b.Name, b.Email, b.Phone, b.Message, b.SlotStart, b.SlotEnd, models.BookingStatusConfirmed, code, tokenHash,
+		).Scan(&id)
+		if err == nil {
+			return id, code, nil
+		}
+		if isUniqueViolation(err) {
+			if strings.Contains(err.Error(), "uq_bookings_booking_code") {
+				continue // code collision: draw another
+			}
+			return 0, "", ErrSlotTaken
+		}
+		return 0, "", err
+	}
+	return 0, "", errors.New("could not allocate a booking code")
+}
+
+// GetByManageTokenHash finds the booking behind a private manage link.
+func (r *BookingRepo) GetByManageTokenHash(ctx context.Context, hash string) (models.Booking, error) {
+	if hash == "" {
+		return models.Booking{}, ErrNotFound
+	}
+	b, err := scanBooking(r.db.QueryRowContext(ctx, `SELECT `+bookingColumns+` FROM bookings WHERE manage_token_hash = $1`, hash))
+	if errors.Is(err, sql.ErrNoRows) {
+		return models.Booking{}, ErrNotFound
+	}
+	return b, err
+}
+
+// CancelByManageTokenHash cancels a confirmed booking that has not started.
+// The cancelled row stays for the admin ledger and frees its slot.
+func (r *BookingRepo) CancelByManageTokenHash(ctx context.Context, hash string) error {
+	res, err := r.db.ExecContext(ctx, `
+		UPDATE bookings SET status = 'cancelled'
+		WHERE manage_token_hash = $1 AND manage_token_hash <> '' AND status = 'confirmed' AND slot_start > now()`, hash)
+	if err != nil {
+		return err
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
+// RescheduleByManageTokenHash is the manage-link twin of SelfReschedule:
+// same effect (new slot, notice cleared), scoped to the token instead of a
+// user id, and only for a confirmed booking that has not started.
+func (r *BookingRepo) RescheduleByManageTokenHash(ctx context.Context, hash string, newStart, newEnd time.Time) error {
+	res, err := r.db.ExecContext(ctx, `
+		UPDATE bookings
+		SET previous_slot_start = slot_start, slot_start = $1, slot_end = $2,
+		    rescheduled_at = now(), reschedule_acknowledged = TRUE
+		WHERE manage_token_hash = $3 AND manage_token_hash <> '' AND status = 'confirmed' AND slot_start > now()`,
+		newStart, newEnd, hash)
+	if err != nil {
+		if isUniqueViolation(err) {
+			return ErrSlotTaken
+		}
+		return err
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
+// CountActiveByEmail counts an address's upcoming confirmed bookings, the
+// cap that stops one person hoarding the calendar.
+func (r *BookingRepo) CountActiveByEmail(ctx context.Context, email string) (int, error) {
+	var n int
+	err := r.db.QueryRowContext(ctx, `
+		SELECT count(*) FROM bookings
+		WHERE lower(email) = lower($1) AND status = 'confirmed' AND slot_start > now()`, email).Scan(&n)
+	return n, err
 }
 
 // MarkPaid confirms a pending booking — historically only called after a
@@ -234,5 +329,6 @@ func isUniqueViolation(err error) bool {
 		return false
 	}
 	msg := err.Error()
-	return strings.Contains(msg, "duplicate key value") || strings.Contains(msg, "SQLSTATE 23505")
+	return strings.Contains(msg, "duplicate key value") || strings.Contains(msg, "SQLSTATE 23505") ||
+		strings.Contains(msg, "violates exclusion constraint") || strings.Contains(msg, "SQLSTATE 23P01")
 }
