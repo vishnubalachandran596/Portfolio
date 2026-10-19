@@ -21,14 +21,14 @@ func NewCourseRepo(db *sql.DB) *CourseRepo { return &CourseRepo{db: db} }
 
 // content_html is intentionally absent. Lesson bytes live in Storage;
 // selecting that column would pull them onto every catalog query.
-const courseColumns = `id, slug, title, summary, description, level, duration, price_cents, image_url, is_published, sort_order, is_paid, min_price_cents, content_key, content_object, rag_context, tags, created_at, updated_at, outline`
+const courseColumns = `id, slug, title, summary, description, level, duration, price_cents, image_url, is_published, sort_order, is_paid, min_price_cents, content_key, content_object, rag_context, tags, created_at, updated_at, outline, preview_ready`
 
 func scanCourse(row interface{ Scan(...any) error }) (models.Course, error) {
 	var c models.Course
 	var tags []string
 	err := row.Scan(&c.ID, &c.Slug, &c.Title, &c.Summary, &c.Description, &c.Level, &c.Duration,
 		&c.PriceCents, &c.ImageURL, &c.IsPublished, &c.SortOrder,
-		&c.IsPaid, &c.MinPriceCents, &c.ContentKey, &c.ContentObject, &c.RagContext, pq.Array(&tags), &c.CreatedAt, &c.UpdatedAt, &c.Outline)
+		&c.IsPaid, &c.MinPriceCents, &c.ContentKey, &c.ContentObject, &c.RagContext, pq.Array(&tags), &c.CreatedAt, &c.UpdatedAt, &c.Outline, &c.PreviewReady)
 	c.Tags = tags
 	return c, err
 }
@@ -231,7 +231,11 @@ func (r *CourseRepo) Create(ctx context.Context, c models.Course) (int64, error)
 }
 
 func (r *CourseRepo) Update(ctx context.Context, c models.Course) error {
-	_, err := r.db.ExecContext(ctx, `
+	return updateCourse(ctx, r.db, c)
+}
+
+func updateCourse(ctx context.Context, x execer, c models.Course) error {
+	_, err := x.ExecContext(ctx, `
 		UPDATE courses SET slug=$1, title=$2, summary=$3, description=$4, level=$5, duration=$6,
 			price_cents=$7, image_url=$8, is_published=$9, sort_order=$10,
 			is_paid=$11, min_price_cents=$12, rag_context=$13, tags=$14, updated_at=now()
@@ -240,6 +244,43 @@ func (r *CourseRepo) Update(ctx context.Context, c models.Course) error {
 		c.IsPaid, c.MinPriceCents, c.RagContext, pq.Array(c.Tags), c.ID,
 	)
 	return err
+}
+
+// courseURLSuffixes are the public and gated URLs under /courses/{slug}
+// that get a permanent redirect when the slug changes.
+var courseURLSuffixes = []string{"", "/preview", "/learn", "/quiz", "/certificate"}
+
+// UpdateRenaming saves the course (including its new slug) and, in the
+// same transaction, points content_object at newObject, clears the
+// derived outline (it is rebuilt on the next view) and records a 301 row
+// for every course URL. The caller has already copied the Storage
+// object. It returns the redirect paths written.
+func (r *CourseRepo) UpdateRenaming(ctx context.Context, c models.Course, oldSlug, newObject string) ([]string, error) {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+	if err := updateCourse(ctx, tx, c); err != nil {
+		return nil, err
+	}
+	if newObject != "" {
+		if _, err := tx.ExecContext(ctx, `UPDATE courses SET content_object = $1 WHERE id = $2`, newObject, c.ID); err != nil {
+			return nil, err
+		}
+	}
+	if _, err := tx.ExecContext(ctx, `UPDATE courses SET outline = '', preview_ready = FALSE WHERE id = $1`, c.ID); err != nil {
+		return nil, err
+	}
+	var written []string
+	for _, suf := range courseURLSuffixes {
+		from, to := "/courses/"+oldSlug+suf, "/courses/"+c.Slug+suf
+		if err := upsertRedirect(ctx, tx, from, to); err != nil {
+			return nil, err
+		}
+		written = append(written, from+" -> "+to)
+	}
+	return written, tx.Commit()
 }
 
 // UpdateContentObject records the private Storage path for a lesson.
@@ -255,8 +296,8 @@ func (r *CourseRepo) UpdateContentObject(ctx context.Context, id int64, objectPa
 // updated_at alone: the outline is derived from content that already
 // bumped it when it was uploaded, and the lazy backfill on a detail-page
 // view must not change a course's sitemap lastmod.
-func (r *CourseRepo) UpdateOutline(ctx context.Context, id int64, outline string) error {
-	_, err := r.db.ExecContext(ctx, `UPDATE courses SET outline = $1 WHERE id = $2`, outline, id)
+func (r *CourseRepo) UpdateOutline(ctx context.Context, id int64, outline string, previewReady bool) error {
+	_, err := r.db.ExecContext(ctx, `UPDATE courses SET outline = $1, preview_ready = $2 WHERE id = $3`, outline, previewReady, id)
 	return err
 }
 

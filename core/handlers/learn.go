@@ -202,6 +202,14 @@ func (a *App) writeCourseReader(w http.ResponseWriter, r *http.Request, course m
 // browser too old to send Sec-Fetch-Dest is let through rather than locked
 // out of a course it paid for.
 func (a *App) writeLessonDocument(w http.ResponseWriter, r *http.Request, course models.Course, watermark string) {
+	a.writeLessonDocumentCut(w, r, course, watermark, nil)
+}
+
+// writeLessonDocumentCut is writeLessonDocument with an optional cut
+// applied to the stored bytes before they are prepared (the public
+// preview passes storage.LessonPreview). When cut reports false the
+// response is a 404: nothing of the lesson is served.
+func (a *App) writeLessonDocumentCut(w http.ResponseWriter, r *http.Request, course models.Course, watermark string, cut func([]byte) ([]byte, bool)) {
 	if a.CourseStorage == nil || course.ContentObject == "" {
 		a.serverError(w, "load course content", fmt.Errorf("no stored lesson for %q", course.Slug))
 		return
@@ -224,6 +232,13 @@ func (a *App) writeLessonDocument(w http.ResponseWriter, r *http.Request, course
 	if len(raw) > maxCourseUploadBytes {
 		a.serverError(w, "load course content", fmt.Errorf("lesson %q exceeds %d bytes", course.Slug, maxCourseUploadBytes))
 		return
+	}
+	if cut != nil {
+		var ok bool
+		if raw, ok = cut(raw); !ok {
+			a.NotFound(w, r)
+			return
+		}
 	}
 	prepared, err := storage.PrepareLesson(raw, watermark, "/static/css/style.css?v="+web.AssetVersion)
 	if err != nil {

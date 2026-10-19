@@ -123,7 +123,7 @@ func (a *App) AdminCourseBulkUpload(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 		outline := storage.LessonOutline(body)
-		_ = a.Courses.UpdateOutline(ctx, course.ID, strings.Join(outline, "\n"))
+		_ = a.Courses.UpdateOutline(ctx, course.ID, strings.Join(outline, "\n"), storage.HasPreview(body))
 		res.Status = "updated"
 		res.Note = course.Title + " · " + strconv.Itoa(len(outline)) + " sections"
 		results = append(results, res)

@@ -535,6 +535,7 @@ func (a *App) CourseDetail(w http.ResponseWriter, r *http.Request) {
 	var quizCount, reviewCount int
 	var myReview *models.CourseReview
 	var backfilledOutline string
+	var backfilledPreview bool
 	g2, g2ctx := errgroup.WithContext(ctx)
 	g2.Go(func() (err error) { quizCount, err = a.QuizQuestions.CountByCourse(g2ctx, course.ID); return })
 	g2.Go(func() (err error) { reviewCount, err = a.CourseReviews.CountByCourse(g2ctx, course.ID); return })
@@ -546,7 +547,7 @@ func (a *App) CourseDetail(w http.ResponseWriter, r *http.Request) {
 		// never the page.
 		c := course
 		g2.Go(func() error {
-			backfilledOutline = a.backfillCourseOutline(g2ctx, c)
+			backfilledOutline, backfilledPreview = a.backfillCourseOutline(g2ctx, c)
 			return nil
 		})
 	}
@@ -575,6 +576,7 @@ func (a *App) CourseDetail(w http.ResponseWriter, r *http.Request) {
 	}
 	if backfilledOutline != "" {
 		course.Outline = backfilledOutline
+		course.PreviewReady = backfilledPreview
 	}
 
 	base := a.baseFrom(r, pf, course.Title+" — "+a.Cfg.SiteName, course.Summary, "courses")
@@ -635,6 +637,9 @@ func (a *App) slotIsOffered(rules []models.AvailabilityRule, slotStart time.Time
 }
 
 func (a *App) NotFound(w http.ResponseWriter, r *http.Request) {
+	if a.redirectRenamed(w, r) {
+		return
+	}
 	a.View.Render(w, http.StatusNotFound, "not_found", a.base(r, "Page not found — "+a.Cfg.SiteName, "", ""))
 }
 
@@ -645,25 +650,25 @@ func (a *App) serverError(w http.ResponseWriter, action string, err error) {
 
 // backfillCourseOutline reads a stored lesson, derives its outline and
 // saves it. Returns the outline ("" on any failure).
-func (a *App) backfillCourseOutline(ctx context.Context, course models.Course) string {
+func (a *App) backfillCourseOutline(ctx context.Context, course models.Course) (string, bool) {
 	body, err := a.CourseStorage.Open(ctx, course.ContentObject)
 	if err != nil {
 		log.Printf("outline backfill open %s: %v", course.ContentObject, err)
-		return ""
+		return "", false
 	}
 	defer body.Close()
 	raw, err := io.ReadAll(io.LimitReader(body, maxCourseUploadBytes+1))
 	if err != nil {
-		return ""
+		return "", false
 	}
 	outline := strings.Join(storage.LessonOutline(raw), "\n")
 	if outline == "" {
-		return ""
+		return "", false
 	}
-	if err := a.Courses.UpdateOutline(ctx, course.ID, outline); err != nil {
+	if err := a.Courses.UpdateOutline(ctx, course.ID, outline, storage.HasPreview(raw)); err != nil {
 		log.Printf("outline backfill save %d: %v", course.ID, err)
 	}
-	return outline
+	return outline, storage.HasPreview(raw)
 }
 
 // homeHighlights returns the admin-entered highlights, or — when none are
@@ -689,4 +694,23 @@ func homeHighlights(published []models.ProfileHighlight, p models.Profile, compa
 		out = append(out, models.ProfileHighlight{Value: "Free", Label: "first call to scope your problem"})
 	}
 	return out
+}
+
+// redirectRenamed answers a would-be 404 with a permanent redirect when
+// the path was moved by a course slug rename (slug_redirects, migration
+// 086). Only GET and HEAD are redirected, so a stale POST still fails
+// loudly. It runs only on the 404 path, so live routes never query it.
+func (a *App) redirectRenamed(w http.ResponseWriter, r *http.Request) bool {
+	if a.SlugRedirects == nil || (r.Method != http.MethodGet && r.Method != http.MethodHead) {
+		return false
+	}
+	to, err := a.SlugRedirects.Lookup(r.Context(), r.URL.Path)
+	if err != nil || to == "" {
+		return false
+	}
+	if r.URL.RawQuery != "" {
+		to += "?" + r.URL.RawQuery
+	}
+	http.Redirect(w, r, to, http.StatusMovedPermanently)
+	return true
 }

@@ -2,9 +2,11 @@ package handlers
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -194,6 +196,8 @@ func (a *App) AdminDashboard(w http.ResponseWriter, r *http.Request) {
 type AdminCoursesListData struct {
 	BaseData
 	Courses []models.Course
+	// Notices report what a slug rename did (see renameCourse).
+	Notices []string
 }
 
 func (a *App) AdminCoursesList(w http.ResponseWriter, r *http.Request) {
@@ -205,6 +209,7 @@ func (a *App) AdminCoursesList(w http.ResponseWriter, r *http.Request) {
 	a.View.Render(w, http.StatusOK, "admin_courses_list", AdminCoursesListData{
 		BaseData: a.base(r, "Courses — Admin", "", "admin"),
 		Courses:  courses,
+		Notices:  r.URL.Query()["notice"],
 	})
 }
 
@@ -344,8 +349,19 @@ func (a *App) AdminCourseSave(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
 	var err error
+	var notices []string
 	if id == 0 {
 		id, err = a.Courses.Create(ctx, course)
+	} else if prev, gerr := a.Courses.GetByID(ctx, id); gerr == nil && prev.Slug != course.Slug {
+		if other, oerr := a.Courses.GetBySlug(ctx, course.Slug); oerr == nil && other.ID != id {
+			a.View.Render(w, http.StatusUnprocessableEntity, "admin_course_form", AdminCourseFormData{
+				BaseData: a.base(r, "Course — Admin", "", "admin"),
+				Course:   course,
+				Error:    "That slug is already used by another course.",
+			})
+			return
+		}
+		notices, err = a.renameCourse(ctx, prev, course)
 	} else {
 		err = a.Courses.Update(ctx, course)
 	}
@@ -385,7 +401,7 @@ func (a *App) AdminCourseSave(w http.ResponseWriter, r *http.Request) {
 		}
 		// The outline is derived from the bytes just stored, so it can
 		// never describe a different file than the one on Storage.
-		if err := a.Courses.UpdateOutline(ctx, id, strings.Join(storage.LessonOutline(uploaded), "\n")); err != nil {
+		if err := a.Courses.UpdateOutline(ctx, id, strings.Join(storage.LessonOutline(uploaded), "\n"), storage.HasPreview(uploaded)); err != nil {
 			log.Printf("save course outline %d: %v", id, err)
 		}
 		if previous != "" && previous != objectPath {
@@ -407,7 +423,56 @@ func (a *App) AdminCourseSave(w http.ResponseWriter, r *http.Request) {
 	}
 
 	a.markChatbotReindexPending(r.Context())
-	http.Redirect(w, r, "/admin/courses", http.StatusSeeOther)
+	dest := "/admin/courses"
+	if len(notices) > 0 {
+		q := url.Values{"notice": append(notices, "chatbot reindex flagged")}
+		dest += "?" + q.Encode()
+	}
+	http.Redirect(w, r, dest, http.StatusSeeOther)
+}
+
+// renameCourse changes a course's slug and returns a report of what it
+// did. Order matters: the Storage object is copied first (the old one is
+// kept as a rollback copy), then one transaction saves the course with the
+// new slug and content_object, clears the derived outline and writes the
+// 301 rows for every course URL. A failure before the transaction leaves
+// the course untouched; running it again is safe because the copy is an
+// overwrite and the redirect rows are upserted. The caller has already
+// checked the new slug is free.
+func (a *App) renameCourse(ctx context.Context, prev, course models.Course) ([]string, error) {
+	report := []string{"slug " + prev.Slug + " -> " + course.Slug}
+	newObject := ""
+	if prev.ContentObject != "" && a.CourseStorage != nil {
+		obj, err := storage.CourseObject(course.Slug)
+		if err != nil {
+			return nil, err
+		}
+		if obj != prev.ContentObject {
+			src, err := a.CourseStorage.Open(ctx, prev.ContentObject)
+			if err != nil {
+				return nil, fmt.Errorf("open %s: %w", prev.ContentObject, err)
+			}
+			body, err := io.ReadAll(io.LimitReader(src, maxCourseUploadBytes+1))
+			src.Close()
+			if err != nil {
+				return nil, err
+			}
+			if err := a.CourseStorage.Put(ctx, obj, "text/html", body); err != nil {
+				return nil, fmt.Errorf("copy to %s: %w", obj, err)
+			}
+			report = append(report, "copied "+prev.ContentObject+" to "+obj+" (old object kept)")
+		}
+		newObject = obj
+	}
+	redirects, err := a.Courses.UpdateRenaming(ctx, course, prev.Slug, newObject)
+	if err != nil {
+		return nil, err
+	}
+	report = append(report, "outline cleared (rebuilt on next view)")
+	for _, rd := range redirects {
+		report = append(report, "301 "+rd)
+	}
+	return report, nil
 }
 
 func (a *App) AdminCourseDelete(w http.ResponseWriter, r *http.Request) {

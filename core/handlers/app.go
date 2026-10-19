@@ -37,6 +37,7 @@ type App struct {
 	Education         *repo.EducationRepo
 	Features          *repo.HomeFeatureRepo
 	Courses           *repo.CourseRepo
+	SlugRedirects     *repo.SlugRedirectRepo
 	Software          *repo.SoftwareRepo
 	SoftwarePurchases *repo.SoftwarePurchaseRepo
 	Bookings          *repo.BookingRepo
@@ -194,6 +195,7 @@ func New(cfg *config.Config, db *sql.DB, renderer *view.Renderer) *App {
 		Education:            repo.NewEducationRepo(db),
 		Features:             repo.NewHomeFeatureRepo(db),
 		Courses:              repo.NewCourseRepo(db),
+		SlugRedirects:        repo.NewSlugRedirectRepo(db),
 		Software:             repo.NewSoftwareRepo(db),
 		SoftwarePurchases:    repo.NewSoftwarePurchaseRepo(db),
 		Bookings:             repo.NewBookingRepo(db),

@@ -211,6 +211,9 @@ type Course struct {
 	// Outline is the lesson's own section titles, one per line, derived
 	// from the stored lesson HTML (migration 079) — never typed by hand.
 	Outline string
+	// PreviewReady is true when the stored lesson has a free public
+	// preview (storage.LessonPreview); set whenever the outline is derived.
+	PreviewReady bool
 	// ReviewCount is populated only by CourseRepo.ListPublishedFiltered --
 	// never persisted by Create/Update, since it's a derived count from
 	// course_reviews, not a stored column. Like the course detail page,

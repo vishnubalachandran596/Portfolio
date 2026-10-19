@@ -31,6 +31,8 @@ func (a *App) Routes() http.Handler {
 	mux.HandleFunc("GET /media/logo", a.Logo)
 	mux.HandleFunc("GET /courses", a.CoursesList)
 	mux.HandleFunc("GET /courses/{slug}", a.CourseDetail)
+	mux.HandleFunc("GET /courses/{slug}/preview", a.CoursePreview)
+	mux.Handle("GET /courses/{slug}/preview/lesson", noindex(http.HandlerFunc(a.CoursePreviewLessonDocument)))
 	mux.HandleFunc("POST /courses/{slug}/checkout/order", a.CheckoutCreateOrder)
 	mux.HandleFunc("POST /courses/{slug}/checkout/verify", a.CheckoutVerify)
 	mux.HandleFunc("GET /software", a.SoftwareList)

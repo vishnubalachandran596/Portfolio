@@ -41,14 +41,20 @@
         </div>
       </div>
 
+      {{if .Course.PreviewReady}}{{if not .HasAccess}}
+      <div class="access-card preview-cta">
+        <p class="purchase-box-title">Try the first lesson free</p>
+        <p class="purchase-box-sub">Read the opening of the course in full, no account needed.</p>
+        <div class="hero-actions"><a class="btn btn-secondary btn-lg" href="/courses/{{.Course.Slug}}/preview">Read the free preview</a></div>
+      </div>
+      {{end}}{{end}}
+
       {{if .Course.OutlineItems}}
       <div>
-        <h2>What's inside</h2>
-        {{$items := .Course.OutlineItems}}
+        <h2>Course index</h2>
         <ol class="outline">
-          {{range $i, $t := $items}}{{if lt $i 12}}<li>{{$t}}</li>{{end}}{{end}}
+          {{range .Course.OutlineItems}}<li>{{.}}</li>{{end}}
         </ol>
-        {{if gt (len $items) 12}}<p class="outline-more">…and {{len (slice $items 12)}} more sections inside.</p>{{end}}
       </div>
       {{end}}
 

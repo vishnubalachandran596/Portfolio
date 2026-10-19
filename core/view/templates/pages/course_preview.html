@@ -1,0 +1,32 @@
+{{define "content"}}
+<section class="product-hero">
+  <div class="container">
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+      <a href="{{.Nav.Courses}}">Courses</a><span class="breadcrumb-sep" aria-hidden="true">/</span><a href="/courses/{{.Course.Slug}}">{{.Course.Title}}</a><span class="breadcrumb-sep" aria-hidden="true">/</span><span aria-current="page">Free preview</span>
+    </nav>
+    <span class="course-level">Free preview</span>
+    <h1>{{.Course.Title}}</h1>
+    <p class="hero-subtitle">{{rich .Course.Summary}}</p>
+    <div class="hero-actions">
+      <a class="btn btn-primary btn-lg" href="/courses/{{.Course.Slug}}#buy-card">Enrol in the full course</a>
+      <a class="btn btn-secondary btn-lg" href="/courses/{{.Course.Slug}}">See what is inside</a>
+    </div>
+  </div>
+</section>
+
+<section class="section section-tight">
+  <div class="container">
+    <div class="preview-stage">
+      <iframe class="preview-frame" src="{{.LessonURL}}" title="{{.Course.Title}} free preview" sandbox="allow-scripts" referrerpolicy="no-referrer" loading="lazy"></iframe>
+    </div>
+    <div class="access-card preview-cta">
+      <p class="purchase-box-title">That was the free part</p>
+      <p class="purchase-box-sub">The full course continues from here{{if .Course.SectionCount}}, with {{.Course.SectionCount}} sections in all{{end}}.</p>
+      <div class="hero-actions">
+        <a class="btn btn-primary btn-lg" href="/courses/{{.Course.Slug}}#buy-card">Enrol in the full course</a>
+        <a class="btn btn-ghost btn-lg" href="/courses/{{.Course.Slug}}">Back to the course page</a>
+      </div>
+    </div>
+  </div>
+</section>
+{{end}}

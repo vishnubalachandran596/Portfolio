@@ -5,6 +5,7 @@
       <h1>Courses</h1>
       <div class="cluster"><a class="btn btn-secondary" href="/admin/courses/bulk-upload">Bulk upload lessons</a><a class="btn btn-primary" href="/admin/courses/new">New Course</a></div>
     </div>
+    {{if .Notices}}<div class="alert alert-success"><p><strong>Course renamed.</strong></p><ul>{{range .Notices}}<li>{{.}}</li>{{end}}</ul></div>{{end}}
     {{if .Courses}}
     <table class="admin-table">
       <thead><tr><th>Title</th><th>Level</th><th>Price</th><th>Published</th><th></th></tr></thead>
