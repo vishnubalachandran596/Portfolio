@@ -3,26 +3,44 @@
   <div class="container">
     <p class="eyebrow"><a href="/courses/{{.Course.Slug}}/learn">← Back to course</a></p>
     <h1>Final Quiz</h1>
-    <p class="hero-subtitle">{{.Course.Title}} — answer all {{len .Questions}} questions and score at least 70% to earn your completion certificate.</p>
+    {{if eq .State "taking"}}
+    <p class="hero-subtitle">{{.Course.Title}} — attempt {{.AttemptNo}}{{if gt .Limit 0}} of {{.Limit}}{{end}}. Answer all {{len .Questions}} questions and score at least {{.PassPct}}% to earn your completion certificate.</p>
+    {{else}}
+    <p class="hero-subtitle">{{.Course.Title}} — score at least {{.PassPct}}% to earn your completion certificate.</p>
+    {{end}}
   </div>
 </section>
 
 <section class="section">
   <div class="container">
+    {{if eq .State "taking"}}
+    <div class="alert alert-error">This attempt is already counted. Leaving without submitting still uses it up, so finish it in one sitting.</div>
     <form method="POST" action="/courses/{{.Course.Slug}}/quiz" class="quiz-form">
       {{range $i, $q := .Questions}}
       <fieldset class="form-fieldset quiz-question">
         <legend>{{add1 $i}}. {{$q.Question}}</legend>
-        <label class="checkbox-label"><input type="radio" name="q{{$q.ID}}" value="A" required> {{$q.OptionA}}</label>
-        <label class="checkbox-label"><input type="radio" name="q{{$q.ID}}" value="B"> {{$q.OptionB}}</label>
-        <label class="checkbox-label"><input type="radio" name="q{{$q.ID}}" value="C"> {{$q.OptionC}}</label>
-        <label class="checkbox-label"><input type="radio" name="q{{$q.ID}}" value="D"> {{$q.OptionD}}</label>
+        <label class="checkbox-label"><input type="radio" name="q{{$q.ID}}" value="A" required> {{$q.A}}</label>
+        <label class="checkbox-label"><input type="radio" name="q{{$q.ID}}" value="B"> {{$q.B}}</label>
+        <label class="checkbox-label"><input type="radio" name="q{{$q.ID}}" value="C"> {{$q.C}}</label>
+        <label class="checkbox-label"><input type="radio" name="q{{$q.ID}}" value="D"> {{$q.D}}</label>
       </fieldset>
       {{end}}
       <div class="form-actions">
         <button type="submit" class="btn btn-primary" data-loading-text="Grading…">Submit Quiz</button>
       </div>
     </form>
+    {{else if eq .State "locked"}}
+    <div class="alert alert-error">You have used all {{.Limit}} attempts for this quiz. If you believe you need another, contact the course instructor.</div>
+    <div class="form-actions">
+      <a class="btn btn-secondary" href="/courses/{{.Course.Slug}}/learn">Back to course</a>
+    </div>
+    {{else}}
+    <p>You have <strong>{{if lt .Left 0}}unlimited{{else}}{{.Left}}{{end}}</strong> attempt{{if ne .Left 1}}s{{end}} left{{if gt .Limit 0}} (of {{.Limit}}){{end}}. Each attempt is a different set of questions and is counted the moment you start it, even if you leave without submitting.</p>
+    <form method="POST" action="/courses/{{.Course.Slug}}/quiz/start" class="form-actions">
+      <button type="submit" class="btn btn-primary">Start attempt {{.AttemptNo}}</button>
+      <a class="btn btn-secondary" href="/courses/{{.Course.Slug}}/learn">Back to course</a>
+    </form>
+    {{end}}
   </div>
 </section>
 {{end}}

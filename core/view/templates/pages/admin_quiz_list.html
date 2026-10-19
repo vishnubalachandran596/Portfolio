@@ -6,13 +6,33 @@
       <h1>Quiz — {{.Course.Title}}</h1>
       <a class="btn btn-primary" href="/admin/courses/{{.Course.ID}}/quiz/new">Add Question</a>
     </div>
+    {{if .Notice}}<div class="alert alert-success">{{.Notice}}</div>{{end}}
+    {{if .Errors}}<div class="alert alert-error"><p>Import rejected - nothing was added:</p><ul>{{range .Errors}}<li>{{.}}</li>{{end}}</ul></div>{{end}}
+
+    <p class="hero-subtitle">{{len .Questions}} of {{.BankSize}} questions. The bank is split into 5 non-overlapping sets; attempt N serves set N.
+      Set sizes: {{range $i, $n := .SetCounts}}{{if $i}} · {{end}}set {{add1 $i}}: {{$n}}{{end}}{{if .Unassigned}} · unassigned: {{.Unassigned}}{{end}}.</p>
+
+    <form method="POST" action="/admin/courses/{{.Course.ID}}/quiz/assign-sets" class="admin-form">
+      <button type="submit" class="btn btn-secondary">Auto-assign sets (stable shuffle)</button>
+      <span class="optional">Only affects attempts started afterwards.</span>
+    </form>
+
+    <h2>Bulk import</h2>
+    <form method="POST" action="/admin/courses/{{.Course.ID}}/quiz/import" enctype="multipart/form-data" class="admin-form">
+      <label>JSON file <span class="optional">array of {"module","question","a","b","c","d","correct":"A".."D"}; ASCII only; duplicates rejected</span>
+        <input type="file" name="file" accept=".json,application/json" required>
+      </label>
+      <div class="form-actions"><button type="submit" class="btn btn-primary">Import</button></div>
+    </form>
+
     {{if .Questions}}
     <table class="admin-table">
-      <thead><tr><th>Question</th><th>Correct</th><th>Sort</th><th></th></tr></thead>
+      <thead><tr><th>Question</th><th>Set</th><th>Correct</th><th>Sort</th><th></th></tr></thead>
       <tbody>
         {{range .Questions}}
         <tr>
           <td>{{.Question}}</td>
+          <td>{{if .SetNo}}{{.SetNo}}{{else}}-{{end}}</td>
           <td>{{.CorrectOption}}</td>
           <td>{{.SortOrder}}</td>
           <td class="admin-table-actions">

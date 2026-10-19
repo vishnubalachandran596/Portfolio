@@ -55,10 +55,30 @@ func (a *App) quizCourseAndAccess(w http.ResponseWriter, r *http.Request) (cours
 	return course, true
 }
 
+// quizQuestionView is what the quiz-taking page receives for each question.
+// It deliberately has no correct-answer field: the answer key never reaches
+// the template, so it cannot leak into the HTML.
+type quizQuestionView struct {
+	ID         int64
+	Question   string
+	A, B, C, D string
+}
+
 type QuizPageData struct {
 	BaseData
 	Course    models.Course
-	Questions []models.QuizQuestion
+	State     string // "intro" | "taking" | "locked"
+	Questions []quizQuestionView
+	AttemptNo int
+	Limit     int // 0 = unlimited (admin preview)
+	Used      int
+	Left      int
+	PassPct   int
+	SetSize   int
+}
+
+func quizLearner(userID *int64, isAdmin bool, name, email string) repo.QuizLearner {
+	return repo.QuizLearner{UserID: userID, IsAdmin: isAdmin, Name: name, Email: email}
 }
 
 func (a *App) QuizPage(w http.ResponseWriter, r *http.Request) {
@@ -66,26 +86,123 @@ func (a *App) QuizPage(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	questions, err := a.QuizQuestions.ListByCourse(r.Context(), course.ID)
+	userID, isAdmin, name, email, hasIdentity := a.quizIdentity(r)
+	if !hasIdentity {
+		http.Redirect(w, r, "/login?next="+url.QueryEscape(r.URL.Path), http.StatusSeeOther)
+		return
+	}
+	ctx := r.Context()
+	who := quizLearner(userID, isAdmin, name, email)
+	bankSize, err := a.QuizQuestions.CountByCourse(ctx, course.ID)
 	if err != nil {
 		a.serverError(w, "load quiz", err)
 		return
 	}
-	if len(questions) == 0 {
+	if bankSize == 0 {
 		a.NotFound(w, r)
 		return
 	}
-	a.View.Render(w, http.StatusOK, "quiz", QuizPageData{
-		BaseData:  a.base(r, "Final Quiz — "+course.Title+" — "+a.Cfg.SiteName, "", "courses"),
-		Course:    course,
-		Questions: questions,
-	})
+	used, limit, err := a.QuizAttempts.Usage(ctx, course.ID, who)
+	if err != nil {
+		a.serverError(w, "load quiz usage", err)
+		return
+	}
+	data := QuizPageData{
+		BaseData: a.base(r, "Final Quiz — "+course.Title+" — "+a.Cfg.SiteName, "", "courses"),
+		Course:   course,
+		Used:     used,
+		Limit:    limit,
+		Left:     quizLeft(used, limit),
+		PassPct:  models.QuizPassPercent,
+		SetSize:  models.QuizSetSize,
+	}
+
+	open, err := a.QuizAttempts.OpenAttempt(ctx, course.ID, who)
+	switch {
+	case err == nil:
+		qs, err := a.QuizQuestions.ListByIDs(ctx, course.ID, open.QuestionIDs)
+		if err != nil {
+			a.serverError(w, "load quiz questions", err)
+			return
+		}
+		data.State = "taking"
+		data.AttemptNo = open.AttemptNo
+		if data.AttemptNo == 0 {
+			data.AttemptNo = used
+		}
+		data.SetSize = len(qs)
+		for _, q := range qs {
+			data.Questions = append(data.Questions, quizQuestionView{ID: q.ID, Question: q.Question, A: q.OptionA, B: q.OptionB, C: q.OptionC, D: q.OptionD})
+		}
+	case err != repo.ErrNotFound:
+		a.serverError(w, "load open attempt", err)
+		return
+	case limit > 0 && used >= limit:
+		data.State = "locked"
+	default:
+		data.State = "intro"
+		data.AttemptNo = used + 1
+	}
+	a.View.Render(w, http.StatusOK, "quiz", data)
+}
+
+// quizLeft is attempts remaining; -1 means unlimited (admin preview).
+func quizLeft(used, limit int) int {
+	if limit <= 0 {
+		return -1
+	}
+	if used >= limit {
+		return 0
+	}
+	return limit - used
+}
+
+// QuizStart begins (and counts) an attempt, or resumes the open one, then
+// redirects to the quiz page. Counting happens here, not at submit, so an
+// abandoned attempt still uses one up.
+func (a *App) QuizStart(w http.ResponseWriter, r *http.Request) {
+	course, ok := a.quizCourseAndAccess(w, r)
+	if !ok {
+		return
+	}
+	userID, isAdmin, name, email, hasIdentity := a.quizIdentity(r)
+	if !hasIdentity {
+		http.Redirect(w, r, "/login?next="+url.QueryEscape("/courses/"+course.Slug+"/quiz"), http.StatusSeeOther)
+		return
+	}
+	ctx := r.Context()
+	bank, err := a.QuizQuestions.ListByCourse(ctx, course.ID)
+	if err != nil {
+		a.serverError(w, "load quiz", err)
+		return
+	}
+	if len(bank) == 0 {
+		a.NotFound(w, r)
+		return
+	}
+	pick := func(attemptNo int) (int, []int64) {
+		setNo, qs := models.QuizSetFor(bank, attemptNo)
+		ids := make([]int64, 0, len(qs))
+		for _, q := range qs {
+			ids = append(ids, q.ID)
+		}
+		return setNo, ids
+	}
+	_, _, err = a.QuizAttempts.Start(ctx, course.ID, quizLearner(userID, isAdmin, name, email), pick)
+	if err != nil && err != repo.ErrNoAttemptsLeft {
+		a.serverError(w, "start quiz attempt", err)
+		return
+	}
+	http.Redirect(w, r, "/courses/"+course.Slug+"/quiz", http.StatusSeeOther)
 }
 
 type QuizResultData struct {
 	BaseData
 	Course  models.Course
 	Attempt models.QuizAttempt
+	Used    int
+	Left    int // -1 = unlimited
+	PassPct int
 }
 
 func (a *App) QuizSubmit(w http.ResponseWriter, r *http.Request) {
@@ -102,55 +219,45 @@ func (a *App) QuizSubmit(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid form", http.StatusBadRequest)
 		return
 	}
-
-	questions, err := a.QuizQuestions.ListByCourse(r.Context(), course.ID)
+	// Only the chosen letters come from the client; which questions count
+	// and what the right answers are come from the stored attempt.
+	answers := map[int64]string{}
+	for key, vals := range r.PostForm {
+		if len(vals) == 0 || !strings.HasPrefix(key, "q") {
+			continue
+		}
+		if id, err := strconv.ParseInt(key[1:], 10, 64); err == nil {
+			answers[id] = strings.ToUpper(strings.TrimSpace(vals[0]))
+		}
+	}
+	code, err := generateCertificateCode()
 	if err != nil {
-		a.serverError(w, "load quiz", err)
+		a.serverError(w, "generate certificate code", err)
 		return
 	}
-	if len(questions) == 0 {
-		a.NotFound(w, r)
+	ctx := r.Context()
+	who := quizLearner(userID, isAdmin, name, email)
+	attempt, err := a.QuizAttempts.Submit(ctx, course.ID, who, answers, code)
+	if err == repo.ErrAlreadySubmitted {
+		http.Redirect(w, r, "/courses/"+course.Slug+"/quiz", http.StatusSeeOther)
 		return
 	}
-
-	correct := 0
-	for _, q := range questions {
-		if strings.EqualFold(r.FormValue("q"+strconv.FormatInt(q.ID, 10)), q.CorrectOption) {
-			correct++
-		}
-	}
-	total := len(questions)
-	scorePercent := correct * 100 / total
-	passed := scorePercent >= models.QuizPassPercent
-
-	attempt := models.QuizAttempt{
-		CourseID:       course.ID,
-		UserID:         userID,
-		IsAdmin:        isAdmin,
-		Name:           name,
-		Email:          email,
-		TotalQuestions: total,
-		CorrectAnswers: correct,
-		ScorePercent:   scorePercent,
-		Passed:         passed,
-	}
-	if passed {
-		code, err := generateCertificateCode()
-		if err != nil {
-			a.serverError(w, "generate certificate code", err)
-			return
-		}
-		attempt.CertificateCode = code
-	}
-	if _, err := a.QuizAttempts.Create(r.Context(), attempt); err != nil {
+	if err != nil {
 		a.serverError(w, "record quiz attempt", err)
 		return
 	}
-
+	used, limit, err := a.QuizAttempts.Usage(ctx, course.ID, who)
+	if err != nil {
+		a.serverError(w, "load quiz usage", err)
+		return
+	}
 	a.View.Render(w, http.StatusOK, "quiz_result", QuizResultData{
 		BaseData: a.base(r, "Quiz Results — "+course.Title+" — "+a.Cfg.SiteName, "", "courses"),
 		Course:   course,
 		Attempt:  attempt,
+		Used:     used,
+		Left:     quizLeft(used, limit),
+		PassPct:  models.QuizPassPercent,
 	})
 }
 

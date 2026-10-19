@@ -976,10 +976,24 @@ type SoftwarePurchase struct {
 // quiz and unlock a completion certificate.
 const QuizPassPercent = 70
 
+// Quiz bank shape. Each course has a bank of QuizBankSize questions split
+// into QuizSets non-overlapping sets of QuizSetSize; attempt N serves set N.
+// QuizMaxAttempts is the hard per-learner per-course cap (mirrored by the
+// quiz_attempt_cap_guard trigger in migration 088 — change both together);
+// an admin can raise one learner's cap via quiz_attempt_grants.
+const (
+	QuizBankSize    = 100
+	QuizSets        = 5
+	QuizSetSize     = QuizBankSize / QuizSets
+	QuizMaxAttempts = 5
+)
+
 // QuizQuestion is one multiple-choice question in a course's final quiz.
 type QuizQuestion struct {
 	ID            int64
 	CourseID      int64
+	Module        string
+	SetNo         int // 1..QuizSets, 0 = unassigned
 	Question      string
 	OptionA       string
 	OptionB       string
@@ -1023,6 +1037,69 @@ type QuizAttempt struct {
 	Passed          bool
 	CertificateCode string
 	CreatedAt       time.Time
+
+	// Set when the attempt is started (counted then, so abandoning one still
+	// uses it up). AttemptNo is 0 for admin previews, which are uncapped.
+	AttemptNo   int
+	SetNo       int
+	QuestionIDs []int64
+	SubmittedAt *time.Time
+}
+
+// QuizSetFor returns the questions served for the given attempt number
+// (1-based). Attempt N serves set ((N-1) mod QuizSets)+1 — a granted extra
+// attempt beyond the fifth therefore repeats a set. If the bank has set
+// numbers assigned, set membership is exactly set_no. If none is assigned
+// (or that set is empty) the bank is dealt round-robin in sort order so a
+// smaller or unassigned bank still yields non-overlapping sets; a bank with
+// fewer than QuizSets questions just serves everything. The returned
+// setNo is the set actually used.
+func QuizSetFor(bank []QuizQuestion, attemptNo int) (setNo int, qs []QuizQuestion) {
+	if attemptNo < 1 {
+		attemptNo = 1
+	}
+	setNo = (attemptNo-1)%QuizSets + 1
+	assigned := false
+	for _, q := range bank {
+		if q.SetNo > 0 {
+			assigned = true
+			if q.SetNo == setNo {
+				qs = append(qs, q)
+			}
+		}
+	}
+	if assigned && len(qs) > 0 {
+		return setNo, qs
+	}
+	qs = nil
+	if len(bank) < QuizSets {
+		return setNo, append(qs, bank...)
+	}
+	for i, q := range bank {
+		if i%QuizSets == setNo-1 {
+			qs = append(qs, q)
+		}
+	}
+	if len(qs) > QuizSetSize {
+		qs = qs[:QuizSetSize]
+	}
+	return setNo, qs
+}
+
+// ScoreQuiz grades answers (question id -> "A".."D") against the stored
+// question set. Unanswered questions are wrong. The correct answers come
+// only from the server-side questions, never from the client.
+func ScoreQuiz(qs []QuizQuestion, answers map[int64]string) (correct, total, percent int, passed bool) {
+	total = len(qs)
+	for _, q := range qs {
+		if strings.EqualFold(answers[q.ID], q.CorrectOption) {
+			correct++
+		}
+	}
+	if total > 0 {
+		percent = correct * 100 / total
+	}
+	return correct, total, percent, total > 0 && percent >= QuizPassPercent
 }
 
 // AdminMessage is a note the admin sent a specific visitor account,

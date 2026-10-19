@@ -53,6 +53,7 @@ type App struct {
 	PromoCodes           *repo.PromoCodeRepo
 	QuizQuestions        *repo.QuizQuestionRepo
 	QuizAttempts         *repo.QuizAttemptRepo
+	QuizGrants           *repo.QuizGrantRepo
 	AdminMessages        *repo.AdminMessageRepo
 	CourseUpdates        *repo.CourseUpdateRepo
 	Testimonials         *repo.TestimonialRepo
@@ -207,6 +208,7 @@ func New(cfg *config.Config, db *sql.DB, renderer *view.Renderer) *App {
 		PromoCodes:           repo.NewPromoCodeRepo(db),
 		QuizQuestions:        repo.NewQuizQuestionRepo(db),
 		QuizAttempts:         repo.NewQuizAttemptRepo(db),
+		QuizGrants:           repo.NewQuizGrantRepo(db),
 		AdminMessages:        repo.NewAdminMessageRepo(db),
 		CourseUpdates:        repo.NewCourseUpdateRepo(db),
 		Testimonials:         repo.NewTestimonialRepo(db),

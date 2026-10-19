@@ -83,6 +83,16 @@ type AdminUserDetailData struct {
 	Purchases     []adminUserPurchase
 	Contributions []adminUserContribution
 	Messages      []adminUserMessage
+	QuizRows      []adminUserQuizRow
+}
+
+// adminUserQuizRow is one course's quiz attempt usage for the grants panel.
+type adminUserQuizRow struct {
+	CourseID    int64
+	CourseTitle string
+	Used        int
+	Extra       int
+	Limit       int
 }
 
 // AdminUserDetail shows one visitor's bookings and course purchases, plus
@@ -135,11 +145,36 @@ func (a *App) AdminUserDetail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	allCourses, err := a.Courses.ListAll(ctx)
+	if err != nil {
+		a.serverError(w, "load courses", err)
+		return
+	}
+	used, err := a.QuizAttempts.UsedByUser(ctx, id)
+	if err != nil {
+		a.serverError(w, "load quiz attempts", err)
+		return
+	}
+	grants, err := a.QuizGrants.ListByUser(ctx, id)
+	if err != nil {
+		a.serverError(w, "load quiz grants", err)
+		return
+	}
+
 	data := AdminUserDetailData{
 		BaseData:  a.base(r, user.Name+" — Admin", "", "admin"),
 		User:      user,
 		IsAdmin:   isAdmin,
 		CanDemote: isAdmin && adminCount > 1,
+	}
+	for _, c := range allCourses {
+		if !c.IsPaid {
+			continue
+		}
+		data.QuizRows = append(data.QuizRows, adminUserQuizRow{
+			CourseID: c.ID, CourseTitle: c.Title, Used: used[c.ID], Extra: grants[c.ID],
+			Limit: models.QuizMaxAttempts + grants[c.ID],
+		})
 	}
 	for _, b := range bookings {
 		data.Bookings = append(data.Bookings, adminUserBooking{
