@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/vishnubalachandran596/portfolio/core/middleware"
@@ -72,6 +73,14 @@ func (a *App) Routes() http.Handler {
 	// Visitor auth.
 	mux.Handle("GET /exit-preview", noindex(http.HandlerFunc(a.ExitVisitorPreview)))
 	mux.Handle("GET /login", noindex(http.HandlerFunc(a.LoginPage)))
+	mux.Handle("POST /login", noindex(http.HandlerFunc(a.PasswordLoginSubmit)))
+	mux.Handle("GET /signup", noindex(http.HandlerFunc(a.SignupPage)))
+	mux.Handle("POST /signup", noindex(http.HandlerFunc(a.SignupSubmit)))
+	mux.Handle("GET /forgot", noindex(http.HandlerFunc(a.ForgotPage)))
+	mux.Handle("POST /forgot", noindex(http.HandlerFunc(a.ForgotQuestion)))
+	mux.Handle("POST /forgot/reset", noindex(http.HandlerFunc(a.ForgotReset)))
+	mux.Handle("GET /account/security", noindex(a.Auth.RequireUser(http.HandlerFunc(a.AccountSecurityPage))))
+	mux.Handle("POST /account/security", noindex(a.Auth.RequireUser(http.HandlerFunc(a.AccountSecuritySubmit))))
 	mux.Handle("GET /login/google", noindex(http.HandlerFunc(a.GoogleLoginStart)))
 	mux.Handle("GET /login/google/callback", noindex(http.HandlerFunc(a.GoogleLoginCallback)))
 	mux.HandleFunc("POST /logout", a.UserLogout)
@@ -211,9 +220,14 @@ func (a *App) Routes() http.Handler {
 
 	mux.HandleFunc("/", a.NotFound)
 
+	siteHost := ""
+	if u, err := url.Parse(a.Cfg.SiteURL); err == nil {
+		siteHost = u.Host
+	}
 	return middleware.Logging(middleware.SecurityHeaders(
 		middleware.CanonicalHost(a.Cfg.SiteURL)(
-			middleware.DomainRouter(a.Cfg.Domain)(mux))))
+			middleware.DomainRouter(a.Cfg.Domain)(
+				middleware.SameOrigin(siteHost)(a.Auth.Attach(mux))))))
 }
 
 // noindex tags every response under a handler as non-indexable — used for

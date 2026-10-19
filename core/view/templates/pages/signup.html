@@ -1,0 +1,49 @@
+{{define "content"}}
+<section class="page-hero page-hero-narrow">
+  <div class="container">
+    <p class="eyebrow">Account</p>
+    <h1>Create your account</h1>
+    <p class="hero-subtitle">Use a password, or sign in with Google instead. You only need an account to open your courses later; buying doesn't require one.</p>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container auth-container"><div class="auth-card">
+    {{if .Error}}<div class="alert alert-error" role="alert">{{.Error}}</div>{{end}}
+    <form method="POST" action="/signup" class="auth-form">
+      <input type="hidden" name="next" value="{{.Next}}">
+      <div hidden aria-hidden="true"><label>Website <input type="text" name="website" tabindex="-1" autocomplete="off"></label></div>
+      <label>Name
+        <input type="text" name="name" value="{{.Name}}" autocomplete="name" maxlength="100">
+      </label>
+      <label>Email
+        <input type="email" name="email" value="{{.Email}}" autocomplete="username" required>
+      </label>
+      <label>Password <span class="field-help">At least 10 characters.</span>
+        <span class="password-field">
+          <input type="password" name="password" id="signup-password" autocomplete="new-password" minlength="10" maxlength="72" required>
+          <button type="button" class="password-toggle" data-target="signup-password" aria-label="Show password">Show</button>
+        </span>
+      </label>
+      <label>Confirm password
+        <input type="password" name="confirm" autocomplete="new-password" minlength="10" maxlength="72" required>
+      </label>
+      <label>Security question <span class="field-help">Used to reset your password if you forget it. The site does not send email.</span>
+        <select name="question" required>
+          <option value="">Choose a question</option>
+          {{range .Questions}}<option value="{{.}}"{{if eq . $.Selected}} selected{{end}}>{{.}}</option>{{end}}
+        </select>
+      </label>
+      <label>Your answer <span class="field-help">Pick something other people can't guess or look up. Spacing and capital letters don't matter.</span>
+        <input type="text" name="answer" autocomplete="off" minlength="3" maxlength="100" required>
+      </label>
+      <button type="submit" class="btn btn-primary" data-loading-text="Creating…">Create account</button>
+    </form>
+    <p class="auth-fineprint">Already have an account? <a href="/login?next={{.Next}}">Log in</a></p>
+    {{if .GoogleEnabled}}
+    <hr class="auth-divider">
+    <a class="btn btn-primary btn-google" href="/login/google?next={{.Next}}">Continue with Google</a>
+    {{end}}
+  </div></div>
+</section>
+{{end}}

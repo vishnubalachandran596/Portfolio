@@ -43,6 +43,7 @@ type App struct {
 	Admins               *repo.AdminRepo
 	Purchases            *repo.PurchaseRepo
 	Users                *repo.UserRepo
+	AuthThrottle         *repo.AuthThrottleRepo
 	Articles             *repo.ArticleRepo
 	PromoCodes           *repo.PromoCodeRepo
 	QuizQuestions        *repo.QuizQuestionRepo
@@ -168,11 +169,19 @@ func New(cfg *config.Config, db *sql.DB, renderer *view.Renderer) *App {
 	if err != nil {
 		loc = time.UTC
 	}
+	auth := middleware.NewAuth(cfg.JWTSecret, cfg.SessionTTL, cfg.IsProduction())
+	users := repo.NewUserRepo(db)
+	admins := repo.NewAdminRepo(db)
+	auth.SetVerifiers(
+		func(ctx context.Context, id int64) (int, bool) { return users.TokenVersion(ctx, id) },
+		func(ctx context.Context, id int64) bool { _, err := admins.GetByID(ctx, id); return err == nil },
+	)
 	return &App{
 		Cfg:                  cfg,
 		DB:                   db,
 		View:                 renderer,
-		Auth:                 middleware.NewAuth(cfg.JWTSecret, cfg.SessionTTL, cfg.IsProduction()),
+		Auth:                 auth,
+		AuthThrottle:         repo.NewAuthThrottleRepo(db),
 		Profile:              repo.NewProfileRepo(db),
 		Skills:               repo.NewSkillGroupRepo(db),
 		Experience:           repo.NewExperienceRepo(db),
@@ -184,9 +193,9 @@ func New(cfg *config.Config, db *sql.DB, renderer *view.Renderer) *App {
 		SoftwarePurchases:    repo.NewSoftwarePurchaseRepo(db),
 		Bookings:             repo.NewBookingRepo(db),
 		Availability:         repo.NewAvailabilityRepo(db),
-		Admins:               repo.NewAdminRepo(db),
+		Admins:               admins,
 		Purchases:            repo.NewPurchaseRepo(db),
-		Users:                repo.NewUserRepo(db),
+		Users:                users,
 		Articles:             repo.NewArticleRepo(db),
 		PromoCodes:           repo.NewPromoCodeRepo(db),
 		QuizQuestions:        repo.NewQuizQuestionRepo(db),

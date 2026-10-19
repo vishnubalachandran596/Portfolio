@@ -109,6 +109,18 @@ erDiagram
         text name
         bool is_guest "true = captured via anonymous article thumbs-up form, never signed in"
         timestamptz created_at
+        int token_version "in the session cookie; bump = sign out everywhere"
+        bool password_usable "true only for a user-chosen password (Google accounts keep a random unusable hash)"
+        bool google_verified "Google has proven control of the email"
+        text security_question "one of the fixed list"
+        text security_answer_hash "bcrypt of the normalised answer"
+    }
+    auth_throttle {
+        text kind PK "login | reset | signup | admin"
+        text key PK "SHA-256 of lower-cased email or client IP"
+        int fail_count
+        timestamptz last_fail_at
+        timestamptz locked_until
     }
     profile {
         smallint id PK "always 1"
@@ -562,7 +574,7 @@ Handler files, by area:
 
 ---
 
-## 5. Auth — two independent JWT sessions
+## 5. Auth — two independent JWT sessions, password and Google sign-in
 
 Both live in `core/middleware/auth.go`, sharing one `Auth` struct (one JWT secret, one TTL — 7 days) but **separate cookies and separate context keys**:
 
@@ -575,7 +587,13 @@ Both live in `core/middleware/auth.go`, sharing one `Auth` struct (one JWT secre
 | Context accessor | `middleware.AdminIDFromContext` | `middleware.UserIDFromContext` |
 | Non-redirecting check | `Auth.IsAuthenticated(r)` | `Auth.IsUserAuthenticated(r)` |
 
-**Visitor login is Google-only** — deliberately, per the comment at the top of `auth.go`: one "Sign in with Google" button serves both a regular visitor and the site owner (a Google account whose email matches an `admins` row also gets an admin session issued alongside the normal user session), so there's no separate password to set up or lose. `core/oauth/google.go` is a standard authorization-code OAuth2 flow: `GoogleLoginStart` builds the consent-screen URL with a random CSRF `state` stashed in a short-lived cookie, `GoogleLoginCallback` exchanges the code, fetches the Google profile, and creates-or-finds a `users` row by email before issuing the session. Admin login (`/admin/login`) takes an admin email plus the password and compares the password, in constant time (`authutil.SecretEquals`), with the `ADMIN_BOOTSTRAP_PASSWORD` environment secret. **No admin password or hash is stored in the database** (migration 080 dropped `admins.password_hash`); the `admins` table is only the list of admin emails, and one password covers all of them. `ADMIN_BOOTSTRAP_EMAIL` is added to that list on every start (`bootstrapAdmin` in `core/app/bootstrap.go`) and cannot be demoted from the console. Changing the variable and redeploying changes the password. An unset variable disables password login (Google sign-in as an admin email still works). Visitor accounts keep their own bcrypt column.
+**Visitor login is a password or Google** (`core/handlers/auth.go`, `auth_password.go`). `GET/POST /login`, `/signup`, `/forgot`, `/forgot/reset` and `/account/security` handle password accounts (bcrypt, 10 to 72 characters, `authutil.ValidatePassword`); the Google button (`core/oauth/google.go`, a standard authorization-code flow with a CSRF `state` cookie) stays alongside. **The site sends no email**, so an email typed at signup is never treated as verified. Consequences: (1) password recovery is the **security question** chosen at signup, from a fixed list (`securityQuestions`); the answer is trimmed, lower-cased and stored only as a bcrypt hash; (2) an unknown, Google-only, or admin email is shown a stable, believable fake question (HMAC of the email under `JWT_SECRET`) so the page does not reveal who has an account, and the answer is compared against `authutil.DummyHash` so timing matches; (3) when Google later proves an email that has an unverified password account, `UserRepo.MarkGoogleVerified` clears that password and answer and bumps `token_version` (the real owner takes over); (4) a password login never issues an admin session.
+
+**Sessions stay stateless** (a signed HS256 JWT cookie, HttpOnly, Secure in production, SameSite=Lax, 7-day expiry; the parser accepts HS256 only). The user cookie carries `tv`, the user's `token_version`; `Auth.SetVerifiers` (wired in `handlers.New`) re-checks every cookie against Postgres, so a password reset or change (`UserRepo.SetPassword` bumps the version) signs every old session out, and an admin removed from `admins` loses access immediately instead of at cookie expiry. `Auth.Attach` memoises that lookup once per request (an anonymous request costs no query). `middleware.SameOrigin` blocks cross-site POSTs (CSRF) for the whole mux; requests with no `Origin` header, such as the token-guarded reindex call, pass.
+
+**Throttling** is in Postgres (`auth_throttle`, `repo.AuthThrottleRepo`) because serverless instances share no memory: five failures per email or per client IP lock that key for 1 minute, doubling per further failure up to 60 minutes; the window resets after an hour of quiet. Kinds: `login`, `reset`, `signup` (10 per IP per hour, honeypot field too) and `admin`. Keys are SHA-256 digests, never raw emails or IPs.
+
+Admin login (`/admin/login`) takes an admin email plus the password and compares the password, in constant time (`authutil.SecretEquals`), with the `ADMIN_BOOTSTRAP_PASSWORD` environment secret. **No admin password or hash is stored in the database** (migration 080 dropped `admins.password_hash`); the `admins` table is only the list of admin emails, and one password covers all of them. `ADMIN_BOOTSTRAP_EMAIL` is added to that list on every start (`bootstrapAdmin` in `core/app/bootstrap.go`) and cannot be demoted from the console. Changing the variable and redeploying changes the password. An unset variable disables password login (Google sign-in as an admin email still works). Any user can be promoted to admin from `/admin/users`.
 
 **Admin preview-as-visitor** is a third, lightweight state: a plain cookie flag (`preview_visitor`), not a session — `isPreviewingAsVisitor(r)` short-circuits `base()`'s `isAdmin` computation to `false` while the admin's real session cookie stays intact, so `/exit-preview` just clears the flag.
 

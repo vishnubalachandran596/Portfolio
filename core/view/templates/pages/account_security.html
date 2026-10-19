@@ -1,0 +1,43 @@
+{{define "content"}}
+<section class="page-hero page-hero-narrow">
+  <div class="container">
+    <p class="eyebrow">Account</p>
+    <h1>Password and security question</h1>
+    <p class="hero-subtitle">{{if .HasPassword}}Change your password or security question.{{else}}Add a password and a security question so you can also log in without Google.{{end}}</p>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container auth-container"><div class="auth-card">
+    {{if .Notice}}<div class="alert alert-success" role="status">{{.Notice}}</div>{{end}}
+    {{if .Error}}<div class="alert alert-error" role="alert">{{.Error}}</div>{{end}}
+    <form method="POST" action="/account/security" class="auth-form">
+      {{if .HasPassword}}
+      <label>Current password
+        <input type="password" name="current" autocomplete="current-password" required>
+      </label>
+      {{end}}
+      <label>New password <span class="field-help">At least 10 characters.</span>
+        <span class="password-field">
+          <input type="password" name="password" id="sec-password" autocomplete="new-password" minlength="10" maxlength="72" required>
+          <button type="button" class="password-toggle" data-target="sec-password" aria-label="Show password">Show</button>
+        </span>
+      </label>
+      <label>Confirm new password
+        <input type="password" name="confirm" autocomplete="new-password" minlength="10" maxlength="72" required>
+      </label>
+      <label>Security question
+        <select name="question" required>
+          <option value="">Choose a question</option>
+          {{range .Questions}}<option value="{{.}}"{{if eq . $.Selected}} selected{{end}}>{{.}}</option>{{end}}
+        </select>
+      </label>
+      <label>Your answer <span class="field-help">Pick something other people can't guess or look up.</span>
+        <input type="text" name="answer" autocomplete="off" minlength="3" maxlength="100" required>
+      </label>
+      <button type="submit" class="btn btn-primary" data-loading-text="Saving…">Save</button>
+    </form>
+    <p class="auth-fineprint">Saving signs you out on your other devices. <a href="/account">Back to my account</a></p>
+  </div></div>
+</section>
+{{end}}

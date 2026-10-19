@@ -610,6 +610,16 @@ type User struct {
 	Name         string
 	IsGuest      bool
 	CreatedAt    time.Time
+
+	// TokenVersion is copied into the session cookie; bumping it signs
+	// the user out everywhere.
+	TokenVersion int
+	// PasswordUsable is true only for accounts with a user-chosen password.
+	PasswordUsable bool
+	// GoogleVerified is true once Google has confirmed the email.
+	GoogleVerified     bool
+	SecurityQuestion   string
+	SecurityAnswerHash string
 }
 
 // Article is one of Vishnu's own blog posts, written and hosted here.

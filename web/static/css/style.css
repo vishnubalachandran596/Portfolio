@@ -2508,3 +2508,4 @@ select { appearance: none; -webkit-appearance: none; padding-right: 2.25rem; bac
   .html-renderer, .article-renderer, .lesson-renderer { height: auto; overflow: visible; }
   .lesson-frame { height: auto; min-height: 40rem; }
 }
+.auth-divider { border: 0; border-top: 1px solid var(--line); margin: var(--space-5) 0; }

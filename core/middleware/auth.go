@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"sync"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -27,6 +28,10 @@ type sessionClaims struct {
 
 type userSessionClaims struct {
 	UserID int64 `json:"user_id"`
+	// TV is the user's token_version when the cookie was issued. A cookie
+	// whose TV no longer matches the database row is rejected, which is how
+	// a password reset signs every old session out without a session table.
+	TV int `json:"tv"`
 	jwt.RegisteredClaims
 }
 
@@ -36,6 +41,49 @@ type Auth struct {
 	secret []byte
 	ttl    time.Duration
 	secure bool
+
+	// verifyUser and verifyAdmin re-check a signed cookie against the
+	// database. A valid signature alone is never enough: an admin who was
+	// removed, or a user who reset their password, loses access at once.
+	verifyUser  func(ctx context.Context, id int64) (tokenVersion int, ok bool)
+	verifyAdmin func(ctx context.Context, id int64) bool
+}
+
+// SetVerifiers wires the database checks. Left unset (as in unit tests) the
+// cookie signature alone decides.
+func (a *Auth) SetVerifiers(
+	user func(ctx context.Context, id int64) (int, bool),
+	admin func(ctx context.Context, id int64) bool,
+) {
+	a.verifyUser, a.verifyAdmin = user, admin
+}
+
+// identity memoises the database checks for one request, so a page that
+// asks "who is this?" several times (the shared chrome plus the handler)
+// pays for at most one lookup per cookie. It is created per request by
+// Attach and holds no state beyond that request.
+type identity struct {
+	userOnce  sync.Once
+	userID    int64
+	userOK    bool
+	adminOnce sync.Once
+	adminID   int64
+	adminOK   bool
+}
+
+type identityKey struct{}
+
+// Attach installs the per-request identity memo. Wrap the whole mux in it.
+func (a *Auth) Attach(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := context.WithValue(r.Context(), identityKey{}, &identity{})
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
+func identityFrom(r *http.Request) *identity {
+	id, _ := r.Context().Value(identityKey{}).(*identity)
+	return id
 }
 
 func NewAuth(secret []byte, ttl time.Duration, secureCookies bool) *Auth {
@@ -80,8 +128,29 @@ func (a *Auth) ClearSession(w http.ResponseWriter) {
 	})
 }
 
-// adminIDFromRequest validates the session cookie and returns the admin id.
+// adminIDFromRequest returns the admin id for a valid cookie that still
+// belongs to a row in the admins table.
 func (a *Auth) adminIDFromRequest(r *http.Request) (int64, bool) {
+	if mem := identityFrom(r); mem != nil {
+		mem.adminOnce.Do(func() { mem.adminID, mem.adminOK = a.resolveAdmin(r) })
+		return mem.adminID, mem.adminOK
+	}
+	return a.resolveAdmin(r)
+}
+
+func (a *Auth) resolveAdmin(r *http.Request) (int64, bool) {
+	id, ok := a.adminCookieID(r)
+	if !ok {
+		return 0, false
+	}
+	if a.verifyAdmin != nil && !a.verifyAdmin(r.Context(), id) {
+		return 0, false
+	}
+	return id, true
+}
+
+// adminCookieID validates the signature and expiry only.
+func (a *Auth) adminCookieID(r *http.Request) (int64, bool) {
 	cookie, err := r.Cookie(SessionCookieName)
 	if err != nil || cookie.Value == "" {
 		return 0, false
@@ -89,7 +158,7 @@ func (a *Auth) adminIDFromRequest(r *http.Request) (int64, bool) {
 	claims := &sessionClaims{}
 	token, err := jwt.ParseWithClaims(cookie.Value, claims, func(t *jwt.Token) (interface{}, error) {
 		return a.secret, nil
-	})
+	}, jwt.WithValidMethods([]string{"HS256"}))
 	if err != nil || !token.Valid {
 		return 0, false
 	}
@@ -139,9 +208,10 @@ func (a *Auth) AdminID(r *http.Request) (int64, bool) {
 // admin account, the login handler issues *both* cookies, so they get
 // their visitor session and full admin access together.
 
-func (a *Auth) IssueUserSession(w http.ResponseWriter, userID int64) {
+func (a *Auth) IssueUserSession(w http.ResponseWriter, userID int64, tokenVersion int) {
 	claims := userSessionClaims{
 		UserID: userID,
+		TV:     tokenVersion,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(a.ttl)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
@@ -178,6 +248,14 @@ func (a *Auth) ClearUserSession(w http.ResponseWriter) {
 }
 
 func (a *Auth) userIDFromRequest(r *http.Request) (int64, bool) {
+	if mem := identityFrom(r); mem != nil {
+		mem.userOnce.Do(func() { mem.userID, mem.userOK = a.resolveUser(r) })
+		return mem.userID, mem.userOK
+	}
+	return a.resolveUser(r)
+}
+
+func (a *Auth) resolveUser(r *http.Request) (int64, bool) {
 	cookie, err := r.Cookie(UserSessionCookieName)
 	if err != nil || cookie.Value == "" {
 		return 0, false
@@ -185,9 +263,15 @@ func (a *Auth) userIDFromRequest(r *http.Request) (int64, bool) {
 	claims := &userSessionClaims{}
 	token, err := jwt.ParseWithClaims(cookie.Value, claims, func(t *jwt.Token) (interface{}, error) {
 		return a.secret, nil
-	})
+	}, jwt.WithValidMethods([]string{"HS256"}))
 	if err != nil || !token.Valid {
 		return 0, false
+	}
+	if a.verifyUser != nil {
+		tv, ok := a.verifyUser(r.Context(), claims.UserID)
+		if !ok || tv != claims.TV {
+			return 0, false
+		}
 	}
 	return claims.UserID, true
 }

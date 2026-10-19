@@ -20,6 +20,7 @@ import (
 type LoginData struct {
 	BaseData
 	Error         string
+	Notice        string
 	Next          string
 	GoogleEnabled bool
 }
@@ -50,8 +51,9 @@ func (a *App) LoginPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	a.View.Render(w, http.StatusOK, "login", LoginData{
-		BaseData:      a.base(r, "Log In — "+a.Cfg.SiteName, "Log in with Google to book a consultancy session or access your purchased courses.", ""),
+		BaseData:      a.base(r, "Log In — "+a.Cfg.SiteName, "Log in to access your purchased courses and account.", ""),
 		Error:         r.URL.Query().Get("error"),
+		Notice:        r.URL.Query().Get("notice"),
 		Next:          next,
 		GoogleEnabled: a.Google.Enabled(),
 	})
@@ -156,7 +158,14 @@ func (a *App) GoogleLoginCallback(w http.ResponseWriter, r *http.Request) {
 			log.Printf("mark guest user signed up: %v", merr)
 		}
 	}
-	a.Auth.IssueUserSession(w, user.ID)
+	// Google has now proven control of this email. If it was an unverified
+	// password account, its password and security answer are cleared.
+	if _, verr := a.Users.MarkGoogleVerified(ctx, user.ID); verr != nil {
+		a.serverError(w, "mark google verified", verr)
+		return
+	}
+	tv, _ := a.Users.TokenVersion(ctx, user.ID)
+	a.Auth.IssueUserSession(w, user.ID, tv)
 
 	// Same email as the configured admin account also opens the admin
 	// dashboard, alongside the visitor session just issued.

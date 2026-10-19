@@ -13,11 +13,12 @@ type UserRepo struct{ db *sql.DB }
 
 func NewUserRepo(db *sql.DB) *UserRepo { return &UserRepo{db: db} }
 
-const userColumns = `id, email, password_hash, name, is_guest, created_at`
+const userColumns = `id, email, password_hash, name, is_guest, created_at, token_version, password_usable, google_verified, security_question, security_answer_hash`
 
 func scanUser(row interface{ Scan(...any) error }) (models.User, error) {
 	var u models.User
-	err := row.Scan(&u.ID, &u.Email, &u.PasswordHash, &u.Name, &u.IsGuest, &u.CreatedAt)
+	err := row.Scan(&u.ID, &u.Email, &u.PasswordHash, &u.Name, &u.IsGuest, &u.CreatedAt,
+		&u.TokenVersion, &u.PasswordUsable, &u.GoogleVerified, &u.SecurityQuestion, &u.SecurityAnswerHash)
 	return u, err
 }
 
@@ -96,4 +97,80 @@ func (r *UserRepo) GetOrCreateGuest(ctx context.Context, email, passwordHash, na
 func (r *UserRepo) MarkSignedUp(ctx context.Context, id int64) error {
 	_, err := r.db.ExecContext(ctx, `UPDATE users SET is_guest = false WHERE id = $1 AND is_guest = true`, id)
 	return err
+}
+
+// CreateWithPassword registers a visitor who chose their own password and
+// security question. The email is not verified (the site sends no email).
+func (r *UserRepo) CreateWithPassword(ctx context.Context, email, passwordHash, name, question, answerHash string) (int64, error) {
+	var id int64
+	err := r.db.QueryRowContext(ctx, `
+		INSERT INTO users (email, password_hash, name, password_usable, security_question, security_answer_hash)
+		VALUES ($1,$2,$3,true,$4,$5) RETURNING id`,
+		email, passwordHash, name, question, answerHash,
+	).Scan(&id)
+	if err != nil && strings.Contains(err.Error(), "duplicate key value") {
+		return 0, ErrEmailTaken
+	}
+	return id, err
+}
+
+// ClaimGuest turns an anonymous thumbs-up guest row into a password account.
+// The WHERE clause makes it a no-op for any real account, so a sign-up can
+// never take over somebody else's row.
+func (r *UserRepo) ClaimGuest(ctx context.Context, id int64, passwordHash, name, question, answerHash string) (bool, error) {
+	res, err := r.db.ExecContext(ctx, `
+		UPDATE users SET password_hash=$2, name=CASE WHEN $3='' THEN name ELSE $3 END,
+			password_usable=true, is_guest=false, security_question=$4, security_answer_hash=$5,
+			token_version=token_version+1
+		WHERE id=$1 AND is_guest=true AND password_usable=false AND google_verified=false`,
+		id, passwordHash, name, question, answerHash)
+	if err != nil {
+		return false, err
+	}
+	n, _ := res.RowsAffected()
+	return n == 1, nil
+}
+
+// SetPassword replaces the password and signs the user out everywhere.
+func (r *UserRepo) SetPassword(ctx context.Context, id int64, passwordHash string) error {
+	_, err := r.db.ExecContext(ctx, `
+		UPDATE users SET password_hash=$2, password_usable=true, token_version=token_version+1 WHERE id=$1`,
+		id, passwordHash)
+	return err
+}
+
+// SetSecurity stores the security question and the hash of its answer.
+func (r *UserRepo) SetSecurity(ctx context.Context, id int64, question, answerHash string) error {
+	_, err := r.db.ExecContext(ctx, `UPDATE users SET security_question=$2, security_answer_hash=$3 WHERE id=$1`,
+		id, question, answerHash)
+	return err
+}
+
+// TokenVersion returns the current session version for a user, or false when
+// the user no longer exists.
+func (r *UserRepo) TokenVersion(ctx context.Context, id int64) (int, bool) {
+	var tv int
+	if err := r.db.QueryRowContext(ctx, `SELECT token_version FROM users WHERE id=$1`, id).Scan(&tv); err != nil {
+		return 0, false
+	}
+	return tv, true
+}
+
+// MarkGoogleVerified records that Google proved control of the email. If the
+// account was an unverified password account, the password and security
+// answer are cleared (the real owner takes over) and old sessions die.
+// Returns true when such a takeover happened.
+func (r *UserRepo) MarkGoogleVerified(ctx context.Context, id int64) (bool, error) {
+	var tookOver bool
+	err := r.db.QueryRowContext(ctx, `
+		WITH old AS (SELECT id, google_verified, password_usable FROM users WHERE id=$1 FOR UPDATE)
+		UPDATE users u SET
+			google_verified = true,
+			password_usable = CASE WHEN old.google_verified THEN u.password_usable ELSE false END,
+			security_question = CASE WHEN old.google_verified THEN u.security_question ELSE '' END,
+			security_answer_hash = CASE WHEN old.google_verified THEN u.security_answer_hash ELSE '' END,
+			token_version = CASE WHEN old.google_verified OR NOT old.password_usable THEN u.token_version ELSE u.token_version+1 END
+		FROM old WHERE u.id = old.id
+		RETURNING (NOT old.google_verified AND old.password_usable)`, id).Scan(&tookOver)
+	return tookOver, err
 }
