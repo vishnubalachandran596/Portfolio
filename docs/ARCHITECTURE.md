@@ -86,6 +86,8 @@ erDiagram
     courses ||--o{ purchases : "is bought via"
     courses ||--o{ quiz_questions : has
     courses ||--o{ quiz_attempts : has
+    users ||--o{ quiz_attempt_grants : granted
+    courses ||--o{ quiz_attempt_grants : for
     courses ||--o{ course_updates : "notifies buyers via"
     promo_codes ||--o{ promo_code_courses : scopes
     courses ||--o{ promo_code_courses : "scoped by"
@@ -291,6 +293,8 @@ erDiagram
     quiz_questions {
         bigserial id PK
         bigint course_id FK
+        text module "default empty"
+        smallint set_no "nullable, 1-5; attempt N serves set N"
         text question
         text option_a
         text option_b
@@ -313,6 +317,17 @@ erDiagram
         bool passed
         text certificate_code UK "nullable, set only when passed"
         timestamptz created_at
+        int attempt_no "nullable (admin previews); UNIQUE(user_id, course_id, attempt_no); trigger caps at 5 + grant"
+        smallint set_no
+        bigint_array question_ids "the stored question set; scoring uses these"
+        timestamptz submitted_at "NULL while in progress; set once on grading"
+    }
+    quiz_attempt_grants {
+        bigint user_id PK,FK
+        bigint course_id PK,FK
+        int extra "0-50, admin-set extra attempts beyond 5"
+        timestamptz created_at
+        timestamptz updated_at
     }
     purchases {
         serial id PK
@@ -556,7 +571,7 @@ erDiagram
 
 `handlers.App` (in `core/handlers/app.go`) is the one struct every handler is a method on. It holds:
 - `Cfg *config.Config`, `DB *sql.DB`, `View *view.Renderer`, `Auth *middleware.Auth`
-- One repo field per aggregate: `Profile, Skills, Experience, Resumes, Education, Features, Courses, Bookings, Availability, Admins, Purchases, Users, Articles, PromoCodes, QuizQuestions, QuizAttempts, AdminMessages, CourseUpdates, Testimonials, Certifications, Publications, CaseStudies, AuditRequests, ArticleVotes, ArticleContributions, ContactMessages, Subscribers, CourseReviews, ChatbotChunks, ChatbotRateLimits`, plus `CourseStorage` for the private buckets
+- One repo field per aggregate: `Profile, Skills, Experience, Resumes, Education, Features, Courses, Bookings, Availability, Admins, Purchases, Users, Articles, PromoCodes, QuizQuestions, QuizAttempts, QuizGrants, AdminMessages, CourseUpdates, Testimonials, Certifications, Publications, CaseStudies, AuditRequests, ArticleVotes, ArticleContributions, ContactMessages, Subscribers, CourseReviews, ChatbotChunks, ChatbotRateLimits`, plus `CourseStorage` for the private buckets
 - `Razorpay *payments.Razorpay`, `Telegram *notify.Telegram`, `Google *oauth.Google`, `Nvidia *ai.Client`, `Timezone *time.Location`
 
 Shared page chrome is assembled by `base` / `startBase` / `baseFrom` in `app.go`. `BaseData` carries site name, title, meta description, canonical URL, nav links, login/admin state, the footer's LinkedIn link, notifications, and `AssetVersion`. Every page-specific `*Data` struct embeds it.
@@ -586,7 +601,7 @@ Handler files, by area:
 | `account.go` | `/account` page + PDF receipts + testimonial submission |
 | `booking_reschedule.go` | Both admin- and self-service booking reschedule flows |
 | `learn.go` | Gated course content serving inside the site chrome + watermark injection |
-| `quiz.go` | Quiz taking, scoring, certificate download |
+| `quiz.go` | Quiz intro/start/resume, server-side scoring, certificate download (see FUNCTIONALITY.md quiz engine rules) |
 | `course_reviews.go` | Verified-buyer review submit (private rating/comment) + its admin-only list view |
 | `auth.go` | Login page, Google OAuth start/callback, logout |
 | `legal.go` | Generic static legal-page handler factory |
@@ -596,7 +611,8 @@ Handler files, by area:
 | `media.go` | Image-upload validation (`readImageUpload`, `sniffImageExt`) shared by the profile photo and logo; public `GET /media/profile-photo` and `GET /media/logo` streaming handlers |
 | `admin_content.go` | Admin CRUD for skills, experience, testimonials |
 | `admin_users.go` | Admin user list/detail/promote/demote/message |
-| `admin_quiz.go` | Admin CRUD for quiz questions |
+| `admin_quiz.go` | Admin CRUD for quiz questions + list page |
+| `admin_quiz_bank.go` | Quiz bulk JSON import, auto-assign sets, per-user attempt grants |
 | `admin_promo.go` | Admin CRUD for promo codes |
 | `admin_payments.go` | The combined payments ledger (purchases + bookings + audit requests + article contributions + software purchases merged) |
 | `promo.go` | `resolvePromoCode()` — the one shared discount-resolution function every checkout flow calls |
@@ -800,3 +816,8 @@ The visual system (tokens, type, motion, components) is documented in `docs/DESI
 **Content normalizer.** `storage.NormalizeLesson` (`core/storage/normalize.go`) runs on every lesson and article upload (course form, bulk upload, article form) and offline via `cmd/lessonfmt`. It maps a lesson's own `:root` palette onto the site tokens as `--l-*` properties, removes in-lesson tables of contents, strips `<h2>` numbering, and labels code blocks with their language. `<!-- vb:theme dark -->` opts a dark app-style lesson into the site's dark palette in both schemes. It is idempotent: it stamps `<!-- vb:normalized v1 -->` and skips files that already carry it. The strategy is in `docs/DESIGN.md` ("Content updates").
 
 **Bulk lesson upload** (`GET/POST /admin/courses/bulk-upload`, `admin_course_bulk.go`). One zip (≤ 8 MB; Vercel caps a request body at 4.5 MB in practice) of `{slug}.html` files; each matches an existing course by file name, is stored at `courses/{slug}.html`, gets its outline re-derived, and the chatbot reindex flag is set once. Unknown slugs are reported and skipped.
+
+
+## Quiz attempt cap (migration 088)
+
+The cap of 5 attempts per learner per course lives in Postgres, not Go. `quiz_attempts.attempt_no` is unique per `(user_id, course_id)`, and the `quiz_attempt_cap_guard` trigger raises `check_violation` when `attempt_no > 5 + COALESCE(quiz_attempt_grants.extra, 0)`, after taking `pg_advisory_xact_lock` on the same key `QuizAttemptRepo.Start` uses. `Start` locks, resumes any open attempt, otherwise inserts `max(attempt_no)+1` with the chosen question ids; the repo maps the DB error to `ErrNoAttemptsLeft`. A grant is therefore the only way past 5, and it can only be written by the admin handler. `models.QuizMaxAttempts` mirrors the literal 5 in the trigger: change both together. Legacy visitor attempts are numbered by migration 088 (a learner with more than 5 old attempts starts locked until granted). Serverless note: everything is a transaction on the pooled connection; no in-process state.
