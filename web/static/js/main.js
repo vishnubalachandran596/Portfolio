@@ -400,9 +400,8 @@
   if (purchaseBtn) {
     purchaseBtn.addEventListener("click", function () {
       var slug = purchaseBtn.getAttribute("data-slug");
-      var minCents = parseInt(purchaseBtn.getAttribute("data-min-cents"), 10) || 0;
+      var isFree = purchaseBtn.getAttribute("data-free") === "1";
       var emailInput = document.getElementById("purchase-email");
-      var amountInput = document.getElementById("purchase-amount");
       var promoInput = document.getElementById("purchase-promo-code");
       var errorBox = document.getElementById("purchase-error");
 
@@ -418,17 +417,16 @@
         showError("Please enter a valid email.");
         return;
       }
-      var amount = Math.round(parseFloat(amountInput ? amountInput.value : "0") * 100);
-      if (isNaN(amount) || amount < minCents) amount = minCents;
-      var defaultLabel = amount > 0 ? "Continue" : "Get Free Access";
+      var defaultLabel = purchaseBtn.textContent;
 
       if (errorBox) errorBox.hidden = true;
       purchaseBtn.disabled = true;
-      purchaseBtn.textContent = amount > 0 ? "Starting checkout…" : "Getting access…";
+      purchaseBtn.textContent = isFree ? "Getting access…" : "Starting checkout…";
 
+      // The price is never sent: the server charges the course's own fixed
+      // price (less a valid promo code) and ignores any amount field.
       var form = new FormData();
       form.append("email", email);
-      form.append("amount_cents", String(amount));
       form.append("promo_code", promoInput ? promoInput.value.trim() : "");
 
       fetch("/courses/" + slug + "/checkout/order", { method: "POST", body: form })
@@ -500,6 +498,7 @@
     softwarePurchaseBtn.addEventListener("click", function () {
       var slug = softwarePurchaseBtn.getAttribute("data-slug");
       var promoInput = document.getElementById("software-promo-code");
+      var emailInput = document.getElementById("software-email");
       var errorBox = document.getElementById("purchase-error");
       var defaultLabel = softwarePurchaseBtn.textContent;
 
@@ -510,11 +509,18 @@
         }
       }
 
+      var email = emailInput ? emailInput.value.trim() : "";
+      if (emailInput && (!email || email.indexOf("@") === -1)) {
+        showError("Please enter a valid email.");
+        return;
+      }
+
       if (errorBox) errorBox.hidden = true;
       softwarePurchaseBtn.disabled = true;
       softwarePurchaseBtn.textContent = "Starting checkout…";
 
       var form = new FormData();
+      form.append("email", email);
       form.append("promo_code", promoInput ? promoInput.value.trim() : "");
 
       fetch("/software/" + slug + "/checkout/order", { method: "POST", body: form })

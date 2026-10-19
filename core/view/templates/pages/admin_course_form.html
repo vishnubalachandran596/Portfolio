@@ -48,7 +48,7 @@
         Paid (shows a Razorpay checkout box; a visitor can still get free access with an active 100%-off promo code)
       </label>
       <div class="form-row">
-        <label>Minimum price, INR (paise) <span class="optional">0 = fully free, e.g. 290000 = ₹2,900 minimum — courses sell in INR only; courses are priced at industry level, not ₹0, by default</span>
+        <label>Fixed price, INR (paise) <span class="optional">the one price a buyer pays, e.g. 99900 = ₹999, 149900 = ₹1,499, 199900 = ₹1,999 (0 = free). Courses sell in INR only; a promo code can only lower it</span>
           <input type="number" name="min_price_cents" value="{{.Course.MinPriceCents}}" min="0">
         </label>
       </div>

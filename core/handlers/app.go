@@ -46,6 +46,7 @@ type App struct {
 	Users             *repo.UserRepo
 	AuthThrottle      *repo.AuthThrottleRepo
 	Licences          *repo.LicenceRepo
+	Claims            *repo.ClaimRepo
 	// LicenceSigner is nil until LICENCE_SIGNING_KEY_B64 and LICENCE_KID are set.
 	LicenceSigner        *licence.Signer
 	Articles             *repo.ArticleRepo
@@ -102,6 +103,9 @@ type BaseData struct {
 	Notifications    []NotificationItem
 	UnreadNotifCount int
 	AssetVersion     string
+	// NoIndex adds a robots noindex meta tag (the noindex() route wrapper
+	// also sets the X-Robots-Tag header).
+	NoIndex bool
 	// PromoCodes is every currently active, public promo code — the
 	// source for the sitewide scrolling banner (promo_banner.html),
 	// rendered just below the header on every page. Empty renders no
@@ -187,6 +191,7 @@ func New(cfg *config.Config, db *sql.DB, renderer *view.Renderer) *App {
 		Auth:                 auth,
 		AuthThrottle:         repo.NewAuthThrottleRepo(db),
 		Licences:             repo.NewLicenceRepo(db),
+		Claims:               repo.NewClaimRepo(db),
 		Profile:              repo.NewProfileRepo(db),
 		Skills:               repo.NewSkillGroupRepo(db),
 		Experience:           repo.NewExperienceRepo(db),

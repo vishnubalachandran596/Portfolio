@@ -579,7 +579,7 @@ func (a *App) CourseDetail(w http.ResponseWriter, r *http.Request) {
 
 	base := a.baseFrom(r, pf, course.Title+" — "+a.Cfg.SiteName, course.Summary, "courses")
 
-	minCents := course.MinPriceCents
+	minCents := course.FixedPriceCents()
 
 	a.View.Render(w, http.StatusOK, "course_detail", CourseDetailData{
 		BaseData:           base,

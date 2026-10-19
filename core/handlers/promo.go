@@ -25,9 +25,9 @@ var errPromoInvalid = errors.New("promo code is invalid or expired")
 // no discount applies. courseID is ignored for the consultancy and
 // software products (software has no per-item scoping — a software code
 // applies to any software purchase, the same default an empty CourseIDs
-// list already means for courses). userID/email identify the account
-// attempting to redeem — checkout requires a signed-in account
-// unconditionally, so these are never zero.
+// list already means for courses). userID/email identify who is
+// redeeming: userID is 0 for a guest checkout (email only), in which case
+// private codes are refused and per-user limits count by email.
 func (a *App) resolvePromoCode(ctx context.Context, raw, product string, courseID, userID int64, email string, amountCents int) (discountCents int, promo *models.PromoCode, err error) {
 	raw = strings.TrimSpace(raw)
 	if raw == "" {
@@ -46,6 +46,12 @@ func (a *App) resolvePromoCode(ctx context.Context, raw, product string, courseI
 	if product == models.PromoProductCourse && len(p.CourseIDs) > 0 && !p.HasCourse(courseID) {
 		return 0, nil, errPromoInvalid
 	}
+	// A guest (userID 0) only has a typed email, which proves nothing, so a
+	// private (email-scoped) code is never honoured for one: the buyer must
+	// sign in first.
+	if userID == 0 && p.IsPrivate() {
+		return 0, nil, errPromoInvalid
+	}
 	if !p.AllowsEmail(strings.ToLower(strings.TrimSpace(email))) {
 		return 0, nil, errPromoInvalid
 	}
@@ -55,9 +61,14 @@ func (a *App) resolvePromoCode(ctx context.Context, raw, product string, courseI
 		// purchases, so each product line counts against its own history.
 		var count int
 		var cerr error
-		if product == models.PromoProductSoftware {
+		switch {
+		case userID == 0 && product == models.PromoProductSoftware:
+			count, cerr = a.SoftwarePurchases.CountEmailRedemptions(ctx, email, p.ID)
+		case userID == 0:
+			count, cerr = a.Purchases.CountEmailRedemptions(ctx, email, p.ID)
+		case product == models.PromoProductSoftware:
 			count, cerr = a.SoftwarePurchases.CountUserRedemptions(ctx, userID, p.ID)
-		} else {
+		default:
 			count, cerr = a.Purchases.CountUserRedemptions(ctx, userID, p.ID)
 		}
 		if cerr != nil {

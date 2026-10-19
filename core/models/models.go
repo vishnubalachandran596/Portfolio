@@ -345,7 +345,18 @@ func (c Course) PriceDisplay() string {
 	return FormatMoney(c.PriceCents, CurrencyINR)
 }
 
-// MinPriceDisplay renders the minimum price for a paid course.
+// FixedPriceCents is what a paid course costs, in paise: the single fixed
+// price set in the admin console (stored in the legacy min_price_cents
+// column). It is the ONLY source of a course checkout amount; a client
+// never supplies one. A promo code can only reduce it.
+func (c Course) FixedPriceCents() int {
+	if c.MinPriceCents < 0 {
+		return 0
+	}
+	return c.MinPriceCents
+}
+
+// MinPriceDisplay renders the fixed price for a paid course.
 func (c Course) MinPriceDisplay() string { return FormatMoney(c.MinPriceCents, CurrencyINR) }
 
 // MinPriceWhole is the minimum price in whole rupees (e.g. 35 for ₹35),
@@ -753,6 +764,10 @@ type Purchase struct {
 	DiscountCents int
 	CreatedAt     time.Time
 	PaidAt        *time.Time
+	// ClaimCode is set only on a guest purchase (UserID 0) until it is
+	// attached to an account; "" afterwards. See authutil.NewClaimCode.
+	ClaimCode string
+	ClaimedAt *time.Time
 }
 
 const (
@@ -967,6 +982,8 @@ type SoftwarePurchase struct {
 	DiscountCents     int
 	CreatedAt         time.Time
 	PaidAt            *time.Time
+	ClaimCode         string
+	ClaimedAt         *time.Time
 }
 
 // QuizPassPercent is the minimum score required to pass a course's final

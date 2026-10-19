@@ -12,7 +12,7 @@ type PurchaseRepo struct{ db *sql.DB }
 
 func NewPurchaseRepo(db *sql.DB) *PurchaseRepo { return &PurchaseRepo{db: db} }
 
-const purchaseColumns = `id, course_id, user_id, email, amount_cents, currency, status, razorpay_order_id, razorpay_payment_id, access_token, promo_code_id, promo_code, promo_text, discount_cents, created_at, paid_at`
+const purchaseColumns = `id, course_id, user_id, email, amount_cents, currency, status, razorpay_order_id, razorpay_payment_id, access_token, promo_code_id, promo_code, promo_text, discount_cents, created_at, paid_at, claim_code, claimed_at`
 
 func scanPurchase(row interface{ Scan(...any) error }) (models.Purchase, error) {
 	var p models.Purchase
@@ -20,7 +20,7 @@ func scanPurchase(row interface{ Scan(...any) error }) (models.Purchase, error) 
 	var promoCodeID sql.NullInt64
 	err := row.Scan(&p.ID, &p.CourseID, &userID, &p.Email, &p.AmountCents, &p.Currency, &p.Status,
 		&p.RazorpayOrderID, &p.RazorpayPaymentID, &p.AccessToken, &promoCodeID, &p.PromoCode, &p.PromoText, &p.DiscountCents,
-		&p.CreatedAt, &p.PaidAt)
+		&p.CreatedAt, &p.PaidAt, &p.ClaimCode, &p.ClaimedAt)
 	p.UserID = userID.Int64
 	if promoCodeID.Valid {
 		p.PromoCodeID = &promoCodeID.Int64
@@ -41,10 +41,10 @@ func (r *PurchaseRepo) Create(ctx context.Context, p models.Purchase) (int64, er
 		promoCodeID = *p.PromoCodeID
 	}
 	err := r.db.QueryRowContext(ctx, `
-		INSERT INTO purchases (course_id, user_id, email, amount_cents, currency, status, razorpay_order_id, access_token, promo_code_id, promo_code, promo_text, discount_cents)
-		VALUES ($1,$2,$3,$4,$5,'created',$6,$7,$8,$9,$10,$11) RETURNING id`,
+		INSERT INTO purchases (course_id, user_id, email, amount_cents, currency, status, razorpay_order_id, access_token, promo_code_id, promo_code, promo_text, discount_cents, claim_code)
+		VALUES ($1,$2,$3,$4,$5,'created',$6,$7,$8,$9,$10,$11,$12) RETURNING id`,
 		p.CourseID, userID, p.Email, p.AmountCents, p.Currency, p.RazorpayOrderID, p.AccessToken,
-		promoCodeID, p.PromoCode, p.PromoText, p.DiscountCents,
+		promoCodeID, p.PromoCode, p.PromoText, p.DiscountCents, p.ClaimCode,
 	).Scan(&id)
 	return id, err
 }
@@ -153,6 +153,18 @@ func (r *PurchaseRepo) CountUserRedemptions(ctx context.Context, userID, promoCo
 	err := r.db.QueryRowContext(ctx,
 		`SELECT count(*) FROM purchases WHERE user_id = $1 AND promo_code_id = $2 AND status = 'paid'`,
 		userID, promoCodeID,
+	).Scan(&count)
+	return count, err
+}
+
+// CountEmailRedemptions is CountUserRedemptions for a guest checkout, which
+// has no account: it counts paid purchases made with this (typed, so only
+// best-effort) email against the promo code.
+func (r *PurchaseRepo) CountEmailRedemptions(ctx context.Context, email string, promoCodeID int64) (int, error) {
+	var count int
+	err := r.db.QueryRowContext(ctx,
+		`SELECT count(*) FROM purchases WHERE lower(email) = lower($1) AND promo_code_id = $2 AND status = 'paid'`,
+		email, promoCodeID,
 	).Scan(&count)
 	return count, err
 }
