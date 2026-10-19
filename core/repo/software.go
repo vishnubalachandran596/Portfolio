@@ -12,12 +12,12 @@ type SoftwareRepo struct{ db *sql.DB }
 
 func NewSoftwareRepo(db *sql.DB) *SoftwareRepo { return &SoftwareRepo{db: db} }
 
-const softwareColumns = `id, slug, title, version, summary, description, rag_context, download_link, price_cents, license_terms, post_purchase_instructions, is_published, sort_order, created_at, updated_at`
+const softwareColumns = `id, slug, title, version, summary, description, rag_context, download_link, price_cents, license_terms, post_purchase_instructions, is_published, sort_order, licence_product, licence_versions, created_at, updated_at`
 
 func scanSoftware(row interface{ Scan(...any) error }) (models.Software, error) {
 	var s models.Software
 	err := row.Scan(&s.ID, &s.Slug, &s.Title, &s.Version, &s.Summary, &s.Description, &s.RagContext, &s.DownloadLink,
-		&s.PriceCents, &s.LicenseTerms, &s.PostPurchaseInstructions, &s.IsPublished, &s.SortOrder, &s.CreatedAt, &s.UpdatedAt)
+		&s.PriceCents, &s.LicenseTerms, &s.PostPurchaseInstructions, &s.IsPublished, &s.SortOrder, &s.LicenceProduct, &s.LicenceVersions, &s.CreatedAt, &s.UpdatedAt)
 	return s, err
 }
 
@@ -66,10 +66,10 @@ func (r *SoftwareRepo) GetByID(ctx context.Context, id int64) (models.Software, 
 func (r *SoftwareRepo) Create(ctx context.Context, s models.Software) (int64, error) {
 	var id int64
 	err := r.db.QueryRowContext(ctx, `
-		INSERT INTO software (slug, title, version, summary, description, rag_context, download_link, price_cents, license_terms, post_purchase_instructions, is_published, sort_order)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING id`,
+		INSERT INTO software (slug, title, version, summary, description, rag_context, download_link, price_cents, license_terms, post_purchase_instructions, is_published, sort_order, licence_product, licence_versions)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING id`,
 		s.Slug, s.Title, s.Version, s.Summary, s.Description, s.RagContext, s.DownloadLink, s.PriceCents,
-		s.LicenseTerms, s.PostPurchaseInstructions, s.IsPublished, s.SortOrder,
+		s.LicenseTerms, s.PostPurchaseInstructions, s.IsPublished, s.SortOrder, s.LicenceProduct, s.LicenceVersions,
 	).Scan(&id)
 	return id, err
 }
@@ -77,10 +77,10 @@ func (r *SoftwareRepo) Create(ctx context.Context, s models.Software) (int64, er
 func (r *SoftwareRepo) Update(ctx context.Context, s models.Software) error {
 	_, err := r.db.ExecContext(ctx, `
 		UPDATE software SET slug=$1, title=$2, version=$3, summary=$4, description=$5, rag_context=$6, download_link=$7,
-			price_cents=$8, license_terms=$9, post_purchase_instructions=$10, is_published=$11, sort_order=$12, updated_at=now()
-		WHERE id=$13`,
+			price_cents=$8, license_terms=$9, post_purchase_instructions=$10, is_published=$11, sort_order=$12, licence_product=$13, licence_versions=$14, updated_at=now()
+		WHERE id=$15`,
 		s.Slug, s.Title, s.Version, s.Summary, s.Description, s.RagContext, s.DownloadLink, s.PriceCents,
-		s.LicenseTerms, s.PostPurchaseInstructions, s.IsPublished, s.SortOrder, s.ID,
+		s.LicenseTerms, s.PostPurchaseInstructions, s.IsPublished, s.SortOrder, s.LicenceProduct, s.LicenceVersions, s.ID,
 	)
 	return err
 }

@@ -890,9 +890,51 @@ type Software struct {
 	PostPurchaseInstructions string
 	IsPublished              bool
 	SortOrder                int
-	CreatedAt                time.Time
-	UpdatedAt                time.Time
+	// LicencePlatform fields: LicenceProduct is the "prod" value written
+	// into signed keys (empty = this item has no licence keys);
+	// LicenceVersions is the comma-separated list of app major versions
+	// offered in the My licences dropdown.
+	LicenceProduct  string
+	LicenceVersions string
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
 }
+
+// LicenceVersionList splits LicenceVersions into trimmed, non-empty values.
+func (s Software) LicenceVersionList() []string {
+	var out []string
+	for _, v := range strings.Split(s.LicenceVersions, ",") {
+		if v = strings.TrimSpace(v); v != "" {
+			out = append(out, v)
+		}
+	}
+	return out
+}
+
+// Licence is one licence entitlement for a software item. Key is empty
+// until the owner supplies a Device ID and a key is signed.
+type Licence struct {
+	ID            int64
+	Code          string
+	SoftwareID    int64
+	SoftwareTitle string
+	PurchaseID    int64
+	UserID        int64
+	UserEmail     string
+	Ver           string
+	DeviceHash    string
+	Key           string
+	KID           string
+	IssuedAt      *time.Time
+	RevokedAt     *time.Time
+	RevokedReason string
+	Note          string
+	AddedByAdmin  bool
+	CreatedAt     time.Time
+}
+
+func (l Licence) Issued() bool  { return l.Key != "" }
+func (l Licence) Revoked() bool { return l.RevokedAt != nil }
 
 // PriceDisplay renders the software's fixed price as a human string.
 func (s Software) PriceDisplay() string { return FormatMoney(s.PriceCents, CurrencyINR) }

@@ -65,6 +65,14 @@ type Config struct {
 	// are never in page HTML; CourseCompilerEmbed hands one to a verified
 	// buyer or admin when they open the drawer.
 	JDoodleEmbedKeys map[string]string
+
+	// LicenceSigningKeyB64 is the Ed25519 PRIVATE key (base64 of the 32-byte
+	// seed) that signs Temple Accounts licence keys, and LicenceKID its id.
+	// Generate the pair in /admin/licences/keygen. The private key lives only
+	// in this environment secret; the public key goes in the app's
+	// config/licence_keys.json. Licence issuing is disabled until both are set.
+	LicenceSigningKeyB64 string
+	LicenceKID           string
 }
 
 // ParseEmbedKeys parses "lang=key,lang=key" into a map, ignoring blanks
@@ -137,6 +145,9 @@ func Load() (*Config, error) {
 		SupabaseStoragePassword: getenv("SUPABASE_STORAGE_PASSWORD"),
 
 		LocalContentDir: getenv("LOCAL_CONTENT_DIR"),
+
+		LicenceSigningKeyB64: getenv("LICENCE_SIGNING_KEY_B64"),
+		LicenceKID:           getenv("LICENCE_KID"),
 
 		NvidiaAPIKey: getenv("NVIDIA_API_KEY"),
 

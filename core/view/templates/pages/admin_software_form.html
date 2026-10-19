@@ -22,6 +22,13 @@
         <textarea name="description" rows="4">{{.Software.Description}}</textarea>
       </label>
 
+      <label>Licence product id <span class="optional">the "prod" value signed into keys, e.g. temple-accounts. Leave empty if this item has no licence keys.</span>
+        <input type="text" name="licence_product" value="{{.Software.LicenceProduct}}" placeholder="temple-accounts" pattern="[a-z0-9-]*">
+      </label>
+      <label>Licence app versions <span class="optional">comma-separated app major versions offered in the My licences dropdown, e.g. 1</span>
+        <input type="text" name="licence_versions" value="{{if .Software.LicenceVersions}}{{.Software.LicenceVersions}}{{else}}1{{end}}" placeholder="1">
+      </label>
+
       <hr class="admin-form-divider">
       <h2 class="admin-form-subhead">Pricing & delivery</h2>
       <div class="form-row">

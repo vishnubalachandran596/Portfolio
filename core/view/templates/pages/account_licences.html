@@ -1,0 +1,77 @@
+{{define "content"}}
+<section class="page-hero page-hero-narrow">
+  <div class="container">
+    <p class="eyebrow">Account</p>
+    <h1>My licences</h1>
+    <p class="hero-subtitle">Get the key for each computer. A key works only on the computer whose Device ID you give here.</p>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    {{if .Notice}}<div class="alert alert-success" role="status">{{.Notice}}</div>{{end}}
+    {{if not .Ready}}<div class="alert alert-error" role="alert">Licence keys are not switched on yet. Your licence is saved; please check back soon.</div>{{end}}
+    {{if .Items}}
+    <div class="licence-list">
+      {{range .Items}}
+      <article class="auth-card licence-card" id="lic-{{.ID}}">
+        <h2>{{.SoftwareTitle}}</h2>
+        <p class="field-help">Licence {{.Code}}{{if .AddedByAdmin}} · added by support{{end}}</p>
+        {{if $.Error}}{{if eq $.ErrID .ID}}<div class="alert alert-error" role="alert">{{$.Error}}</div>{{end}}{{end}}
+        {{if .Revoked}}
+          <div class="alert alert-error" role="alert">This licence has been revoked. Please contact support.</div>
+        {{else}}
+          {{if .Issued}}
+          <label>Your licence key
+            <textarea readonly rows="5" class="mono licence-key" onclick="this.select()" aria-label="Licence key">{{.Key}}</textarea>
+          </label>
+          <p>
+            <a class="btn btn-primary" href="/account/licences/{{.ID}}/download">Download .lic file</a>
+            <button type="button" class="btn btn-secondary" data-copy-target="lic-{{.ID}}">Copy key</button>
+          </p>
+          <p class="field-help">Registered for version {{.Ver}}, Device ID <span class="mono">{{.DeviceHash}}</span></p>
+          <ol class="licence-steps">
+            <li>Open Temple Accounts and press <strong>Activate</strong>.</li>
+            <li>Paste the key, or open the downloaded .lic file.</li>
+          </ol>
+          <p class="field-help">This key works only on that computer and only for version {{.Ver}} of the app.</p>
+          <details>
+            <summary>Move this licence to another computer ({{.ChangesLeft}} of 2 changes left this year)</summary>
+          {{end}}
+          {{if or (not .Issued) (gt .ChangesLeft 0)}}
+          <form method="POST" action="/account/licences/{{.ID}}/issue" class="auth-form">
+            <label>App version
+              <select name="ver" required>
+                {{$cur := .Ver}}{{range .Versions}}<option value="{{.}}"{{if eq . $cur}} selected{{end}}>Version {{.}}</option>{{end}}
+              </select>
+            </label>
+            <label>Device ID <span class="field-help">In Temple Accounts open Help &gt; Licence and copy the Device ID (64 letters and numbers).</span>
+              <input type="text" name="device" class="mono" autocomplete="off" spellcheck="false" required>
+            </label>
+            <button type="submit" class="btn btn-primary" data-loading-text="Creating key…">{{if .Issued}}Create key for this computer{{else}}Get my key{{end}}</button>
+          </form>
+          {{else}}
+          <p class="field-help">You have used both changes for this year. Contact support to move this licence.</p>
+          {{end}}
+          {{if .Issued}}</details>{{end}}
+        {{end}}
+      </article>
+      {{end}}
+    </div>
+    <script>
+      document.querySelectorAll('[data-copy-target]').forEach(function (b) {
+        b.addEventListener('click', function () {
+          var t = document.querySelector('#' + b.dataset.copyTarget + ' textarea');
+          if (!t) return;
+          t.select();
+          if (navigator.clipboard) { navigator.clipboard.writeText(t.value); }
+          b.textContent = 'Copied';
+        });
+      });
+    </script>
+    {{else}}
+    <p class="empty-state">You have no licences yet. <a href="/software">See the software</a>.</p>
+    {{end}}
+  </div>
+</section>
+{{end}}

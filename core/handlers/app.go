@@ -11,6 +11,7 @@ import (
 
 	"github.com/vishnubalachandran596/portfolio/core/ai"
 	"github.com/vishnubalachandran596/portfolio/core/config"
+	"github.com/vishnubalachandran596/portfolio/core/licence"
 	"github.com/vishnubalachandran596/portfolio/core/middleware"
 	"github.com/vishnubalachandran596/portfolio/core/models"
 	"github.com/vishnubalachandran596/portfolio/core/notify"
@@ -29,21 +30,24 @@ type App struct {
 	View *view.Renderer
 	Auth *middleware.Auth
 
-	Profile              *repo.ProfileRepo
-	Skills               *repo.SkillGroupRepo
-	Experience           *repo.ExperienceRepo
-	Resumes              *repo.RoleResumeRepo
-	Education            *repo.EducationRepo
-	Features             *repo.HomeFeatureRepo
-	Courses              *repo.CourseRepo
-	Software             *repo.SoftwareRepo
-	SoftwarePurchases    *repo.SoftwarePurchaseRepo
-	Bookings             *repo.BookingRepo
-	Availability         *repo.AvailabilityRepo
-	Admins               *repo.AdminRepo
-	Purchases            *repo.PurchaseRepo
-	Users                *repo.UserRepo
-	AuthThrottle         *repo.AuthThrottleRepo
+	Profile           *repo.ProfileRepo
+	Skills            *repo.SkillGroupRepo
+	Experience        *repo.ExperienceRepo
+	Resumes           *repo.RoleResumeRepo
+	Education         *repo.EducationRepo
+	Features          *repo.HomeFeatureRepo
+	Courses           *repo.CourseRepo
+	Software          *repo.SoftwareRepo
+	SoftwarePurchases *repo.SoftwarePurchaseRepo
+	Bookings          *repo.BookingRepo
+	Availability      *repo.AvailabilityRepo
+	Admins            *repo.AdminRepo
+	Purchases         *repo.PurchaseRepo
+	Users             *repo.UserRepo
+	AuthThrottle      *repo.AuthThrottleRepo
+	Licences          *repo.LicenceRepo
+	// LicenceSigner is nil until LICENCE_SIGNING_KEY_B64 and LICENCE_KID are set.
+	LicenceSigner        *licence.Signer
 	Articles             *repo.ArticleRepo
 	PromoCodes           *repo.PromoCodeRepo
 	QuizQuestions        *repo.QuizQuestionRepo
@@ -182,6 +186,7 @@ func New(cfg *config.Config, db *sql.DB, renderer *view.Renderer) *App {
 		View:                 renderer,
 		Auth:                 auth,
 		AuthThrottle:         repo.NewAuthThrottleRepo(db),
+		Licences:             repo.NewLicenceRepo(db),
 		Profile:              repo.NewProfileRepo(db),
 		Skills:               repo.NewSkillGroupRepo(db),
 		Experience:           repo.NewExperienceRepo(db),
@@ -222,6 +227,7 @@ func New(cfg *config.Config, db *sql.DB, renderer *view.Renderer) *App {
 		Google:               oauth.NewGoogle(cfg.GoogleClientID, cfg.GoogleClientSecret, cfg.GoogleRedirectURL),
 		Nvidia:               ai.New(cfg.NvidiaAPIKey),
 		Timezone:             loc,
+		LicenceSigner:        newLicenceSigner(cfg),
 	}
 }
 

@@ -1,0 +1,50 @@
+{{define "content"}}
+<section class="section">
+  <div class="container">
+    <div class="section-header-row">
+      <h1>Licence key pair generator</h1>
+      <a class="btn btn-secondary" href="/admin/licences">Back to licences</a>
+    </div>
+    {{if .Error}}<div class="alert alert-error" role="alert">{{.Error}}</div>{{end}}
+    {{if .ServerKID}}<p class="field-help">The server is currently signing with key id <strong>{{.ServerKID}}</strong>, public key <span class="mono">{{.ServerPub}}</span>.</p>{{end}}
+
+    {{if .Generated}}
+    <div class="alert alert-error" role="alert"><strong>The private key is shown once and is not saved anywhere.</strong> Copy it into Vercel now. If you leave this page you must generate a new pair.</div>
+
+    <ol class="licence-steps">
+      <li><strong>Vercel:</strong> Project &gt; Settings &gt; Environment Variables. Add <code>LICENCE_SIGNING_KEY_B64</code> with the private key below (mark it Sensitive) and <code>LICENCE_KID</code> = <code>{{.KID}}</code>. Redeploy.</li>
+      <li><strong>Temple repo:</strong> put the JSON below in <code>config/licence_keys.json</code>. The public key is not secret.</li>
+      <li>Keep earlier key ids in that file so keys already issued keep working.</li>
+    </ol>
+
+    <label>Private key (base64) &mdash; secret
+      <textarea readonly rows="2" class="mono" id="kg-priv" onclick="this.select()">{{.PrivateKey}}</textarea>
+    </label>
+    <label>Key id
+      <input type="text" readonly class="mono" value="{{.KID}}" onclick="this.select()">
+    </label>
+    <label>Public key (base64, raw 32 bytes)
+      <textarea readonly rows="2" class="mono" onclick="this.select()">{{.PublicKey}}</textarea>
+    </label>
+    <label>config/licence_keys.json
+      <textarea readonly rows="6" class="mono" onclick="this.select()">{{.ConfigJSON}}</textarea>
+    </label>
+    <p><button type="button" class="btn btn-secondary" id="kg-clear">Hide the private key now</button></p>
+    <script>
+      document.getElementById('kg-clear').addEventListener('click', function () {
+        document.getElementById('kg-priv').value = '';
+        this.textContent = 'Hidden';
+      });
+    </script>
+    {{else}}
+    <p>This makes a new Ed25519 pair in the server's memory and shows it to you once. Nothing is stored or logged. Do not use it if the server is already signing keys for customers unless you also keep the old key id in the app config.</p>
+    <form method="POST" action="/admin/licences/keygen" class="admin-form" autocomplete="off">
+      <label>Key id <span class="optional">short name for this pair, e.g. vb-2026-1</span>
+        <input type="text" name="kid" value="vb-2026-1" maxlength="40" required>
+      </label>
+      <button class="btn btn-primary" type="submit">Generate key pair</button>
+    </form>
+    {{end}}
+  </div>
+</section>
+{{end}}

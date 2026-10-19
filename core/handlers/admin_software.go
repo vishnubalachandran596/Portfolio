@@ -101,6 +101,11 @@ func (a *App) AdminSoftwareSave(w http.ResponseWriter, r *http.Request) {
 		PostPurchaseInstructions: strings.TrimSpace(r.FormValue("post_purchase_instructions")),
 		IsPublished:              r.FormValue("is_published") == "on",
 		SortOrder:                sortOrder,
+		LicenceProduct:           strings.TrimSpace(r.FormValue("licence_product")),
+		LicenceVersions:          strings.TrimSpace(r.FormValue("licence_versions")),
+	}
+	if sw.LicenceVersions == "" {
+		sw.LicenceVersions = "1"
 	}
 	if sw.Title == "" || sw.Slug == "" {
 		a.View.Render(w, http.StatusUnprocessableEntity, "admin_software_form", AdminSoftwareFormData{

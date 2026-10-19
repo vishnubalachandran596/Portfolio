@@ -38,6 +38,7 @@
         {{else}}
         <div class="purchase-box" id="purchase-box">
           <div id="purchase-error" class="alert alert-error" hidden></div>
+          {{if .Software.LicenceProduct}}<p class="purchase-box-sub">After you pay, open <a href="/account/licences">My licences</a>, choose your licence, enter the Device ID shown in the app (Help &gt; Licence) and your key appears there. The key works only on that computer.</p>{{end}}
           {{if .UserEmail}}
           <p class="purchase-box-sub">Access goes to <strong>{{.UserEmail}}</strong>.</p>
           {{if .PaymentsEnabled}}
@@ -49,7 +50,7 @@
           <p class="purchase-box-sub">Payments aren't enabled yet.</p>
           {{end}}
           {{else}}
-          <p class="purchase-box-sub">Sign in with Google to purchase — it ties access to your account and lets promo codes be checked.</p>
+          <p class="purchase-box-sub">Sign in or create an account to purchase — it ties access to your account and lets promo codes be checked.</p>
           <a class="btn btn-primary btn-lg" href="/login?next=/software/{{.Software.Slug}}">Sign in to buy</a>
           {{end}}
         </div>

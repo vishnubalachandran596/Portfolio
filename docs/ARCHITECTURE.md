@@ -26,6 +26,8 @@
 | CSS | Plain CSS, custom-property design tokens | No Tailwind/Bootstrap, no build step |
 | JS | Vanilla JS, no framework | `main.js` (public), `admin.js` + `theme.js` (admin) |
 
+**Licence keys (Temple Accounts, `core/licence`, `core/handlers/licence.go`, `core/repo/licences.go`, migration `084`).** The desktop app verifies a key offline with an Ed25519 PUBLIC key; this site signs with the matching PRIVATE key, which lives only in the Vercel env secret `LICENCE_SIGNING_KEY_B64` (base64 of the 32-byte seed) with `LICENCE_KID` its id. The public key (and the same `kid`) goes in the Temple repo's `config/licence_keys.json`. Generate the pair in the admin console at `/admin/licences/keygen` (shown once, `Cache-Control: no-store`, never stored or logged, POST only so `SameOrigin` applies). Key format, fixed by the app: payload = compact JSON, keys sorted, exactly `{"dev","iat","kid","lic","prod","v":1,"ver"}` (no `updates_until`); signature = Ed25519 over `b"vb-licence/v1\n" + payload`; key = `"VBL1-" + b64url(payload) + "." + b64url(sig)` without padding. `core/licence/licence_test.go` pins the app owner's published test vector (throwaway key, test only), so any drift in serialisation fails the build. Every paid software purchase (and every free/promo checkout) creates exactly one `licences` row (`EnsureForPurchase`, idempotent through the partial unique index on `purchase_id`), only for software whose `licence_product` is set; two purchases give two licences; an admin-added licence has no purchase. The owner opens `/account/licences`, picks an app version (from `software.licence_versions`) and pastes the full 64-hex Device ID (spaces and hyphens ignored, any hex length accepted); the signed key stays on the page with a `.lic` download. Moving a licence to another computer is limited to 2 self-service changes per rolling 12 months (counted from `licence_events`); the admin console can reissue to any device (which also clears a revoke). A revoke cannot be enforced offline, so reissue is the only remedy. The old "MAC address + shared secret" scheme is gone; nothing in this repo derives keys from a shared secret.
+
 ---
 
 ## 2. Package layout
@@ -34,6 +36,7 @@
 core/
   ai/           NVIDIA NIM client (free-tier embeddings + chat completion) for the RAG chatbot — see §12
   app/          Bootstrap() — the one place that wires config+DB+renderer into handlers.App
+  licence/      Ed25519 licence-key signer (Temple Accounts): payload, signing, Device ID normalisation, key-pair generation. Pure functions, no I/O
   authutil/     visitor password hashing (bcrypt wrapper), SecretEquals (constant-time secret compare, used for the admin password) + RandomHex, the one shared source of cryptographically random tokens (OAuth state, access tokens, cert codes, placeholder passwords)
   certificate/  PDF quiz-completion certificate generator
   config/       env-var loading (Config struct)
@@ -348,6 +351,33 @@ erDiagram
         timestamptz updated_at
         note "migration 075; the fourth paid product, alongside courses/booking/article-contribution"
     }
+    licences {
+        bigserial id PK
+        text lic_code UK "TAB-XXXXX-XXXXX, signed into the key"
+        bigint software_id FK
+        bigint purchase_id FK "nullable; unique when set: one licence per paid purchase; NULL = added by admin"
+        bigint user_id FK "nullable, ON DELETE SET NULL"
+        text ver "app major version, e.g. 1"
+        text device_hash "normalised hex Device ID; empty until the owner supplies it"
+        text key_text "the signed VBL1- key; empty until issued"
+        text kid
+        timestamptz iat
+        timestamptz revoked_at
+        text revoked_reason
+        text note
+        bool added_by_admin
+    }
+    licence_events {
+        bigserial id PK
+        bigint licence_id FK
+        text event "issued, reissued, device_change, admin_reissue, revoked, added"
+        text actor "user or admin"
+        text detail
+        timestamptz created_at
+    }
+    software ||--o{ licences : "is licensed via"
+    software_purchases ||--o| licences : "creates one"
+    licences ||--o{ licence_events : "audit trail"
     software_purchases {
         bigserial id PK
         bigint software_id FK

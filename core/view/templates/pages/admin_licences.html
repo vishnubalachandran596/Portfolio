@@ -1,0 +1,73 @@
+{{define "content"}}
+<section class="section">
+  <div class="container">
+    <div class="section-header-row">
+      <h1>Licences</h1>
+      <a class="btn btn-secondary" href="/admin/licences/keygen">Key pair generator</a>
+    </div>
+    {{if .Notice}}<div class="alert alert-success" role="status">{{.Notice}}</div>{{end}}
+    {{if .Error}}<div class="alert alert-error" role="alert">{{.Error}}</div>{{end}}
+    {{if .Ready}}
+    <p class="field-help">Signing with key id <strong>{{.KID}}</strong>. Public key (must equal the app's config): <span class="mono">{{.PublicKey}}</span></p>
+    {{else}}
+    <div class="alert alert-error" role="alert">Signing is off: set <code>LICENCE_SIGNING_KEY_B64</code> and <code>LICENCE_KID</code> in Vercel. <a href="/admin/licences/keygen">Generate a key pair</a>.</div>
+    {{end}}
+
+    <form method="GET" action="/admin/licences" class="admin-filter">
+      <input type="search" name="q" value="{{.Q}}" placeholder="Search code, email or device">
+      <button class="btn btn-secondary" type="submit">Search</button>
+    </form>
+
+    {{if .Items}}
+    <table class="admin-table">
+      <thead><tr><th>Code</th><th>Owner</th><th>Software</th><th>Order</th><th>Device</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody>
+      {{range .Items}}
+        <tr>
+          <td class="mono">{{.Code}}</td>
+          <td>{{.UserEmail}}</td>
+          <td>{{.SoftwareTitle}}{{if .Ver}} v{{.Ver}}{{end}}</td>
+          <td>{{if .PurchaseID}}#{{.PurchaseID}}{{else}}admin{{if .Note}}: {{.Note}}{{end}}{{end}}</td>
+          <td class="mono">{{if .DeviceHash}}{{.DeviceHash}}{{else}}—{{end}}</td>
+          <td>{{if .Revoked}}Revoked{{else if .Issued}}Issued{{else}}Waiting for device{{end}}</td>
+          <td class="admin-table-actions">
+            {{if .Issued}}<a class="link-button" href="/admin/licences/{{.ID}}/download">.lic</a>{{end}}
+            <details>
+              <summary>Reissue</summary>
+              <form method="POST" action="/admin/licences/{{.ID}}/reissue" class="admin-inline-form">
+                <input type="text" name="ver" value="{{if .Ver}}{{.Ver}}{{else}}1{{end}}" size="3" aria-label="Version">
+                <input type="text" name="device" class="mono" placeholder="Device ID" aria-label="Device ID" required>
+                <input type="text" name="reason" placeholder="Reason" aria-label="Reason">
+                <button class="link-button" type="submit">Sign key</button>
+              </form>
+            </details>
+            {{if not .Revoked}}
+            <form method="POST" action="/admin/licences/{{.ID}}/revoke" onsubmit="return confirm('Revoke this licence? The app cannot check this offline; reissue is the only way to replace a key.');">
+              <input type="hidden" name="reason" value="revoked by admin">
+              <button type="submit" class="link-button danger">Revoke</button>
+            </form>
+            {{end}}
+          </td>
+        </tr>
+      {{end}}
+      </tbody>
+    </table>
+    {{else}}
+    <p class="empty-state">No licences yet.</p>
+    {{end}}
+
+    <h2>Add a licence for a user</h2>
+    <p class="field-help">For a user who needs a licence without an order. One paid order always creates its own licence automatically; two orders give two licences.</p>
+    <form method="POST" action="/admin/licences/add" class="admin-form">
+      <label>Software
+        <select name="software_id" required>
+          {{range .Software}}<option value="{{.ID}}">{{.Title}}</option>{{end}}
+        </select>
+      </label>
+      <label>User email <input type="email" name="email" required></label>
+      <label>Note <input type="text" name="note" maxlength="200" placeholder="Why this licence was added"></label>
+      <button class="btn btn-primary" type="submit">Add licence</button>
+    </form>
+  </div>
+</section>
+{{end}}

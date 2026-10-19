@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -87,7 +88,8 @@ func (a *App) SoftwareCheckoutOrder(w http.ResponseWriter, r *http.Request) {
 	// Razorpay never involved.
 	if amountCents == 0 {
 		purchase.RazorpayOrderID = "free-" + token
-		if _, err := a.SoftwarePurchases.Create(r.Context(), purchase); err != nil {
+		pid, err := a.SoftwarePurchases.Create(r.Context(), purchase)
+		if err != nil {
 			a.serverError(w, "record free software purchase", err)
 			return
 		}
@@ -95,6 +97,7 @@ func (a *App) SoftwareCheckoutOrder(w http.ResponseWriter, r *http.Request) {
 			a.serverError(w, "mark free software purchase paid", err)
 			return
 		}
+		a.ensureLicence(r.Context(), sw, pid, uid)
 		if promo != nil {
 			if err := a.PromoCodes.IncrementRedemption(r.Context(), promo.ID); err != nil {
 				log.Printf("increment promo redemption: %v", err)
@@ -193,6 +196,8 @@ func (a *App) SoftwareCheckoutVerify(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	a.ensureLicence(ctx, sw, purchase.ID, purchase.UserID)
+
 	promoLine := ""
 	if purchase.PromoCode != "" {
 		promoLine = fmt.Sprintf("\nPromo: %s (-%s)", purchase.PromoCode, models.FormatMoney(purchase.DiscountCents, purchase.Currency))
@@ -250,4 +255,17 @@ func (a *App) softwareAccess(w http.ResponseWriter, r *http.Request, sw models.S
 		})
 	}
 	return true
+}
+
+// ensureLicence creates the one licence a paid purchase entitles the buyer
+// to (a no-op when the software has no licence product, or when one
+// already exists for this purchase). A failure is logged, not fatal: the
+// payment already succeeded and an admin can add the licence by hand.
+func (a *App) ensureLicence(ctx context.Context, sw models.Software, purchaseID, userID int64) {
+	if sw.LicenceProduct == "" {
+		return
+	}
+	if err := a.Licences.EnsureForPurchase(ctx, sw.ID, purchaseID, userID); err != nil {
+		log.Printf("create licence for software purchase %d: %v", purchaseID, err)
+	}
 }
