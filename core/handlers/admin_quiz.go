@@ -11,35 +11,52 @@ import (
 
 type AdminQuizListData struct {
 	BaseData
-	Course    models.Course
-	Questions []models.QuizQuestion
+	Course     models.Course
+	Questions  []models.QuizQuestion
+	BankSize   int
+	SetCounts  [models.QuizSets]int
+	Unassigned int
+	Errors     []string
+	Notice     string
 }
 
 func (a *App) AdminQuizList(w http.ResponseWriter, r *http.Request) {
-	courseID, err := strconv.ParseInt(r.PathValue("courseID"), 10, 64)
-	if err != nil {
-		a.NotFound(w, r)
+	course, ok := a.quizAdminCourse(w, r)
+	if !ok {
 		return
 	}
-	course, err := a.Courses.GetByID(r.Context(), courseID)
-	if err != nil {
-		if err == repo.ErrNotFound {
-			a.NotFound(w, r)
-			return
-		}
-		a.serverError(w, "load course", err)
-		return
+	notice := ""
+	switch r.URL.Query().Get("msg") {
+	case "sets":
+		notice = "Sets re-dealt. Attempts already started keep their questions."
+	case "imported":
+		notice = "Imported " + r.URL.Query().Get("n") + " questions. Now deal the sets."
 	}
-	questions, err := a.QuizQuestions.ListByCourse(r.Context(), courseID)
+	a.renderQuizList(w, r, course, http.StatusOK, nil, notice)
+}
+
+func (a *App) renderQuizList(w http.ResponseWriter, r *http.Request, course models.Course, status int, errs []string, notice string) {
+	questions, err := a.QuizQuestions.ListByCourse(r.Context(), course.ID)
 	if err != nil {
 		a.serverError(w, "load quiz questions", err)
 		return
 	}
-	a.View.Render(w, http.StatusOK, "admin_quiz_list", AdminQuizListData{
+	data := AdminQuizListData{
 		BaseData:  a.base(r, "Quiz — "+course.Title+" — Admin", "", "admin"),
 		Course:    course,
 		Questions: questions,
-	})
+		BankSize:  models.QuizBankSize,
+		Errors:    errs,
+		Notice:    notice,
+	}
+	for _, q := range questions {
+		if q.SetNo >= 1 && q.SetNo <= models.QuizSets {
+			data.SetCounts[q.SetNo-1]++
+		} else {
+			data.Unassigned++
+		}
+	}
+	a.View.Render(w, status, "admin_quiz_list", data)
 }
 
 type AdminQuizFormData struct {

@@ -5,18 +5,28 @@ import (
 	"database/sql"
 	"errors"
 
+	"github.com/lib/pq"
 	"github.com/vishnubalachandran596/portfolio/core/models"
+)
+
+var (
+	// ErrNoAttemptsLeft is returned by Start when the learner has used every
+	// attempt they are entitled to (5 plus any admin grant).
+	ErrNoAttemptsLeft = errors.New("quiz: no attempts left")
+	// ErrAlreadySubmitted is returned when grading an attempt that has
+	// already been graded (or does not exist for the caller).
+	ErrAlreadySubmitted = errors.New("quiz: attempt already submitted")
 )
 
 type QuizQuestionRepo struct{ db *sql.DB }
 
 func NewQuizQuestionRepo(db *sql.DB) *QuizQuestionRepo { return &QuizQuestionRepo{db: db} }
 
-const quizQuestionColumns = `id, course_id, question, option_a, option_b, option_c, option_d, correct_option, sort_order`
+const quizQuestionColumns = `id, course_id, module, COALESCE(set_no,0), question, option_a, option_b, option_c, option_d, correct_option, sort_order`
 
 func scanQuizQuestion(row interface{ Scan(...any) error }) (models.QuizQuestion, error) {
 	var q models.QuizQuestion
-	err := row.Scan(&q.ID, &q.CourseID, &q.Question, &q.OptionA, &q.OptionB, &q.OptionC, &q.OptionD, &q.CorrectOption, &q.SortOrder)
+	err := row.Scan(&q.ID, &q.CourseID, &q.Module, &q.SetNo, &q.Question, &q.OptionA, &q.OptionB, &q.OptionC, &q.OptionD, &q.CorrectOption, &q.SortOrder)
 	return q, err
 }
 
@@ -55,18 +65,18 @@ func (r *QuizQuestionRepo) GetByID(ctx context.Context, id int64) (models.QuizQu
 func (r *QuizQuestionRepo) Create(ctx context.Context, q models.QuizQuestion) (int64, error) {
 	var id int64
 	err := r.db.QueryRowContext(ctx, `
-		INSERT INTO quiz_questions (course_id, question, option_a, option_b, option_c, option_d, correct_option, sort_order)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id`,
-		q.CourseID, q.Question, q.OptionA, q.OptionB, q.OptionC, q.OptionD, q.CorrectOption, q.SortOrder,
+		INSERT INTO quiz_questions (course_id, module, question, option_a, option_b, option_c, option_d, correct_option, sort_order)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id`,
+		q.CourseID, q.Module, q.Question, q.OptionA, q.OptionB, q.OptionC, q.OptionD, q.CorrectOption, q.SortOrder,
 	).Scan(&id)
 	return id, err
 }
 
 func (r *QuizQuestionRepo) Update(ctx context.Context, q models.QuizQuestion) error {
 	res, err := r.db.ExecContext(ctx, `
-		UPDATE quiz_questions SET question=$1, option_a=$2, option_b=$3, option_c=$4, option_d=$5, correct_option=$6, sort_order=$7
+		UPDATE quiz_questions SET module=$9, question=$1, option_a=$2, option_b=$3, option_c=$4, option_d=$5, correct_option=$6, sort_order=$7
 		WHERE id=$8`,
-		q.Question, q.OptionA, q.OptionB, q.OptionC, q.OptionD, q.CorrectOption, q.SortOrder, q.ID,
+		q.Question, q.OptionA, q.OptionB, q.OptionC, q.OptionD, q.CorrectOption, q.SortOrder, q.ID, q.Module,
 	)
 	if err != nil {
 		return err
@@ -90,37 +100,26 @@ type QuizAttemptRepo struct{ db *sql.DB }
 
 func NewQuizAttemptRepo(db *sql.DB) *QuizAttemptRepo { return &QuizAttemptRepo{db: db} }
 
-const quizAttemptColumns = `id, course_id, user_id, is_admin, name, email, total_questions, correct_answers, score_percent, passed, certificate_code, created_at`
+const quizAttemptColumns = `id, course_id, user_id, is_admin, name, email, total_questions, correct_answers, score_percent, passed, certificate_code, created_at, COALESCE(attempt_no,0), COALESCE(set_no,0), question_ids, submitted_at`
 
 func scanQuizAttempt(row interface{ Scan(...any) error }) (models.QuizAttempt, error) {
 	var a models.QuizAttempt
 	var userID sql.NullInt64
 	var certCode sql.NullString
+	var ids pq.Int64Array
+	var submitted sql.NullTime
 	err := row.Scan(&a.ID, &a.CourseID, &userID, &a.IsAdmin, &a.Name, &a.Email,
-		&a.TotalQuestions, &a.CorrectAnswers, &a.ScorePercent, &a.Passed, &certCode, &a.CreatedAt)
+		&a.TotalQuestions, &a.CorrectAnswers, &a.ScorePercent, &a.Passed, &certCode, &a.CreatedAt,
+		&a.AttemptNo, &a.SetNo, &ids, &submitted)
+	a.QuestionIDs = []int64(ids)
+	if submitted.Valid {
+		a.SubmittedAt = &submitted.Time
+	}
 	if userID.Valid {
 		a.UserID = &userID.Int64
 	}
 	a.CertificateCode = certCode.String
 	return a, err
-}
-
-func (r *QuizAttemptRepo) Create(ctx context.Context, a models.QuizAttempt) (int64, error) {
-	var id int64
-	var userID any
-	if a.UserID != nil {
-		userID = *a.UserID
-	}
-	var certCode any
-	if a.CertificateCode != "" {
-		certCode = a.CertificateCode
-	}
-	err := r.db.QueryRowContext(ctx, `
-		INSERT INTO quiz_attempts (course_id, user_id, is_admin, name, email, total_questions, correct_answers, score_percent, passed, certificate_code)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id`,
-		a.CourseID, userID, a.IsAdmin, a.Name, a.Email, a.TotalQuestions, a.CorrectAnswers, a.ScorePercent, a.Passed, certCode,
-	).Scan(&id)
-	return id, err
 }
 
 // BestPassingAttempt returns the most recent passing attempt for a given
