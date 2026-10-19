@@ -80,16 +80,17 @@ Prices: always through `models.FormatMoney` (Indian grouping for INR — ₹1,50
 Every course lesson and article follows the same path, so the content can never drift back to per-file themes:
 
 1. **Source of truth.** Lessons live in Storage at `courses/{slug}.html` (bucket `course-content`), articles at `articles/{slug}.html` (bucket `articles`). The repo holds no content (CLAUDE.md rule 8).
-2. **One normalizer.** `storage.NormalizeLesson` (`core/storage/normalize.go`) runs on every upload: the course form, Admin → Courses → Bulk upload, and the article form. Offline edits go through `go run ./cmd/lessonfmt -out DIR files...`. It is idempotent and stamps `<!-- vb:normalized v1 -->`. What it does:
+2. **Preview marker.** Put `<!-- vb:preview-end -->` in a lesson where the free public trial (`/courses/{slug}/preview`) should stop; the normalizer preserves it. Without it the preview is the first section only. Write the first section so it works as the trial: it is the page most visitors read before buying.
+3. **One normalizer.** `storage.NormalizeLesson` (`core/storage/normalize.go`) runs on every upload: the course form, Admin → Courses → Bulk upload, and the article form. Offline edits go through `go run ./cmd/lessonfmt -out DIR files...`. It is idempotent and stamps `<!-- vb:normalized v1 -->`. What it does:
    - Maps the lesson's own `:root` palette onto the site tokens (renamed `--l-*`), so components keep their rules but take the site's colours, type and dark mode. It also drops Google Fonts `@import`s, which the CSP blocks anyway.
    - Removes in-lesson "On this page" / "Contents" blocks, because the reader's contents rail replaces them.
    - Strips section numbers from `<h2>`, because the reader and the outline number sections.
    - Labels code blocks `language-java|go|python|javascript|sql|bash` when the signal is unambiguous. Runnable languages get a Run button.
-3. **Dark "app" lessons** with hard-coded dark panels declare `<!-- vb:theme dark -->`. They then render in the site's dark palette in both schemes, and their teal/navy literals are recoloured to the site's dark surfaces and gold.
-4. **Per-course fixes** that the normalizer can't make generically (a grid that blows out on phones, a fixed-width diagram) are small CSS rules appended to that lesson's `<style>`, each with a `/* vb: … */` comment saying why.
-5. **Motion and navigation come from the reader**, not the lesson. `lesson_runtime.go` builds the contents from `h2`/`h3`, skips headings in hidden tab panels, and reveals concept cards, labs, figures, tables and code once as they scroll in. A Run button appears only for languages that have a JDoodle embed key (`JDOODLE_EMBED_KEYS`).
-6. **Verify before upload.** Render every changed lesson through `PrepareLesson` and check it at 390 px and desktop, in light and dark: no horizontal overflow, no console errors, Inter as the body font. Keep the originals as a rollback copy: copy each object to `backup/{date}/` in its own bucket before replacing it (a server-side copy, so size doesn't matter), or put a zip in the Drive folder `Portfolio`. The 2026-10-17 rework's originals are in `backup/2026-10-17/`.
-7. **After upload:** clear `courses.outline` for the changed courses so the detail page re-derives "What's inside", and flag the chatbot reindex.
+4. **Dark "app" lessons** with hard-coded dark panels declare `<!-- vb:theme dark -->`. They then render in the site's dark palette in both schemes, and their teal/navy literals are recoloured to the site's dark surfaces and gold.
+5. **Per-course fixes** that the normalizer can't make generically (a grid that blows out on phones, a fixed-width diagram) are small CSS rules appended to that lesson's `<style>`, each with a `/* vb: … */` comment saying why.
+6. **Motion and navigation come from the reader**, not the lesson. `lesson_runtime.go` builds the contents from `h2`/`h3`, skips headings in hidden tab panels, and reveals concept cards, labs, figures, tables and code once as they scroll in. A Run button appears only for languages that have a JDoodle embed key (`JDOODLE_EMBED_KEYS`).
+7. **Verify before upload.** Render every changed lesson through `PrepareLesson` and check it at 390 px and desktop, in light and dark: no horizontal overflow, no console errors, Inter as the body font. Keep the originals as a rollback copy: copy each object to `backup/{date}/` in its own bucket before replacing it (a server-side copy, so size doesn't matter), or put a zip in the Drive folder `Portfolio`. The 2026-10-17 rework's originals are in `backup/2026-10-17/`.
+8. **After upload:** clear `courses.outline` for the changed courses so the detail page re-derives "What's inside", and flag the chatbot reindex.
 
 ## Lesson authoring conventions
 

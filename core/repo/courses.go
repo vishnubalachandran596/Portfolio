@@ -219,6 +219,9 @@ func (r *CourseRepo) GetByID(ctx context.Context, id int64) (models.Course, erro
 }
 
 func (r *CourseRepo) Create(ctx context.Context, c models.Course) (int64, error) {
+	if c.Tags == nil {
+		c.Tags = []string{}
+	}
 	var id int64
 	err := r.db.QueryRowContext(ctx, `
 		INSERT INTO courses (slug, title, summary, description, level, duration, price_cents, image_url, is_published, sort_order,
@@ -235,6 +238,9 @@ func (r *CourseRepo) Update(ctx context.Context, c models.Course) error {
 }
 
 func updateCourse(ctx context.Context, x execer, c models.Course) error {
+	if c.Tags == nil {
+		c.Tags = []string{} // tags is NOT NULL; a course saved with no tags must not fail
+	}
 	_, err := x.ExecContext(ctx, `
 		UPDATE courses SET slug=$1, title=$2, summary=$3, description=$4, level=$5, duration=$6,
 			price_cents=$7, image_url=$8, is_published=$9, sort_order=$10,
