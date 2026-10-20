@@ -59,12 +59,13 @@ func TestSoftwareTemplatesRender(t *testing.T) {
 	}{
 		{"logged out", loggedOut, `href="/login?next=/software/temple-accounts-billing"`},
 		{"logged in", detailData, `id="software-purchase-btn"`},
-		{"owner", ownerLic, `href="/account/licences"`},
+		{"owner", ownerLic, `id="software-get-licence" href="/account/licences"`},
+		{"admin", SoftwareDetailData{BaseData: base, Software: swLic, HasAccess: true, UserEmail: "admin@example.com"}, `id="software-get-licence" href="/admin/licences"`},
 	} {
 		rec := httptest.NewRecorder()
 		r.Render(rec, 200, "software_detail", c.data)
 		body := rec.Body.String()
-		if !strings.Contains(body, c.want) || (c.name != "owner" && !strings.Contains(body, "Get licence")) {
+		if !strings.Contains(body, c.want) || !strings.Contains(body, "Get licence") {
 			t.Fatalf("%s: missing %q or Get licence button", c.name, c.want)
 		}
 	}

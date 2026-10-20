@@ -34,8 +34,9 @@
       <div class="buy-card" id="buy-card">
         <div class="buy-card-price"><span class="price">{{.Software.PriceDisplay}}</span><span>one-time</span></div>
         {{if .HasAccess}}
-        {{if and .OwnsSoftware .Software.LicenceProduct}}<a class="btn btn-primary btn-lg btn-block" href="/account/licences">View my licence</a>{{end}}
-        <a class="btn {{if and .OwnsSoftware .Software.LicenceProduct}}btn-secondary{{else}}btn-primary{{end}} btn-lg btn-block" href="{{.Software.DownloadLink}}" target="_blank" rel="noopener">Download</a>
+        {{if .Software.LicenceProduct}}<a class="btn btn-primary btn-lg btn-block" id="software-get-licence" href="{{if .OwnsSoftware}}/account/licences{{else}}/admin/licences{{end}}">Get licence</a>{{end}}
+        <a class="btn {{if .Software.LicenceProduct}}btn-secondary{{else}}btn-primary{{end}} btn-lg btn-block" href="{{.Software.DownloadLink}}" target="_blank" rel="noopener">Download</a>
+        {{if .Software.LicenceProduct}}<p class="purchase-box-sub">Download the app, then press Get licence, paste the Device ID from Help &gt; Licence and copy your key.</p>{{end}}
         {{else}}
         <div class="purchase-box" id="purchase-box">
           <div id="purchase-error" class="alert alert-error" hidden></div>
