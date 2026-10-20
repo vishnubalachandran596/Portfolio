@@ -6,12 +6,19 @@
 <div class="downloads" id="downloads">
   <h2>Download</h2>
   <p class="field-help">One licence key covers every app version on the same computer. A key is per computer.</p>
-  <article class="download-option download-option-main">
-    <h4>Download from Microsoft Store</h4>
-    <p>No security warnings, automatic updates.</p>
-    {{if .}}<a class="btn btn-primary" id="dl-windows-store" href="{{.}}" target="_blank" rel="noopener">Download from Microsoft Store</a>
-    {{else}}<p><span class="badge" id="dl-windows-store-soon">Coming soon</span></p>{{end}}
-  </article>
+  <div class="download-options">
+    <article class="download-option download-option-main">
+      <h4>Download from Microsoft Store</h4>
+      <p>No security warnings, automatic updates.</p>
+      {{if .StoreURL}}<a class="btn btn-primary" id="dl-windows-store" href="{{.StoreURL}}" target="_blank" rel="noopener">Download from Microsoft Store</a>
+      {{else}}<p><span class="badge" id="dl-windows-store-soon">Coming soon</span></p>{{end}}
+    </article>
+    {{if .DriveURL}}<article class="download-option">
+      <h4>Download from Google Drive</h4>
+      <p>Direct download of the app files.</p>
+      <a class="btn btn-secondary" id="dl-drive" href="{{.DriveURL}}" target="_blank" rel="noopener">Download from Google Drive</a>
+    </article>{{end}}
+  </div>
 </div>
 {{end}}
 

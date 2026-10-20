@@ -971,6 +971,18 @@ type Software struct {
 	UpdatedAt         time.Time
 }
 
+// DownloadLinks are the places a licensed app can be downloaded from, shown
+// side by side. Both come from the admin software form, never from the repo.
+type DownloadLinks struct {
+	StoreURL string // Microsoft Store listing; empty = "Coming soon"
+	DriveURL string // software.download_link (external folder); empty = card hidden
+}
+
+// Downloads returns the links for the downloads block.
+func (s Software) Downloads() DownloadLinks {
+	return DownloadLinks{StoreURL: s.MicrosoftStoreURL, DriveURL: s.DownloadLink}
+}
+
 // Licence is one licence entitlement for a software item. Key is empty
 // until the owner supplies a Device ID and a key is signed.
 type Licence struct {

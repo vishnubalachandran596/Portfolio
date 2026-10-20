@@ -21,7 +21,7 @@
       </div>
       {{if .HasAccess}}
       {{if .Software.LicenceProduct}}
-      {{template "software_downloads" .Software.MicrosoftStoreURL}}
+      {{template "software_downloads" .Software.Downloads}}
       <div>
         <h2>After you download</h2>
         {{template "licence_steps"}}

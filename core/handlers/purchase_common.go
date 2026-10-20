@@ -115,9 +115,8 @@ type PurchaseSuccessData struct {
 	NextURL  string
 	NextText string
 	Licence  bool
-	// StoreURL is the software's Microsoft Store listing (empty = "Coming
-	// soon"); read only when Licence is set.
-	StoreURL string
+	// Downloads are the software's download links; read only when Licence is set.
+	Downloads models.DownloadLinks
 }
 
 func (a *App) renderPurchaseSuccess(w http.ResponseWriter, r *http.Request, d PurchaseSuccessData) {

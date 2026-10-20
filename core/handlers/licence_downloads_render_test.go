@@ -26,7 +26,7 @@ func renderDL(t *testing.T, name string, data any) string {
 
 func TestDownloadsBlock(t *testing.T) {
 	base := BaseData{SiteName: "S", Nav: NavLinks{Home: "/", TempleAccountsPrivacy: "/temple-accounts/privacy"}}
-	sw := models.Software{ID: 1, Slug: "temple", Title: "Temple", LicenceProduct: "temple-accounts", DownloadLink: "https://example.test/old/TempleAccounts.exe"}
+	sw := models.Software{ID: 1, Slug: "temple", Title: "Temple", LicenceProduct: "temple-accounts", DownloadLink: "https://drive.example.test/folder"}
 
 	// No store URL: Coming soon. Old exe link is gone.
 	body := renderDL(t, "software_detail", SoftwareDetailData{BaseData: base, Software: sw, HasAccess: true, OwnsSoftware: true})
@@ -38,8 +38,8 @@ func TestDownloadsBlock(t *testing.T) {
 			t.Errorf("missing %q", want)
 		}
 	}
-	if strings.Contains(body, "TempleAccounts.exe\"") || strings.Contains(body, "example.test/old") {
-		t.Error("old exe link still rendered")
+	if !strings.Contains(body, `href="https://drive.example.test/folder"`) || !strings.Contains(body, "Download from Google Drive") {
+		t.Error("Drive card missing beside Store")
 	}
 	for _, gone := range []string{"TempleAccounts-windows.zip", "TempleAccounts.app.zip", "TempleAccounts-linux.deb"} {
 		if strings.Contains(body, gone) {
