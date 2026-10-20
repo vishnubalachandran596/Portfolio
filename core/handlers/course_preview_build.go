@@ -24,7 +24,7 @@ import (
 // previewFromLesson) the lesson upload paths.
 
 // previewRetryAfter is how long a course whose preview could not be built
-// is left alone before a page view tries again (migration 090).
+// is left alone before a page view tries again (migration 091).
 const previewRetryAfter = 6 * time.Hour
 
 // Preview build outcomes, shown verbatim in the admin results.

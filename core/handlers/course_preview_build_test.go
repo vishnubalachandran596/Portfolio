@@ -104,7 +104,7 @@ func previewTestDB(t *testing.T) *sql.DB {
 	t.Helper()
 	db := testDB(t)
 	if _, err := db.Exec(`SELECT preview_checked_at FROM courses LIMIT 1`); err != nil {
-		t.Skip("migration 090 not applied: ", err)
+		t.Skip("migration 091 not applied: ", err)
 	}
 	return db
 }

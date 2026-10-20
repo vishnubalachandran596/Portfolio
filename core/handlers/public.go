@@ -556,7 +556,7 @@ func (a *App) CourseDetail(w http.ResponseWriter, r *http.Request) {
 		// Lazy backfill of "What's inside" (migration 079) and the free
 		// preview flag (086) for a lesson whose derived columns are
 		// missing: rebuild them once per previewRetryAfter (migration
-		// 090) so a lesson with nothing to preview is not re-read on
+		// 091) so a lesson with nothing to preview is not re-read on
 		// every view. Best-effort: a Storage hiccup costs this one
 		// view its outline, never the page.
 		c := course

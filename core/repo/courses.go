@@ -300,7 +300,7 @@ func (r *CourseRepo) UpdateContentObject(ctx context.Context, id int64, objectPa
 
 // UpdateOutline stores the lesson's derived section titles and preview
 // flag (see storage.LessonOutline, storage.LessonPreview, migrations 079
-// and 090) and stamps preview_checked_at. It deliberately leaves
+// and 091) and stamps preview_checked_at. It deliberately leaves
 // updated_at alone: the outline is derived from content that already
 // bumped it when it was uploaded, and the lazy backfill on a detail-page
 // view must not change a course's sitemap lastmod.
