@@ -31,10 +31,7 @@ func TestDownloadsBlock(t *testing.T) {
 	// No store URL: Coming soon. Old exe link is gone.
 	body := renderDL(t, "software_detail", SoftwareDetailData{BaseData: base, Software: sw, HasAccess: true, OwnsSoftware: true})
 	for _, want := range []string{
-		"Coming soon", "Recommended", "Advanced / offline", "No security warnings, automatic updates.",
-		"releases/latest/download/TempleAccounts-windows.zip", "releases/latest/download/TempleAccounts.app.zip",
-		"releases/latest/download/TempleAccounts-linux.deb", "sudo apt install ./TempleAccounts-linux.deb",
-		"Open Anyway", "Allow on device", "same licence key works for both Windows downloads",
+		"Coming soon", "Download from Microsoft Store", "No security warnings, automatic updates.",
 		"Open the app and copy the Device ID from the activation screen", `href="/temple-accounts/privacy"`,
 	} {
 		if !strings.Contains(body, want) {
@@ -43,6 +40,11 @@ func TestDownloadsBlock(t *testing.T) {
 	}
 	if strings.Contains(body, "TempleAccounts.exe\"") || strings.Contains(body, "example.test/old") {
 		t.Error("old exe link still rendered")
+	}
+	for _, gone := range []string{"TempleAccounts-windows.zip", "TempleAccounts.app.zip", "TempleAccounts-linux.deb"} {
+		if strings.Contains(body, gone) {
+			t.Errorf("hidden build %q still shown", gone)
+		}
 	}
 
 	// Store URL set: link instead of Coming soon.

@@ -4,7 +4,7 @@ Summary of the licence-format change made on the website (migration 092). Contai
 
 ## What changed
 
-- One licence key covers every app version and every build (Microsoft Store, offline Windows zip, Mac, Linux) on the same computer. A key is still per computer.
+- One licence key covers every app version and every build (Microsoft Store for now; other builds are hidden until published) on the same computer. A key is still per computer.
 - The signed payload no longer has `ver`. Fields: `dev` (device hash as entered, trimmed and lower-cased), `iat` (ISO 8601 UTC), `kid`, `lic`, `prod` ("temple-accounts"), `v` (1). Compact JSON, keys sorted, UTF-8.
 - Unchanged: signature = Ed25519 over `"vb-licence/v1\n" + payload`; key = `VBL1-` + base64url(payload) + `.` + base64url(signature), no padding; the private key.
 - Keys already issued (with `ver`) keep working because the app ignores `ver`; nothing is reissued. The app (`verify_licence`, "different version" check) should drop that check on its side.
