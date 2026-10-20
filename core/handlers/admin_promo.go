@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"net/http"
 	"strconv"
 	"strings"
@@ -48,14 +49,26 @@ type AdminPromoFormData struct {
 	ExpiresAtValue    string
 	AllowedEmailsText string
 	Courses           []models.Course
+	SoftwareItems     []models.Software
 	IsNew             bool
 	Error             string
 }
 
-func (a *App) AdminPromoNewPage(w http.ResponseWriter, r *http.Request) {
-	courses, err := a.Courses.ListAll(r.Context())
+// promoScopeChoices loads the course and software lists the form's two
+// scope pickers offer.
+func (a *App) promoScopeChoices(ctx context.Context) ([]models.Course, []models.Software, error) {
+	courses, err := a.Courses.ListAll(ctx)
 	if err != nil {
-		a.serverError(w, "load courses", err)
+		return nil, nil, err
+	}
+	software, err := a.Software.ListAll(ctx)
+	return courses, software, err
+}
+
+func (a *App) AdminPromoNewPage(w http.ResponseWriter, r *http.Request) {
+	courses, software, err := a.promoScopeChoices(r.Context())
+	if err != nil {
+		a.serverError(w, "load promo scope choices", err)
 		return
 	}
 	product := models.PromoProductCourse
@@ -66,10 +79,11 @@ func (a *App) AdminPromoNewPage(w http.ResponseWriter, r *http.Request) {
 		product = models.PromoProductSoftware
 	}
 	a.View.Render(w, http.StatusOK, "admin_promo_form", AdminPromoFormData{
-		BaseData: a.base(r, "New Promo Code — Admin", "", "admin"),
-		Promo:    models.PromoCode{Product: product, IsActive: true, MaxRedemptionsPerUser: 1},
-		Courses:  courses,
-		IsNew:    true,
+		BaseData:      a.base(r, "New Promo Code — Admin", "", "admin"),
+		Promo:         models.PromoCode{Product: product, IsActive: true, MaxRedemptionsPerUser: 1},
+		Courses:       courses,
+		SoftwareItems: software,
+		IsNew:         true,
 	})
 }
 
@@ -88,9 +102,9 @@ func (a *App) AdminPromoEditPage(w http.ResponseWriter, r *http.Request) {
 		a.serverError(w, "load promo code", err)
 		return
 	}
-	courses, err := a.Courses.ListAll(r.Context())
+	courses, software, err := a.promoScopeChoices(r.Context())
 	if err != nil {
-		a.serverError(w, "load courses", err)
+		a.serverError(w, "load promo scope choices", err)
 		return
 	}
 	a.View.Render(w, http.StatusOK, "admin_promo_form", AdminPromoFormData{
@@ -100,6 +114,7 @@ func (a *App) AdminPromoEditPage(w http.ResponseWriter, r *http.Request) {
 		ExpiresAtValue:    promo.ExpiresAt.In(a.Timezone).Format(promoDateTimeLayout),
 		AllowedEmailsText: strings.Join(promo.AllowedEmails, ", "),
 		Courses:           courses,
+		SoftwareItems:     software,
 	})
 }
 
@@ -133,13 +148,14 @@ func (a *App) AdminPromoSave(w http.ResponseWriter, r *http.Request) {
 	expiresAtRaw := strings.TrimSpace(r.FormValue("expires_at"))
 	expiresAt, expErr := time.ParseInLocation(promoDateTimeLayout, expiresAtRaw, a.Timezone)
 
-	var courseIDs []int64
-	if product == models.PromoProductCourse {
-		for _, raw := range r.Form["course_ids"] {
-			if cid, err := strconv.ParseInt(raw, 10, 64); err == nil {
-				courseIDs = append(courseIDs, cid)
-			}
-		}
+	// Only the scope matching the selected product is kept, so switching a
+	// code's product never leaves a stale scope behind.
+	var courseIDs, softwareIDs []int64
+	switch product {
+	case models.PromoProductCourse:
+		courseIDs = parseIDList(r.Form["course_ids"])
+	case models.PromoProductSoftware:
+		softwareIDs = parseIDList(r.Form["software_ids"])
 	}
 
 	allowedEmailsRaw := strings.TrimSpace(r.FormValue("allowed_emails"))
@@ -162,6 +178,7 @@ func (a *App) AdminPromoSave(w http.ResponseWriter, r *http.Request) {
 		Product:               product,
 		DiscountPercent:       discountPercent,
 		CourseIDs:             courseIDs,
+		SoftwareIDs:           softwareIDs,
 		MaxRedemptions:        maxRedemptions,
 		MaxRedemptionsPerUser: maxRedemptionsPerUser,
 		StartsAt:              startsAt,
@@ -189,7 +206,7 @@ func (a *App) AdminPromoSave(w http.ResponseWriter, r *http.Request) {
 		formErr = "Per-account redemption limit can't be negative."
 	}
 	if formErr != "" {
-		courses, _ := a.Courses.ListAll(r.Context())
+		courses, software, _ := a.promoScopeChoices(r.Context())
 		a.View.Render(w, http.StatusUnprocessableEntity, "admin_promo_form", AdminPromoFormData{
 			BaseData:          a.base(r, "Promo Code — Admin", "", "admin"),
 			Promo:             promo,
@@ -197,6 +214,7 @@ func (a *App) AdminPromoSave(w http.ResponseWriter, r *http.Request) {
 			ExpiresAtValue:    expiresAtRaw,
 			AllowedEmailsText: allowedEmailsRaw,
 			Courses:           courses,
+			SoftwareItems:     software,
 			IsNew:             id == 0,
 			Error:             formErr,
 		})
@@ -212,7 +230,7 @@ func (a *App) AdminPromoSave(w http.ResponseWriter, r *http.Request) {
 	}
 	if err != nil {
 		if err == repo.ErrDuplicateCode {
-			courses, _ := a.Courses.ListAll(ctx)
+			courses, software, _ := a.promoScopeChoices(ctx)
 			a.View.Render(w, http.StatusUnprocessableEntity, "admin_promo_form", AdminPromoFormData{
 				BaseData:          a.base(r, "Promo Code — Admin", "", "admin"),
 				Promo:             promo,
@@ -220,6 +238,7 @@ func (a *App) AdminPromoSave(w http.ResponseWriter, r *http.Request) {
 				ExpiresAtValue:    expiresAtRaw,
 				AllowedEmailsText: allowedEmailsRaw,
 				Courses:           courses,
+				SoftwareItems:     software,
 				IsNew:             id == 0,
 				Error:             "That code is already in use.",
 			})
@@ -229,6 +248,18 @@ func (a *App) AdminPromoSave(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	http.Redirect(w, r, "/admin/promo-codes", http.StatusSeeOther)
+}
+
+// parseIDList converts submitted checkbox values to IDs, skipping any that
+// aren't numbers.
+func parseIDList(raw []string) []int64 {
+	var out []int64
+	for _, v := range raw {
+		if id, err := strconv.ParseInt(v, 10, 64); err == nil {
+			out = append(out, id)
+		}
+	}
+	return out
 }
 
 func (a *App) AdminPromoDelete(w http.ResponseWriter, r *http.Request) {

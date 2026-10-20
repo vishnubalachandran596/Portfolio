@@ -1,7 +1,8 @@
 {{define "content"}}
 <section class="section">
   <div class="container">
-    <div class="section-header-row">
+    <nav class="optional" aria-label="Promo code groups">Jump to: <a class="text-link" href="#promo-courses">Courses</a> · <a class="text-link" href="#promo-software">Software</a> · <a class="text-link" href="#promo-consultancy">Consultancy</a></nav>
+    <div class="section-header-row" id="promo-courses">
       <h1>Course Promo Codes</h1>
       <a class="btn btn-primary" href="/admin/promo-codes/new?product=course">Add Course Promo Code</a>
     </div>
@@ -39,7 +40,7 @@
     <p class="empty-state">No course promo codes yet.</p>
     {{end}}
 
-    <div class="section-header-row">
+    <div class="section-header-row" id="promo-consultancy">
       <h1>Consultancy Promo Codes</h1>
       <a class="btn btn-primary" href="/admin/promo-codes/new?product=consultancy">Add Consultancy Promo Code</a>
     </div>
@@ -73,18 +74,19 @@
     <p class="empty-state">No consultancy promo codes yet.</p>
     {{end}}
 
-    <div class="section-header-row">
+    <div class="section-header-row" id="promo-software">
       <h1>Software Promo Codes</h1>
       <a class="btn btn-primary" href="/admin/promo-codes/new?product=software">Add Software Promo Code</a>
     </div>
     {{if .SoftwarePromos}}
     <table class="admin-table">
-      <thead><tr><th>Code</th><th>Discount</th><th>Per account</th><th>Visibility</th><th>Redemptions</th><th>Window</th><th>Status</th><th></th></tr></thead>
+      <thead><tr><th>Code</th><th>Discount</th><th>Applies to</th><th>Per account</th><th>Visibility</th><th>Redemptions</th><th>Window</th><th>Status</th><th></th></tr></thead>
       <tbody>
         {{range .SoftwarePromos}}
         <tr>
           <td>{{.Code}}{{if .Description}}<br><span class="optional">{{.Description}}</span>{{end}}</td>
           <td>{{.DiscountPercent}}%</td>
+          <td>{{if not .SoftwareIDs}}Any software{{else}}{{len .SoftwareIDs}} software item{{if ne (len .SoftwareIDs) 1}}s{{end}}{{end}}</td>
           <td>{{if eq .MaxRedemptionsPerUser 0}}Unlimited{{else}}{{.MaxRedemptionsPerUser}}{{end}}</td>
           <td>{{if .IsPrivate}}Private ({{len .AllowedEmails}} email{{if ne (len .AllowedEmails) 1}}s{{end}}){{else if .IsPublic}}Public{{else}}Hidden{{end}}</td>
           <td>{{.RedemptionsDisplay}}</td>

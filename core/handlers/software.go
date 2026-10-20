@@ -36,6 +36,7 @@ type SoftwareDetailData struct {
 	RazorpayKeyID    string
 	PurchaseRequired bool
 	HasAccess        bool
+	OwnsSoftware     bool // signed-in visitor with a paid purchase of this item
 	UserEmail        string
 }
 
@@ -61,9 +62,20 @@ func (a *App) SoftwareDetail(w http.ResponseWriter, r *http.Request) {
 	}
 
 	userEmail := ""
+	ownsSoftware := false
 	if uid, ok := a.Auth.UserID(r); ok {
 		if u, err := a.Users.GetByID(ctx, uid); err == nil {
 			userEmail = u.Email
+		}
+		// A signed-in buyer who already paid for this item is pointed at
+		// their licence instead of being offered checkout again.
+		if paid, err := a.SoftwarePurchases.ListPaidByUserID(ctx, uid); err == nil {
+			for _, p := range paid {
+				if p.SoftwareID == sw.ID {
+					ownsSoftware = true
+					break
+				}
+			}
 		}
 	}
 
@@ -87,7 +99,8 @@ func (a *App) SoftwareDetail(w http.ResponseWriter, r *http.Request) {
 		PaymentsEnabled:  a.Razorpay.Enabled(),
 		RazorpayKeyID:    a.Razorpay.KeyID,
 		PurchaseRequired: r.URL.Query().Get("purchase") == "required",
-		HasAccess:        hasAccess,
+		HasAccess:        hasAccess || ownsSoftware,
+		OwnsSoftware:     ownsSoftware,
 		UserEmail:        userEmail,
 	})
 }

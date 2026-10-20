@@ -47,8 +47,19 @@ func joinEmails(emails []string) string {
 	return strings.Join(emails, ",")
 }
 
-func (r *PromoCodeRepo) courseIDs(ctx context.Context, promoID int64) ([]int64, error) {
-	rows, err := r.db.QueryContext(ctx, `SELECT course_id FROM promo_code_courses WHERE promo_code_id = $1 ORDER BY course_id`, promoID)
+// loadScope fills p.CourseIDs and p.SoftwareIDs from the two scope join
+// tables. Table and column names are fixed constants, never user input.
+func (r *PromoCodeRepo) loadScope(ctx context.Context, p *models.PromoCode) error {
+	var err error
+	if p.CourseIDs, err = r.scopeIDs(ctx, "promo_code_courses", "course_id", p.ID); err != nil {
+		return err
+	}
+	p.SoftwareIDs, err = r.scopeIDs(ctx, "promo_code_software", "software_id", p.ID)
+	return err
+}
+
+func (r *PromoCodeRepo) scopeIDs(ctx context.Context, table, col string, promoID int64) ([]int64, error) {
+	rows, err := r.db.QueryContext(ctx, `SELECT `+col+` FROM `+table+` WHERE promo_code_id = $1 ORDER BY `+col, promoID)
 	if err != nil {
 		return nil, err
 	}
@@ -83,11 +94,9 @@ func (r *PromoCodeRepo) ListAll(ctx context.Context) ([]models.PromoCode, error)
 		return nil, err
 	}
 	for i := range out {
-		ids, err := r.courseIDs(ctx, out[i].ID)
-		if err != nil {
+		if err := r.loadScope(ctx, &out[i]); err != nil {
 			return nil, err
 		}
-		out[i].CourseIDs = ids
 	}
 	return out, nil
 }
@@ -127,11 +136,9 @@ func (r *PromoCodeRepo) GetByID(ctx context.Context, id int64) (models.PromoCode
 	if err != nil {
 		return models.PromoCode{}, err
 	}
-	ids, err := r.courseIDs(ctx, id)
-	if err != nil {
+	if err := r.loadScope(ctx, &p); err != nil {
 		return models.PromoCode{}, err
 	}
-	p.CourseIDs = ids
 	return p, nil
 }
 
@@ -146,11 +153,9 @@ func (r *PromoCodeRepo) GetByCode(ctx context.Context, code string) (models.Prom
 	if err != nil {
 		return models.PromoCode{}, err
 	}
-	ids, err := r.courseIDs(ctx, p.ID)
-	if err != nil {
+	if err := r.loadScope(ctx, &p); err != nil {
 		return models.PromoCode{}, err
 	}
-	p.CourseIDs = ids
 	return p, nil
 }
 
@@ -174,7 +179,7 @@ func (r *PromoCodeRepo) Create(ctx context.Context, p models.PromoCode) (int64, 
 		}
 		return 0, err
 	}
-	if err := insertPromoCourses(ctx, tx, id, p.CourseIDs); err != nil {
+	if err := insertPromoScope(ctx, tx, id, p); err != nil {
 		return 0, err
 	}
 	return id, tx.Commit()
@@ -209,20 +214,29 @@ func (r *PromoCodeRepo) Update(ctx context.Context, p models.PromoCode) error {
 	if n == 0 {
 		return ErrNotFound
 	}
-	if _, err := tx.ExecContext(ctx, `DELETE FROM promo_code_courses WHERE promo_code_id = $1`, p.ID); err != nil {
-		return err
+	for _, t := range []string{"promo_code_courses", "promo_code_software"} {
+		if _, err := tx.ExecContext(ctx, `DELETE FROM `+t+` WHERE promo_code_id = $1`, p.ID); err != nil {
+			return err
+		}
 	}
-	if err := insertPromoCourses(ctx, tx, p.ID, p.CourseIDs); err != nil {
+	if err := insertPromoScope(ctx, tx, p.ID, p); err != nil {
 		return err
 	}
 	return tx.Commit()
 }
 
-func insertPromoCourses(ctx context.Context, tx *sql.Tx, promoID int64, courseIDs []int64) error {
-	for _, cid := range courseIDs {
+func insertPromoScope(ctx context.Context, tx *sql.Tx, promoID int64, p models.PromoCode) error {
+	for _, cid := range p.CourseIDs {
 		if _, err := tx.ExecContext(ctx,
 			`INSERT INTO promo_code_courses (promo_code_id, course_id) VALUES ($1,$2) ON CONFLICT DO NOTHING`,
 			promoID, cid); err != nil {
+			return err
+		}
+	}
+	for _, sid := range p.SoftwareIDs {
+		if _, err := tx.ExecContext(ctx,
+			`INSERT INTO promo_code_software (promo_code_id, software_id) VALUES ($1,$2) ON CONFLICT DO NOTHING`,
+			promoID, sid); err != nil {
 			return err
 		}
 	}

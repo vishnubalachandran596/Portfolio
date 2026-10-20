@@ -25,13 +25,12 @@ var errPromoInvalid = errors.New("promo code is invalid or expired")
 // (never more than amountCents) plus the code's own record so the caller
 // can label the purchase/booking and bump its redemption count once
 // payment is verified. An empty raw code is not an error — it just means
-// no discount applies. courseID is ignored for the consultancy and
-// software products (software has no per-item scoping — a software code
-// applies to any software purchase, the same default an empty CourseIDs
-// list already means for courses). userID/email identify who is
+// no discount applies. itemID is the course ID for the course product and
+// the software ID for the software product (an empty CourseIDs/SoftwareIDs
+// scope means "any item"); it is ignored for consultancy. userID/email identify who is
 // redeeming: userID is 0 for a guest checkout (email only), in which case
 // private codes are refused and per-user limits count by email.
-func (a *App) resolvePromoCode(ctx context.Context, raw, product string, courseID, userID int64, email string, amountCents int) (discountCents int, promo *models.PromoCode, err error) {
+func (a *App) resolvePromoCode(ctx context.Context, raw, product string, itemID, userID int64, email string, amountCents int) (discountCents int, promo *models.PromoCode, err error) {
 	raw = strings.TrimSpace(raw)
 	if raw == "" {
 		return 0, nil, nil
@@ -46,7 +45,10 @@ func (a *App) resolvePromoCode(ctx context.Context, raw, product string, courseI
 	if !p.Usable() || p.Product != product {
 		return 0, nil, errPromoInvalid
 	}
-	if product == models.PromoProductCourse && len(p.CourseIDs) > 0 && !p.HasCourse(courseID) {
+	if product == models.PromoProductCourse && len(p.CourseIDs) > 0 && !p.HasCourse(itemID) {
+		return 0, nil, errPromoInvalid
+	}
+	if product == models.PromoProductSoftware && len(p.SoftwareIDs) > 0 && !p.HasSoftware(itemID) {
 		return 0, nil, errPromoInvalid
 	}
 	// A guest (userID 0) only has a typed email, which proves nothing, so a

@@ -90,6 +90,8 @@ erDiagram
     courses ||--o{ quiz_attempt_grants : for
     courses ||--o{ course_updates : "notifies buyers via"
     promo_codes ||--o{ promo_code_courses : scopes
+    promo_codes ||--o{ promo_code_software : scopes
+    software ||--o{ promo_code_software : "scoped by"
     courses ||--o{ promo_code_courses : "scoped by"
     promo_codes ||--o{ purchases : "discounts (nullable FK)"
     promo_codes ||--o{ bookings : "discounts (nullable FK)"
@@ -537,6 +539,10 @@ erDiagram
         bigint promo_code_id PK_FK
         bigint course_id PK_FK
     }
+    promo_code_software {
+        bigint promo_code_id PK_FK
+        bigint software_id PK_FK
+    }
     admin_messages {
         bigserial id PK
         bigint user_id FK
@@ -688,7 +694,7 @@ Admin login (`/admin/login`) takes an admin email plus the password and compares
 
 `core/payments/razorpay.go`: `Razorpay.Enabled()` is `false` whenever `RAZORPAY_KEY_ID`/`RAZORPAY_KEY_SECRET` aren't set — both create-order handlers check this (except each one's own $0 branch, which doesn't need Razorpay at all) and return `503` with a friendly message instead of erroring.
 
-**Promo codes are product-scoped** (`promo_codes.product`, a `CHECK` of `'course' | 'consultancy' | 'software'`). `resolvePromoCode()` (`core/handlers/promo.go`) is one shared function, not three near-duplicates — it branches internally only where the products genuinely differ: course-ID scoping (`promo_code_courses`) only applies to the course product (a `software` promo code has no equivalent per-item scoping — it applies to any software purchase, the same default an empty course-ID list already means for courses), and per-user redemption counting branches between `PurchaseRepo.CountUserRedemptions` (courses) and `SoftwarePurchaseRepo.CountUserRedemptions` (software), since paid purchases of each product live in their own table.
+**Promo codes are product-scoped** (`promo_codes.product`, a `CHECK` of `'course' | 'consultancy' | 'software'`). `resolvePromoCode()` (`core/handlers/promo.go`) is one shared function, not three near-duplicates — it branches internally only where the products genuinely differ: per-item scoping applies to the course product (`promo_code_courses`) and the software product (`promo_code_software`, migration `090`; an empty list means any item for either), the `itemID` argument being the course or software ID; `PromoCodeRepo.loadScope` fills both lists and `insertPromoScope` writes them, and per-user redemption counting branches between `PurchaseRepo.CountUserRedemptions` (courses) and `SoftwarePurchaseRepo.CountUserRedemptions` (software), since paid purchases of each product live in their own table.
 
 **To add a new fixed-price paid product**, `checkout.go`'s `CheckoutCreateOrder`/`CheckoutVerify` + `purchases` table (fixed price, guest or signed in) and `software_checkout.go`'s `SoftwareCheckoutOrder`/`SoftwareCheckoutVerify` + `software_purchases` table (fixed price) are the two live reference implementations for a Razorpay create/verify pair in this codebase — pick whichever pricing model fits and copy that one's shape into its own new file(s), per the layering rule in §2 above.
 

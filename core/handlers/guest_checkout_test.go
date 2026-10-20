@@ -97,7 +97,7 @@ func TestGuestCheckoutTemplatesRender(t *testing.T) {
 		{"course_detail", CourseDetailData{BaseData: base, Course: course, PaymentsEnabled: true, ResolvedMinCents: 149900, ResolvedMinDisplay: "Rs 1,499", UserEmail: "me@example.com"},
 			[]string{"me@example.com"}},
 		{"software_detail", SoftwareDetailData{BaseData: base, Software: sw, PaymentsEnabled: true},
-			[]string{"Sign in to buy"}},
+			[]string{"Get licence"}},
 		{"quiz_result", QuizResultData{BaseData: base, Course: course, Attempt: models.QuizAttempt{Passed: true, ScorePercent: 90}, PaymentsEnabled: true},
 			[]string{"course-contribute-btn", "Download Certificate"}},
 		{"purchase_success", PurchaseSuccessData{BaseData: base, Kind: "course", Title: "Java", Receipt: "C000012", Email: "g@example.com", Amount: "Rs 1,499", ClaimCode: "ABCDE-FGHIJ-KLMNO-PQRST", NextURL: "/courses/java/learn", NextText: "Open the course"},

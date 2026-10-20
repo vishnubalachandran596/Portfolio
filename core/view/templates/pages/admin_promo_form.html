@@ -41,6 +41,22 @@
         {{end}}
       </fieldset>
 
+      <fieldset class="form-fieldset" id="promo-software-scope">
+        <legend>Software <span class="optional">(only used when "Software purchases" is selected above — leave every box below unchecked to allow any software item)</span></legend>
+        {{if .SoftwareItems}}
+        <div class="promo-course-list">
+          {{range .SoftwareItems}}
+          <label class="checkbox-label">
+            <input type="checkbox" name="software_ids" value="{{.ID}}" {{if $.Promo.HasSoftware .ID}}checked{{end}}>
+            {{.Title}}
+          </label>
+          {{end}}
+        </div>
+        {{else}}
+        <p class="optional">No software items yet.</p>
+        {{end}}
+      </fieldset>
+
       <div class="form-row">
         <label>Discount (%)
           <input type="number" name="discount_percent" value="{{.Promo.DiscountPercent}}" min="1" max="100" required>

@@ -48,7 +48,7 @@ func (a *App) SoftwareCheckoutOrder(w http.ResponseWriter, r *http.Request) {
 	currency := models.CurrencyINR
 	baseCents := sw.PriceCents
 
-	discountCents, promo, perr := a.resolvePromoCode(r.Context(), r.FormValue("promo_code"), models.PromoProductSoftware, 0, uid, email, baseCents)
+	discountCents, promo, perr := a.resolvePromoCode(r.Context(), r.FormValue("promo_code"), models.PromoProductSoftware, sw.ID, uid, email, baseCents)
 	if perr != nil {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": errPromoMessage})
 		return

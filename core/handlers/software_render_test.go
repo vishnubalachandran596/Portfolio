@@ -42,10 +42,41 @@ func TestSoftwareTemplatesRender(t *testing.T) {
 	adminFormData := AdminSoftwareFormData{BaseData: adminBase, Software: sw, IsNew: false}
 	adminFormNewData := AdminSoftwareFormData{BaseData: adminBase, IsNew: true}
 
+	loggedOut := SoftwareDetailData{BaseData: base, Software: sw, PaymentsEnabled: true}
+	owner := SoftwareDetailData{BaseData: base, Software: sw, HasAccess: true, OwnsSoftware: true, UserEmail: "buyer@example.com"}
+	swLic := sw
+	swLic.LicenceProduct = "temple"
+	ownerLic := SoftwareDetailData{BaseData: base, Software: swLic, HasAccess: true, OwnsSoftware: true, UserEmail: "buyer@example.com"}
+	promo := models.PromoCode{ID: 1, Code: "X", Product: models.PromoProductSoftware, DiscountPercent: 10, SoftwareIDs: []int64{1}}
+	promoList := AdminPromoListData{BaseData: base, SoftwarePromos: []models.PromoCode{promo}}
+	promoForm := AdminPromoFormData{BaseData: base, Promo: promo, SoftwareItems: []models.Software{sw}}
+
+	// Extra, content-asserting checks on the purchase-box states.
+	for _, c := range []struct {
+		name string
+		data SoftwareDetailData
+		want string
+	}{
+		{"logged out", loggedOut, `href="/login?next=/software/temple-accounts-billing"`},
+		{"logged in", detailData, `id="software-purchase-btn"`},
+		{"owner", ownerLic, `href="/account/licences"`},
+	} {
+		rec := httptest.NewRecorder()
+		r.Render(rec, 200, "software_detail", c.data)
+		body := rec.Body.String()
+		if !strings.Contains(body, c.want) || (c.name != "owner" && !strings.Contains(body, "Get licence")) {
+			t.Fatalf("%s: missing %q or Get licence button", c.name, c.want)
+		}
+	}
+
 	cases := []struct {
 		page string
 		data any
 	}{
+		{"software_detail", loggedOut},
+		{"software_detail", owner},
+		{"admin_promo_list", promoList},
+		{"admin_promo_form", promoForm},
 		{"software_list", listData},
 		{"software_list", emptyListData},
 		{"software_detail", detailData},

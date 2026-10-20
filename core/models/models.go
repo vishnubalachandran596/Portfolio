@@ -813,10 +813,9 @@ const (
 // visitor redeems at checkout. It applies to exactly one product line —
 // courses, the single consultancy offering, or software — never more than
 // one. CourseIDs empty means "applies to any course" by itself; there is
-// no separate "applies to all" flag to keep in sync with that. A
-// software-product code has no equivalent per-item scoping (there's no
-// SoftwareIDs list) — it simply applies to any software purchase, the
-// same default CourseIDs-empty already means for courses.
+// no separate "applies to all" flag to keep in sync with that. SoftwareIDs
+// works the same way for a software-product code: empty means any
+// software item.
 //
 // A code is either public (scrolls in the sitewide promo banner to every
 // visitor) or user-scoped private (AllowedEmails non-empty — never shown
@@ -835,6 +834,7 @@ type PromoCode struct {
 	Product         string // PromoProductCourse | PromoProductConsultancy
 	DiscountPercent int
 	CourseIDs       []int64
+	SoftwareIDs     []int64
 	MaxRedemptions  int // 0 means unlimited, total across every account
 	// MaxRedemptionsPerUser caps how many times one account may redeem
 	// this code; 0 means unlimited. Defaults to 1 ("once per account")
@@ -854,6 +854,17 @@ type PromoCode struct {
 func (p PromoCode) HasCourse(id int64) bool {
 	for _, cid := range p.CourseIDs {
 		if cid == id {
+			return true
+		}
+	}
+	return false
+}
+
+// HasSoftware reports whether a software-scoped promo code applies to the
+// given software item. Irrelevant when SoftwareIDs is empty (any item).
+func (p PromoCode) HasSoftware(id int64) bool {
+	for _, sid := range p.SoftwareIDs {
+		if sid == id {
 			return true
 		}
 	}
