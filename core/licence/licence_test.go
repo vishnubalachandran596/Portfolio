@@ -60,14 +60,14 @@ func TestVectorPayloadAndKey(t *testing.T) {
 }
 
 func TestNormaliseDevice(t *testing.T) {
-	got, err := NormaliseDevice("  9f7828e963f3\n")
+	got, err := NormaliseDevice("  9F7828E963F3\n")
 	if err != nil || got != "9f7828e963f3" {
 		t.Fatalf("got %q %v", got, err)
 	}
-	// No format or length rule: anything non-empty is kept as typed.
-	for _, ok := range []string{"xyz", "9F78-28E9 63F3", strings.Repeat("a", 500)} {
-		if got, err := NormaliseDevice(ok); err != nil || got != ok {
-			t.Errorf("%q should pass unchanged, got %q %v", ok, got, err)
+	// No format or length rule beyond trim + lower-case, like the app.
+	for in, want := range map[string]string{"xyz": "xyz", "9F78-28E9 63F3": "9f78-28e9 63f3", strings.Repeat("A", 500): strings.Repeat("a", 500)} {
+		if got, err := NormaliseDevice(in); err != nil || got != want {
+			t.Errorf("%q: got %q %v, want %q", in, got, err, want)
 		}
 	}
 	for _, bad := range []string{"", "   ", "\n\t"} {

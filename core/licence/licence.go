@@ -107,12 +107,12 @@ func Payload(dev string, iat time.Time, kid, lic, product, ver string) ([]byte, 
 	return bytes.TrimRight(buf.Bytes(), "\n"), err
 }
 
-// NormaliseDevice only trims surrounding whitespace and requires a
-// non-empty value. There is no format or length rule: the Device ID is
-// signed into the key exactly as the Temple app shows it, and the app
-// compares it (trimmed, lower-cased) with its own device hash.
+// NormaliseDevice does exactly what the Temple app does to the signed dev
+// value before comparing it with its own device hash (app.py verify_licence:
+// strip, lower-case): it trims surrounding whitespace and lower-cases, and
+// requires a non-empty value. There is no format or length rule.
 func NormaliseDevice(s string) (string, error) {
-	s = strings.TrimSpace(s)
+	s = strings.ToLower(strings.TrimSpace(s))
 	if s == "" {
 		return "", errors.New("Enter the Device ID shown in Temple Accounts.")
 	}
