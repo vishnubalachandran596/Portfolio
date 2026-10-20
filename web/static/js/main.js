@@ -1252,3 +1252,30 @@
     });
   }
 })();
+
+/* Promo banner info tooltip: tap/click toggles it (hover and focus are CSS). */
+(function () {
+  var wraps = document.querySelectorAll('.promo-info');
+  if (!wraps.length) return;
+  function closeAll(except) {
+    wraps.forEach(function (w) {
+      if (w === except) return;
+      w.classList.remove('is-open');
+      var b = w.querySelector('.promo-info-btn');
+      if (b) b.setAttribute('aria-expanded', 'false');
+    });
+  }
+  wraps.forEach(function (w) {
+    var b = w.querySelector('.promo-info-btn');
+    if (!b) return;
+    b.addEventListener('click', function (e) {
+      e.stopPropagation();
+      var open = !w.classList.contains('is-open');
+      closeAll(w);
+      w.classList.toggle('is-open', open);
+      b.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+  });
+  document.addEventListener('click', function () { closeAll(null); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeAll(null); });
+})();

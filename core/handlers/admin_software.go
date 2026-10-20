@@ -105,18 +105,22 @@ func (a *App) AdminSoftwareSave(w http.ResponseWriter, r *http.Request) {
 		IsPublished:              r.FormValue("is_published") == "on",
 		SortOrder:                sortOrder,
 		LicenceProduct:           strings.TrimSpace(r.FormValue("licence_product")),
-		LicenceVersions:          strings.TrimSpace(r.FormValue("licence_versions")),
+		MicrosoftStoreURL:        strings.TrimSpace(r.FormValue("microsoft_store_url")),
 	}
-	if sw.LicenceVersions == "" {
-		sw.LicenceVersions = "1"
+	formErr := ""
+	switch {
+	case sw.Title == "" || sw.Slug == "":
+		formErr = "Title is required."
+	case sw.MicrosoftStoreURL != "" && !strings.HasPrefix(strings.ToLower(sw.MicrosoftStoreURL), "https://"):
+		formErr = "The Microsoft Store URL must start with https://"
 	}
-	if sw.Title == "" || sw.Slug == "" {
+	if formErr != "" {
 		a.View.Render(w, http.StatusUnprocessableEntity, "admin_software_form", AdminSoftwareFormData{
 			BaseData: a.base(r, "Software — Admin", "", "admin"),
 			Software: sw,
 			SEO:      seoFieldsFromForm(r),
 			IsNew:    id == 0,
-			Error:    "Title is required.",
+			Error:    formErr,
 		})
 		return
 	}

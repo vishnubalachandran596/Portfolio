@@ -187,6 +187,9 @@ type NavLinks struct {
 	Terms       string
 	Refund      string
 	Cookies     string
+	// TempleAccountsPrivacy is the Temple Accounts app privacy policy,
+	// required by the Microsoft Store listing.
+	TempleAccountsPrivacy string
 }
 
 func New(cfg *config.Config, db *sql.DB, renderer *view.Renderer) *App {
@@ -431,24 +434,25 @@ func (a *App) baseFrom(r *http.Request, pf *basePrefetch, title, metaDescription
 		OGImageURL:      ogImage,
 		RobotsMeta:      robots,
 		Nav: NavLinks{
-			Home:        a.pageURL(r, "/"),
-			About:       a.pageURL(r, "/about"),
-			Courses:     a.pageURL(r, "/courses"),
-			Software:    a.pageURL(r, "/software"),
-			Consultancy: a.pageURL(r, "/consultancy"),
-			Booking:     a.pageURL(r, "/booking"),
-			Articles:    a.pageURL(r, "/articles"),
-			Contact:     a.pageURL(r, "/contact"),
-			AIAssistant: a.pageURL(r, "/ai-assistant"),
-			Search:      a.pageURL(r, "/search"),
-			Account:     a.pageURL(r, "/account"),
-			Admin:       a.pageURL(r, "/admin"),
-			Login:       a.pageURL(r, "/login"),
-			Logout:      a.pageURL(r, "/logout"),
-			Privacy:     a.pageURL(r, "/privacy"),
-			Terms:       a.pageURL(r, "/terms"),
-			Refund:      a.pageURL(r, "/refund"),
-			Cookies:     a.pageURL(r, "/cookies"),
+			Home:                  a.pageURL(r, "/"),
+			About:                 a.pageURL(r, "/about"),
+			Courses:               a.pageURL(r, "/courses"),
+			Software:              a.pageURL(r, "/software"),
+			Consultancy:           a.pageURL(r, "/consultancy"),
+			Booking:               a.pageURL(r, "/booking"),
+			Articles:              a.pageURL(r, "/articles"),
+			Contact:               a.pageURL(r, "/contact"),
+			AIAssistant:           a.pageURL(r, "/ai-assistant"),
+			Search:                a.pageURL(r, "/search"),
+			Account:               a.pageURL(r, "/account"),
+			Admin:                 a.pageURL(r, "/admin"),
+			Login:                 a.pageURL(r, "/login"),
+			Logout:                a.pageURL(r, "/logout"),
+			Privacy:               a.pageURL(r, "/privacy"),
+			Terms:                 a.pageURL(r, "/terms"),
+			Refund:                a.pageURL(r, "/refund"),
+			Cookies:               a.pageURL(r, "/cookies"),
+			TempleAccountsPrivacy: a.pageURL(r, "/temple-accounts/privacy"),
 		},
 		IsLoggedIn:          pf.isUser || pf.isAdmin,
 		IsAdmin:             pf.isAdmin,

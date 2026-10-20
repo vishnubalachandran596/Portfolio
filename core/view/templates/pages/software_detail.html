@@ -20,6 +20,13 @@
         </div>
       </div>
       {{if .HasAccess}}
+      {{if .Software.LicenceProduct}}
+      {{template "software_downloads" .Software.MicrosoftStoreURL}}
+      <div>
+        <h2>After you download</h2>
+        {{template "licence_steps"}}
+      </div>
+      {{end}}
       {{if .Software.LicenseTerms}}<p class="course-detail-note">{{.Software.LicenseTerms}}</p>{{end}}
       {{if .Software.PostPurchaseInstructions}}<p class="course-detail-note">{{.Software.PostPurchaseInstructions}}</p>{{end}}
       {{else if .Software.LicenseTerms}}
@@ -35,13 +42,17 @@
         <div class="buy-card-price"><span class="price">{{.Software.PriceDisplay}}</span><span>one-time</span></div>
         {{if .HasAccess}}
         {{if .Software.LicenceProduct}}<a class="btn btn-primary btn-lg btn-block" id="software-get-licence" href="{{if .OwnsSoftware}}/account/licences{{else}}/admin/licences{{end}}">Get licence</a>{{end}}
-        <a class="btn {{if .Software.LicenceProduct}}btn-secondary{{else}}btn-primary{{end}} btn-lg btn-block" href="{{.Software.DownloadLink}}" target="_blank" rel="noopener">Download</a>
-        {{if .Software.LicenceProduct}}<p class="purchase-box-sub">Download the app, then press Get licence, paste the Device ID from Help &gt; Licence and copy your key.</p>{{end}}
+        {{if .Software.LicenceProduct}}
+        <a class="btn btn-secondary btn-lg btn-block" href="#downloads">Downloads</a>
+        <p class="purchase-box-sub">Install the app, copy the Device ID from its activation screen, then press Get licence and paste it to get your key.</p>
+        {{else if .Software.DownloadLink}}
+        <a class="btn btn-primary btn-lg btn-block" href="{{.Software.DownloadLink}}" target="_blank" rel="noopener">Download</a>
+        {{end}}
         {{if and .Software.LicenceProduct .OwnsSoftware}}<p class="purchase-box-sub">Need another device? <a class="text-link" id="software-new-licence" href="/account/licences#new-licence-{{.Software.Slug}}">Get a new licence</a></p>{{end}}
         {{else}}
         <div class="purchase-box" id="purchase-box">
           <div id="purchase-error" class="alert alert-error" hidden></div>
-          {{if .Software.LicenceProduct}}<p class="purchase-box-sub">After you pay, open <a href="/account/licences">My licences</a>, choose your licence, enter the Device ID shown in the app (Help &gt; Licence) and your key appears there. The key works only on that computer.</p>{{end}}
+          {{if .Software.LicenceProduct}}<p class="purchase-box-sub">After you pay, open <a href="/account/licences">My licences</a>, choose your licence, enter the Device ID shown on the app's activation screen and your key appears there. The key works only on that computer.</p>{{end}}
           {{if .UserEmail}}
           <p class="purchase-box-sub">Access goes to <strong>{{.UserEmail}}</strong>.</p>
           {{else}}
@@ -60,7 +71,9 @@
         {{end}}
         <ul class="buy-card-perks">
           <li><svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="m5 10.5 3 3 7-7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>One-time purchase, no subscription</span></li>
-          <li><svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="m5 10.5 3 3 7-7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Download link stays in your account</span></li>
+          <li><svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="m5 10.5 3 3 7-7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Downloads stay on this page for your account</span></li>
+          {{if .Software.LicenceProduct}}<li><svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="m5 10.5 3 3 7-7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>One key per computer, for every app version</span></li>
+          <li><svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="m5 10.5 3 3 7-7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Works offline, <a class="text-link" href="{{.Nav.TempleAccountsPrivacy}}">privacy policy</a></span></li>{{end}}
         </ul>
       </div>
     </aside>

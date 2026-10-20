@@ -127,7 +127,7 @@ func canonicalURLForRequest(base string, r *http.Request) string {
 // as well, so the sitemap never advertises a URL that asks not to be indexed.
 var sitemapStaticPaths = []string{
 	"/", "/about", "/courses", "/software", "/consultancy", "/articles",
-	"/contact", "/privacy", "/terms", "/refund", "/cookies",
+	"/contact", "/privacy", "/temple-accounts/privacy", "/terms", "/refund", "/cookies",
 }
 
 // staticLastmod returns the real "last edited" time of a static page: the
@@ -290,6 +290,7 @@ func (a *App) LLMsTxt(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(&b, "- [AI Assistant](%s/ai-assistant): Ask questions about his background, courses, consultancy, and articles, answered with retrieval-augmented generation\n", base)
 	}
 	fmt.Fprintf(&b, "- [Privacy Policy](%s/privacy): How data is collected, used, and deleted\n", base)
+	fmt.Fprintf(&b, "- [Temple Accounts Privacy Policy](%s/temple-accounts/privacy): The Temple Accounts app works offline and sends no data\n", base)
 	fmt.Fprintf(&b, "- [Terms of Service](%s/terms): Terms governing use of this site\n", base)
 	fmt.Fprintf(&b, "- [Refund Policy](%s/refund): Refund terms for paid courses\n", base)
 	fmt.Fprintf(&b, "- [Cookie Policy](%s/cookies): How cookies are used on this site\n\n", base)
@@ -333,6 +334,7 @@ var staticSearchIndex = []PageHit{
 	{"Articles", "/articles", "Original writing on architecture, AI, and engineering careers."},
 	{"Contact Me", "/contact", "Get in touch."},
 	{"Privacy Policy", "/privacy", "How data is collected, used, and deleted."},
+	{"Temple Accounts Privacy Policy", "/temple-accounts/privacy", "Privacy policy for the Temple Accounts desktop app: it works offline and sends no data."},
 	{"Terms of Service", "/terms", "Terms governing use of this site."},
 	{"Refund Policy", "/refund", "Refund terms for paid courses and consultancy."},
 	{"Cookie Policy", "/cookies", "How cookies are used on this site."},

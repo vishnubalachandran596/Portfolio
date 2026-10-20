@@ -847,6 +847,17 @@ type PromoCode struct {
 	IsPublic              bool
 	AllowedEmails         []string
 	CreatedAt             time.Time
+	// ScopeItems lists the published courses and software items this code
+	// is limited to, for the banner's info tooltip. Filled only by
+	// PromoCodeRepo.ListActivePublic (in its one query); empty for an
+	// unscoped code (applies to any item).
+	ScopeItems []PromoScopeItem
+}
+
+// PromoScopeItem is one course or software item a promo code is limited to.
+type PromoScopeItem struct {
+	Title string `json:"t"`
+	URL   string `json:"u"`
 }
 
 // HasCourse reports whether a course-scoped promo code applies to the
@@ -949,25 +960,15 @@ type Software struct {
 	PostPurchaseInstructions string
 	IsPublished              bool
 	SortOrder                int
-	// LicencePlatform fields: LicenceProduct is the "prod" value written
-	// into signed keys (empty = this item has no licence keys);
-	// LicenceVersions is the comma-separated list of app major versions
-	// offered in the My licences dropdown.
-	LicenceProduct  string
-	LicenceVersions string
-	CreatedAt       time.Time
-	UpdatedAt       time.Time
-}
-
-// LicenceVersionList splits LicenceVersions into trimmed, non-empty values.
-func (s Software) LicenceVersionList() []string {
-	var out []string
-	for _, v := range strings.Split(s.LicenceVersions, ",") {
-		if v = strings.TrimSpace(v); v != "" {
-			out = append(out, v)
-		}
-	}
-	return out
+	// LicenceProduct is the "prod" value written into signed keys (empty =
+	// this item has no licence keys). A key is per computer, never per app
+	// version or build.
+	LicenceProduct string
+	// MicrosoftStoreURL is the app's Microsoft Store listing, edited in the
+	// admin software form. Empty = the downloads block says "Coming soon".
+	MicrosoftStoreURL string
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
 }
 
 // Licence is one licence entitlement for a software item. Key is empty
@@ -977,10 +978,10 @@ type Licence struct {
 	Code          string
 	SoftwareID    int64
 	SoftwareTitle string
+	SoftwareSlug  string
 	PurchaseID    int64
 	UserID        int64
 	UserEmail     string
-	Ver           string
 	DeviceHash    string
 	Key           string
 	KID           string

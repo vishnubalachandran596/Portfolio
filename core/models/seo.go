@@ -54,6 +54,7 @@ var StaticSEOPages = []StaticSEOPage{
 	{"/contact", "Contact"},
 	{"/ai-assistant", "AI Assistant"},
 	{"/privacy", "Privacy Policy"},
+	{"/temple-accounts/privacy", "Temple Accounts Privacy Policy"},
 	{"/terms", "Terms of Service"},
 	{"/refund", "Refund Policy"},
 	{"/cookies", "Cookie Policy"},

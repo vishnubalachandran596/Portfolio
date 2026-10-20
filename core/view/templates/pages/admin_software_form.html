@@ -25,8 +25,8 @@
       <label>Licence product id <span class="optional">the "prod" value signed into keys, e.g. temple-accounts. Leave empty if this item has no licence keys.</span>
         <input type="text" name="licence_product" value="{{.Software.LicenceProduct}}" placeholder="temple-accounts" pattern="[a-z0-9-]*">
       </label>
-      <label>Licence app versions <span class="optional">comma-separated app major versions offered in the My licences dropdown, e.g. 1</span>
-        <input type="text" name="licence_versions" value="{{if .Software.LicenceVersions}}{{.Software.LicenceVersions}}{{else}}1{{end}}" placeholder="1">
+      <label>Microsoft Store URL <span class="optional">the app's Store listing, shown as the recommended Windows download on the product page. Leave empty to show "Coming soon". Only used when a licence product id is set.</span>
+        <input type="url" name="microsoft_store_url" value="{{.Software.MicrosoftStoreURL}}" placeholder="https://apps.microsoft.com/detail/...">
       </label>
 
       <hr class="admin-form-divider">
@@ -36,7 +36,7 @@
           <input type="number" name="price" value="{{.Software.PriceWhole}}" min="0" step="1">
         </label>
       </div>
-      <label>Download link <span class="optional">external URL (e.g. a Google Drive folder) — revealed only after a verified purchase, or to you as admin</span>
+      <label>Download link <span class="optional">external URL (e.g. a Google Drive folder) — revealed only after a verified purchase, or to you as admin. Not used for items with a licence product id: those show the per-OS downloads block instead.</span>
         <input type="url" name="download_link" value="{{.Software.DownloadLink}}" placeholder="https://drive.google.com/drive/folders/...">
       </label>
       <label>License terms <span class="optional">shown on the product page and the purchase receipt, e.g. "Licensed per device"</span>

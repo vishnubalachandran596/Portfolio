@@ -33,6 +33,14 @@
       <p>This purchase is attached to your account.{{if .Licence}} Open <a href="/account/licences">My licences</a> to get your key.{{end}}</p>
       {{end}}
 
+      {{if .Licence}}
+      {{template "software_downloads" .StoreURL}}
+      <div>
+        <h2>Next steps</h2>
+        {{template "licence_steps"}}
+      </div>
+      {{end}}
+
       <p><a class="btn btn-primary btn-lg" href="{{.NextURL}}">{{.NextText}}</a></p>
     </div>
   </div>

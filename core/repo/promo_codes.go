@@ -3,6 +3,7 @@ package repo
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"strings"
 
@@ -107,8 +108,18 @@ func (r *PromoCodeRepo) ListAll(ctx context.Context) ([]models.PromoCode, error)
 // code never appears here even if somehow marked public, since saving a
 // code with AllowedEmails set always forces IsPublic false.
 func (r *PromoCodeRepo) ListActivePublic(ctx context.Context) ([]models.PromoCode, error) {
+	// The scoped course/software titles for the banner tooltip come back in
+	// the same round trip as JSON sub-selects, so the banner costs no extra
+	// query. Only published items are listed.
 	rows, err := r.db.QueryContext(ctx, `
-		SELECT `+promoCodeColumns+` FROM promo_codes
+		SELECT `+promoCodeColumns+`,
+			COALESCE((SELECT json_agg(json_build_object('t', c.title, 'u', '/courses/' || c.slug) ORDER BY c.title)
+				FROM promo_code_courses pc JOIN courses c ON c.id = pc.course_id
+				WHERE pc.promo_code_id = promo_codes.id AND c.is_published), '[]'::json)::text,
+			COALESCE((SELECT json_agg(json_build_object('t', s.title, 'u', '/software/' || s.slug) ORDER BY s.title)
+				FROM promo_code_software ps JOIN software s ON s.id = ps.software_id
+				WHERE ps.promo_code_id = promo_codes.id AND s.is_published), '[]'::json)::text
+		FROM promo_codes
 		WHERE is_active AND is_public AND now() >= starts_at AND now() < expires_at
 			AND (max_redemptions = 0 OR redemption_count < max_redemptions)
 		ORDER BY created_at DESC`)
@@ -119,13 +130,30 @@ func (r *PromoCodeRepo) ListActivePublic(ctx context.Context) ([]models.PromoCod
 
 	var out []models.PromoCode
 	for rows.Next() {
-		p, err := scanPromoCode(rows)
-		if err != nil {
+		var p models.PromoCode
+		var allowedEmails, courses, software string
+		if err := rows.Scan(&p.ID, &p.Code, &p.Description, &p.BannerText, &p.Product, &p.DiscountPercent,
+			&p.MaxRedemptions, &p.MaxRedemptionsPerUser, &p.RedemptionCount, &p.StartsAt, &p.ExpiresAt,
+			&p.IsActive, &p.IsPublic, &allowedEmails, &p.CreatedAt, &courses, &software); err != nil {
 			return nil, err
 		}
+		p.AllowedEmails = splitEmails(allowedEmails)
+		p.ScopeItems = parseScopeItems(courses, software)
 		out = append(out, p)
 	}
 	return out, rows.Err()
+}
+
+// parseScopeItems decodes the two JSON arrays built by ListActivePublic.
+func parseScopeItems(courseJSON, softwareJSON string) []models.PromoScopeItem {
+	var out []models.PromoScopeItem
+	for _, raw := range []string{courseJSON, softwareJSON} {
+		var items []models.PromoScopeItem
+		if json.Unmarshal([]byte(raw), &items) == nil {
+			out = append(out, items...)
+		}
+	}
+	return out
 }
 
 func (r *PromoCodeRepo) GetByID(ctx context.Context, id int64) (models.PromoCode, error) {

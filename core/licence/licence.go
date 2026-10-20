@@ -5,7 +5,9 @@
 // verifies offline. Format (must match the app exactly):
 //
 //	payload   = compact JSON, keys sorted, UTF-8:
-//	            {"dev","iat","kid","lic","prod","v":1,"ver"}
+//	            {"dev","iat","kid","lic","prod","v":1}
+//	            (no app version: one key covers every version and build on the
+//	            same computer)
 //	signature = Ed25519(b"vb-licence/v1\n" + payload)
 //	key       = "VBL1-" + b64url(payload) + "." + b64url(signature)   (no padding)
 package licence
@@ -66,13 +68,14 @@ func (s *Signer) PublicKeyB64() string {
 	return base64.StdEncoding.EncodeToString(s.priv.Public().(ed25519.PublicKey))
 }
 
-// Issue builds and signs a key for one licence, device and app major version.
-func (s *Signer) Issue(product, lic, device, ver string, iat time.Time) (string, error) {
+// Issue builds and signs a key for one licence and one device. The key is
+// not tied to an app version or build.
+func (s *Signer) Issue(product, lic, device string, iat time.Time) (string, error) {
 	dev, err := NormaliseDevice(device)
 	if err != nil {
 		return "", err
 	}
-	payload, err := Payload(dev, iat, s.kid, lic, product, ver)
+	payload, err := Payload(dev, iat, s.kid, lic, product)
 	if err != nil {
 		return "", err
 	}
@@ -87,8 +90,8 @@ func (s *Signer) SignPayload(payload []byte) string {
 }
 
 // Payload serialises the payload: compact, keys sorted, no HTML escaping.
-func Payload(dev string, iat time.Time, kid, lic, product, ver string) ([]byte, error) {
-	if lic == "" || product == "" || ver == "" || kid == "" {
+func Payload(dev string, iat time.Time, kid, lic, product string) ([]byte, error) {
+	if lic == "" || product == "" || kid == "" {
 		return nil, errors.New("licence: payload field missing")
 	}
 	var buf bytes.Buffer
@@ -102,7 +105,6 @@ func Payload(dev string, iat time.Time, kid, lic, product, ver string) ([]byte, 
 		"lic":  lic,
 		"prod": product,
 		"v":    payloadV,
-		"ver":  ver,
 	})
 	return bytes.TrimRight(buf.Bytes(), "\n"), err
 }

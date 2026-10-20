@@ -602,6 +602,31 @@ a.tag-chip:active { transform: scale(0.96); }
   background: var(--band-accent);
   flex: none;
 }
+/* Info icon + tooltip listing what a scoped promo code applies to. Shown on
+   hover, keyboard focus and tap (.is-open, set in main.js). */
+.promo-info { position: relative; display: inline-flex; }
+.promo-info-btn {
+  width: 1.25rem; height: 1.25rem; padding: 0;
+  border: 1px solid var(--band-accent); border-radius: 50%;
+  background: transparent; color: var(--band-accent);
+  font: italic 700 0.75rem/1 Georgia, serif; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.promo-info-btn:hover, .promo-info-btn:focus-visible { background: var(--band-accent); color: var(--band); }
+.promo-info-btn:focus-visible { outline: 2px solid var(--band-ink); outline-offset: 2px; }
+.promo-tip {
+  position: absolute; top: calc(100% + 0.5rem); left: 50%; transform: translateX(-50%);
+  z-index: 60; min-width: 12rem; max-width: min(20rem, calc(100vw - 2rem));
+  padding: 0.625rem 0.875rem; text-align: left;
+  background: var(--surface); color: var(--ink);
+  border: 1px solid var(--line-strong); border-radius: var(--radius-md); box-shadow: var(--shadow-md);
+  visibility: hidden; opacity: 0;
+}
+.promo-info:hover .promo-tip, .promo-info:focus-within .promo-tip, .promo-info.is-open .promo-tip { visibility: visible; opacity: 1; }
+.promo-tip-head { display: block; font-weight: 700; font-size: 0.75rem; color: var(--ink-2); margin-bottom: 0.25rem; }
+.promo-tip ul { margin: 0; padding-left: 1rem; display: grid; gap: 0.125rem; }
+.promo-tip a { color: var(--accent-strong); text-decoration: underline; }
+@media (prefers-reduced-motion: no-preference) { .promo-tip { transition: opacity 0.15s ease, visibility 0.15s; } }
 .promo-banner strong, .promo-code { color: var(--band-accent); font-weight: 700; letter-spacing: 0.04em; }
 
 /* ---------------------------------------------------------------------
@@ -2538,3 +2563,14 @@ select { appearance: none; -webkit-appearance: none; padding-right: 2.25rem; bac
 .seo-counter { font-size: 0.8125rem; font-weight: 400; color: var(--ink-3); font-variant-numeric: tabular-nums; }
 .seo-counter-over { color: var(--danger); font-weight: 600; }
 .seo-page-form { margin-bottom: var(--space-5); padding-bottom: var(--space-5); border-bottom: 1px solid var(--line); }
+
+/* Downloads block for licensed apps (software detail, post-purchase). */
+.downloads { display: grid; gap: var(--space-4); }
+.download-os { display: grid; gap: var(--space-2); }
+.download-os h3, .download-option h4 { margin: 0; }
+.download-options { display: grid; gap: var(--space-3); grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); }
+.download-option { border: 1px solid var(--line-strong); border-radius: var(--radius-md); padding: var(--space-4); display: grid; gap: var(--space-2); background: var(--surface); align-content: start; }
+.download-option-main { border-color: var(--accent); background: var(--accent-soft); }
+.download-tag { margin: 0; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-2); }
+.download-option p { margin: 0; }
+.licence-howto { margin-bottom: var(--space-4); }

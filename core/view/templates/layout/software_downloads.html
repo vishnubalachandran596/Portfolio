@@ -1,0 +1,51 @@
+{{/* Downloads and activation steps for a licensed app. UI chrome only: the
+     Microsoft Store address comes from software.microsoft_store_url (admin
+     software form), never from this file. Shown to buyers and the admin on
+     the product page, and on the post-purchase page. */}}
+{{define "software_downloads"}}
+<div class="downloads" id="downloads">
+  <h2>Download for your computer</h2>
+  <p class="field-help">One licence key covers every app version and every download below, on the same computer. A key is per computer.</p>
+
+  <section class="download-os" aria-labelledby="dl-windows">
+    <h3 id="dl-windows">Windows</h3>
+    <div class="download-options">
+      <article class="download-option download-option-main">
+        <p class="download-tag">Recommended</p>
+        <h4>Microsoft Store</h4>
+        <p>No security warnings, automatic updates.</p>
+        {{if .}}<a class="btn btn-primary" id="dl-windows-store" href="{{.}}" target="_blank" rel="noopener">Get it from Microsoft Store</a>
+        {{else}}<p><span class="badge" id="dl-windows-store-soon">Coming soon</span></p>{{end}}
+      </article>
+      <article class="download-option">
+        <p class="download-tag">Advanced / offline</p>
+        <h4>Windows zip</h4>
+        <p><a class="btn btn-secondary" id="dl-windows-zip" href="https://github.com/vishnubalachandran596/Temple/releases/latest/download/TempleAccounts-windows.zip" rel="noopener">Download TempleAccounts-windows.zip</a></p>
+        <p class="field-help">Right-click the zip &gt; Properties &gt; tick Unblock &gt; OK, then unzip the whole folder and open TempleAccounts.exe. If Windows Defender blocks it: Windows Security &gt; Virus &amp; threat protection &gt; Protection history &gt; Restore &gt; Allow on device. Do not run it from inside the zip.</p>
+      </article>
+    </div>
+    <p class="field-help">The same licence key works for both Windows downloads.</p>
+  </section>
+
+  <section class="download-os" aria-labelledby="dl-mac">
+    <h3 id="dl-mac">Mac (Apple Silicon)</h3>
+    <p><a class="btn btn-secondary" id="dl-mac-zip" href="https://github.com/vishnubalachandran596/Temple/releases/latest/download/TempleAccounts.app.zip" rel="noopener">Download TempleAccounts.app.zip</a></p>
+    <p class="field-help">Unzip, move TempleAccounts.app to Applications. First open: System Settings &gt; Privacy &amp; Security &gt; Open Anyway.</p>
+  </section>
+
+  <section class="download-os" aria-labelledby="dl-linux">
+    <h3 id="dl-linux">Linux (Ubuntu, Debian, Mint)</h3>
+    <p><a class="btn btn-secondary" id="dl-linux-deb" href="https://github.com/vishnubalachandran596/Temple/releases/latest/download/TempleAccounts-linux.deb" rel="noopener">Download TempleAccounts-linux.deb</a></p>
+    <p class="field-help">Install with: <code>sudo apt install ./TempleAccounts-linux.deb</code>, then open Temple Accounts from the app menu.</p>
+  </section>
+</div>
+{{end}}
+
+{{define "licence_steps"}}
+<ol class="licence-steps">
+  <li>Install for your operating system.</li>
+  <li>Open the app and copy the Device ID from the activation screen.</li>
+  <li>Paste it on <a href="/account/licences">My licences</a> to get your key.</li>
+  <li>Paste the key into the app.</li>
+</ol>
+{{end}}

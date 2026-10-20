@@ -126,6 +126,7 @@ func New() (*Renderer, error) {
 		"templates/layout/skills_grid.html",
 		"templates/layout/subscribe_form.html",
 		"templates/layout/promo_banner.html",
+		"templates/layout/software_downloads.html",
 		"templates/layout/chatbot_widget.html",
 	}
 	adminLayout := []string{

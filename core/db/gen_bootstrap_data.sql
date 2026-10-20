@@ -264,23 +264,23 @@ FROM courses ORDER BY sort_order, id;
 -- column to omit here the way courses/articles do.
 SELECT E'\n-- software -------------------------------------------------------------';
 SELECT format($f$
-WITH v (slug, title, version, summary, description, rag_context, download_link, price_cents, license_terms, post_purchase_instructions, licence_product, licence_versions, is_published, sort_order, seo_title, meta_description, primary_keyword, og_image) AS (
+WITH v (slug, title, version, summary, description, rag_context, download_link, price_cents, license_terms, post_purchase_instructions, licence_product, microsoft_store_url, is_published, sort_order, seo_title, meta_description, primary_keyword, og_image) AS (
   VALUES (%L::text, %L::text, %L::text, %L::text, %L::text, %L::text, %L::text, %s::int, %L::text, %L::text, %L::text, %L::text, %L::boolean, %s::int, %L::text, %L::text, %L::text, %L::text)
 ), upd AS (
   UPDATE software s SET title = v.title, version = v.version, summary = v.summary, description = v.description,
       rag_context = v.rag_context, download_link = v.download_link, price_cents = v.price_cents,
       license_terms = v.license_terms, post_purchase_instructions = v.post_purchase_instructions,
-      licence_product = v.licence_product, licence_versions = v.licence_versions,
+      licence_product = v.licence_product, microsoft_store_url = v.microsoft_store_url,
       is_published = v.is_published,
       sort_order = v.sort_order, seo_title = v.seo_title,
       meta_description = v.meta_description, primary_keyword = v.primary_keyword,
       og_image = v.og_image, updated_at = now()
     FROM v WHERE s.slug = v.slug RETURNING 1
 )
-INSERT INTO software (slug, title, version, summary, description, rag_context, download_link, price_cents, license_terms, post_purchase_instructions, licence_product, licence_versions, is_published, sort_order, seo_title, meta_description, primary_keyword, og_image)
+INSERT INTO software (slug, title, version, summary, description, rag_context, download_link, price_cents, license_terms, post_purchase_instructions, licence_product, microsoft_store_url, is_published, sort_order, seo_title, meta_description, primary_keyword, og_image)
 SELECT v.* FROM v WHERE NOT EXISTS (SELECT 1 FROM software s WHERE s.slug = v.slug);$f$,
   slug, title, version, summary, description, rag_context, download_link, price_cents,
-  license_terms, post_purchase_instructions, licence_product, licence_versions, is_published, sort_order,
+  license_terms, post_purchase_instructions, licence_product, microsoft_store_url, is_published, sort_order,
   seo_title, meta_description, primary_keyword, og_image)
 FROM software ORDER BY sort_order, id;
 

@@ -16,8 +16,8 @@ type LicenceRepo struct{ db *sql.DB }
 func NewLicenceRepo(db *sql.DB) *LicenceRepo { return &LicenceRepo{db: db} }
 
 const licenceSelect = `
-	SELECT l.id, l.lic_code, l.software_id, s.title, COALESCE(l.purchase_id,0), COALESCE(l.user_id,0), COALESCE(u.email,''),
-	       l.ver, l.device_hash, l.key_text, l.kid, l.iat, l.revoked_at, l.revoked_reason, l.note, l.added_by_admin, l.created_at
+	SELECT l.id, l.lic_code, l.software_id, s.title, s.slug, COALESCE(l.purchase_id,0), COALESCE(l.user_id,0), COALESCE(u.email,''),
+	       l.device_hash, l.key_text, l.kid, l.iat, l.revoked_at, l.revoked_reason, l.note, l.added_by_admin, l.created_at
 	FROM licences l
 	JOIN software s ON s.id = l.software_id
 	LEFT JOIN users u ON u.id = l.user_id `
@@ -25,8 +25,8 @@ const licenceSelect = `
 func scanLicence(row interface{ Scan(...any) error }) (models.Licence, error) {
 	var l models.Licence
 	var iat, rev sql.NullTime
-	err := row.Scan(&l.ID, &l.Code, &l.SoftwareID, &l.SoftwareTitle, &l.PurchaseID, &l.UserID, &l.UserEmail,
-		&l.Ver, &l.DeviceHash, &l.Key, &l.KID, &iat, &rev, &l.RevokedReason, &l.Note, &l.AddedByAdmin, &l.CreatedAt)
+	err := row.Scan(&l.ID, &l.Code, &l.SoftwareID, &l.SoftwareTitle, &l.SoftwareSlug, &l.PurchaseID, &l.UserID, &l.UserEmail,
+		&l.DeviceHash, &l.Key, &l.KID, &iat, &rev, &l.RevokedReason, &l.Note, &l.AddedByAdmin, &l.CreatedAt)
 	if iat.Valid {
 		l.IssuedAt = &iat.Time
 	}
@@ -134,16 +134,16 @@ func (r *LicenceRepo) list(ctx context.Context, query string, args ...any) ([]mo
 
 // SetKey stores a freshly signed key for a licence and clears any revoke
 // (a reissue is the only way back). The event row records who and why.
-func (r *LicenceRepo) SetKey(ctx context.Context, id int64, ver, device, key, kid string, iat time.Time, event, actor, detail string) error {
+func (r *LicenceRepo) SetKey(ctx context.Context, id int64, device, key, kid string, iat time.Time, event, actor, detail string) error {
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
 	if _, err := tx.ExecContext(ctx, `
-		UPDATE licences SET ver=$1, device_hash=$2, key_text=$3, kid=$4, iat=$5,
+		UPDATE licences SET device_hash=$1, key_text=$2, kid=$3, iat=$4,
 			revoked_at=NULL, revoked_reason='', updated_at=now()
-		WHERE id=$6`, ver, device, key, kid, iat, id); err != nil {
+		WHERE id=$5`, device, key, kid, iat, id); err != nil {
 		return err
 	}
 	if _, err := tx.ExecContext(ctx, `INSERT INTO licence_events (licence_id, event, actor, detail) VALUES ($1,$2,$3,$4)`,

@@ -26,7 +26,7 @@
         <tr>
           <td class="mono">{{.Code}}</td>
           <td>{{.UserEmail}}</td>
-          <td>{{.SoftwareTitle}}{{if .Ver}} v{{.Ver}}{{end}}</td>
+          <td>{{.SoftwareTitle}}</td>
           <td>{{if .PurchaseID}}#{{.PurchaseID}}{{else}}admin{{if .Note}}: {{.Note}}{{end}}{{end}}</td>
           <td class="mono">{{if .DeviceHash}}{{.DeviceHash}}{{else}}—{{end}}</td>
           <td>{{if .Revoked}}Revoked{{else if .Issued}}Issued{{else}}Waiting for device{{end}}</td>
@@ -35,7 +35,6 @@
             <details>
               <summary>Reissue</summary>
               <form method="POST" action="/admin/licences/{{.ID}}/reissue" class="admin-inline-form">
-                <input type="text" name="ver" value="{{if .Ver}}{{.Ver}}{{else}}1{{end}}" size="3" aria-label="Version">
                 <input type="text" name="device" class="mono" placeholder="Device ID" aria-label="Device ID" required>
                 <input type="text" name="reason" placeholder="Reason" aria-label="Reason">
                 <button class="link-button" type="submit">Sign key</button>

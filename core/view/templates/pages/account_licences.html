@@ -3,7 +3,7 @@
   <div class="container">
     <p class="eyebrow">Account</p>
     <h1>My licences</h1>
-    <p class="hero-subtitle">Get the key for each computer. A key works only on the computer whose Device ID you give here.</p>
+    <p class="hero-subtitle">One key per computer. A key works on the computer whose Device ID you give here, with every app version and every download (Microsoft Store, Windows zip, Mac, Linux).</p>
   </div>
 </section>
 
@@ -12,6 +12,11 @@
     {{if .Notice}}<div class="alert alert-success" role="status">{{.Notice}}</div>{{end}}
     {{if not .Ready}}<div class="alert alert-error" role="alert">Licence keys are not switched on yet. Your licence is saved; please check back soon.</div>{{end}}
     {{if .Items}}
+    <div class="auth-card licence-howto">
+      <h2>How to activate</h2>
+      {{template "licence_steps"}}
+      <p class="field-help">Need another computer? Each computer has its own Device ID and its own key.</p>
+    </div>
     <div class="licence-list">
       {{range .Items}}
       <article class="auth-card licence-card" id="lic-{{.ID}}">
@@ -29,23 +34,14 @@
             <a class="btn btn-primary" href="/account/licences/{{.ID}}/download">Download .lic file</a>
             <button type="button" class="btn btn-secondary" data-copy-target="lic-{{.ID}}">Copy key</button>
           </p>
-          <p class="field-help">Registered for version {{.Ver}}, Device ID <span class="mono">{{.DeviceHash}}</span></p>
-          <ol class="licence-steps">
-            <li>Open Temple Accounts and press <strong>Activate</strong>.</li>
-            <li>Paste the key, or open the downloaded .lic file.</li>
-          </ol>
-          <p class="field-help">This key works only on that computer and only for version {{.Ver}} of the app.</p>
+          <p class="field-help">Registered for Device ID <span class="mono">{{.DeviceHash}}</span></p>
+          <p class="field-help">Paste the key into the app, or open the downloaded .lic file (it holds the same text). This key works only on that computer, with every app version.{{if .SoftwareSlug}} Downloads are on the <a href="/software/{{.SoftwareSlug}}#downloads">product page</a>.{{end}}</p>
           <details>
             <summary>Move this licence to another computer ({{.ChangesLeft}} of 2 changes left this year)</summary>
           {{end}}
           {{if or (not .Issued) (gt .ChangesLeft 0)}}
           <form method="POST" action="/account/licences/{{.ID}}/issue" class="auth-form">
-            <label>App version
-              <select name="ver" required>
-                {{$cur := .Ver}}{{range .Versions}}<option value="{{.}}"{{if eq . $cur}} selected{{end}}>Version {{.}}</option>{{end}}
-              </select>
-            </label>
-            <label>Device ID <span class="field-help">In Temple Accounts open Help &gt; Licence and paste the Device ID exactly as shown (spaces around it and capital letters are fine).</span>
+            <label>Device ID <span class="field-help">Open the app and copy the Device ID from its activation screen, then paste it here exactly as shown (spaces around it and capital letters are fine).</span>
               <input type="text" name="device" class="mono" autocomplete="off" spellcheck="false" required>
             </label>
             <button type="submit" class="btn btn-primary" data-loading-text="Creating key…">{{if .Issued}}Create key for this computer{{else}}Get my key{{end}}</button>

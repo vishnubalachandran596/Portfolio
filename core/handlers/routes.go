@@ -112,6 +112,7 @@ func (a *App) Routes() http.Handler {
 
 	// Legal / compliance.
 	mux.HandleFunc("GET /privacy", a.LegalPage("privacy", "Privacy Policy"))
+	mux.HandleFunc("GET /temple-accounts/privacy", a.LegalPage("temple-accounts-privacy", "Temple Accounts Privacy Policy"))
 	mux.HandleFunc("GET /terms", a.LegalPage("terms", "Terms of Service"))
 	mux.HandleFunc("GET /refund", a.LegalPage("refund", "Refund Policy"))
 	mux.HandleFunc("GET /cookies", a.LegalPage("cookies", "Cookie Policy"))

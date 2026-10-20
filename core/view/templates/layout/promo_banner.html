@@ -13,11 +13,16 @@
   Several codes wrap onto separate lines.
 */}}
 {{define "promo_banner_item"}}{{if .BannerText}}{{.BannerText}}{{else}}Use code <strong class="promo-code">{{.Code}}</strong> for {{.DiscountPercent}}% off{{if .Description}} — {{.Description}}{{end}}{{end}}{{end}}
+{{/* Scoped codes get a small "i" button after the text: a tooltip lists the
+     courses/software the code applies to (hover, keyboard focus, or tap).
+     Unscoped codes (any item) show no icon. The list comes from the banner
+     query itself (ScopeItems), so it costs no extra DB round trip. */}}
+{{define "promo_banner_info"}}{{if .ScopeItems}}<span class="promo-info"><button type="button" class="promo-info-btn" aria-label="Where code {{.Code}} applies" aria-describedby="promo-tip-{{.ID}}" aria-expanded="false">i</button><span class="promo-tip" role="tooltip" id="promo-tip-{{.ID}}"><span class="promo-tip-head">Applies to</span><ul>{{range .ScopeItems}}<li><a href="{{.URL}}">{{.Title}}</a></li>{{end}}</ul></span></span>{{end}}{{end}}
 {{define "promo_banner"}}
 {{if .PromoCodes}}
 <div class="promo-banner" role="note" aria-label="Promo code offers">
   <div class="promo-banner-track">
-    {{range .PromoCodes}}<span class="promo-banner-item">{{template "promo_banner_item" .}}</span>{{end}}
+    {{range .PromoCodes}}<span class="promo-banner-item">{{template "promo_banner_item" .}}{{template "promo_banner_info" .}}</span>{{end}}
   </div>
 </div>
 {{end}}

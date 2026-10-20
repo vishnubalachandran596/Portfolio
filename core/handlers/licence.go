@@ -45,7 +45,7 @@ var (
 
 // issueKey signs a key for lic and stores it. event/actor/detail feed the
 // audit trail. The caller has already applied any owner-side limits.
-func (a *App) issueKey(ctx context.Context, lic models.Licence, ver, device, event, actor, detail string) error {
+func (a *App) issueKey(ctx context.Context, lic models.Licence, device, event, actor, detail string) error {
 	if a.LicenceSigner == nil {
 		return errLicenceOff
 	}
@@ -60,25 +60,12 @@ func (a *App) issueKey(ctx context.Context, lic models.Licence, ver, device, eve
 	if err != nil {
 		return err
 	}
-	ver = strings.TrimSpace(ver)
-	if !contains(sw.LicenceVersionList(), ver) {
-		return errors.New("Choose a version of the app from the list.")
-	}
 	iat := time.Now().UTC().Truncate(time.Second)
-	key, err := a.LicenceSigner.Issue(sw.LicenceProduct, lic.Code, dev, ver, iat)
+	key, err := a.LicenceSigner.Issue(sw.LicenceProduct, lic.Code, dev, iat)
 	if err != nil {
 		return err
 	}
-	return a.Licences.SetKey(ctx, lic.ID, ver, dev, key, a.LicenceSigner.KID(), iat, event, actor, detail)
-}
-
-func contains(list []string, v string) bool {
-	for _, x := range list {
-		if x == v {
-			return true
-		}
-	}
-	return false
+	return a.Licences.SetKey(ctx, lic.ID, dev, key, a.LicenceSigner.KID(), iat, event, actor, detail)
 }
 
 // userMessage turns an issue error into text safe to show: validation
@@ -92,7 +79,7 @@ func userMessage(err error) string {
 	}
 	msg := err.Error()
 	if strings.HasPrefix(msg, "Enter ") || strings.HasPrefix(msg, "The Device") ||
-		strings.HasPrefix(msg, "That Device") || strings.HasPrefix(msg, "Choose ") {
+		strings.HasPrefix(msg, "That Device") {
 		return msg
 	}
 	log.Printf("licence issue: %v", err)
@@ -110,7 +97,6 @@ func serveLicFile(w http.ResponseWriter, l models.Licence) {
 
 type licenceRow struct {
 	models.Licence
-	Versions    []string
 	ChangesLeft int
 }
 
@@ -136,15 +122,7 @@ type AccountLicencesData struct {
 func (a *App) loadLicenceRows(ctx context.Context, list []models.Licence) []licenceRow {
 	rows := make([]licenceRow, 0, len(list))
 	since := time.Now().Add(-selfDeviceChangeWindow)
-	cache := map[int64][]string{}
 	for _, l := range list {
-		vers, ok := cache[l.SoftwareID]
-		if !ok {
-			if sw, err := a.Software.GetByID(ctx, l.SoftwareID); err == nil {
-				vers = sw.LicenceVersionList()
-			}
-			cache[l.SoftwareID] = vers
-		}
 		left := selfDeviceChangeLimit
 		if l.Issued() {
 			if n, err := a.Licences.SelfDeviceChanges(ctx, l.ID, since); err == nil {
@@ -154,7 +132,7 @@ func (a *App) loadLicenceRows(ctx context.Context, list []models.Licence) []lice
 				left = 0
 			}
 		}
-		rows = append(rows, licenceRow{Licence: l, Versions: vers, ChangesLeft: left})
+		rows = append(rows, licenceRow{Licence: l, ChangesLeft: left})
 	}
 	return rows
 }
@@ -245,7 +223,6 @@ func (a *App) AccountLicenceIssue(w http.ResponseWriter, r *http.Request) {
 		fail("This licence has been revoked. Please contact support.")
 		return
 	}
-	ver := r.FormValue("ver")
 	event, detail := "issued", ""
 	if l.Issued() {
 		dev, err := licence.NormaliseDevice(r.FormValue("device"))
@@ -253,25 +230,24 @@ func (a *App) AccountLicenceIssue(w http.ResponseWriter, r *http.Request) {
 			fail(userMessage(err))
 			return
 		}
-		if dev == l.DeviceHash && ver == l.Ver {
+		if dev == l.DeviceHash {
 			http.Redirect(w, r, "/account/licences?done=1#lic-"+strconv.FormatInt(l.ID, 10), http.StatusSeeOther)
 			return
 		}
-		event = "reissued"
-		if dev != l.DeviceHash {
-			n, err := a.Licences.SelfDeviceChanges(r.Context(), l.ID, time.Now().Add(-selfDeviceChangeWindow))
-			if err != nil {
-				a.serverError(w, "count device changes", err)
-				return
-			}
-			if n >= selfDeviceChangeLimit {
-				fail("You have used both computer changes for this year. Please contact support to move this licence.")
-				return
-			}
-			event, detail = "device_change", "from "+l.DeviceHash
+		// Same Device ID: the key already on the page is the right one.
+		// A different one moves the licence to another computer.
+		n, err := a.Licences.SelfDeviceChanges(r.Context(), l.ID, time.Now().Add(-selfDeviceChangeWindow))
+		if err != nil {
+			a.serverError(w, "count device changes", err)
+			return
 		}
+		if n >= selfDeviceChangeLimit {
+			fail("You have used both computer changes for this year. Please contact support to move this licence.")
+			return
+		}
+		event, detail = "device_change", "from "+l.DeviceHash
 	}
-	if err := a.issueKey(r.Context(), l, ver, r.FormValue("device"), event, "user", detail); err != nil {
+	if err := a.issueKey(r.Context(), l, r.FormValue("device"), event, "user", detail); err != nil {
 		fail(userMessage(err))
 		return
 	}
@@ -393,7 +369,7 @@ func (a *App) AdminLicenceReissue(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid form", http.StatusBadRequest)
 		return
 	}
-	if err := a.issueKey(r.Context(), l, r.FormValue("ver"), r.FormValue("device"), "admin_reissue", "admin", strings.TrimSpace(r.FormValue("reason"))); err != nil {
+	if err := a.issueKey(r.Context(), l, r.FormValue("device"), "admin_reissue", "admin", strings.TrimSpace(r.FormValue("reason"))); err != nil {
 		a.renderAdminLicences(w, r, http.StatusUnprocessableEntity, "", userMessage(err))
 		return
 	}
