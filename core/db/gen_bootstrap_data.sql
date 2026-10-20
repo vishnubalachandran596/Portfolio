@@ -16,7 +16,8 @@
 -- admins, users, purchases, software_purchases, bookings, quiz_attempts,
 -- contact_messages, article_thumbs_up, testimonials, promo_codes,
 -- promo_code_courses, admin_messages, course_updates, audit_requests,
--- subscribers, article_contributions. They are not content, they
+-- subscribers, article_contributions, quiz_attempt_grants, licence_events,
+-- auth_throttle, licences. They are not content, they
 -- carry third-party PII, and a fresh install should not have them. The first
 -- admin account is created by Bootstrap() from ADMIN_BOOTSTRAP_EMAIL /
 -- ADMIN_BOOTSTRAP_PASSWORD -- see the generated header for the procedure. No
@@ -129,20 +130,20 @@ SELECT E'-- de-duplicate on natural keys before matching on them ---------------
 -- profile: a single identity row pinned to id = 1 by a CHECK constraint.
 SELECT E'\n-- profile -------------------------------------------------------------';
 SELECT format($f$
-WITH v (name, title, tagline, hero_subtitle, summary, location, email, linkedin_url, github_url, resume_url, photo_object, logo_object, years_experience) AS (
-  VALUES (%L::text, %L::text, %L::text, %L::text, %L::text, %L::text, %L::text, %L::text, %L::text, %L::text, %L::text, %L::text, %s::smallint)
+WITH v (name, title, tagline, hero_subtitle, summary, location, email, linkedin_url, github_url, resume_url, photo_object, logo_object, years_experience, rag_context) AS (
+  VALUES (%L::text, %L::text, %L::text, %L::text, %L::text, %L::text, %L::text, %L::text, %L::text, %L::text, %L::text, %L::text, %s::smallint, %L::text)
 ), upd AS (
   UPDATE profile p SET name = v.name, title = v.title, tagline = v.tagline,
       hero_subtitle = v.hero_subtitle, summary = v.summary, location = v.location,
       email = v.email, linkedin_url = v.linkedin_url, github_url = v.github_url,
       resume_url = v.resume_url, photo_object = v.photo_object, logo_object = v.logo_object,
-      years_experience = v.years_experience, updated_at = now()
+      years_experience = v.years_experience, rag_context = v.rag_context, updated_at = now()
     FROM v WHERE p.id = 1 RETURNING 1
 )
-INSERT INTO profile (id, name, title, tagline, hero_subtitle, summary, location, email, linkedin_url, github_url, resume_url, photo_object, logo_object, years_experience)
+INSERT INTO profile (id, name, title, tagline, hero_subtitle, summary, location, email, linkedin_url, github_url, resume_url, photo_object, logo_object, years_experience, rag_context)
 SELECT 1, v.* FROM v WHERE NOT EXISTS (SELECT 1 FROM profile WHERE id = 1);$f$,
   name, title, tagline, hero_subtitle, summary, location, email,
-  linkedin_url, github_url, resume_url, photo_object, logo_object, years_experience)
+  linkedin_url, github_url, resume_url, photo_object, logo_object, years_experience, rag_context)
 FROM profile WHERE id = 1;
 
 -- skill_groups: natural key is `category`.
@@ -229,25 +230,32 @@ SELECT v.* FROM v WHERE NOT EXISTS (SELECT 1 FROM home_features h WHERE h.title 
   title, description, sort_order)
 FROM home_features ORDER BY sort_order, id;
 
--- courses: natural key is `slug`. content_html stays empty. content_object is
+-- courses: natural key is `slug`. currency and min_price_cents_inr went with
+-- migration 062 (INR only). `outline` is a derived cache the app rebuilds, so
+-- it is not emitted. content_html stays empty. content_object is
 -- the Storage path; the HTML bytes are not in this file.
 SELECT E'\n-- courses -------------------------------------------------------------';
 SELECT format($f$
-WITH v (slug, title, summary, description, level, duration, price_cents, currency, image_url, is_published, sort_order, is_paid, min_price_cents, min_price_cents_inr, content_key, content_object, content_html) AS (
-  VALUES (%L::text, %L::text, %L::text, %L::text, %L::text, %L::text, %s::int, %L::text, %L::text, %L::boolean, %s::int, %L::boolean, %s::int, %s::int, %L::text, %L::text, %L::text)
+WITH v (slug, title, summary, description, level, duration, price_cents, image_url, is_published, sort_order, is_paid, min_price_cents, content_key, content_object, content_html, rag_context, tags, preview_ready, seo_title, meta_description, primary_keyword, og_image) AS (
+  VALUES (%L::text, %L::text, %L::text, %L::text, %L::text, %L::text, %s::int, %L::text, %L::boolean, %s::int, %L::boolean, %s::int, %L::text, %L::text, %L::text, %L::text, %L::text[], %L::boolean, %L::text, %L::text, %L::text, %L::text)
 ), upd AS (
   UPDATE courses c SET title = v.title, summary = v.summary, description = v.description,
       level = v.level, duration = v.duration, price_cents = v.price_cents,
-      currency = v.currency, image_url = v.image_url, is_published = v.is_published,
+      image_url = v.image_url, is_published = v.is_published,
       sort_order = v.sort_order, is_paid = v.is_paid, min_price_cents = v.min_price_cents,
-      min_price_cents_inr = v.min_price_cents_inr, content_key = v.content_key,
-      content_object = v.content_object, content_html = v.content_html, updated_at = now()
+      content_key = v.content_key, content_object = v.content_object,
+      content_html = v.content_html, rag_context = v.rag_context, tags = v.tags,
+      preview_ready = v.preview_ready, seo_title = v.seo_title,
+      meta_description = v.meta_description, primary_keyword = v.primary_keyword,
+      og_image = v.og_image, updated_at = now()
     FROM v WHERE c.slug = v.slug RETURNING 1
 )
-INSERT INTO courses (slug, title, summary, description, level, duration, price_cents, currency, image_url, is_published, sort_order, is_paid, min_price_cents, min_price_cents_inr, content_key, content_object, content_html)
+INSERT INTO courses (slug, title, summary, description, level, duration, price_cents, image_url, is_published, sort_order, is_paid, min_price_cents, content_key, content_object, content_html, rag_context, tags, preview_ready, seo_title, meta_description, primary_keyword, og_image)
 SELECT v.* FROM v WHERE NOT EXISTS (SELECT 1 FROM courses c WHERE c.slug = v.slug);$f$,
-  slug, title, summary, description, level, duration, price_cents, currency, image_url,
-  is_published, sort_order, is_paid, min_price_cents, min_price_cents_inr, content_key, content_object, content_html)
+  slug, title, summary, description, level, duration, price_cents, image_url,
+  is_published, sort_order, is_paid, min_price_cents, content_key, content_object, content_html,
+  rag_context, tags::text,
+  preview_ready, seo_title, meta_description, primary_keyword, og_image)
 FROM courses ORDER BY sort_order, id;
 
 -- software: natural key is `slug`. Downloadable products (e.g. desktop
@@ -256,40 +264,50 @@ FROM courses ORDER BY sort_order, id;
 -- column to omit here the way courses/articles do.
 SELECT E'\n-- software -------------------------------------------------------------';
 SELECT format($f$
-WITH v (slug, title, version, summary, description, rag_context, download_link, price_cents, license_terms, post_purchase_instructions, is_published, sort_order) AS (
-  VALUES (%L::text, %L::text, %L::text, %L::text, %L::text, %L::text, %L::text, %s::int, %L::text, %L::text, %L::boolean, %s::int)
+WITH v (slug, title, version, summary, description, rag_context, download_link, price_cents, license_terms, post_purchase_instructions, licence_product, licence_versions, is_published, sort_order, seo_title, meta_description, primary_keyword, og_image) AS (
+  VALUES (%L::text, %L::text, %L::text, %L::text, %L::text, %L::text, %L::text, %s::int, %L::text, %L::text, %L::text, %L::text, %L::boolean, %s::int, %L::text, %L::text, %L::text, %L::text)
 ), upd AS (
   UPDATE software s SET title = v.title, version = v.version, summary = v.summary, description = v.description,
       rag_context = v.rag_context, download_link = v.download_link, price_cents = v.price_cents,
       license_terms = v.license_terms, post_purchase_instructions = v.post_purchase_instructions,
-      is_published = v.is_published, sort_order = v.sort_order, updated_at = now()
+      licence_product = v.licence_product, licence_versions = v.licence_versions,
+      is_published = v.is_published,
+      sort_order = v.sort_order, seo_title = v.seo_title,
+      meta_description = v.meta_description, primary_keyword = v.primary_keyword,
+      og_image = v.og_image, updated_at = now()
     FROM v WHERE s.slug = v.slug RETURNING 1
 )
-INSERT INTO software (slug, title, version, summary, description, rag_context, download_link, price_cents, license_terms, post_purchase_instructions, is_published, sort_order)
+INSERT INTO software (slug, title, version, summary, description, rag_context, download_link, price_cents, license_terms, post_purchase_instructions, licence_product, licence_versions, is_published, sort_order, seo_title, meta_description, primary_keyword, og_image)
 SELECT v.* FROM v WHERE NOT EXISTS (SELECT 1 FROM software s WHERE s.slug = v.slug);$f$,
   slug, title, version, summary, description, rag_context, download_link, price_cents,
-  license_terms, post_purchase_instructions, is_published, sort_order)
+  license_terms, post_purchase_instructions, licence_product, licence_versions, is_published, sort_order,
+  seo_title, meta_description, primary_keyword, og_image)
 FROM software ORDER BY sort_order, id;
 
 -- articles: natural key is `slug`. thumbs_up_count is deliberately omitted --
 -- it is a running tally of visitor activity, not content, and the matching
 -- article_thumbs_up rows are not emitted either. content_object is the
 -- Storage path (articles/{slug}.html). The HTML bytes are not in this file.
+-- articles.updated_at is deliberately omitted: it marks the last real edit for
+-- the sitemap's lastmod, and a restore is not an edit.
 SELECT E'\n-- articles ------------------------------------------------------------';
 SELECT format($f$
-WITH v (slug, title, summary, body, content_object, cover_image_url, tags, published_date, is_published, sort_order) AS (
-  VALUES (%L::text, %L::text, %L::text, %L::text, %L::text, %L::text, %L::text[], %s::date, %L::boolean, %s::int)
+WITH v (slug, title, summary, body, content_object, cover_image_url, tags, published_date, is_published, sort_order, seo_title, meta_description, primary_keyword, og_image) AS (
+  VALUES (%L::text, %L::text, %L::text, %L::text, %L::text, %L::text, %L::text[], %s::date, %L::boolean, %s::int, %L::text, %L::text, %L::text, %L::text)
 ), upd AS (
   UPDATE articles a SET title = v.title, summary = v.summary, body = v.body,
       content_object = v.content_object, cover_image_url = v.cover_image_url, tags = v.tags,
       published_date = v.published_date, is_published = v.is_published,
-      sort_order = v.sort_order
+      sort_order = v.sort_order, seo_title = v.seo_title,
+      meta_description = v.meta_description, primary_keyword = v.primary_keyword,
+      og_image = v.og_image
     FROM v WHERE a.slug = v.slug RETURNING 1
 )
-INSERT INTO articles (slug, title, summary, body, content_object, cover_image_url, tags, published_date, is_published, sort_order)
+INSERT INTO articles (slug, title, summary, body, content_object, cover_image_url, tags, published_date, is_published, sort_order, seo_title, meta_description, primary_keyword, og_image)
 SELECT v.* FROM v WHERE NOT EXISTS (SELECT 1 FROM articles a WHERE a.slug = v.slug);$f$,
   slug, title, summary, body, content_object, cover_image_url, tags::text,
-  coalesce(quote_literal(published_date::text), 'NULL'), is_published, sort_order)
+  coalesce(quote_literal(published_date::text), 'NULL'), is_published, sort_order,
+  seo_title, meta_description, primary_keyword, og_image)
 FROM articles ORDER BY published_date DESC NULLS LAST, id;
 
 -- availability_rules: natural key is the slot itself, (weekday, start_time,
@@ -317,21 +335,23 @@ FROM availability_rules ORDER BY weekday, start_time;
 -- so a regenerated snapshot never carries the duplication forward.
 SELECT E'\n-- quiz_questions ------------------------------------------------------';
 SELECT format($f$
-WITH v (course_slug, question, option_a, option_b, option_c, option_d, correct_option, sort_order) AS (
-  VALUES (%L::text, %L::text, %L::text, %L::text, %L::text, %L::text, %L::char, %s::int)
+WITH v (course_slug, question, option_a, option_b, option_c, option_d, correct_option, sort_order, set_no, module) AS (
+  VALUES (%L::text, %L::text, %L::text, %L::text, %L::text, %L::text, %L::char, %s::int, %s::smallint, %L::text)
 ), c AS (
   SELECT co.id FROM courses co, v WHERE co.slug = v.course_slug
 ), upd AS (
   UPDATE quiz_questions q SET option_a = v.option_a, option_b = v.option_b,
       option_c = v.option_c, option_d = v.option_d,
-      correct_option = v.correct_option, sort_order = v.sort_order
+      correct_option = v.correct_option, sort_order = v.sort_order,
+      set_no = v.set_no, module = v.module
     FROM v, c WHERE q.course_id = c.id AND q.question = v.question RETURNING 1
 )
-INSERT INTO quiz_questions (course_id, question, option_a, option_b, option_c, option_d, correct_option, sort_order)
-SELECT c.id, v.question, v.option_a, v.option_b, v.option_c, v.option_d, v.correct_option, v.sort_order
+INSERT INTO quiz_questions (course_id, question, option_a, option_b, option_c, option_d, correct_option, sort_order, set_no, module)
+SELECT c.id, v.question, v.option_a, v.option_b, v.option_c, v.option_d, v.correct_option, v.sort_order, v.set_no, v.module
 FROM v, c WHERE NOT EXISTS (
   SELECT 1 FROM quiz_questions q WHERE q.course_id = c.id AND q.question = v.question);$f$,
-  c.slug, q.question, q.option_a, q.option_b, q.option_c, q.option_d, q.correct_option, q.sort_order)
+  c.slug, q.question, q.option_a, q.option_b, q.option_c, q.option_d, q.correct_option, q.sort_order,
+  coalesce(q.set_no::text, 'NULL'), q.module)
 FROM (SELECT DISTINCT ON (course_id, question) * FROM quiz_questions ORDER BY course_id, question, id) q
 JOIN courses c ON c.id = q.course_id
 ORDER BY c.sort_order, q.sort_order;
@@ -397,6 +417,40 @@ INSERT INTO case_studies (title, client_context, problem, approach, result, is_p
 SELECT v.* FROM v WHERE NOT EXISTS (SELECT 1 FROM case_studies c WHERE c.title = v.title);$f$,
   title, client_context, problem, approach, result, is_published, sort_order)
 FROM case_studies ORDER BY sort_order, id;
+
+-- page_seo: natural key is `path` (the primary key), so ON CONFLICT would work
+-- here, but the same single-statement shape is kept for consistency. A row
+-- exists only where the owner overrode a static page; no row means the built-in
+-- copy applies, so an empty table is a valid snapshot.
+SELECT E'\n-- page_seo -------------------------------------------------------------';
+SELECT format($f$
+WITH v (path, seo_title, meta_description, primary_keyword, og_image, noindex) AS (
+  VALUES (%L::text, %L::text, %L::text, %L::text, %L::text, %L::boolean)
+), upd AS (
+  UPDATE page_seo p SET seo_title = v.seo_title, meta_description = v.meta_description,
+      primary_keyword = v.primary_keyword, og_image = v.og_image, noindex = v.noindex,
+      updated_at = now()
+    FROM v WHERE p.path = v.path RETURNING 1
+)
+INSERT INTO page_seo (path, seo_title, meta_description, primary_keyword, og_image, noindex)
+SELECT v.* FROM v WHERE NOT EXISTS (SELECT 1 FROM page_seo p WHERE p.path = v.path);$f$,
+  path, seo_title, meta_description, primary_keyword, og_image, noindex)
+FROM page_seo ORDER BY path;
+
+-- slug_redirects: natural key is `old_path` (the primary key). Permanent 301s
+-- left by a course slug rename (migration 086); created_at is not content.
+SELECT E'\n-- slug_redirects ---------------------------------------------------------';
+SELECT format($f$
+WITH v (old_path, new_path) AS (
+  VALUES (%L::text, %L::text)
+), upd AS (
+  UPDATE slug_redirects r SET new_path = v.new_path
+    FROM v WHERE r.old_path = v.old_path RETURNING 1
+)
+INSERT INTO slug_redirects (old_path, new_path)
+SELECT v.* FROM v WHERE NOT EXISTS (SELECT 1 FROM slug_redirects r WHERE r.old_path = v.old_path);$f$,
+  old_path, new_path)
+FROM slug_redirects ORDER BY old_path;
 
 -- SERIAL sequences are left where the inserts put them; nothing above sets an
 -- id explicitly except profile's pinned id = 1, so no setval is needed.
