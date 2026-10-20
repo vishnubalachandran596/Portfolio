@@ -27,7 +27,6 @@ const (
 	SigningPrefix = "vb-licence/v1\n"
 	KeyPrefix     = "VBL1-"
 	payloadV      = 1
-	maxDeviceLen  = 128
 )
 
 var b64 = base64.RawURLEncoding
@@ -108,21 +107,14 @@ func Payload(dev string, iat time.Time, kid, lic, product, ver string) ([]byte, 
 	return bytes.TrimRight(buf.Bytes(), "\n"), err
 }
 
-// NormaliseDevice trims, strips spaces and hyphens, lower-cases, and
-// requires non-empty hex. Any length is accepted (the app sends a full
-// 64-character SHA-256).
+// NormaliseDevice only trims surrounding whitespace and requires a
+// non-empty value. There is no format or length rule: the Device ID is
+// signed into the key exactly as the Temple app shows it, and the app
+// compares it (trimmed, lower-cased) with its own device hash.
 func NormaliseDevice(s string) (string, error) {
-	s = strings.ToLower(strings.NewReplacer(" ", "", "-", "", "\t", "", "\n", "", "\r", "").Replace(strings.TrimSpace(s)))
+	s = strings.TrimSpace(s)
 	if s == "" {
 		return "", errors.New("Enter the Device ID shown in Temple Accounts.")
-	}
-	if len(s) > maxDeviceLen {
-		return "", errors.New("That Device ID is too long.")
-	}
-	for _, c := range s {
-		if !(c >= '0' && c <= '9' || c >= 'a' && c <= 'f') {
-			return "", errors.New("The Device ID must contain only 0-9 and a-f. Copy it from Help > Licence in the app.")
-		}
 	}
 	return s, nil
 }

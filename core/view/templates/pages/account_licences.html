@@ -45,7 +45,7 @@
                 {{$cur := .Ver}}{{range .Versions}}<option value="{{.}}"{{if eq . $cur}} selected{{end}}>Version {{.}}</option>{{end}}
               </select>
             </label>
-            <label>Device ID <span class="field-help">In Temple Accounts open Help &gt; Licence and copy the Device ID (64 letters and numbers).</span>
+            <label>Device ID <span class="field-help">In Temple Accounts open Help &gt; Licence and paste the Device ID exactly as shown.</span>
               <input type="text" name="device" class="mono" autocomplete="off" spellcheck="false" required>
             </label>
             <button type="submit" class="btn btn-primary" data-loading-text="Creating key…">{{if .Issued}}Create key for this computer{{else}}Get my key{{end}}</button>

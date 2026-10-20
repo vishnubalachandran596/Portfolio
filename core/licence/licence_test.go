@@ -60,11 +60,17 @@ func TestVectorPayloadAndKey(t *testing.T) {
 }
 
 func TestNormaliseDevice(t *testing.T) {
-	got, err := NormaliseDevice("  9F78-28E9 63F3\n")
+	got, err := NormaliseDevice("  9f7828e963f3\n")
 	if err != nil || got != "9f7828e963f3" {
 		t.Fatalf("got %q %v", got, err)
 	}
-	for _, bad := range []string{"", "   ", "xyz", "9f78g", strings.Repeat("a", 129)} {
+	// No format or length rule: anything non-empty is kept as typed.
+	for _, ok := range []string{"xyz", "9F78-28E9 63F3", strings.Repeat("a", 500)} {
+		if got, err := NormaliseDevice(ok); err != nil || got != ok {
+			t.Errorf("%q should pass unchanged, got %q %v", ok, got, err)
+		}
+	}
+	for _, bad := range []string{"", "   ", "\n\t"} {
 		if _, err := NormaliseDevice(bad); err == nil {
 			t.Errorf("%q should be rejected", bad)
 		}
