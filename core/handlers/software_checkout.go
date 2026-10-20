@@ -102,7 +102,7 @@ func (a *App) SoftwareCheckoutOrder(w http.ResponseWriter, r *http.Request) {
 		a.setAccessCookie(w, softwareAccessCookieName(sw.ID), token)
 		writeJSON(w, http.StatusOK, map[string]any{
 			"free":     true,
-			"redirect": "/software/" + slug,
+			"redirect": a.softwareLanding(r.Context(), sw, pid, uid),
 		})
 		return
 	}
@@ -195,7 +195,53 @@ func (a *App) SoftwareCheckoutVerify(w http.ResponseWriter, r *http.Request) {
 
 	a.setAccessCookie(w, softwareAccessCookieName(sw.ID), purchase.AccessToken)
 
-	writeJSON(w, http.StatusOK, map[string]string{"redirect": "/software/" + slug})
+	writeJSON(w, http.StatusOK, map[string]string{"redirect": a.softwareLanding(ctx, sw, purchase.ID, purchase.UserID)})
+}
+
+// softwareLanding is where the buyer goes after a verified purchase. A first
+// purchase returns to the software page; an extra licence (the account
+// already held a paid purchase of this item) goes straight to My licences,
+// at the new licence, ready for its Device ID.
+func (a *App) softwareLanding(ctx context.Context, sw models.Software, purchaseID, userID int64) string {
+	home := "/software/" + sw.Slug
+	if sw.LicenceProduct == "" || userID == 0 {
+		return home
+	}
+	earlier, err := a.SoftwarePurchases.CountEarlierPaid(ctx, userID, sw.ID, purchaseID)
+	if err != nil || earlier == 0 {
+		return home
+	}
+	l, err := a.Licences.GetByPurchase(ctx, purchaseID)
+	if err != nil {
+		return home
+	}
+	return "/account/licences?new=1#lic-" + strconv.FormatInt(l.ID, 10)
+}
+
+// extraPurchaseIDs marks the paid purchases that are not an account's first
+// purchase of an item, i.e. extra licences for another device. Guest rows
+// (no user) are never extra. Used by the admin ledger and My Software.
+func extraPurchaseIDs(purchases []models.SoftwarePurchase) map[int64]bool {
+	first := map[[2]int64]int64{}
+	for _, p := range purchases {
+		if p.UserID == 0 || p.Status != models.PurchaseStatusPaid {
+			continue
+		}
+		k := [2]int64{p.UserID, p.SoftwareID}
+		if f, ok := first[k]; !ok || p.ID < f {
+			first[k] = p.ID
+		}
+	}
+	extra := map[int64]bool{}
+	for _, p := range purchases {
+		if p.UserID == 0 || p.Status != models.PurchaseStatusPaid {
+			continue
+		}
+		if first[[2]int64{p.UserID, p.SoftwareID}] != p.ID {
+			extra[p.ID] = true
+		}
+	}
+	return extra
 }
 
 // softwareAccess reports whether the current request may see a paid

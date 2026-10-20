@@ -606,12 +606,14 @@
   }
 
   // --- Fixed-price software checkout (Razorpay) ---------------------------
-  var softwarePurchaseBtn = document.getElementById("software-purchase-btn");
-  if (softwarePurchaseBtn) {
+  // Used by the software page and by "Get a new licence" on My licences:
+  // every [data-software-buy] button carries its slug and the ids of its own
+  // promo input and error box.
+  document.querySelectorAll("[data-software-buy]").forEach(function (softwarePurchaseBtn) {
     softwarePurchaseBtn.addEventListener("click", function () {
       var slug = softwarePurchaseBtn.getAttribute("data-slug");
-      var promoInput = document.getElementById("software-promo-code");
-      var errorBox = document.getElementById("purchase-error");
+      var promoInput = document.getElementById(softwarePurchaseBtn.getAttribute("data-promo"));
+      var errorBox = document.getElementById(softwarePurchaseBtn.getAttribute("data-error"));
       var defaultLabel = softwarePurchaseBtn.textContent;
 
       function showError(msg) {
@@ -689,7 +691,7 @@
           softwarePurchaseBtn.textContent = defaultLabel;
         });
     });
-  }
+  });
 
   // --- Optional article contribution (Razorpay) --------------------------
   var contributeBtn = document.getElementById("contribute-btn");

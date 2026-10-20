@@ -89,6 +89,16 @@ func (r *LicenceRepo) Get(ctx context.Context, id int64) (models.Licence, error)
 	return l, err
 }
 
+// GetByPurchase returns the licence a purchase created (ErrNotFound when
+// the item has no licence product or creation failed).
+func (r *LicenceRepo) GetByPurchase(ctx context.Context, purchaseID int64) (models.Licence, error) {
+	l, err := scanLicence(r.db.QueryRowContext(ctx, licenceSelect+`WHERE l.purchase_id = $1`, purchaseID))
+	if errors.Is(err, sql.ErrNoRows) {
+		return l, ErrNotFound
+	}
+	return l, err
+}
+
 func (r *LicenceRepo) ListByUser(ctx context.Context, userID int64) ([]models.Licence, error) {
 	return r.list(ctx, licenceSelect+`WHERE l.user_id = $1 ORDER BY l.id DESC`, userID)
 }

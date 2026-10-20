@@ -111,6 +111,19 @@ func (r *SoftwarePurchaseRepo) ListPaidByUserID(ctx context.Context, userID int6
 	return out, rows.Err()
 }
 
+// CountEarlierPaid counts the account's paid purchases of one software item
+// made before purchase beforeID. Above zero means beforeID is an extra
+// licence (another device), not the first purchase. Ordering by id keeps the
+// answer stable when a verify request is replayed.
+func (r *SoftwarePurchaseRepo) CountEarlierPaid(ctx context.Context, userID, softwareID, beforeID int64) (int, error) {
+	var n int
+	err := r.db.QueryRowContext(ctx,
+		`SELECT count(*) FROM software_purchases WHERE user_id = $1 AND software_id = $2 AND status = 'paid' AND id < $3`,
+		userID, softwareID, beforeID,
+	).Scan(&n)
+	return n, err
+}
+
 // CountUserRedemptions mirrors PurchaseRepo.CountUserRedemptions for the
 // software product line — how many paid software purchases this account
 // already has against a given promo code.

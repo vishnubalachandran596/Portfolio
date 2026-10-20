@@ -65,7 +65,7 @@ func TestAmountNeverFromClient(t *testing.T) {
 	src := string(js)
 	start := strings.Index(src, `getElementById("purchase-btn")`)
 	mid := strings.Index(src, "Optional contribution after finishing a course")
-	sw := strings.Index(src, `getElementById("software-purchase-btn")`)
+	sw := strings.Index(src, `querySelectorAll("[data-software-buy]")`)
 	end := strings.Index(src, "Optional article contribution")
 	if start < 0 || mid < start || sw < mid || end < sw {
 		t.Fatal("could not locate course and software checkout code in main.js")

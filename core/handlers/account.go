@@ -203,10 +203,15 @@ func (a *App) AccountPage(w http.ResponseWriter, r *http.Request) {
 			ReceiptURL:  "/account/articles/" + strconv.FormatInt(c.ID, 10) + "/receipt.pdf",
 		})
 	}
+	extraSoftware := extraPurchaseIDs(softwarePurchases)
 	for _, p := range softwarePurchases {
 		sw, err := a.Software.GetByID(ctx, p.SoftwareID)
 		if err != nil {
 			continue
+		}
+		extraLabel := ""
+		if extraSoftware[p.ID] {
+			extraLabel = " · extra licence"
 		}
 		paidAt := ""
 		if p.PaidAt != nil {
@@ -214,7 +219,7 @@ func (a *App) AccountPage(w http.ResponseWriter, r *http.Request) {
 		}
 		data.Software = append(data.Software, AccountSoftware{
 			Title:                    sw.Title,
-			Version:                  sw.Version,
+			Version:                  sw.Version + extraLabel,
 			DownloadLink:             sw.DownloadLink,
 			LicenseTerms:             sw.LicenseTerms,
 			PostPurchaseInstructions: sw.PostPurchaseInstructions,
@@ -223,7 +228,7 @@ func (a *App) AccountPage(w http.ResponseWriter, r *http.Request) {
 		})
 		data.Payments = append(data.Payments, AccountPayment{
 			When:        paidAt,
-			Description: "Software: " + sw.Title + " " + sw.Version,
+			Description: "Software: " + sw.Title + " " + sw.Version + extraLabel,
 			Amount:      models.FormatMoney(p.AmountCents, p.Currency),
 			ReceiptURL:  "/account/software/" + strconv.FormatInt(p.ID, 10) + "/receipt.pdf",
 		})

@@ -145,6 +145,7 @@ func (a *App) AdminPaymentsList(w http.ResponseWriter, r *http.Request) {
 		})
 		totalCents[c.Currency] += c.AmountCents
 	}
+	extraSoftware := extraPurchaseIDs(softwarePurchases)
 	for _, p := range softwarePurchases {
 		if p.Status != models.PurchaseStatusPaid || p.PaidAt == nil {
 			continue
@@ -153,6 +154,9 @@ func (a *App) AdminPaymentsList(w http.ResponseWriter, r *http.Request) {
 		title := "(software removed)"
 		if swerr == nil {
 			title = sw.Title + " " + sw.Version
+		}
+		if extraSoftware[p.ID] {
+			title += " · extra licence"
 		}
 		row := adminPaymentRow{
 			When:        p.PaidAt.In(a.Timezone).Format("Jan 2, 2006 · 3:04 PM"),

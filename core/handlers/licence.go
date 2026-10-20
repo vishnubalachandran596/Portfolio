@@ -114,13 +114,23 @@ type licenceRow struct {
 	ChangesLeft int
 }
 
+// licenceBuy is one "Get a new licence" box: a published licensed item the
+// account has already paid for, offered again at its fixed price.
+type licenceBuy struct {
+	Slug  string
+	Title string
+	Price string
+}
+
 type AccountLicencesData struct {
 	BaseData
-	Items  []licenceRow
-	Ready  bool
-	Notice string
-	Error  string
-	ErrID  int64
+	Items           []licenceRow
+	Buy             []licenceBuy
+	PaymentsEnabled bool
+	Ready           bool
+	Notice          string
+	Error           string
+	ErrID           int64
 }
 
 func (a *App) loadLicenceRows(ctx context.Context, list []models.Licence) []licenceRow {
@@ -149,6 +159,30 @@ func (a *App) loadLicenceRows(ctx context.Context, list []models.Licence) []lice
 	return rows
 }
 
+// loadLicenceBuy lists the items this account may buy another licence for:
+// published, licensed, and already paid for at least once.
+func (a *App) loadLicenceBuy(ctx context.Context, uid int64) []licenceBuy {
+	paid, err := a.SoftwarePurchases.ListPaidByUserID(ctx, uid)
+	if err != nil {
+		return nil
+	}
+	seen := map[int64]bool{}
+	var out []licenceBuy
+	for i := len(paid) - 1; i >= 0; i-- { // oldest purchase first
+		id := paid[i].SoftwareID
+		if seen[id] {
+			continue
+		}
+		seen[id] = true
+		sw, err := a.Software.GetByID(ctx, id)
+		if err != nil || !sw.IsPublished || sw.LicenceProduct == "" {
+			continue
+		}
+		out = append(out, licenceBuy{Slug: sw.Slug, Title: sw.Title, Price: sw.PriceDisplay()})
+	}
+	return out
+}
+
 func (a *App) renderAccountLicences(w http.ResponseWriter, r *http.Request, uid int64, status int, notice, errMsg string, errID int64) {
 	list, err := a.Licences.ListByUser(r.Context(), uid)
 	if err != nil {
@@ -157,12 +191,14 @@ func (a *App) renderAccountLicences(w http.ResponseWriter, r *http.Request, uid 
 	}
 	w.Header().Set("Cache-Control", "no-store")
 	a.View.Render(w, status, "account_licences", AccountLicencesData{
-		BaseData: a.base(r, "My licences", "Your software licence keys.", "account"),
-		Items:    a.loadLicenceRows(r.Context(), list),
-		Ready:    a.LicenceSigner != nil,
-		Notice:   notice,
-		Error:    errMsg,
-		ErrID:    errID,
+		BaseData:        a.base(r, "My licences", "Your software licence keys.", "account"),
+		Items:           a.loadLicenceRows(r.Context(), list),
+		Buy:             a.loadLicenceBuy(r.Context(), uid),
+		PaymentsEnabled: a.Razorpay.Enabled(),
+		Ready:           a.LicenceSigner != nil,
+		Notice:          notice,
+		Error:           errMsg,
+		ErrID:           errID,
 	})
 }
 
@@ -171,6 +207,9 @@ func (a *App) AccountLicences(w http.ResponseWriter, r *http.Request) {
 	notice := ""
 	if r.URL.Query().Get("done") == "1" {
 		notice = "Your key is ready below."
+	}
+	if r.URL.Query().Get("new") == "1" {
+		notice = "Payment received. Your new licence is below: choose the app version and enter the Device ID of the other computer."
 	}
 	a.renderAccountLicences(w, r, uid, http.StatusOK, notice, "", 0)
 }

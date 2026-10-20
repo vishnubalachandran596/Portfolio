@@ -72,6 +72,23 @@
     {{else}}
     <p class="empty-state">You have no licences yet. <a href="/software">See the software</a>.</p>
     {{end}}
+    {{range .Buy}}
+    <article class="auth-card licence-card" id="new-licence-{{.Slug}}">
+      <h2>Get a new licence</h2>
+      <p class="field-help">Need another device? Each licence works on one computer at a time. A new licence for {{.Title}} is another one-time purchase at {{.Price}}; it appears above with its own key once you have paid.</p>
+      <div id="lic-err-{{.Slug}}" class="alert alert-error" role="alert" hidden></div>
+      <label>Promo code <span class="optional">(optional)</span>
+        <input type="text" id="lic-promo-{{.Slug}}" autocapitalize="characters" autocomplete="off">
+      </label>
+      {{if $.PaymentsEnabled}}
+      <button type="button" class="btn btn-primary" data-software-buy data-slug="{{.Slug}}" data-promo="lic-promo-{{.Slug}}" data-error="lic-err-{{.Slug}}">Get a new licence · {{.Price}}</button>
+      {{else}}
+      <p class="field-help">Payments are not switched on yet. Please try again later.</p>
+      {{end}}
+      <p class="field-help">See the <a class="text-link" href="{{$.Nav.Refund}}">refund policy</a>.</p>
+    </article>
+    {{end}}
+    {{if and .Buy .PaymentsEnabled}}<script src="https://checkout.razorpay.com/v1/checkout.js"></script>{{end}}
   </div>
 </section>
 {{end}}
