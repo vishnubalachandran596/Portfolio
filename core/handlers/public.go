@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"context"
 	"fmt"
 	"html/template"
 	"io"
@@ -17,7 +16,6 @@ import (
 	"github.com/vishnubalachandran596/portfolio/core/models"
 	"github.com/vishnubalachandran596/portfolio/core/repo"
 	"github.com/vishnubalachandran596/portfolio/core/resume"
-	"github.com/vishnubalachandran596/portfolio/core/storage"
 )
 
 type HomeData struct {
@@ -550,19 +548,20 @@ func (a *App) CourseDetail(w http.ResponseWriter, r *http.Request) {
 	var quizCount, reviewCount int
 	var myReview *models.CourseReview
 	var backfilledOutline string
-	var backfilledPreview bool
+	var backfilledPreview, backfilled bool
 	g2, g2ctx := errgroup.WithContext(ctx)
 	g2.Go(func() (err error) { quizCount, err = a.QuizQuestions.CountByCourse(g2ctx, course.ID); return })
 	g2.Go(func() (err error) { reviewCount, err = a.CourseReviews.CountByCourse(g2ctx, course.ID); return })
-	if course.Outline == "" && course.ContentObject != "" && a.CourseStorage != nil {
-		// Lazy backfill of "What's inside" (migration 079) for a lesson
-		// uploaded before outlines existed: read it once, store the
-		// derived section titles, and every later view skips this.
-		// Best-effort — a Storage hiccup costs this one view its outline,
-		// never the page.
+	if needsPreviewBuild(course) && a.CourseStorage != nil {
+		// Lazy backfill of "What's inside" (migration 079) and the free
+		// preview flag (086) for a lesson whose derived columns are
+		// missing: rebuild them once per previewRetryAfter (migration
+		// 090) so a lesson with nothing to preview is not re-read on
+		// every view. Best-effort: a Storage hiccup costs this one
+		// view its outline, never the page.
 		c := course
 		g2.Go(func() error {
-			backfilledOutline, backfilledPreview = a.backfillCourseOutline(g2ctx, c)
+			backfilledOutline, backfilledPreview, backfilled = a.backfillCoursePreview(g2ctx, c)
 			return nil
 		})
 	}
@@ -589,7 +588,7 @@ func (a *App) CourseDetail(w http.ResponseWriter, r *http.Request) {
 		a.serverError(w, "load quiz count", err)
 		return
 	}
-	if backfilledOutline != "" {
+	if backfilled {
 		course.Outline = backfilledOutline
 		course.PreviewReady = backfilledPreview
 	}
@@ -668,29 +667,6 @@ func (a *App) NotFound(w http.ResponseWriter, r *http.Request) {
 func (a *App) serverError(w http.ResponseWriter, action string, err error) {
 	log.Printf("%s: %v", action, err)
 	http.Error(w, "Something went wrong. Please try again.", http.StatusInternalServerError)
-}
-
-// backfillCourseOutline reads a stored lesson, derives its outline and
-// saves it. Returns the outline ("" on any failure).
-func (a *App) backfillCourseOutline(ctx context.Context, course models.Course) (string, bool) {
-	body, err := a.CourseStorage.Open(ctx, course.ContentObject)
-	if err != nil {
-		log.Printf("outline backfill open %s: %v", course.ContentObject, err)
-		return "", false
-	}
-	defer body.Close()
-	raw, err := io.ReadAll(io.LimitReader(body, maxCourseUploadBytes+1))
-	if err != nil {
-		return "", false
-	}
-	outline := strings.Join(storage.LessonOutline(raw), "\n")
-	if outline == "" {
-		return "", false
-	}
-	if err := a.Courses.UpdateOutline(ctx, course.ID, outline, storage.HasPreview(raw)); err != nil {
-		log.Printf("outline backfill save %d: %v", course.ID, err)
-	}
-	return outline, storage.HasPreview(raw)
 }
 
 // homeHighlights returns the admin-entered highlights, or — when none are

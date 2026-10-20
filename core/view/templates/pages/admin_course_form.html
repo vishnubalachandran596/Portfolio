@@ -86,6 +86,21 @@
         <a class="btn btn-secondary" href="/admin/courses">Cancel</a>
       </div>
     </form>
+    {{if and (not .IsNew) .Course.ContentObject}}
+    <hr class="admin-form-divider">
+    <h2 class="admin-form-subhead">Free preview</h2>
+    {{if eq .PreviewStatus "ready"}}
+    <p class="admin-form-note"><strong>Preview ready.</strong> Visitors see this part of the lesson free{{if .Course.PreviewReady}}.{{else}}, but the course page does not offer it yet: use Rebuild preview below.{{end}}</p>
+    {{if .Preview.PreviewSections}}<p class="admin-form-note">Sections shown:</p><ul>{{range .Preview.PreviewSections}}<li>{{.}}</li>{{end}}</ul>{{end}}
+    {{else if eq .PreviewStatus "missing lesson"}}
+    <p class="admin-form-note"><strong>Missing lesson.</strong> The stored file could not be read, so there is no preview.</p>
+    {{else}}
+    <p class="admin-form-note"><strong>No previewable section.</strong> The lesson needs a second section heading, or a <code>&lt;!-- vb:preview-end --&gt;</code> marker, before a free preview can be cut.</p>
+    {{end}}
+    <form method="POST" action="/admin/courses/{{.Course.ID}}/rebuild-preview">
+      <button type="submit" class="btn btn-secondary" data-loading-text="Rebuilding…">Rebuild preview</button>
+    </form>
+    {{end}}
   </div>
 </section>
 {{end}}

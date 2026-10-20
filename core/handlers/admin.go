@@ -198,6 +198,8 @@ type AdminCoursesListData struct {
 	Courses []models.Course
 	// Notices report what a slug rename did (see renameCourse).
 	Notices []string
+	// PreviewResults is the per-course report of a "Rebuild previews" run.
+	PreviewResults []PreviewRebuildResult
 }
 
 func (a *App) AdminCoursesList(w http.ResponseWriter, r *http.Request) {
@@ -219,6 +221,10 @@ type AdminCourseFormData struct {
 	IsNew  bool
 	Error  string
 	SEO    models.SEOFields
+	// Preview is the stored lesson's live preview state (edit page only);
+	// PreviewStatus is one of the Preview* constants.
+	Preview       CoursePreview
+	PreviewStatus string
 }
 
 func (a *App) AdminCourseNewPage(w http.ResponseWriter, r *http.Request) {
@@ -244,11 +250,20 @@ func (a *App) AdminCourseEditPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	seo, _ := a.SEO.GetFields(r.Context(), repo.SEOCourse, id)
-	a.View.Render(w, http.StatusOK, "admin_course_form", AdminCourseFormData{
+	data := AdminCourseFormData{
 		BaseData: a.base(r, "Edit Course — Admin", "", "admin"),
 		Course:   course,
 		SEO:      seo,
-	})
+	}
+	// What the free preview will show, computed from the stored lesson
+	// (read-only: Rebuild previews is what persists it).
+	if raw, ok := a.readCourseLesson(r.Context(), course); ok {
+		data.Preview = previewFromLesson(raw)
+		data.PreviewStatus = data.Preview.Status()
+	} else {
+		data.PreviewStatus = PreviewMissingLesson
+	}
+	a.View.Render(w, http.StatusOK, "admin_course_form", data)
 }
 
 const maxCourseUploadBytes = 8 << 20 // 8MB — comfortably covers even the largest course content file
@@ -410,7 +425,8 @@ func (a *App) AdminCourseSave(w http.ResponseWriter, r *http.Request) {
 		}
 		// The outline is derived from the bytes just stored, so it can
 		// never describe a different file than the one on Storage.
-		if err := a.Courses.UpdateOutline(ctx, id, strings.Join(storage.LessonOutline(uploaded), "\n"), storage.HasPreview(uploaded)); err != nil {
+		up := previewFromLesson(uploaded)
+		if err := a.Courses.UpdateOutline(ctx, id, strings.Join(up.Outline, "\n"), up.Ready); err != nil {
 			log.Printf("save course outline %d: %v", id, err)
 		}
 		if previous != "" && previous != objectPath {

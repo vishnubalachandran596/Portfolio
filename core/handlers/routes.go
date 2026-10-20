@@ -128,6 +128,8 @@ func (a *App) Routes() http.Handler {
 	protected.HandleFunc("GET /admin/courses", a.AdminCoursesList)
 	protected.HandleFunc("GET /admin/courses/bulk-upload", a.AdminCourseBulkPage)
 	protected.HandleFunc("POST /admin/courses/bulk-upload", a.AdminCourseBulkUpload)
+	protected.HandleFunc("POST /admin/courses/rebuild-previews", a.AdminCoursesRebuildPreviews)
+	protected.HandleFunc("POST /admin/courses/{id}/rebuild-preview", a.AdminCoursesRebuildPreviews)
 	protected.HandleFunc("GET /admin/courses/new", a.AdminCourseNewPage)
 	protected.HandleFunc("POST /admin/courses/new", a.AdminCourseSave)
 	protected.HandleFunc("GET /admin/courses/{id}/preview", a.AdminCoursePreview)

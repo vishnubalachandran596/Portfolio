@@ -3,12 +3,13 @@
   <div class="container">
     <div class="section-header-row">
       <h1>Courses</h1>
-      <div class="cluster"><a class="btn btn-secondary" href="/admin/courses/bulk-upload">Bulk upload lessons</a><a class="btn btn-primary" href="/admin/courses/new">New Course</a></div>
+      <div class="cluster"><form method="POST" action="/admin/courses/rebuild-previews"><button type="submit" class="btn btn-secondary" data-loading-text="Rebuilding…">Rebuild previews</button></form><a class="btn btn-secondary" href="/admin/courses/bulk-upload">Bulk upload lessons</a><a class="btn btn-primary" href="/admin/courses/new">New Course</a></div>
     </div>
     {{if .Notices}}<div class="alert alert-success"><p><strong>Course renamed.</strong></p><ul>{{range .Notices}}<li>{{.}}</li>{{end}}</ul></div>{{end}}
+    {{if .PreviewResults}}<div class="alert alert-success"><p><strong>Previews rebuilt.</strong></p><ul>{{range .PreviewResults}}<li>{{.Title}}: {{.Status}}{{if .Sections}} ({{range $i, $t := .Sections}}{{if $i}}, {{end}}{{$t}}{{end}}){{end}}</li>{{end}}</ul></div>{{end}}
     {{if .Courses}}
     <table class="admin-table">
-      <thead><tr><th>Title</th><th>Level</th><th>Price</th><th>Published</th><th></th></tr></thead>
+      <thead><tr><th>Title</th><th>Level</th><th>Price</th><th>Published</th><th>Preview</th><th></th></tr></thead>
       <tbody>
         {{range .Courses}}
         <tr>
@@ -16,8 +17,10 @@
           <td>{{.Level}}</td>
           <td>{{.PriceDisplay}}</td>
           <td>{{if .IsPublished}}Yes{{else}}No{{end}}</td>
+          <td>{{if .ContentObject}}{{if .PreviewReady}}Ready{{else}}Not ready{{end}}{{else}}No lesson{{end}}</td>
           <td class="admin-table-actions">
             {{if .ContentObject}}<a class="link-button" href="/admin/courses/{{.ID}}/preview" target="_blank" rel="noopener">Preview</a>{{end}}
+            {{if .ContentObject}}<form method="POST" action="/admin/courses/{{.ID}}/rebuild-preview"><button type="submit" class="link-button">Rebuild preview</button></form>{{end}}
             <a href="/admin/courses/{{.ID}}/edit">Edit</a>
             <a class="link-button" href="/admin/courses/{{.ID}}/quiz">Quiz</a>
             <a class="link-button" href="/admin/courses/{{.ID}}/reviews">Reviews</a>

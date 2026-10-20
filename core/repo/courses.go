@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/lib/pq"
 	"golang.org/x/sync/errgroup"
@@ -275,7 +276,7 @@ func (r *CourseRepo) UpdateRenaming(ctx context.Context, c models.Course, oldSlu
 			return nil, err
 		}
 	}
-	if _, err := tx.ExecContext(ctx, `UPDATE courses SET outline = '', preview_ready = FALSE WHERE id = $1`, c.ID); err != nil {
+	if _, err := tx.ExecContext(ctx, `UPDATE courses SET outline = '', preview_ready = FALSE, preview_checked_at = NULL WHERE id = $1`, c.ID); err != nil {
 		return nil, err
 	}
 	var written []string
@@ -297,14 +298,32 @@ func (r *CourseRepo) UpdateContentObject(ctx context.Context, id int64, objectPa
 	return err
 }
 
-// UpdateOutline stores the lesson's derived section titles (see
-// storage.LessonOutline and migration 079). It deliberately leaves
+// UpdateOutline stores the lesson's derived section titles and preview
+// flag (see storage.LessonOutline, storage.LessonPreview, migrations 079
+// and 090) and stamps preview_checked_at. It deliberately leaves
 // updated_at alone: the outline is derived from content that already
 // bumped it when it was uploaded, and the lazy backfill on a detail-page
 // view must not change a course's sitemap lastmod.
 func (r *CourseRepo) UpdateOutline(ctx context.Context, id int64, outline string, previewReady bool) error {
-	_, err := r.db.ExecContext(ctx, `UPDATE courses SET outline = $1, preview_ready = $2 WHERE id = $3`, outline, previewReady, id)
+	_, err := r.db.ExecContext(ctx, `UPDATE courses SET outline = $1, preview_ready = $2, preview_checked_at = now() WHERE id = $3`, outline, previewReady, id)
 	return err
+}
+
+// ClaimPreviewBuild atomically reserves a preview rebuild for a course
+// whose outline or preview is missing, and reports whether this caller
+// won it. A course is claimable when it was never checked or the last
+// check is older than retryAfter, so concurrent serverless instances do
+// one Storage read between them and a lesson with nothing to preview is
+// not re-read on every page view. The throttle lives in the database
+// because the app keeps no in-process state.
+func (r *CourseRepo) ClaimPreviewBuild(ctx context.Context, id int64, retryAfter time.Duration) (bool, error) {
+	res, err := r.db.ExecContext(ctx, `UPDATE courses SET preview_checked_at = now()
+		WHERE id = $1 AND (preview_checked_at IS NULL OR preview_checked_at < now() - make_interval(secs => $2))`, id, retryAfter.Seconds())
+	if err != nil {
+		return false, err
+	}
+	n, err := res.RowsAffected()
+	return n > 0, err
 }
 
 func (r *CourseRepo) Delete(ctx context.Context, id int64) error {
