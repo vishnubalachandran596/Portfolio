@@ -632,6 +632,7 @@ Handler files, by area:
 | `newsletter.go` | Public `POST /subscribe` (capture only, no confirmation email) + admin subscribers list/delete |
 | `articles.go` | Public article list (incl. subscribe-form data)/detail/thumbs-up + Admin article CRUD |
 | `account.go` | `/account` page + PDF receipts + testimonial submission |
+| `account_delete.go` | `/account/delete` self-service erasure (`UserRepo.DeleteAccount`: anonymise payments, revoke access tokens, delete licences/quizzes/testimonials) |
 | `booking_reschedule.go` | Admin and signed-in booking reschedule flows, `availableDays` (30 days) and `bookableSlotError`, the single server-side gate for any requested slot |
 | `booking_manage.go` | Token-based manage page for no-login bookings: view, cancel, reschedule (`manageGuard` sets noindex, no-store, no-referrer) |
 | `learn.go` | Gated course content serving inside the site chrome + watermark injection |

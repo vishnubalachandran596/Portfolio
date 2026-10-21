@@ -174,3 +174,82 @@ func (r *UserRepo) MarkGoogleVerified(ctx context.Context, id int64) (bool, erro
 		RETURNING (NOT old.google_verified AND old.password_usable)`, id).Scan(&tookOver)
 	return tookOver, err
 }
+
+// AccountDeletionSummary counts what a self-service account deletion will
+// remove, so the confirmation page can say exactly what is lost.
+type AccountDeletionSummary struct {
+	Courses       int
+	Software      int
+	Contributions int
+	Certificates  int
+	UpcomingSlots int
+}
+
+func (r *UserRepo) DeletionSummary(ctx context.Context, id int64) (AccountDeletionSummary, error) {
+	var s AccountDeletionSummary
+	err := r.db.QueryRowContext(ctx, `
+SELECT
+  (SELECT count(*) FROM purchases WHERE user_id=$1 AND status='paid'),
+  (SELECT count(*) FROM software_purchases WHERE user_id=$1 AND status='paid'),
+  (SELECT count(*) FROM article_contributions WHERE user_id=$1 AND status='paid')
+   + (SELECT count(*) FROM course_contributions WHERE user_id=$1 AND status='paid'),
+  (SELECT count(*) FROM quiz_attempts WHERE user_id=$1 AND certificate_code IS NOT NULL),
+  (SELECT count(*) FROM bookings WHERE user_id=$1 AND status='confirmed' AND slot_start > now())`, id).
+		Scan(&s.Courses, &s.Software, &s.Contributions, &s.Certificates, &s.UpcomingSlots)
+	return s, err
+}
+
+// DeleteAccount permanently removes a visitor's account and everything that
+// ties their identity or access to it, in one transaction.
+//
+//   - Course and software access is revoked: the purchase's access token is
+//     replaced and its claim code cleared, so no cookie, claim code or later
+//     sign-up with the same email can bring it back.
+//   - Licences, quiz attempts, certificates, testimonials, reviews and
+//     admin messages are deleted.
+//   - Payment records (purchases, software purchases, contributions,
+//     bookings) are kept only as anonymous accounting rows: user_id NULL and
+//     email, name, phone and message blanked, because tax law requires
+//     payment records to be kept. Nothing in them identifies the person.
+//
+// The caller must already have checked the password/confirmation and that the
+// account is not the site admin and has no upcoming booking.
+func (r *UserRepo) DeleteAccount(ctx context.Context, id int64) error {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	var email string
+	if err := tx.QueryRowContext(ctx, `SELECT lower(email) FROM users WHERE id=$1 FOR UPDATE`, id).Scan(&email); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ErrNotFound
+		}
+		return err
+	}
+	const anon = "deleted-account"
+	stmts := []struct {
+		q    string
+		args []any
+	}{
+		{`DELETE FROM licences WHERE user_id=$1`, []any{id}},
+		{`DELETE FROM quiz_attempts WHERE user_id=$1`, []any{id}},
+		{`DELETE FROM testimonials WHERE user_id=$1`, []any{id}},
+		{`UPDATE purchases SET user_id=NULL, email=$2, claim_code='', access_token='revoked-'||id||'-'||md5(random()::text)
+		  WHERE user_id=$1 OR (user_id IS NULL AND claim_code<>'' AND lower(email)=$3)`, []any{id, anon, email}},
+		{`UPDATE software_purchases SET user_id=NULL, email=$2, claim_code='', access_token='revoked-'||id||'-'||md5(random()::text)
+		  WHERE user_id=$1 OR (user_id IS NULL AND claim_code<>'' AND lower(email)=$3)`, []any{id, anon, email}},
+		{`UPDATE article_contributions SET user_id=NULL, email=$2 WHERE user_id=$1 OR lower(email)=$3`, []any{id, anon, email}},
+		{`UPDATE course_contributions SET user_id=NULL, email=$2 WHERE user_id=$1 OR lower(email)=$3`, []any{id, anon, email}},
+		{`UPDATE bookings SET user_id=NULL, name='Deleted user', email=$2, phone='', message='', manage_token_hash=''
+		  WHERE user_id=$1`, []any{id, anon}},
+		{`DELETE FROM users WHERE id=$1`, []any{id}},
+	}
+	for _, s := range stmts {
+		if _, err := tx.ExecContext(ctx, s.q, s.args...); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
+}

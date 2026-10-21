@@ -1,0 +1,46 @@
+{{define "content"}}
+<section class="page-hero page-hero-narrow">
+  <div class="container">
+    <p class="eyebrow">Account</p>
+    <h1>Delete my account</h1>
+    <p class="hero-subtitle">This is permanent and cannot be undone.</p>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container auth-container"><div class="auth-card">
+    {{if .Error}}<div class="alert alert-error" role="alert">{{.Error}}</div>{{end}}
+
+    <div class="alert alert-error" role="note">
+      <strong>All your purchases will be lost.</strong> Once you delete your account you can no longer open your courses, download your software or get licence keys, and your certificates stop verifying. We cannot restore them and payments are not refunded.
+    </div>
+
+    <p>Deleting <strong>{{.Email}}</strong> will:</p>
+    <ul>
+      <li>Remove access to <strong>{{.Summary.Courses}}</strong> paid course{{if ne .Summary.Courses 1}}s{{end}} and <strong>{{.Summary.Software}}</strong> software purchase{{if ne .Summary.Software 1}}s{{end}}, including every licence key and Device ID linked to them.</li>
+      <li>Delete your quiz attempts and <strong>{{.Summary.Certificates}}</strong> certificate{{if ne .Summary.Certificates 1}}s{{end}}, your testimonial and reviews, and your messages.</li>
+      <li>Keep only anonymous payment records (amount and date, with no name or email) because tax law requires us to keep them.</li>
+    </ul>
+    {{if .Summary.UpcomingSlots}}
+    <div class="alert alert-error" role="alert">You have {{.Summary.UpcomingSlots}} upcoming consultancy booking{{if ne .Summary.UpcomingSlots 1}}s{{end}}. Cancel or complete {{if eq .Summary.UpcomingSlots 1}}it{{else}}them{{end}} before deleting your account.</div>
+    {{end}}
+
+    <form method="POST" action="/account/delete" class="auth-form">
+      {{if .HasPassword}}
+      <label>Your password
+        <input type="password" name="password" autocomplete="current-password" required>
+      </label>
+      {{else}}
+      <label>Type your email address to confirm <span class="field-help">{{.Email}}</span>
+        <input type="email" name="email" autocomplete="off" required>
+      </label>
+      {{end}}
+      <label>Type <strong>DELETE</strong> to confirm
+        <input type="text" name="confirm" autocomplete="off" required>
+      </label>
+      <button type="submit" class="btn btn-primary" data-loading-text="Deleting…">Permanently delete my account</button>
+    </form>
+    <p class="auth-fineprint"><a href="/account">Keep my account</a></p>
+  </div></div>
+</section>
+{{end}}

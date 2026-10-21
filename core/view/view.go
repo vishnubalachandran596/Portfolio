@@ -160,6 +160,7 @@ func New() (*Renderer, error) {
 		"templates/pages/signup.html",
 		"templates/pages/forgot.html",
 		"templates/pages/account_security.html",
+		"templates/pages/account_delete.html",
 		"templates/pages/account_licences.html",
 		"templates/pages/account_claim.html",
 		"templates/pages/purchase_success.html",
