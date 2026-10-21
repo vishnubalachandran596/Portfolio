@@ -26,7 +26,7 @@ func (a *App) LegalPage(slug, title string) http.HandlerFunc {
 			BaseData:     a.base(r, title+" — "+a.Cfg.SiteName, title+" for "+a.Cfg.SiteName, "legal"),
 			Slug:         slug,
 			PageTitle:    title,
-			LastUpdated:  "September 2026",
+			LastUpdated:  "October 2026",
 			ContactName:  profile.Name,
 			ContactLoc:   profile.Location,
 			ContactEmail: profile.Email,

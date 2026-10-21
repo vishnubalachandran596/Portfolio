@@ -17,14 +17,20 @@
     <h2>Information we collect</h2>
     <p>We collect only what's needed to operate the site:</p>
     <ul>
-      <li><strong>Account information:</strong> the name, email address, and a securely hashed password (never stored in plain text) you provide when creating an account. An account is needed to book consultancy, take a course quiz or manage software licences; it is not needed to buy a course.</li>
+      <li><strong>Account information:</strong> the name and email address you provide when creating an account, plus either a securely hashed password (never stored in plain text) or, if you sign in with Google, the name and email address Google shares with us (we ask Google only for "openid email profile" and never receive your Google password). If you sign up with a password, we also store a security question you choose and a securely hashed answer, used only to reset a forgotten password. An account is needed to book consultancy, take a course quiz or manage software licences; it is not needed to buy a course.</li>
       <li><strong>Consultancy bookings:</strong> the time slot you selected, an optional message, and payment status (pending/confirmed), tied to your account.</li>
       <li><strong>Course and software purchases:</strong> the email address you enter (or your account email), the fixed price charged, any promo code, and payment status (paid/failed). A course purchase made without an account also stores a random claim code that lets you attach it to an account later. We send no emails. We never see or store your card details — payment is handled entirely by Razorpay's own checkout, which runs in its own secure window and passes us only a payment confirmation.</li>
       <li><strong>Article contributions:</strong> the email address and amount you enter when optionally supporting an article, with payment status and the time it was paid, tied to your account (or a guest account created from that email). We never see or store your card details — same Razorpay checkout as courses.</li>
+      <li><strong>Quizzes and certificates:</strong> your quiz attempts (answers, score, attempt count) and, once you pass, a certificate with your name, the course, your score, the date and a certificate code. Anyone who has the certificate code can open the public verification page, which shows exactly those details, so only share your code with people you want to verify it.</li>
+      <li><strong>AI assistant (chatbot):</strong> the questions you type and the recent messages of that conversation are sent to NVIDIA's hosted AI service to generate an answer from this site's content. Please do not type personal or confidential information into it. We store the text of questions and answers (without your name or email) so repeat questions can be answered faster, and an anonymous random session identifier (kept in a cookie) to count a daily message limit.</li>
+      <li><strong>Security logs:</strong> to block password-guessing we keep failed-attempt counters keyed to a one-way hash of your email address or IP address, never the raw value.</li>
       <li><strong>Admin account:</strong> if you're the site administrator, your email and a securely hashed password.</li>
-      <li><strong>Cookies:</strong> a cookie-consent preference, your login session cookie, a per-course access token (only if you've purchased a paid course), and — for the administrator only — a separate admin session cookie. See our <a href="{{.Nav.Cookies}}">Cookie Policy</a> for details.</li>
+      <li><strong>Cookies:</strong> a cookie-consent preference, your login session cookie, a per-course access token (only if you've purchased a paid course), an anonymous chat session cookie (if you use the AI assistant), and — for the administrator only — a separate admin session cookie. See our <a href="{{.Nav.Cookies}}">Cookie Policy</a> for details.</li>
     </ul>
-    <p>Third-party processors we use, and why: <strong>Razorpay</strong> processes course and optional article-contribution payments (they receive your card/payment details directly; we never do), <strong>Supabase</strong> hosts our database, and <strong>Vercel</strong> hosts the application. We don't use any third-party advertising or analytics trackers.</p>
+    <p>Third-party processors we use, and why: <strong>Razorpay</strong> processes course, software and optional article-contribution payments (they receive your card/payment details directly; we never do), <strong>Google</strong> provides optional sign-in, <strong>NVIDIA</strong> processes AI assistant questions, <strong>Supabase</strong> hosts our database, and <strong>Vercel</strong> hosts the application. We don't use any third-party advertising or analytics trackers. Some of these providers may process data on servers outside India; we use them only to run the site and not for any other purpose.</p>
+
+    <h2>Why we process it, and your consent</h2>
+    <p>We process your personal data only for the purposes described on this page, and only with your consent or where you have voluntarily provided it to us for that purpose (for example by creating an account, booking a session, making a purchase or asking the assistant a question). You can withdraw consent at any time by deleting your account or writing to us; this does not affect processing that already happened, and we may keep payment records where the law requires.</p>
 
     <h2>How we use it</h2>
     <p>Account and booking information is used solely to authenticate you, schedule and follow up on the session you booked, grant access to courses you've purchased, and record optional article contributions. It is not sold, rented, or used for marketing without your separate consent.</p>
@@ -32,11 +38,25 @@
     <h2>Where it's stored</h2>
     <p>Data is stored in a managed PostgreSQL database (hosted by Supabase) and served by an application hosted on Vercel. Both providers process data on our behalf under their own security and privacy commitments.</p>
 
+    <h2>How long we keep it</h2>
+    <ul>
+      <li>Account details, quiz attempts and certificates: until you ask us to delete your account.</li>
+      <li>Booking, purchase and licence records: as long as needed to provide the service and support, and for as long as accounting and tax law require us to keep payment records.</li>
+      <li>Security counters: short-lived; they reset after a lockout window.</li>
+      <li>AI assistant question and answer text, and the daily message counter: kept only as long as they are useful for answering repeat questions and can be deleted on request.</li>
+    </ul>
+
+    <h2>Keeping your data safe, and breaches</h2>
+    <p>Passwords and security answers are stored only as one-way hashes, connections use HTTPS, payment card details never reach us, and database tables are protected by access rules. No system is perfectly secure. If a breach of personal data we hold occurs, we will tell the affected users and the Data Protection Board of India as required by the Digital Personal Data Protection Act, 2023 and its rules.</p>
+
     <h2>Your rights, including data deletion</h2>
-    <p>You can ask us to access, correct, or delete the personal information we hold about you (for example, your account or a booking) at any time{{if .ContactEmail}} by emailing <a href="mailto:{{.ContactEmail}}">{{.ContactEmail}}</a>{{else}} via the contact details on the <a href="{{.Nav.Contact}}">Contact page</a>{{end}}. We'll respond and action deletion requests within a reasonable time.</p>
+    <p>Under India's Digital Personal Data Protection Act, 2023 you can ask us for a summary of the personal data we hold about you and how it is used, ask us to correct or complete it, ask us to erase it, withdraw your consent, nominate someone to exercise these rights on your behalf if you die or become unable to, and raise a grievance. Write to us at any time{{if .ContactEmail}} at <a href="mailto:{{.ContactEmail}}">{{.ContactEmail}}</a>{{else}} via the contact details on the <a href="{{.Nav.Contact}}">Contact page</a>{{end}}; we aim to reply within 30 days and will action verified deletion requests within that time, except for records we must keep by law.</p>
+
+    <h2>Grievance contact</h2>
+    <p>Grievance officer: {{.ContactName}}{{if .ContactEmail}}, <a href="mailto:{{.ContactEmail}}">{{.ContactEmail}}</a>{{end}}. If we do not resolve your complaint you may complain to the Data Protection Board of India.</p>
 
     <h2>Children's data</h2>
-    <p>This site is not directed at children, and we do not knowingly collect personal information from anyone under 16. If you believe a child has provided us information, contact us and we'll delete it.</p>
+    <p>This site is not directed at children. Under Indian law a child is anyone under 18, and we do not knowingly collect personal information from anyone under 18 without a parent or legal guardian's verifiable consent. If you believe a child has provided us information, contact us and we'll delete it.</p>
 
     <p>The <strong>Temple Accounts</strong> app has its own <a href="{{.Nav.TempleAccountsPrivacy}}">privacy policy</a>.</p>
 
@@ -48,6 +68,9 @@
     <h2>What this policy covers</h2>
     <p>This policy covers the <strong>Temple Accounts</strong> desktop app (Windows, Mac and Linux) and the part of {{.ContactName}}'s website ("this site") that sells and licenses it. For everything else on this site, see the general <a href="{{.Nav.Privacy}}">Privacy Policy</a>.</p>
 
+    <h2>Your temple's data is your temple's responsibility</h2>
+    <p>The names, nakshathra, payment details and amounts a temple records in the app (for example devotees and donors) are collected and kept by the temple, not by us. We never receive, see or process them. The temple decides what to record and why, and should tell devotees what it records and keep it only as long as needed.</p>
+
     <h2>The app works offline and sends no data</h2>
     <p>Temple Accounts runs entirely on your computer. Your temple's records, orders, expenses and spreadsheets stay in the app's data folder on your computer. The app does not send them, or any usage data, analytics or crash reports, to us or to anyone else, and it does not need an internet connection to work. Verifying your licence key is done offline on your computer.</p>
 
@@ -58,13 +81,22 @@
       <li><strong>Device ID:</strong> the Device ID you copy from the app's activation screen and paste into <em>My licences</em>. It is a one-way code for your computer, not your name or your files. We store it with your licence so we can sign your licence key for that computer, together with the key itself and a short history of key changes.</li>
       <li><strong>Account:</strong> to use <em>My licences</em> you sign in with an account (name, email and a securely hashed password, or Google sign-in).</li>
     </ul>
-    <p>We send no emails. Hosting is by Supabase (database) and Vercel (application), as described in the general <a href="{{.Nav.Privacy}}">Privacy Policy</a>. Downloading the app from the Microsoft Store or from GitHub is handled by those services under their own policies, not by this site or by the app.</p>
+    <p>We send no emails. Hosting is by Supabase (database) and Vercel (application), as described in the general <a href="{{.Nav.Privacy}}">Privacy Policy</a>. Downloading the app from the Microsoft Store, Google Drive or GitHub is handled by those services under their own policies, not by this site or by the app.</p>
+
+    <h2>Keeping your temple's data safe</h2>
+    <p>The app's data folder and Excel files are not encrypted, so anyone who can open your computer account can read them. Protect your computer with a password and disk encryption, keep backups somewhere secure, and remove the data folder before giving away or recycling a computer. Because the data never leaves your computer, we cannot see it, recover it or tell you if it is lost; a breach of data on the temple's own computer must be handled by the temple. If a breach affects the licence and purchase data we hold on this site, we will tell the affected users and the Data Protection Board of India as required by the Digital Personal Data Protection Act, 2023.</p>
+
+    <h2>How long we keep it</h2>
+    <p>We keep your licence record and Device ID while your licence is active and for as long as accounting and tax law require us to keep payment records. You can ask us to delete them sooner (except records we must keep by law).</p>
 
     <h2>Your rights, including deletion</h2>
-    <p>You can ask us to access, correct or delete the information we hold about you (for example your licence record and Device ID){{if .ContactEmail}} by emailing <a href="mailto:{{.ContactEmail}}">{{.ContactEmail}}</a>{{else}} via the <a href="{{.Nav.Contact}}">Contact page</a>{{end}}. Uninstalling the app and deleting its data folder removes everything the app stores on your computer.</p>
+    <p>Under India's Digital Personal Data Protection Act, 2023 you can ask us to access, correct or delete the information we hold about you (for example your licence record and Device ID), withdraw your consent, nominate someone to act for you, and raise a grievance{{if .ContactEmail}} by emailing <a href="mailto:{{.ContactEmail}}">{{.ContactEmail}}</a>{{else}} via the <a href="{{.Nav.Contact}}">Contact page</a>{{end}}. Uninstalling the app and deleting its data folder removes everything the app stores on your computer.</p>
 
     <h2>Children's data</h2>
-    <p>The app and this site are not directed at children, and we do not knowingly collect personal information from anyone under 16.</p>
+    <p>The app and this site are not directed at children, and we do not knowingly collect personal information from anyone under 18 without a parent or legal guardian's verifiable consent.</p>
+
+    <h2>Grievance contact</h2>
+    <p>Grievance officer: {{.ContactName}}{{if .ContactEmail}}, <a href="mailto:{{.ContactEmail}}">{{.ContactEmail}}</a>{{end}}. If we do not resolve your complaint you may complain to the Data Protection Board of India.</p>
 
     <h2>Changes</h2>
     <p>If this policy changes, the "Last updated" date above changes with it.</p>
@@ -75,7 +107,7 @@
     <p>By using this site you agree to these terms. This site is operated by {{.ContactName}}{{if .ContactLoc}}, based in {{.ContactLoc}}{{end}}, as a personal portfolio, course listing, and session-booking site.</p>
 
     <h2>Accounts</h2>
-    <p>You can buy a course as a guest with just an email address (software purchases need an account). After paying you are shown a claim code; keep it safe, because this site sends no emails. Enter it at <em>Claim a purchase</em> in your account, or sign in with Google using the same email, to attach the purchase to your account. An account is needed to book consultancy, take a course quiz and manage software licences. Keep your password confidential; you're responsible for activity under your account, and anyone who holds a claim code can claim the purchase it belongs to.</p>
+    <p>You must be 18 or older to use this site, or have a parent or legal guardian's consent. You can buy a course as a guest with just an email address (software purchases need an account). After paying you are shown a claim code; keep it safe, because this site sends no emails. Enter it at <em>Claim a purchase</em> in your account, or sign in with Google using the same email, to attach the purchase to your account. An account is needed to book consultancy, take a course quiz and manage software licences. Keep your password confidential; you're responsible for activity under your account, and anyone who holds a claim code can claim the purchase it belongs to.</p>
 
     <h2>Consultancy bookings</h2>
     <p>A consultancy slot is reserved the moment you start checkout, and confirmed the moment payment clears — the current price is always shown before you pay. Please arrive on time and provide accurate contact information so we can reach you if plans change.</p>
@@ -129,6 +161,7 @@
     <ul>
       <li><strong>Cookie consent preference</strong> — remembers that you've seen and dismissed the cookie banner, stored in your browser.</li>
       <li><strong>Login session</strong> — an HttpOnly, secure session cookie issued when you log into your account, used to keep you signed in for booking and course access. You only receive this if you create an account.</li>
+      <li><strong>Chat session</strong> — a random, anonymous identifier (HttpOnly, kept for up to a year) set only if you use the AI assistant, used to count a daily message limit. It contains no name or email.</li>
       <li><strong>Course and software access token</strong> — issued only after you've purchased a paid course or software (including as a guest), so you don't have to re-authenticate to view it.</li>
       <li><strong>Admin session</strong> — a separate HttpOnly, secure session cookie issued only when the site administrator logs in, used purely to keep that admin session authenticated.</li>
     </ul>
