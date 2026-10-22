@@ -100,6 +100,8 @@ func (a *App) Routes() http.Handler {
 	mux.Handle("POST /forgot/reset", noindex(http.HandlerFunc(a.ForgotReset)))
 	mux.Handle("GET /account/security", noindex(a.Auth.RequireUser(http.HandlerFunc(a.AccountSecurityPage))))
 	mux.Handle("POST /account/security", noindex(a.Auth.RequireUser(http.HandlerFunc(a.AccountSecuritySubmit))))
+	mux.Handle("GET /account/delete", noindex(a.Auth.RequireUser(http.HandlerFunc(a.AccountDeletePage))))
+	mux.Handle("POST /account/delete", noindex(a.Auth.RequireUser(http.HandlerFunc(a.AccountDeleteSubmit))))
 	mux.Handle("GET /login/google", noindex(http.HandlerFunc(a.GoogleLoginStart)))
 	mux.Handle("GET /login/google/callback", noindex(http.HandlerFunc(a.GoogleLoginCallback)))
 	mux.HandleFunc("POST /logout", a.UserLogout)

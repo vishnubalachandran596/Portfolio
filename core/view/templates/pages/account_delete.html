@@ -1,0 +1,33 @@
+{{define "content"}}
+<section class="page-hero page-hero-narrow">
+  <div class="container">
+    <p class="eyebrow">Account</p>
+    <h1>Delete my account</h1>
+    <p class="hero-subtitle">This erases your login and personal details. It cannot be undone.</p>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container auth-container"><div class="auth-card">
+    {{if .Error}}<div class="alert alert-error" role="alert">{{.Error}}</div>{{end}}
+    <p>Account: <strong>{{.Email}}</strong></p>
+    <ul>
+      <li>Your testimonial and thumbs-up are removed.</li>
+      <li>Payment, booking, contribution and quiz records are kept for accounting and legal reasons, but your name, email and phone are removed from them.</li>
+      <li>Licence keys and course access tied to this account stop working for you.</li>
+    </ul>
+    <form method="POST" action="/account/delete" class="auth-form">
+      {{if .HasPassword}}
+      <label>Current password
+        <input type="password" name="current" autocomplete="current-password" required>
+      </label>
+      {{end}}
+      <label>Type DELETE to confirm
+        <input type="text" name="confirm" autocomplete="off" required>
+      </label>
+      <button type="submit" class="btn btn-primary" data-loading-text="Deleting…">Delete my account</button>
+    </form>
+    <p class="auth-fineprint"><a href="/account">Cancel and go back</a></p>
+  </div></div>
+</section>
+{{end}}

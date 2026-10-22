@@ -105,3 +105,17 @@ func TestPromoBannerInfoIcon(t *testing.T) {
 		t.Error("unscoped code must have no info icon")
 	}
 }
+
+func TestAccountDeleteRender(t *testing.T) {
+	base := BaseData{SiteName: "S", Nav: NavLinks{Home: "/"}}
+	body := renderDL(t, "account_delete", PasswordAuthData{BaseData: base, Email: "a@b.test", HasPassword: true})
+	for _, want := range []string{`action="/account/delete"`, `name="confirm"`, `name="current"`, "Delete my account"} {
+		if !strings.Contains(body, want) {
+			t.Errorf("missing %q", want)
+		}
+	}
+	body = renderDL(t, "account_delete", PasswordAuthData{BaseData: base, Email: "a@b.test"})
+	if strings.Contains(body, `name="current"`) {
+		t.Error("google account must not be asked for a password")
+	}
+}

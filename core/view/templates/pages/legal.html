@@ -32,11 +32,25 @@
     <h2>Where it's stored</h2>
     <p>Data is stored in a managed PostgreSQL database (hosted by Supabase) and served by an application hosted on Vercel. Both providers process data on our behalf under their own security and privacy commitments.</p>
 
+    <h2>Why we process it, and your consent</h2>
+    <p>We process your personal data only for the purposes described above, on the basis of your consent (for example when you create an account, make a booking or submit a form) or for a legitimate use such as completing a purchase you asked for, keeping accounting records, and keeping the site secure. You can withdraw your consent at any time by deleting your account or writing to us; withdrawing does not affect what was lawfully done before.</p>
+
+    <h2>How long we keep it</h2>
+    <p>Account details are kept while your account exists. Payment, booking and contribution records are kept as long as needed for accounting and legal obligations; when you delete your account, your name, email and phone are removed from those records. Contact-form messages and newsletter sign-ups are kept until you ask us to remove them.</p>
+
     <h2>Your rights, including data deletion</h2>
-    <p>You can ask us to access, correct, or delete the personal information we hold about you (for example, your account or a booking) at any time{{if .ContactEmail}} by emailing <a href="mailto:{{.ContactEmail}}">{{.ContactEmail}}</a>{{else}} via the contact details on the <a href="{{.Nav.Contact}}">Contact page</a>{{end}}. We'll respond and action deletion requests within a reasonable time.</p>
+    <p>Under India's Digital Personal Data Protection Act, 2023 you have the right to access a summary of your personal data, to have it corrected or completed, to have it erased, to nominate another person to exercise these rights on your behalf if you die or cannot act, and to have your grievance addressed.</p>
+    <ul>
+      <li><strong>Delete your account yourself:</strong> sign in and open <a href="/account/delete">Delete my account</a>. This erases your login and personal details immediately. Accounts with an upcoming booking, and the administrator account, cannot be deleted online; write to us and we will handle it.</li>
+      <li><strong>Anything else</strong> (access, correction, erasure without an account, withdrawing consent, or a complaint): contact our privacy contact{{if .ContactEmail}} at <a href="mailto:{{.ContactEmail}}">{{.ContactEmail}}</a>{{else}} via the <a href="{{.Nav.Contact}}">Contact page</a>{{end}}. We aim to respond within 30 days.</li>
+    </ul>
+    <p>If we do not resolve your grievance, you may complain to the Data Protection Board of India once it is operational.</p>
+
+    <h2>Security and data breaches</h2>
+    <p>Passwords are stored only as salted hashes, payments are handled by Razorpay, traffic is encrypted, and each account can see only its own records. If a personal data breach affects you, we will tell you and the Data Protection Board of India as the law requires, describing what happened and what you can do.</p>
 
     <h2>Children's data</h2>
-    <p>This site is not directed at children, and we do not knowingly collect personal information from anyone under 16. If you believe a child has provided us information, contact us and we'll delete it.</p>
+    <p>This site is not directed at children. We do not knowingly collect personal information from anyone under 18, and we do not track or profile children. If you are under 18, please do not create an account or make a purchase; a parent or guardian can do so for you. If you believe a child has provided us information, contact us and we will delete it.</p>
 
     <p>The <strong>Temple Accounts</strong> app has its own <a href="{{.Nav.TempleAccountsPrivacy}}">privacy policy</a>.</p>
 
@@ -61,10 +75,13 @@
     <p>We send no emails. Hosting is by Supabase (database) and Vercel (application), as described in the general <a href="{{.Nav.Privacy}}">Privacy Policy</a>. Downloading the app from the Microsoft Store or from GitHub is handled by those services under their own policies, not by this site or by the app.</p>
 
     <h2>Your rights, including deletion</h2>
-    <p>You can ask us to access, correct or delete the information we hold about you (for example your licence record and Device ID){{if .ContactEmail}} by emailing <a href="mailto:{{.ContactEmail}}">{{.ContactEmail}}</a>{{else}} via the <a href="{{.Nav.Contact}}">Contact page</a>{{end}}. Uninstalling the app and deleting its data folder removes everything the app stores on your computer.</p>
+    <p>You have the rights described in the general <a href="{{.Nav.Privacy}}">Privacy Policy</a> under India's Digital Personal Data Protection Act, 2023: access, correction, erasure, withdrawing consent, nominating someone to act for you, and grievance redressal. You can delete your account and personal details yourself at <a href="/account/delete">Delete my account</a>, or write to us{{if .ContactEmail}} at <a href="mailto:{{.ContactEmail}}">{{.ContactEmail}}</a>{{else}} via the <a href="{{.Nav.Contact}}">Contact page</a>{{end}}. Uninstalling the app and deleting its data folder removes everything the app stores on your computer.</p>
+
+    <h2>Data breaches</h2>
+    <p>If a breach of the licence or account data held on this site affects you, we will tell you and the Data Protection Board of India as the law requires.</p>
 
     <h2>Children's data</h2>
-    <p>The app and this site are not directed at children, and we do not knowingly collect personal information from anyone under 16.</p>
+    <p>The app and this site are not directed at children, and we do not knowingly collect personal information from anyone under 18.</p>
 
     <h2>Changes</h2>
     <p>If this policy changes, the "Last updated" date above changes with it.</p>

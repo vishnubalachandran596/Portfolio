@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/vishnubalachandran596/portfolio/core/models"
@@ -173,4 +174,69 @@ func (r *UserRepo) MarkGoogleVerified(ctx context.Context, id int64) (bool, erro
 		FROM old WHERE u.id = old.id
 		RETURNING (NOT old.google_verified AND old.password_usable)`, id).Scan(&tookOver)
 	return tookOver, err
+}
+
+// ErrDeleteBlocked means the account can't be deleted yet; the message is
+// safe to show to the account holder.
+var ErrDeleteBlocked = errors.New("account deletion blocked")
+
+// DeleteAccount erases a visitor's personal data in one transaction. Rows
+// that must be kept for accounting (payments, bookings, contributions,
+// quiz attempts) are anonymised rather than removed; testimonials and
+// thumbs-up are deleted; the user row is deleted last (remaining FKs are
+// ON DELETE SET NULL / CASCADE). Admins and users with an upcoming booking
+// are refused.
+func (r *UserRepo) DeleteAccount(ctx context.Context, id int64) error {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	var email string
+	if err := tx.QueryRowContext(ctx, `SELECT email FROM users WHERE id = $1 FOR UPDATE`, id).Scan(&email); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ErrNotFound
+		}
+		return err
+	}
+	var isAdmin bool
+	if err := tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM admins WHERE lower(email) = lower($1))`, email).Scan(&isAdmin); err != nil {
+		return err
+	}
+	if isAdmin {
+		return ErrDeleteBlocked
+	}
+	var upcoming bool
+	if err := tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM bookings WHERE user_id = $1 AND status IN ('confirmed','pending_payment') AND slot_start > now())`, id).Scan(&upcoming); err != nil {
+		return err
+	}
+	if upcoming {
+		return ErrDeleteBlocked
+	}
+
+	anon := fmt.Sprintf("deleted-%d@deleted.invalid", id)
+	stmts := []string{
+		`UPDATE bookings SET name = 'Deleted user', email = $2, phone = '', manage_token_hash = md5(random()::text || clock_timestamp()::text) || md5(random()::text) WHERE user_id = $1`,
+		`UPDATE purchases SET email = $2, access_token = md5(random()::text || clock_timestamp()::text) || md5(random()::text), claim_code = '' WHERE user_id = $1`,
+		`UPDATE software_purchases SET email = $2, access_token = md5(random()::text || clock_timestamp()::text) || md5(random()::text), claim_code = '' WHERE user_id = $1`,
+		`UPDATE article_contributions SET email = $2 WHERE user_id = $1`,
+		`UPDATE course_contributions SET email = $2 WHERE user_id = $1`,
+		`UPDATE quiz_attempts SET name = 'Deleted user', email = $2 WHERE user_id = $1`,
+		`DELETE FROM testimonials WHERE user_id = $1`,
+		`DELETE FROM article_thumbs_up WHERE user_id = $1`,
+	}
+	for _, s := range stmts {
+		args := []any{id}
+		if strings.Contains(s, "$2") {
+			args = append(args, anon)
+		}
+		if _, err := tx.ExecContext(ctx, s, args...); err != nil {
+			return err
+		}
+	}
+	if _, err := tx.ExecContext(ctx, `DELETE FROM users WHERE id = $1`, id); err != nil {
+		return err
+	}
+	return tx.Commit()
 }

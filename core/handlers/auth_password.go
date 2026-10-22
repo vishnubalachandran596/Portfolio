@@ -3,6 +3,7 @@ package handlers
 import (
 	"crypto/hmac"
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -408,4 +409,60 @@ func (a *App) AccountSecuritySubmit(w http.ResponseWriter, r *http.Request) {
 	tv, _ := a.Users.TokenVersion(r.Context(), uid)
 	a.Auth.IssueUserSession(w, uid, tv)
 	back("notice", "Saved. Other devices have been signed out.")
+}
+
+// AccountDeletePage shows the delete-my-account confirmation.
+func (a *App) AccountDeletePage(w http.ResponseWriter, r *http.Request) {
+	uid, _ := a.Auth.UserID(r)
+	user, err := a.Users.GetByID(r.Context(), uid)
+	if err != nil {
+		a.serverError(w, "load user", err)
+		return
+	}
+	a.View.Render(w, http.StatusOK, "account_delete", a.authPage(r, "Delete my account", PasswordAuthData{
+		Error: r.URL.Query().Get("error"), Email: user.Email, HasPassword: user.PasswordUsable,
+	}))
+}
+
+// AccountDeleteSubmit erases the signed-in user's personal data (DPDP
+// right to erasure). Password accounts re-enter their password; everyone
+// types DELETE. Payment and booking records are anonymised, not kept with
+// the person's details (repo.UserRepo.DeleteAccount).
+func (a *App) AccountDeleteSubmit(w http.ResponseWriter, r *http.Request) {
+	uid, _ := a.Auth.UserID(r)
+	_ = r.ParseForm()
+	user, err := a.Users.GetByID(r.Context(), uid)
+	if err != nil {
+		a.serverError(w, "load user", err)
+		return
+	}
+	back := func(msg string) {
+		http.Redirect(w, r, "/account/delete?error="+urlQuery(msg), http.StatusSeeOther)
+	}
+	ik := authutil.HashKey(authutil.ClientIP(r))
+	ek := authutil.HashKey(user.Email)
+	if until, locked := a.throttled(r, throttleLogin, ek, ik); locked {
+		back(lockedMessage(until))
+		return
+	}
+	if strings.TrimSpace(r.FormValue("confirm")) != "DELETE" {
+		back("Type DELETE in capitals to confirm.")
+		return
+	}
+	if user.PasswordUsable && !authutil.CheckPassword(user.PasswordHash, r.FormValue("current")) {
+		a.recordFailure(r, throttleLogin, loginMaxFails, ek, ik)
+		back("Your current password isn't correct.")
+		return
+	}
+	if err := a.Users.DeleteAccount(r.Context(), uid); err != nil {
+		if errors.Is(err, repo.ErrDeleteBlocked) {
+			back("This account can't be deleted online right now (it may have an upcoming booking, or it is an administrator account). Email the privacy contact and we will handle it.")
+			return
+		}
+		a.serverError(w, "delete account", err)
+		return
+	}
+	a.Auth.ClearUserSession(w)
+	a.Auth.ClearSession(w)
+	http.Redirect(w, r, "/login?notice="+urlQuery("Your account and personal details have been deleted."), http.StatusSeeOther)
 }
