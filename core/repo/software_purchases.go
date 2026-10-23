@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 
+	"github.com/vishnubalachandran596/portfolio/core/authutil"
 	"github.com/vishnubalachandran596/portfolio/core/models"
 )
 
@@ -41,10 +42,10 @@ func (r *SoftwarePurchaseRepo) Create(ctx context.Context, p models.SoftwarePurc
 		promoCodeID = *p.PromoCodeID
 	}
 	err := r.db.QueryRowContext(ctx, `
-		INSERT INTO software_purchases (software_id, user_id, email, amount_cents, currency, status, razorpay_order_id, access_token, promo_code_id, promo_code, promo_text, discount_cents, claim_code)
-		VALUES ($1,$2,$3,$4,$5,'created',$6,$7,$8,$9,$10,$11,$12) RETURNING id`,
-		p.SoftwareID, userID, p.Email, p.AmountCents, p.Currency, p.RazorpayOrderID, p.AccessToken,
-		promoCodeID, p.PromoCode, p.PromoText, p.DiscountCents, p.ClaimCode,
+		INSERT INTO software_purchases (software_id, user_id, email, amount_cents, currency, status, razorpay_order_id, access_token, access_token_hash, promo_code_id, promo_code, promo_text, discount_cents, claim_code)
+		VALUES ($1,$2,$3,$4,$5,'created',$6,$7,$13,$8,$9,$10,$11,$12) RETURNING id`,
+		p.SoftwareID, userID, p.Email, p.AmountCents, p.Currency, p.RazorpayOrderID, "scrubbed-"+authutil.TokenHash(p.AccessToken),
+		promoCodeID, p.PromoCode, p.PromoText, p.DiscountCents, p.ClaimCode, authutil.TokenHash(p.AccessToken),
 	).Scan(&id)
 	return id, err
 }
@@ -61,7 +62,7 @@ func (r *SoftwarePurchaseRepo) GetByRazorpayOrderID(ctx context.Context, orderID
 // only returning it if payment has actually been verified.
 func (r *SoftwarePurchaseRepo) GetPaidByAccessToken(ctx context.Context, token string) (models.SoftwarePurchase, error) {
 	p, err := scanSoftwarePurchase(r.db.QueryRowContext(ctx,
-		`SELECT `+softwarePurchaseColumns+` FROM software_purchases WHERE access_token = $1 AND status = 'paid'`, token))
+		`SELECT `+softwarePurchaseColumns+` FROM software_purchases WHERE access_token_hash = $1 AND status = 'paid'`, authutil.TokenHash(token)))
 	if errors.Is(err, sql.ErrNoRows) {
 		return models.SoftwarePurchase{}, ErrNotFound
 	}
@@ -163,4 +164,20 @@ func (r *SoftwarePurchaseRepo) ListAll(ctx context.Context) ([]models.SoftwarePu
 		out = append(out, p)
 	}
 	return out, rows.Err()
+}
+
+// RotateAccessToken replaces a paid order's stored token hash with one for
+// a freshly minted raw token. Called at payment verification: only the hash
+// is stored, so the raw token is created then and handed out once, in the
+// buyer's cookie.
+func (r *SoftwarePurchaseRepo) RotateAccessToken(ctx context.Context, orderID, rawToken string) error {
+	h := authutil.TokenHash(rawToken)
+	res, err := r.db.ExecContext(ctx, `UPDATE software_purchases SET access_token_hash = $2, access_token = 'scrubbed-' || $2 WHERE razorpay_order_id = $1`, orderID, h)
+	if err != nil {
+		return err
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return ErrNotFound
+	}
+	return nil
 }

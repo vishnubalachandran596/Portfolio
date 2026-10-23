@@ -359,7 +359,8 @@ erDiagram
         text status "created | paid | failed"
         text razorpay_order_id UK
         text razorpay_payment_id
-        text access_token UK "bearer token unlocking /learn"
+        text access_token UK "placeholder scrubbed-<hash>"
+        text access_token_hash "SHA-256 of bearer token unlocking /learn"
         bigint promo_code_id FK "nullable"
         text promo_code
         text promo_text "snapshot of the promo code's BannerText/Description at redemption time, for the receipt; migration 063"
@@ -425,7 +426,8 @@ erDiagram
         text status "created | paid | failed"
         text razorpay_order_id
         text razorpay_payment_id
-        text access_token "bearer token revealing download_link"
+        text access_token "placeholder scrubbed-<hash>"
+        text access_token_hash "SHA-256 of bearer token revealing download_link"
         bigint promo_code_id FK "nullable"
         text promo_code
         text promo_text
@@ -587,7 +589,7 @@ erDiagram
 
 **Notes on the model that aren't obvious from the diagram:**
 - `admins` and `users` are **completely separate tables** — an admin logging in does not create a `users` row, and vice versa. The two sessions (§5) are independent; the same email *can* hold both.
-- `purchases.access_token` is the single mechanism gating `/courses/{slug}/learn` — see `courseAccess()` in `core/handlers/checkout.go`. A `$0` "free" purchase still gets a real row and a real token; it just skips Razorpay entirely (`amountCents == 0` branch in `CheckoutCreateOrder`).
+- `purchases.access_token_hash` (SHA-256 of the cookie's token; `access_token` holds a `scrubbed-…` placeholder, same for `software_purchases`; migration 093) is the single mechanism gating `/courses/{slug}/learn` — see `courseAccess()` in `core/handlers/checkout.go`. A `$0` "free" purchase still gets a real row and a real token; it just skips Razorpay entirely (`amountCents == 0` branch in `CheckoutCreateOrder`).
 - `audit_requests` is now read-only from the app's perspective — nothing writes new rows anymore since the Architecture Review's self-checkout was removed (see §6). The table and its historical rows are kept purely so the admin payments ledger still shows what was actually paid before the removal.
 - `course_updates` has no Go-side fan-out logic — a **Postgres trigger** (`trg_course_updates_notify`, from migration `026_course_updates.sql`) does the INSERT into `admin_messages` for every buyer automatically. Inserting a `course_updates` row (from the admin course-edit form's "what changed" field, or directly via SQL) is the *entire* notification mechanism.
 - `min_price_cents` on `courses` defaults to `0` at the column level (migration `030`), but every published course has carried a real, industry-level INR minimum (content, set via the admin course form) since Oct 2026 — the free-by-default "contribute as you like" state from Sept 2026 was retired in favor of real pricing plus whichever promo code is currently active as the free-access path. `CheckoutCreateOrder` (`core/handlers/checkout.go`) now requires a Google-authenticated session unconditionally — there is no guest-checkout branch left.

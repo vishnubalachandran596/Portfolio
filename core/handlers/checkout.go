@@ -207,7 +207,17 @@ func (a *App) CheckoutVerify(w http.ResponseWriter, r *http.Request) {
 	a.Telegram.Send(fmt.Sprintf("💰 Course purchase%s\nCourse: %s\nEmail: %s\nAmount: %s%s",
 		guestTag(purchase.UserID), course.Title, purchase.Email, models.FormatMoney(purchase.AmountCents, purchase.Currency), promoLine))
 
-	a.setAccessCookie(w, accessCookieName(course.ID), purchase.AccessToken)
+	// Only the token's hash is stored, so mint the raw token now and hand
+	// it out once, in the buyer's cookie.
+	rawToken, terr := generateAccessToken()
+	if terr == nil {
+		terr = a.Purchases.RotateAccessToken(ctx, body.OrderID, rawToken)
+	}
+	if terr != nil {
+		a.serverError(w, "issue access token", terr)
+		return
+	}
+	a.setAccessCookie(w, accessCookieName(course.ID), rawToken)
 
 	writeJSON(w, http.StatusOK, map[string]string{"redirect": "/courses/" + slug + "/enrolled"})
 }
@@ -227,12 +237,11 @@ func (a *App) courseAccess(w http.ResponseWriter, r *http.Request, course models
 		return true, "Admin preview", 0
 	}
 
-	token := r.URL.Query().Get("token")
-	fromQuery := token != ""
-	if token == "" {
-		if c, err := r.Cookie(accessCookieName(course.ID)); err == nil {
-			token = c.Value
-		}
+	// Cookie only: a ?token= link is converted to the cookie and stripped
+	// from the URL by redirectAccessToken before any handler runs.
+	token := ""
+	if c, err := r.Cookie(accessCookieName(course.ID)); err == nil {
+		token = c.Value
 	}
 	if token == "" {
 		return false, "", 0
@@ -243,8 +252,5 @@ func (a *App) courseAccess(w http.ResponseWriter, r *http.Request, course models
 		return false, "", 0
 	}
 
-	if fromQuery {
-		a.setAccessCookie(w, accessCookieName(course.ID), token)
-	}
 	return true, purchase.Email, purchase.ID
 }

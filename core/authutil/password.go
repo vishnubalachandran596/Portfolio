@@ -98,3 +98,10 @@ func ClientIP(r *http.Request) string {
 // it when an account doesn't exist keeps the response time the same, so the
 // login and reset pages don't reveal which emails are registered.
 const DummyHash = "$2a$10$WeqYFIb86kn84JVhRPURXOtIr7M6GImo6XxkrqhncFNmkK5NOwtIa"
+
+// TokenHash is the SHA-256 hex digest under which a bearer access token is
+// stored; the raw token lives only in the holder's cookie.
+func TokenHash(token string) string {
+	sum := sha256.Sum256([]byte(token))
+	return hex.EncodeToString(sum[:])
+}

@@ -218,8 +218,8 @@ func (r *UserRepo) DeleteAccount(ctx context.Context, id int64) error {
 	anon := fmt.Sprintf("deleted-%d@deleted.invalid", id)
 	stmts := []string{
 		`UPDATE bookings SET name = 'Deleted user', email = $2, phone = '', manage_token_hash = md5(random()::text || clock_timestamp()::text) || md5(random()::text) WHERE user_id = $1`,
-		`UPDATE purchases SET email = $2, access_token = md5(random()::text || clock_timestamp()::text) || md5(random()::text), claim_code = '' WHERE user_id = $1`,
-		`UPDATE software_purchases SET email = $2, access_token = md5(random()::text || clock_timestamp()::text) || md5(random()::text), claim_code = '' WHERE user_id = $1`,
+		`UPDATE purchases SET email = $2, access_token = 'scrubbed-' || md5(random()::text || clock_timestamp()::text), access_token_hash = md5(random()::text || clock_timestamp()::text) || md5(random()::text), claim_code = '' WHERE user_id = $1`,
+		`UPDATE software_purchases SET email = $2, access_token = 'scrubbed-' || md5(random()::text || clock_timestamp()::text), access_token_hash = md5(random()::text || clock_timestamp()::text) || md5(random()::text), claim_code = '' WHERE user_id = $1`,
 		`UPDATE article_contributions SET email = $2 WHERE user_id = $1`,
 		`UPDATE course_contributions SET email = $2 WHERE user_id = $1`,
 		`UPDATE quiz_attempts SET name = 'Deleted user', email = $2 WHERE user_id = $1`,

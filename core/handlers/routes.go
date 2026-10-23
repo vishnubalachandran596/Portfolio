@@ -263,7 +263,7 @@ func (a *App) Routes() http.Handler {
 	return middleware.Logging(middleware.SecurityHeaders(
 		middleware.CanonicalHost(a.Cfg.SiteURL)(
 			middleware.DomainRouter(a.Cfg.Domain)(
-				middleware.SameOrigin(siteHost)(middleware.LegacyRedirects(a.Auth.Attach(mux)))))))
+				middleware.SameOrigin(siteHost)(middleware.LegacyRedirects(a.Auth.Attach(a.redirectAccessToken(mux))))))))
 }
 
 // noindex tags every response under a handler as non-indexable — used for

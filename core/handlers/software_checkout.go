@@ -193,7 +193,15 @@ func (a *App) SoftwareCheckoutVerify(w http.ResponseWriter, r *http.Request) {
 	a.Telegram.Send(fmt.Sprintf("💾 Software purchase\nSoftware: %s %s\nEmail: %s\nAmount: %s%s",
 		sw.Title, sw.Version, purchase.Email, models.FormatMoney(purchase.AmountCents, purchase.Currency), promoLine))
 
-	a.setAccessCookie(w, softwareAccessCookieName(sw.ID), purchase.AccessToken)
+	rawToken, terr := generateAccessToken()
+	if terr == nil {
+		terr = a.SoftwarePurchases.RotateAccessToken(ctx, body.OrderID, rawToken)
+	}
+	if terr != nil {
+		a.serverError(w, "issue access token", terr)
+		return
+	}
+	a.setAccessCookie(w, softwareAccessCookieName(sw.ID), rawToken)
 
 	writeJSON(w, http.StatusOK, map[string]string{"redirect": a.softwareLanding(ctx, sw, purchase.ID, purchase.UserID)})
 }
@@ -253,12 +261,9 @@ func (a *App) softwareAccess(w http.ResponseWriter, r *http.Request, sw models.S
 		return true
 	}
 
-	token := r.URL.Query().Get("token")
-	fromQuery := token != ""
-	if token == "" {
-		if c, err := r.Cookie(softwareAccessCookieName(sw.ID)); err == nil {
-			token = c.Value
-		}
+	token := ""
+	if c, err := r.Cookie(softwareAccessCookieName(sw.ID)); err == nil {
+		token = c.Value
 	}
 	if token == "" {
 		return false
@@ -269,9 +274,6 @@ func (a *App) softwareAccess(w http.ResponseWriter, r *http.Request, sw models.S
 		return false
 	}
 
-	if fromQuery {
-		a.setAccessCookie(w, softwareAccessCookieName(sw.ID), token)
-	}
 	return true
 }
 
