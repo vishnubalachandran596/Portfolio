@@ -46,7 +46,7 @@ core/
   handlers/     ALL HTTP handlers + App struct (the biggest package — see §4)
   middleware/   auth (admin+user sessions), domain/subdomain routing, legacy/trailing-slash redirects, security headers, logging
   models/       every domain struct + business-rule methods (pricing display, status enums, etc.)
-  notify/       Telegram notification sender
+  notify/       Telegram alerts, plus Resend (paid flows) and Brevo (bookings and newsletter confirmations)
   oauth/        Google OAuth2 client
   payments/     Razorpay client (order creation, signature verification)
   receipt/      PDF payment-receipt generator
@@ -247,6 +247,40 @@ erDiagram
         text source_page "home | courses | articles | other"
         timestamptz created_at
         note "pure visitor PII, never in the bootstrap-data snapshot — migration 061"
+    }
+    email_outbox {
+        bigserial id PK
+        text kind "purchase_course | purchase_software | purchase_article | contribution | booking_* | newsletter_confirm | send_test"
+        text entity_id "purchase, software purchase, article contribution, course contribution, booking, or subscriber id"
+        text to_email
+        text provider "resend | brevo | disabled"
+        text status "pending | sent | failed | disabled"
+        int attempts
+        text last_error
+        text provider_id
+        timestamptz created_at
+        timestamptz updated_at
+        timestamptz sent_at
+        note "metadata only, never the body — migration 094; RLS enabled; UNIQUE (kind, entity_id)"
+    }
+    email_templates {
+        text kind PK
+        text subject
+        text html
+        text text_body
+        timestamptz updated_at
+        text updated_by
+        note "admin override; no row means the built-in template — migration 095; RLS enabled"
+    }
+    email_template_versions {
+        bigserial id PK
+        text kind
+        text subject
+        text html
+        text text_body
+        timestamptz saved_at
+        text saved_by
+        note "last 20 per kind — migration 095; RLS enabled"
     }
     home_features {
         serial id PK
@@ -631,7 +665,11 @@ Handler files, by area:
 | `admin_contact.go` | Admin contact-messages list + mark-read |
 | `admin_credentials.go` | Admin CRUD for Certifications and Speaking & Publications |
 | `admin_case_studies.go` | Admin CRUD for Case Studies |
-| `newsletter.go` | Public `POST /subscribe` (capture only, no confirmation email) + admin subscribers list/delete |
+| `newsletter.go` | Public `POST /subscribe` (records the address and sends the confirmation when Brevo is configured) + admin subscribers list/delete |
+| `email_send.go` | Enqueue after commit, worker send, `GET /internal/email/retry` |
+| `email_build.go` | Builds one job per purchase, booking, contribution, and newsletter confirmation |
+| `admin_email_templates.go` | Admin template list, edit, preview, send-test, reset, restore, and queue resend |
+| `admin_inbox.go` | Admin inbox: Resend Inboxes API (list, view, reply, forward, labels, threads, drafts, agent, attachments). Bodies stay at Resend |
 | `articles.go` | Public article list (incl. subscribe-form data)/detail/thumbs-up + Admin article CRUD |
 | `account.go` | `/account` page + PDF receipts + testimonial submission |
 | `booking_reschedule.go` | Admin and signed-in booking reschedule flows, `availableDays` (30 days) and `bookableSlotError`, the single server-side gate for any requested slot |
@@ -656,6 +694,14 @@ Handler files, by area:
 | `promo.go` | `resolvePromoCode()` — the one shared discount-resolution function every checkout flow calls |
 | `chatbot.go` | Public `POST /chat` (RAG answer) + `GET /ai-assistant` (`AIAssistantPage`) + `chatbotSessionID`; admin `/admin/chatbot` page + `/admin/chatbot/reindex` + content-gathering/chunking helpers — see §12 |
 
+**Transactional email** (`core/notify`, `core/handlers/email_send.go`, `email_build.go`). The customer request enqueues one `email_outbox` row after the purchase, booking, contribution, or subscriber row is committed, then returns. It does not call Resend or Brevo, and it does not start a goroutine. `email_outbox` is the queue. `(kind, entity_id)` is unique. `entity_id` is the course purchase id, software purchase id, article contribution id, course contribution id, booking id, or subscriber id. A second verify adds nothing. A second reschedule of the same booking puts that one row back to `pending`. The rendered body is never stored. The private booking manage token is not stored either, so the emailed link is `/account` or `/booking`; the on-screen link remains the only copy of the token.
+
+`GET /internal/email/retry` is the worker. It sends `pending` rows and retries `failed` rows with fewer than five attempts. Send-test rows are excluded. The bearer is `CHATBOT_REINDEX_TOKEN` (constant-time compare, 404 when unset). `.github/workflows/email-retry.yml` calls it every 10 minutes with `curl -f`, for the same Hobby-cron reason as the chatbot poller. An empty provider key leaves the row `pending`. A provider error marks it `failed`, raises a Telegram alert, and does not fail the original order. Payments and bookings in the admin console show sent, failed, pending, or none. Admin resend sets the row back to `pending` and does not call the provider. The template send-test is the exception: that admin request sends immediately, and only to `ADMIN_BOOTSTRAP_EMAIL`.
+
+`RESEND_API_KEY` and `BREVO_API_KEY` are the only new mail environment variables. A provider sends only when its key is non-empty. From addresses are constants in `core/notify/mail.go`: Vishnu Balachandran `<orders@vishnubalachandran.com>` for paid flows, `<bookings@vishnubalachandran.com>` for bookings, `<news@vishnubalachandran.com>` for the newsletter confirmation. Reply-To is `admin@vishnubalachandran.com`. BCC and the admin send-test recipient are `ADMIN_BOOTSTRAP_EMAIL`. News stays on the main domain; a later promo subdomain is a one-line change to the news From constant. Keys are never written into the repo, docs, or logs.
+
+The admin inbox (`/admin/inbox`, `core/handlers/admin_inbox.go`, `core/notify/resendinbox.go`) reads and replies through the Resend Inboxes API with the same `RESEND_API_KEY`. It does not add an environment variable and it does not store message bodies in Postgres. Mail shows up only after the domain's receiving is pointed at Resend. Receiving DNS is the owner's; the app does not change it. An empty key leaves the inbox pages explaining that Resend is off.
+
 ---
 
 ## 5. Auth — two independent JWT sessions, password and Google sign-in
@@ -671,7 +717,7 @@ Both live in `core/middleware/auth.go`, sharing one `Auth` struct (one JWT secre
 | Context accessor | `middleware.AdminIDFromContext` | `middleware.UserIDFromContext` |
 | Non-redirecting check | `Auth.IsAuthenticated(r)` | `Auth.IsUserAuthenticated(r)` |
 
-**Visitor login is a password or Google** (`core/handlers/auth.go`, `auth_password.go`). `GET/POST /login`, `/signup`, `/forgot`, `/forgot/reset` and `/account/security` handle password accounts (bcrypt, 10 to 72 characters, `authutil.ValidatePassword`); the Google button (`core/oauth/google.go`, a standard authorization-code flow with a CSRF `state` cookie) stays alongside. **The site sends no email**, so an email typed at signup is never treated as verified. Consequences: (1) password recovery is the **security question** chosen at signup, from a fixed list (`securityQuestions`); the answer is trimmed, lower-cased and stored only as a bcrypt hash; (2) an unknown, Google-only, or admin email is shown a stable, believable fake question (HMAC of the email under `JWT_SECRET`) so the page does not reveal who has an account, and the answer is compared against `authutil.DummyHash` so timing matches; (3) when Google later proves an email that has an unverified password account, `UserRepo.MarkGoogleVerified` clears that password and answer and bumps `token_version` (the real owner takes over); (4) a password login never issues an admin session; (5) `GET/POST /account/delete` (`AccountDeletePage/Submit`) calls `UserRepo.DeleteAccount`, one transaction that anonymises bookings, purchases, software_purchases, article/course contributions and quiz_attempts, deletes testimonials and thumbs-up, then the user row (other FKs are SET NULL/CASCADE); it refuses the admin and users with an upcoming booking. Breach checklist: `docs/SECURITY.md`.
+**Visitor login is a password or Google** (`core/handlers/auth.go`, `auth_password.go`). `GET/POST /login`, `/signup`, `/forgot`, `/forgot/reset` and `/account/security` handle password accounts (bcrypt, 10 to 72 characters, `authutil.ValidatePassword`); the Google button (`core/oauth/google.go`, a standard authorization-code flow with a CSRF `state` cookie) stays alongside. **Signup does not verify the address** (transactional mail is a receipt or a booking message, not proof of the inbox). An email typed at signup is never treated as verified. Consequences: (1) password recovery is the **security question** chosen at signup, from a fixed list (`securityQuestions`); the answer is trimmed, lower-cased and stored only as a bcrypt hash; (2) an unknown, Google-only, or admin email is shown a stable, believable fake question (HMAC of the email under `JWT_SECRET`) so the page does not reveal who has an account, and the answer is compared against `authutil.DummyHash` so timing matches; (3) when Google later proves an email that has an unverified password account, `UserRepo.MarkGoogleVerified` clears that password and answer and bumps `token_version` (the real owner takes over); (4) a password login never issues an admin session; (5) `GET/POST /account/delete` (`AccountDeletePage/Submit`) calls `UserRepo.DeleteAccount`, one transaction that anonymises bookings, purchases, software_purchases, article/course contributions and quiz_attempts, deletes testimonials and thumbs-up, then the user row (other FKs are SET NULL/CASCADE); it refuses the admin and users with an upcoming booking. Breach checklist: `docs/SECURITY.md`.
 
 **Sessions stay stateless** (a signed HS256 JWT cookie, HttpOnly, Secure in production, SameSite=Lax, 7-day expiry; the parser accepts HS256 only). The user cookie carries `tv`, the user's `token_version`; `Auth.SetVerifiers` (wired in `handlers.New`) re-checks every cookie against Postgres, so a password reset or change (`UserRepo.SetPassword` bumps the version) signs every old session out, and an admin removed from `admins` loses access immediately instead of at cookie expiry. `Auth.Attach` memoises that lookup once per request (an anonymous request costs no query). `middleware.SameOrigin` blocks cross-site POSTs (CSRF) for the whole mux; requests with no `Origin` header, such as the token-guarded reindex call, pass.
 
@@ -757,7 +803,8 @@ Optional (`DOMAIN` env var) subdomain-per-page-group scheme: `about.`, `courses.
 
 ## 10. Security posture
 
-- CSP + `X-Content-Type-Options: nosniff` + `X-Frame-Options: DENY` + `Referrer-Policy: strict-origin-when-cross-origin` on every response (`middleware.SecurityHeaders`). CSP allows `'unsafe-inline'` for script/style (templates and embedded course-content pages both rely on inline blocks) but restricts *external* origins to only Razorpay's checkout domain — fonts are self-hosted (below), so `style-src`/`font-src` need no external allowance at all. `frame-src` allows `'self'` and Razorpay Checkout.
+- **`RESEND_API_KEY` and `BREVO_API_KEY`** live only in the host environment (Vercel, Sensitive). An empty value turns that provider off. From addresses, Reply-To, and the BCC recipient are not environment variables. `GET /internal/email/retry` uses the existing `CHATBOT_REINDEX_TOKEN`.
+- CSP + `X-Content-Type-Options: nosniff` + `X-Frame-Options: DENY` + `Referrer-Policy: strict-origin-when-cross-origin` on every response (`middleware.SecurityHeaders`). CSP allows `'unsafe-inline'` for script/style (templates and embedded course-content pages both rely on inline blocks) but restricts *external* origins to only Razorpay's checkout domain — fonts are self-hosted (below), so `style-src`/`font-src` need no external allowance at all. `frame-src` allows `'self'` and Razorpay Checkout. The email preview handler replaces that CSP with `script-src 'none'` and a sandboxed iframe.
 - All payment confirmation is server-side HMAC verification (`Razorpay.VerifySignature`) — never trusts a client-reported "payment succeeded."
 - Admin and user sessions are fully independent JWTs in `HttpOnly`, `SameSite=Lax` cookies, `Secure` in production.
 - Course-content access is an opaque random 32-byte hex bearer token, not a guessable ID. The learn page is the site chrome; the lesson loads from the gated `/learn/lesson` route (it answers only an iframe load with the buyer's session) in a unique-origin iframe, so the outer page source does not contain the lesson tags and the parent cannot read the lesson DOM. `vishnubalachandran.com` is drawn once, horizontally, centered in the pane (`core/storage/prepare.go`'s `WatermarkScript` — originally drawn three times along the pane diagonal; changed to a single centered line to read cleanly against the site's own type instead of cutting across it at an angle), in the site's font (`"Montserrat"`, matching `--font-sans`) and the same muted color token as the rest of the page's faint text (`--color-text-faint`, both light and dark values) — only inside the renderer; copied text is stamped with the viewer's identity.

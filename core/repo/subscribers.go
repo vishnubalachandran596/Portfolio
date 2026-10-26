@@ -3,6 +3,7 @@ package repo
 import (
 	"context"
 	"database/sql"
+	"errors"
 
 	"github.com/vishnubalachandran596/portfolio/core/models"
 )
@@ -47,6 +48,26 @@ func (r *SubscriberRepo) ListAll(ctx context.Context) ([]models.Subscriber, erro
 		out = append(out, s)
 	}
 	return out, rows.Err()
+}
+
+func (r *SubscriberRepo) GetByID(ctx context.Context, id int64) (models.Subscriber, error) {
+	var s models.Subscriber
+	err := r.db.QueryRowContext(ctx, `SELECT id, email, source_page, created_at FROM subscribers WHERE id = $1`, id).
+		Scan(&s.ID, &s.Email, &s.SourcePage, &s.CreatedAt)
+	if errors.Is(err, sql.ErrNoRows) {
+		return models.Subscriber{}, ErrNotFound
+	}
+	return s, err
+}
+
+func (r *SubscriberRepo) GetByEmail(ctx context.Context, email string) (models.Subscriber, error) {
+	var s models.Subscriber
+	err := r.db.QueryRowContext(ctx, `SELECT id, email, source_page, created_at FROM subscribers WHERE email = $1`, email).
+		Scan(&s.ID, &s.Email, &s.SourcePage, &s.CreatedAt)
+	if errors.Is(err, sql.ErrNoRows) {
+		return models.Subscriber{}, ErrNotFound
+	}
+	return s, err
 }
 
 func (r *SubscriberRepo) Delete(ctx context.Context, id int64) error {

@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><title>{{.SiteName}}</title></head>
+<body style="margin:0;padding:0;background:#f4f1ea;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f1ea;">
+<tr><td align="center" style="padding:24px 12px;">
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;">
+<tr><td style="padding:28px 28px 8px;font-family:Georgia,serif;font-size:22px;color:#1c1917;">{{.SiteName}}</td></tr>
+<tr><td style="padding:8px 28px 28px;font-family:Arial,sans-serif;font-size:16px;line-height:1.5;color:#292524;">
+<p>Hello {{.BuyerName}},</p>
+<p>This confirms your purchase of <strong>{{.ItemTitle}}</strong>.</p>
+<p>Amount paid: {{.Amount}}</p>
+<p>Receipt {{.ReceiptNo}}: <a href="{{.ReceiptURL}}">{{.ReceiptURL}}</a></p>
+<p>Your licences: <a href="{{.AccessURL}}">{{.AccessURL}}</a></p>
+{{if .Instructions}}<p>{{.Instructions}}</p>{{end}}
+<p>Reply to this message to reach {{.SupportReplyTo}}.</p>
+</td></tr>
+</table>
+</td></tr>
+</table>
+</body>
+</html>

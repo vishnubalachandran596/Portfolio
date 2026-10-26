@@ -3,6 +3,9 @@ package handlers
 import (
 	"net/http"
 	"sort"
+	"strconv"
+	"strings"
+	"time"
 
 	"github.com/vishnubalachandran596/portfolio/core/models"
 )
@@ -17,12 +20,16 @@ type adminPaymentRow struct {
 	PaymentID   string
 	PromoCode   string
 	Discount    string
+	EmailStatus string
+	EmailKind   string
+	EmailEntity string
 }
 
 type AdminPaymentsListData struct {
 	BaseData
-	Payments []adminPaymentRow
-	Total    string
+	Payments    []adminPaymentRow
+	Total       string
+	EmailNotice string
 }
 
 // AdminPaymentsList is a single combined ledger of every payment actually
@@ -58,6 +65,16 @@ func (a *App) AdminPaymentsList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var outbox []models.EmailOutbox
+	if a.Outbox != nil {
+		if listed, lerr := a.Outbox.ListAll(ctx); lerr != nil {
+			a.serverError(w, "load email status", lerr)
+			return
+		} else {
+			outbox = listed
+		}
+	}
+
 	var rows []adminPaymentRow
 	totalCents := map[string]int{}
 
@@ -83,6 +100,7 @@ func (a *App) AdminPaymentsList(w http.ResponseWriter, r *http.Request) {
 		if p.PromoCode != "" {
 			row.Discount = models.FormatMoney(p.DiscountCents, p.Currency)
 		}
+		row.EmailKind, row.EmailEntity, row.EmailStatus = emailStatusFor(outbox, models.EmailPurchaseCourse, strconv.FormatInt(p.ID, 10))
 		rows = append(rows, row)
 		totalCents[p.Currency] += p.AmountCents
 	}
@@ -102,6 +120,9 @@ func (a *App) AdminPaymentsList(w http.ResponseWriter, r *http.Request) {
 		}
 		if b.PromoCode != "" {
 			row.Discount = models.FormatMoney(b.DiscountCents, b.Currency)
+		}
+		if mail := latestBookingEmail(outbox, b.ID); mail.Kind != "" {
+			row.EmailKind, row.EmailEntity, row.EmailStatus = mail.Kind, mail.EntityID, mail.Status
 		}
 		rows = append(rows, row)
 		totalCents[b.Currency] += b.AmountCents
@@ -134,7 +155,7 @@ func (a *App) AdminPaymentsList(w http.ResponseWriter, r *http.Request) {
 		if aerr == nil {
 			title = article.Title
 		}
-		rows = append(rows, adminPaymentRow{
+		articleRow := adminPaymentRow{
 			When:        c.PaidAt.In(a.Timezone).Format("Jan 2, 2006 · 3:04 PM"),
 			whenSort:    c.PaidAt.Unix(),
 			Type:        "Article",
@@ -142,7 +163,9 @@ func (a *App) AdminPaymentsList(w http.ResponseWriter, r *http.Request) {
 			Email:       c.Email,
 			Amount:      models.FormatMoney(c.AmountCents, c.Currency),
 			PaymentID:   c.RazorpayPaymentID,
-		})
+		}
+		articleRow.EmailKind, articleRow.EmailEntity, articleRow.EmailStatus = emailStatusFor(outbox, models.EmailPurchaseArticle, strconv.FormatInt(c.ID, 10))
+		rows = append(rows, articleRow)
 		totalCents[c.Currency] += c.AmountCents
 	}
 	extraSoftware := extraPurchaseIDs(softwarePurchases)
@@ -171,6 +194,7 @@ func (a *App) AdminPaymentsList(w http.ResponseWriter, r *http.Request) {
 		if p.PromoCode != "" {
 			row.Discount = models.FormatMoney(p.DiscountCents, p.Currency)
 		}
+		row.EmailKind, row.EmailEntity, row.EmailStatus = emailStatusFor(outbox, models.EmailPurchaseSoftware, strconv.FormatInt(p.ID, 10))
 		rows = append(rows, row)
 		totalCents[p.Currency] += p.AmountCents
 	}
@@ -183,8 +207,40 @@ func (a *App) AdminPaymentsList(w http.ResponseWriter, r *http.Request) {
 	}
 
 	a.View.Render(w, http.StatusOK, "admin_payments_list", AdminPaymentsListData{
-		BaseData: a.base(r, "Payments — Admin", "", "admin"),
-		Payments: rows,
-		Total:    total,
+		BaseData:    a.base(r, "Payments — Admin", "", "admin"),
+		Payments:    rows,
+		Total:       total,
+		EmailNotice: r.URL.Query().Get("email"),
 	})
+}
+
+func emailStatusFor(rows []models.EmailOutbox, kind, entity string) (k, id, status string) {
+	for _, row := range rows {
+		if row.Kind == kind && row.EntityID == entity {
+			return row.Kind, row.EntityID, row.Status
+		}
+	}
+	return "", "", ""
+}
+
+func latestBookingEmail(rows []models.EmailOutbox, bookingID int64) models.EmailOutbox {
+	prefix := strconv.FormatInt(bookingID, 10)
+	var best models.EmailOutbox
+	var bestAt time.Time
+	for _, row := range rows {
+		switch row.Kind {
+		case models.EmailBookingNew, models.EmailBookingRescheduled, models.EmailBookingCancelled:
+		default:
+			continue
+		}
+		idPart, _, _ := strings.Cut(row.EntityID, ":")
+		if idPart != prefix {
+			continue
+		}
+		if best.Kind == "" || row.UpdatedAt.After(bestAt) {
+			best = row
+			bestAt = row.UpdatedAt
+		}
+	}
+	return best
 }

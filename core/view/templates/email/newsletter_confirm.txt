@@ -1,0 +1,7 @@
+Hello {{.BuyerName}},
+
+You are on the list for notes from {{.SiteName}} about new courses and articles. This message only confirms that. It is not a campaign.
+
+To be removed, use {{.UnsubscribeURL}} and ask.
+
+Reply to this message to reach {{.SupportReplyTo}}.

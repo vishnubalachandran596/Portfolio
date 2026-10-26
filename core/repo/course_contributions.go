@@ -42,6 +42,14 @@ func (r *CourseContributionRepo) Create(ctx context.Context, c models.CourseCont
 	return id, err
 }
 
+func (r *CourseContributionRepo) GetByID(ctx context.Context, id int64) (models.CourseContribution, error) {
+	c, err := scanCourseContribution(r.db.QueryRowContext(ctx, `SELECT `+courseContributionColumns+` FROM course_contributions WHERE id = $1`, id))
+	if errors.Is(err, sql.ErrNoRows) {
+		return models.CourseContribution{}, ErrNotFound
+	}
+	return c, err
+}
+
 func (r *CourseContributionRepo) GetByRazorpayOrderID(ctx context.Context, orderID string) (models.CourseContribution, error) {
 	c, err := scanCourseContribution(r.db.QueryRowContext(ctx, `SELECT `+courseContributionColumns+` FROM course_contributions WHERE razorpay_order_id = $1`, orderID))
 	if errors.Is(err, sql.ErrNoRows) {

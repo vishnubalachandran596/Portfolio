@@ -7,6 +7,7 @@ require (
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/jackc/pgx/v5 v5.7.4
 	github.com/lib/pq v1.12.3
+	github.com/resend/resend-go/v4 v4.9.0
 	golang.org/x/crypto v0.31.0
 	golang.org/x/sync v0.10.0
 )

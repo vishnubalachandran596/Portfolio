@@ -535,9 +535,9 @@ type Booking struct {
 	PromoCodeID            *int64
 	PromoCode              string
 	DiscountCents          int
-	// Code is the on-screen reference (BK-XXXXXX) shown at booking time;
-	// the site sends no email, so it is how a visitor and the admin refer
-	// to a booking. It grants no access — the private manage link does.
+	// Code is the on-screen reference (BK-XXXXXX) shown at booking time.
+	// A confirmation is also emailed when booking mail is configured.
+	// The code grants no access — the private manage link does.
 	Code      string
 	CreatedAt time.Time
 }
@@ -581,11 +581,9 @@ type ContactMessage struct {
 	CreatedAt time.Time
 }
 
-// Subscriber is one email capture from Courses, Articles, or Home — a
-// visitor who wants to hear about new courses and posts. There is no
-// transactional email provider wired up anywhere in this codebase (see
-// Contact's own note in docs/FUNCTIONALITY.md), so nothing automated is
-// sent on signup; this is just the list Vishnu reaches out from manually.
+// Subscriber is one email capture from Courses, Articles, or Home. A
+// confirmation is emailed when Brevo is configured. Campaign blasts are
+// not sent from this list.
 type Subscriber struct {
 	ID         int64
 	Email      string

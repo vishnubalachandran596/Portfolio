@@ -1,0 +1,9 @@
+Hello {{.BuyerName}},
+
+Your consultancy call was moved.
+
+New time: {{.BookingStart}} ({{.Duration}})
+Booking code: {{.BookingCode}}
+Your manage link: {{.ManageURL}}
+
+Reply to this message to reach {{.SupportReplyTo}}.

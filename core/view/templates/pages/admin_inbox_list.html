@@ -1,0 +1,49 @@
+{{define "content"}}
+<section class="section">
+  <div class="container">
+    <h1>Inbox</h1>
+    <p class="hero-subtitle">Received mail stays at Resend. Messages show up here after the domain's receiving is pointed at Resend. This page does not change DNS.</p>
+    <p><a class="link-button" href="/admin/inbox/received">All received mail</a></p>
+    {{if eq .Notice "created"}}<p class="alert">Inbox created.</p>{{end}}
+    {{if eq .Notice "deleted"}}<p class="alert">Deleted.</p>{{end}}
+    {{if .Error}}<p class="alert alert-error">{{.Error}}</p>{{end}}
+    {{if not .Enabled}}<p class="alert">Resend is off until its API key is set.</p>{{end}}
+
+    {{if .Enabled}}
+    <h2>New inbox</h2>
+    <form method="POST" action="/admin/inbox" class="admin-form">
+      <label>Email address
+        <input type="email" name="email_address" required maxlength="320" placeholder="orders@vishnubalachandran.com">
+      </label>
+      <label>Internal name <span class="optional">optional</span>
+        <input type="text" name="name" maxlength="64">
+      </label>
+      <label>From name <span class="optional">optional</span>
+        <input type="text" name="from_name" maxlength="78">
+      </label>
+      <label><input type="checkbox" name="forwarding" value="1"> Receive without an MX record (Resend forwarding address)</label>
+      <button type="submit" class="btn btn-primary">Create inbox</button>
+    </form>
+    {{end}}
+
+    {{if .Inboxes}}
+    <table class="admin-table">
+      <thead><tr><th>Address</th><th>Name</th><th>Unread</th><th>Last received</th></tr></thead>
+      <tbody>
+        {{range .Inboxes}}
+        <tr>
+          <td><a href="/admin/inbox/{{.ID}}">{{.Email}}</a></td>
+          <td>{{if .Name}}{{.Name}}{{else}}—{{end}}</td>
+          <td>{{.Unread}}</td>
+          <td>{{if .Last}}{{.Last}}{{else}}—{{end}}</td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+    {{if .HasMore}}<p><a class="link-button" href="/admin/inbox?after={{.After}}">Older</a></p>{{end}}
+    {{else if .Enabled}}
+    <p class="empty-state">No inboxes yet.</p>
+    {{end}}
+  </div>
+</section>
+{{end}}

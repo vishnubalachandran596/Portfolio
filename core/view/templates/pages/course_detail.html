@@ -114,7 +114,7 @@
             <div><dt>You pay</dt><dd id="sum-total">{{.ResolvedMinDisplay}}</dd></div>
           </dl>
           <button type="button" class="btn btn-primary btn-lg" id="purchase-btn" data-slug="{{.Course.Slug}}" data-free="{{if gt .ResolvedMinCents 0}}0{{else}}1{{end}}" data-pay-label="Pay">{{if gt .ResolvedMinCents 0}}Pay {{.ResolvedMinDisplay}}{{else}}Get free access{{end}}</button>
-          {{if not .UserEmail}}<p class="purchase-box-sub">After payment you get a claim code to attach this purchase to an account later. We send no emails, so keep it safe.</p>{{end}}
+          {{if not .UserEmail}}<p class="purchase-box-sub">After payment you get a claim code to attach this purchase to an account later. A confirmation is also emailed. Keep the code safe.</p>{{end}}
           <p class="purchase-box-sub">Fixed price, one-time. See the <a class="text-link" href="{{.Nav.Refund}}">refund policy</a>.</p>
         </div>
         {{if .PaymentsEnabled}}<script src="https://checkout.razorpay.com/v1/checkout.js"></script>{{end}}

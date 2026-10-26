@@ -12,9 +12,10 @@ import (
 )
 
 // The private manage link (/booking/manage/{token}) is how a no-login
-// visitor views, cancels or reschedules their booking. The site sends no
-// email, so the token is shown once on screen after booking and only its
-// SHA-256 hash is stored. Possession of the link is the credential: every
+// visitor views, cancels or reschedules their booking. A confirmation is
+// also emailed when Brevo is configured. The token is shown once on screen
+// after booking and only its SHA-256 hash is stored. Possession of the link
+// is the credential: every
 // handler looks the booking up by that hash and nothing else.
 
 type BookingManageData struct {
@@ -106,6 +107,7 @@ func (a *App) BookingManageCancel(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	a.Telegram.Send("❌ Booking cancelled (" + b.Code + ")\nName: " + b.Name + "\nWas: " + b.SlotStart.In(a.Timezone).Format("Mon, Jan 2 · 3:04 PM"))
+	a.emailBooking(r.Context(), models.EmailBookingCancelled, b, b.SlotStart, b.SlotEnd, token)
 	http.Redirect(w, r, managePath(token)+"?notice=cancelled", http.StatusSeeOther)
 }
 
@@ -171,5 +173,6 @@ func (a *App) BookingManageRescheduleSubmit(w http.ResponseWriter, r *http.Reque
 	a.Telegram.Send("🔁 Visitor rescheduled their booking (" + b.Code + ")\nName: " + b.Name +
 		"\nWas: " + b.SlotStart.In(a.Timezone).Format("Mon, Jan 2 · 3:04 PM") +
 		"\nNow: " + newStart.In(a.Timezone).Format("Mon, Jan 2 · 3:04 PM"))
+	a.emailBooking(r.Context(), models.EmailBookingRescheduled, b, newStart, newStart.Add(duration), token)
 	http.Redirect(w, r, managePath(token)+"?notice=rescheduled", http.StatusSeeOther)
 }

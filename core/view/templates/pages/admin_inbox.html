@@ -1,0 +1,139 @@
+{{define "content"}}
+<section class="section">
+  <div class="container">
+    <p class="eyebrow"><a href="/admin/inbox">Inbox</a></p>
+    <h1>{{if .Email}}{{.Email}}{{else}}Inbox{{end}}</h1>
+    {{if .Name}}<p class="hero-subtitle">{{.Name}}{{if .FromName}} · From {{.FromName}}{{end}}{{if .Receiving}} · Forward to {{.Receiving}}{{end}}</p>{{end}}
+    <p>{{.Unread}} unread · {{.DraftCount}} drafts. Mail appears after receiving for this domain points at Resend.</p>
+    {{if eq .Notice "updated"}}<p class="alert">Inbox updated.</p>{{end}}
+    {{if eq .Notice "label"}}<p class="alert">Labels updated.</p>{{end}}
+    {{if eq .Notice "agent"}}<p class="alert">Agent settings saved.</p>{{end}}
+    {{if eq .Notice "deleted"}}<p class="alert">Deleted.</p>{{end}}
+    {{if eq .Notice "sent"}}<p class="alert">Sent.</p>{{end}}
+    {{if .Error}}<p class="alert alert-error">{{.Error}}</p>{{end}}
+    {{if not .Enabled}}<p class="alert">Resend is off until its API key is set.</p>{{end}}
+
+    {{if and .Enabled .Email}}
+    <form method="GET" action="/admin/inbox/{{.ID}}" class="admin-form">
+      <label>Folder
+        <select name="folder">
+          <option value="">Default</option>
+          <option value="inbox" {{if eq .Folder "inbox"}}selected{{end}}>inbox</option>
+          <option value="archive" {{if eq .Folder "archive"}}selected{{end}}>archive</option>
+          <option value="sent" {{if eq .Folder "sent"}}selected{{end}}>sent</option>
+          <option value="spam" {{if eq .Folder "spam"}}selected{{end}}>spam</option>
+          <option value="trash" {{if eq .Folder "trash"}}selected{{end}}>trash</option>
+        </select>
+      </label>
+      <label>Search
+        <input type="search" name="q" value="{{.Query}}" maxlength="256">
+      </label>
+      <button type="submit" class="btn btn-secondary">Show threads</button>
+    </form>
+
+    {{if .Threads}}
+    <table class="admin-table">
+      <thead><tr><th>From</th><th>Subject</th><th>When</th><th>Folder</th></tr></thead>
+      <tbody>
+        {{range .Threads}}
+        <tr>
+          <td><a href="/admin/inbox/{{$.ID}}/threads/{{.ID}}">{{if .From}}{{.From}}{{else}}—{{end}}</a></td>
+          <td>{{if .Subject}}{{.Subject}}{{else}}(no subject){{end}}{{if .Unread}} · unread{{end}}{{if .HasAttachment}} · attachment{{end}}</td>
+          <td>{{.When}}</td>
+          <td>{{.Folder}}{{if .Labels}} · {{.Labels}}{{end}}</td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+    {{if .HasMore}}<p><a class="link-button" href="/admin/inbox/{{.ID}}?folder={{.Folder}}&amp;q={{.Query}}&amp;after={{.After}}">Next</a></p>{{end}}
+    {{else}}
+    <p class="empty-state">No threads in this view.</p>
+    {{end}}
+
+    <h2>Inbox settings</h2>
+    <form method="POST" action="/admin/inbox/{{.ID}}" class="admin-form">
+      <label>Internal name <input type="text" name="name" value="{{.Name}}" maxlength="64"></label>
+      <label>From name <input type="text" name="from_name" value="{{.FromName}}" maxlength="78"></label>
+      <label><input type="checkbox" name="clear_from_name" value="1"> Clear the from name</label>
+      <button type="submit" class="btn btn-primary">Update inbox</button>
+    </form>
+    <form method="POST" action="/admin/inbox/{{.ID}}/delete">
+      <button type="submit" class="btn btn-secondary">Delete inbox</button>
+    </form>
+
+    <h2>Labels</h2>
+    {{if .Labels}}
+    <table class="admin-table">
+      <thead><tr><th>Name</th><th>Color</th><th></th></tr></thead>
+      <tbody>
+        {{range .Labels}}
+        <tr>
+          <td colspan="3">
+            <form method="POST" action="/admin/inbox/{{$.ID}}/labels/{{.ID}}" class="admin-form">
+              <label>Name <input type="text" name="name" value="{{.Name}}" maxlength="64"></label>
+              <label>Color <input type="text" name="color" value="{{.Color}}" maxlength="7" placeholder="#112233"></label>
+              <button type="submit" class="btn btn-secondary btn-sm">Update</button>
+            </form>
+            <form method="POST" action="/admin/inbox/{{$.ID}}/labels/{{.ID}}/delete">
+              <button type="submit" class="btn btn-secondary btn-sm">Delete</button>
+            </form>
+          </td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+    {{else}}<p class="empty-state">No labels.</p>{{end}}
+    <form method="POST" action="/admin/inbox/{{.ID}}/labels" class="admin-form">
+      <label>New label <input type="text" name="name" maxlength="64" required></label>
+      <label>Color <span class="optional">optional</span> <input type="text" name="color" maxlength="7" placeholder="#112233"></label>
+      <button type="submit" class="btn btn-secondary">Add label</button>
+    </form>
+
+    <h2>Drafts</h2>
+    {{if .Drafts}}
+    <ul>
+      {{range .Drafts}}<li><a href="/admin/inbox/{{$.ID}}/drafts/{{.ID}}">{{if .Subject}}{{.Subject}}{{else}}(no subject){{end}}</a> · {{.Type}} · {{.To}}</li>{{end}}
+    </ul>
+    {{else}}<p class="empty-state">No drafts.</p>{{end}}
+    <form method="POST" action="/admin/inbox/{{.ID}}/drafts" enctype="multipart/form-data" class="admin-form">
+      <label>To <input type="text" name="to" placeholder="ada@example.com"></label>
+      <label>Cc <input type="text" name="cc"></label>
+      <label>Bcc <input type="text" name="bcc"></label>
+      <label>Subject <input type="text" name="subject" maxlength="2000"></label>
+      <label>Plain text <textarea name="text" rows="4"></textarea></label>
+      <label>HTML <textarea name="html" rows="4"></textarea></label>
+      <label>Reply in thread <span class="optional">both required together</span>
+        <input type="text" name="thread_id" placeholder="thread id">
+        <input type="text" name="reply_to_email_id" placeholder="email id">
+      </label>
+      <label>Attachment <span class="optional">max 8 MB</span> <input type="file" name="attachment"></label>
+      <button type="submit" class="btn btn-secondary">Save draft</button>
+    </form>
+
+    <h2>Agent</h2>
+    <form method="POST" action="/admin/inbox/{{.ID}}/agent" class="admin-form">
+      <label>Instructions <textarea name="instructions" rows="4" maxlength="4000">{{.AgentNotes}}</textarea></label>
+      <label><input type="checkbox" name="clear_instructions" value="1"> Clear instructions</label>
+      <label>Tone
+        <select name="tone">
+          <option value="">Keep</option>
+          <option value="concise_professional" {{if eq .AgentTone "concise_professional"}}selected{{end}}>concise professional</option>
+          <option value="concise_casual" {{if eq .AgentTone "concise_casual"}}selected{{end}}>concise casual</option>
+          <option value="expanded_professional" {{if eq .AgentTone "expanded_professional"}}selected{{end}}>expanded professional</option>
+          <option value="expanded_casual" {{if eq .AgentTone "expanded_casual"}}selected{{end}}>expanded casual</option>
+        </select>
+      </label>
+      <label><input type="checkbox" name="clear_tone" value="1"> Clear tone</label>
+      <label><input type="checkbox" name="action" value="draft_reply" {{if index .AgentActs "draft_reply"}}checked{{end}}> draft reply</label>
+      <label><input type="checkbox" name="action" value="forward_thread" {{if index .AgentActs "forward_thread"}}checked{{end}}> forward thread</label>
+      <label><input type="checkbox" name="action" value="add_labels" {{if index .AgentActs "add_labels"}}checked{{end}}> add labels</label>
+      <label><input type="checkbox" name="action" value="assign_thread" {{if index .AgentActs "assign_thread"}}checked{{end}}> assign thread</label>
+      <label><input type="checkbox" name="action" value="mark_as_spam" {{if index .AgentActs "mark_as_spam"}}checked{{end}}> mark as spam</label>
+      <label><input type="checkbox" name="action" value="archive" {{if index .AgentActs "archive"}}checked{{end}}> archive</label>
+      <label><input type="checkbox" name="action" value="move_to_trash" {{if index .AgentActs "move_to_trash"}}checked{{end}}> move to trash</label>
+      <button type="submit" class="btn btn-secondary">Save agent</button>
+    </form>
+    {{end}}
+  </div>
+</section>
+{{end}}

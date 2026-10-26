@@ -1,0 +1,27 @@
+{{define "content"}}
+<section class="section">
+  <div class="container">
+    <h1>Email templates</h1>
+    <p class="hero-subtitle">Built-in templates are used until you save a custom one. Paid mail uses orders@. Bookings use bookings@. The newsletter confirmation uses news@.</p>
+    {{if .Notice}}<p class="alert">{{.Notice}}</p>{{end}}
+    <table class="admin-table">
+      <thead><tr><th>Kind</th><th>From</th><th>Provider</th><th>Source</th><th>Updated</th><th></th></tr></thead>
+      <tbody>
+        {{range .Rows}}
+        <tr>
+          <td>{{.Label}}</td>
+          <td>{{.From}}</td>
+          <td>{{.Provider}}</td>
+          <td>{{if .Custom}}Custom{{else}}Default{{end}}</td>
+          <td>{{.Updated}}</td>
+          <td class="admin-table-actions">
+            <a class="link-button" href="/admin/email-templates/{{.Kind}}">Edit</a>
+            <a class="link-button" href="/admin/email-templates/{{.Kind}}/preview">Preview</a>
+          </td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+</section>
+{{end}}

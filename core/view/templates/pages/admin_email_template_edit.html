@@ -1,0 +1,68 @@
+{{define "content"}}
+<section class="section">
+  <div class="container">
+    <p class="eyebrow"><a href="/admin/email-templates">Email templates</a></p>
+    <h1>{{.Label}}</h1>
+    <p class="hero-subtitle">{{.From}} via {{.Provider}}. {{if .Custom}}Custom template.{{else}}Built-in default.{{end}} {{.Updated}}</p>
+    {{if eq .Notice "saved"}}<p class="alert">Saved.</p>{{end}}
+    {{if eq .Notice "reset"}}<p class="alert">Reset to the built-in template.</p>{{end}}
+    {{if eq .Notice "restored"}}<p class="alert">Restored.</p>{{end}}
+    {{if eq .Notice "test-sent"}}<p class="alert">Test sent to the admin address.</p>{{end}}
+    {{if .Error}}<p class="alert alert-error">{{.Error}}</p>{{end}}
+    {{range .Warnings}}<p class="alert">{{.}}</p>{{end}}
+
+    <p><a class="link-button" href="/admin/email-templates/{{.Kind}}/preview">Preview sample</a>
+    <a class="link-button" href="/admin/email-templates/{{.Kind}}/preview?theme=dark">Dark background</a></p>
+
+    <form method="POST" action="/admin/email-templates/{{.Kind}}" enctype="multipart/form-data" class="admin-form">
+      <label>Subject
+        <input type="text" name="subject" value="{{.Subject}}" maxlength="200" required>
+      </label>
+      <label>HTML
+        <textarea name="html" rows="16">{{.HTML}}</textarea>
+      </label>
+      <label>Or upload an HTML file <span class="optional">max 200 KB</span>
+        <input type="file" name="file" accept=".html,text/html">
+      </label>
+      <label>Plain text <span class="optional">optional; generated from the HTML when empty</span>
+        <textarea name="text_body" rows="8">{{.TextBody}}</textarea>
+      </label>
+      <button type="submit" class="btn btn-primary">Save template</button>
+    </form>
+
+    <h2>Placeholders</h2>
+    <ul>
+      {{range .Fields}}<li><code>&#123;&#123;.{{.}}&#125;&#125;</code></li>{{end}}
+    </ul>
+    <p>Money is already formatted. Do not add a second money formatter, scripts, or external stylesheets.</p>
+
+    <form method="POST" action="/admin/email-templates/{{.Kind}}/send-test">
+      <button type="submit" class="btn btn-secondary">Send test to admin</button>
+    </form>
+    <form method="POST" action="/admin/email-templates/{{.Kind}}/reset">
+      <button type="submit" class="btn btn-secondary">Reset to default</button>
+    </form>
+
+    {{if .Versions}}
+    <h2>Previous versions</h2>
+    <table class="admin-table">
+      <thead><tr><th>Saved</th><th>By</th><th></th></tr></thead>
+      <tbody>
+        {{range .Versions}}
+        <tr>
+          <td>{{formatDateTime .SavedAt}}</td>
+          <td>{{if .SavedBy}}{{.SavedBy}}{{else}}—{{end}}</td>
+          <td>
+            <form method="POST" action="/admin/email-templates/{{$.Kind}}/restore">
+              <input type="hidden" name="version_id" value="{{.ID}}">
+              <button type="submit" class="link-button">Restore</button>
+            </form>
+          </td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+    {{end}}
+  </div>
+</section>
+{{end}}

@@ -1,0 +1,28 @@
+{{define "content"}}
+<section class="section">
+  <div class="container">
+    <p class="eyebrow"><a href="/admin/inbox">Inbox</a></p>
+    <h1>Received mail</h1>
+    <p class="hero-subtitle">Every message Resend has received for this account. Bodies stay at Resend. Nothing is stored in this site's database.</p>
+    {{if .Error}}<p class="alert alert-error">{{.Error}}</p>{{end}}
+    {{if .Emails}}
+    <table class="admin-table">
+      <thead><tr><th>From</th><th>To</th><th>Subject</th><th>When</th></tr></thead>
+      <tbody>
+        {{range .Emails}}
+        <tr>
+          <td><a href="/admin/inbox/received/{{.ID}}">{{.From}}</a></td>
+          <td>{{.To}}</td>
+          <td>{{if .Subject}}{{.Subject}}{{else}}(no subject){{end}}</td>
+          <td>{{.When}}</td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+    {{if .HasMore}}<p><a class="link-button" href="/admin/inbox/received?after={{.After}}">Older</a></p>{{end}}
+    {{else if not .Error}}
+    <p class="empty-state">No received mail yet. Mail shows up after the domain's receiving is pointed at Resend.</p>
+    {{end}}
+  </div>
+</section>
+{{end}}

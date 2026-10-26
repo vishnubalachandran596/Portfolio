@@ -206,9 +206,13 @@ rows yourself. Everything below is editable from `/admin`:
   unique index plus a no-overlap exclusion constraint in the database mean
   two visitors can never hold the same or overlapping slots.
 
-Booking the free consultancy call needs no account (a private manage link is
-shown on screen once, since the site sends no email). Buying a course requires an account
-(`/login`, email + password — `core/repo/users.go`). Logging in with the
+Booking the free consultancy call needs no account. A private manage link is
+shown on screen once, and a confirmation is queued when `BREVO_API_KEY`
+is set. Buying a course can be a guest checkout. The claim code is shown on
+screen, and a receipt is queued when `RESEND_API_KEY` is set. The mail
+worker sends both. An account
+(`/login`, email + password — `core/repo/users.go`) is how a guest attaches
+that purchase later. Logging in with the
 email/password that matches the `admins` table opens the admin dashboard
 *and* a matching visitor session in one step, so the site owner can browse
 the rest of the site (buy/preview courses, book sessions) exactly like any
@@ -302,9 +306,10 @@ rules), give a name, email and optional topic, and the call is confirmed at
 once. There is no price and no payment step for the hourly call. The slot is
 claimed by the database (a unique index on the live slot start plus a
 no-overlap exclusion constraint, migration `089`), so two simultaneous
-requests cannot both win. The site sends no email: the confirmation shows a
+requests cannot both win. The confirmation shows a
 `BK-XXXXXX` code and a private manage link (`/booking/manage/{token}`, stored
-only as a hash) to view, cancel or reschedule. Abuse protection is a
+only as a hash). A confirmation is queued when `BREVO_API_KEY` is set and sent by the mail worker.
+The on-screen link is still shown only once. Abuse protection is a
 honeypot field plus database throttling (`auth_throttle`, kind `booking`).
 Details in `docs/FUNCTIONALITY.md` (Booking) and `docs/ARCHITECTURE.md` (§6).
 
@@ -357,22 +362,20 @@ Implemented:
 
 Explicitly **not** implemented (each needs an infrastructure/account
 decision this repo can't make on its own):
-- **Newsletter signup automation** — email *capture* exists (`POST
+- **Newsletter campaigns** — email capture exists (`POST
   /subscribe` on Home/Courses/Articles, `subscribers` table, admin list at
-  `/admin/subscribers`), but nothing automated is sent on signup or ever
-  after: no welcome email, no actual newsletter, no unsubscribe link,
-  because there is still no transactional email provider (Resend, etc.)
-  wired up anywhere in this codebase. Vishnu reaches out to the list
-  manually. A real double opt-in/unsubscribe compliance flow is required
-  before any automated sending is added on top of this.
+  `/admin/subscribers`). A confirmation is queued when `BREVO_API_KEY` is set and sent by the mail worker.
+  Campaign blasts are not implemented. There is no stored unsubscribe token;
+  the confirmation points at `/contact`.
 - **UTM tracking** — added when you share links externally, not something
   to bake into internal navigation.
 - **Google Search Console verification / sitemap submission** — a manual
   step in Google's dashboard once the site is live on a real domain.
 - **Backlink strategy** — an ongoing external activity, not a code change.
-- **SPF/DKIM/DMARC, `mail.`/`news.` email subdomains** — no transactional
-  or marketing email is sent by the app yet, so there's nothing to
-  authenticate; revisit if/when booking confirmation emails are added.
+- **SPF/DKIM/DMARC** — the app sends from `orders@`, `bookings@`, and `news@`
+  on the main domain when the provider keys are set. DNS authentication is
+  owner-side (Resend and Brevo each publish the records). It is not in this
+  repo. A later promo subdomain is a one-line change to the news From constant.
 
 ## Notes on scope
 

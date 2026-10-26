@@ -1,0 +1,24 @@
+name: Email retry
+
+# Pending and failed transactional mail is drained from email_outbox here.
+# The site request only enqueues. Vercel Hobby cron jobs only run once a
+# day, so this workflow calls GET /internal/email/retry every 10 minutes.
+# The bearer is the existing CHATBOT_REINDEX_TOKEN (same GitHub Actions
+# secret as the chatbot poller). curl -f fails the job on 401/404/5xx.
+#
+# CI rule (CLAUDE.md rule 13): this repo is public, so Actions minutes are
+# free. GitHub runs schedule triggers from the default branch (main) only.
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch: {}
+
+jobs:
+  retry:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Drain the email queue
+        run: |
+          curl -f -sS \
+            "https://www.vishnubalachandran.com/internal/email/retry" \
+            -H "Authorization: Bearer ${{ secrets.CHATBOT_REINDEX_TOKEN }}"

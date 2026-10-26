@@ -78,10 +78,22 @@ type App struct {
 	CourseStorage        *storage.Client
 
 	Razorpay *payments.Razorpay
-	Telegram *notify.Telegram
-	Google   *oauth.Google
-	Nvidia   *ai.Client
-	Timezone *time.Location
+	// Telegram is best-effort. The field is an interface so tests can
+	// record alerts without calling Telegram.
+	Telegram interface{ Send(string) }
+	// PaidMail is Resend when RESEND_API_KEY is set, otherwise disabled.
+	// BrevoMail is Brevo when BREVO_API_KEY is set, otherwise disabled.
+	PaidMail       notify.Mailer
+	BrevoMail      notify.Mailer
+	Outbox         emailOutboxStore
+	EmailTemplates emailTemplateStore
+	Inbox          *notify.InboxAPI
+	// emailRebuild, when set, replaces database lookups while retrying.
+	// Production leaves it nil.
+	emailRebuild func(context.Context, string, string) (emailJob, error)
+	Google       *oauth.Google
+	Nvidia       *ai.Client
+	Timezone     *time.Location
 }
 
 // BaseData carries the fields every page template needs. Page-specific
@@ -198,6 +210,14 @@ func New(cfg *config.Config, db *sql.DB, renderer *view.Renderer) *App {
 		loc = time.UTC
 	}
 	auth := middleware.NewAuth(cfg.JWTSecret, cfg.SessionTTL, cfg.IsProduction())
+	var paid notify.Mailer = notify.Disabled{}
+	if strings.TrimSpace(cfg.ResendAPIKey) != "" {
+		paid = notify.NewResend(cfg.ResendAPIKey)
+	}
+	var brevo notify.Mailer = notify.Disabled{}
+	if strings.TrimSpace(cfg.BrevoAPIKey) != "" {
+		brevo = notify.NewBrevo(cfg.BrevoAPIKey)
+	}
 	users := repo.NewUserRepo(db)
 	admins := repo.NewAdminRepo(db)
 	auth.SetVerifiers(
@@ -253,6 +273,11 @@ func New(cfg *config.Config, db *sql.DB, renderer *view.Renderer) *App {
 		CourseStorage:        storage.New(cfg),
 		Razorpay:             payments.NewRazorpay(cfg.RazorpayKeyID, cfg.RazorpayKeySecret),
 		Telegram:             notify.NewTelegram(cfg.TelegramBotToken, cfg.TelegramChatID),
+		PaidMail:             paid,
+		BrevoMail:            brevo,
+		Outbox:               repo.NewEmailOutboxRepo(db),
+		EmailTemplates:       repo.NewEmailTemplateRepo(db),
+		Inbox:                notify.NewInboxAPI(cfg.ResendAPIKey),
 		Google:               oauth.NewGoogle(cfg.GoogleClientID, cfg.GoogleClientSecret, cfg.GoogleRedirectURL),
 		Nvidia:               ai.New(cfg.NvidiaAPIKey),
 		Timezone:             loc,
@@ -316,8 +341,10 @@ func (a *App) startBase(r *http.Request) *basePrefetch {
 	pf.wg.Add(1)
 	go func() {
 		defer pf.wg.Done()
-		if profile, err := a.Profile.Get(r.Context()); err == nil {
-			pf.ownProfile = profile
+		if a.Profile != nil {
+			if profile, err := a.Profile.Get(r.Context()); err == nil {
+				pf.ownProfile = profile
+			}
 		}
 	}()
 	return pf
@@ -368,16 +395,20 @@ func (a *App) startBaseChrome(r *http.Request) *basePrefetch {
 		pf.wg.Add(1)
 		go func() {
 			defer pf.wg.Done()
-			if p, err := a.SEO.GetPage(ctx, r.URL.Path); err == nil {
-				pf.pageSEO = &p
+			if a.SEO != nil {
+				if p, err := a.SEO.GetPage(ctx, r.URL.Path); err == nil {
+					pf.pageSEO = &p
+				}
 			}
 		}()
 	}
 	pf.wg.Add(1)
 	go func() {
 		defer pf.wg.Done()
-		if codes, err := a.PromoCodes.ListActivePublic(ctx); err == nil {
-			pf.promoCodes = codes
+		if a.PromoCodes != nil {
+			if codes, err := a.PromoCodes.ListActivePublic(ctx); err == nil {
+				pf.promoCodes = codes
+			}
 		}
 	}()
 	return pf

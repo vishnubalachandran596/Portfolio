@@ -71,6 +71,14 @@ func (r *PurchaseRepo) ListPaidByUserID(ctx context.Context, userID int64) ([]mo
 	return out, rows.Err()
 }
 
+func (r *PurchaseRepo) GetByID(ctx context.Context, id int64) (models.Purchase, error) {
+	p, err := scanPurchase(r.db.QueryRowContext(ctx, `SELECT `+purchaseColumns+` FROM purchases WHERE id = $1`, id))
+	if errors.Is(err, sql.ErrNoRows) {
+		return models.Purchase{}, ErrNotFound
+	}
+	return p, err
+}
+
 func (r *PurchaseRepo) GetByRazorpayOrderID(ctx context.Context, orderID string) (models.Purchase, error) {
 	p, err := scanPurchase(r.db.QueryRowContext(ctx, `SELECT `+purchaseColumns+` FROM purchases WHERE razorpay_order_id = $1`, orderID))
 	if errors.Is(err, sql.ErrNoRows) {

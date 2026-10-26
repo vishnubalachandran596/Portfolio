@@ -1,0 +1,28 @@
+{{define "content"}}
+<section class="section">
+  <div class="container">
+    <p class="eyebrow"><a href="/admin/inbox/{{.InboxID}}">Inbox</a></p>
+    <h1>{{if .Subject}}{{.Subject}}{{else}}Draft{{end}}</h1>
+    <p class="hero-subtitle">{{.Type}}</p>
+    {{if eq .Notice "saved"}}<p class="alert">Draft saved.</p>{{end}}
+    {{if eq .Notice "draft"}}<p class="alert">Draft created.</p>{{end}}
+    {{if .Error}}<p class="alert alert-error">{{.Error}}</p>{{end}}
+
+    <form method="POST" action="/admin/inbox/{{.InboxID}}/drafts/{{.DraftID}}" class="admin-form">
+      <label>To <input type="text" name="to" value="{{.To}}"></label>
+      <label>Cc <input type="text" name="cc" value="{{.Cc}}"></label>
+      <label>Bcc <input type="text" name="bcc" value="{{.Bcc}}"></label>
+      <label>Subject <input type="text" name="subject" value="{{.Subject}}" maxlength="2000"></label>
+      <label>Plain text <textarea name="text" rows="8">{{.Text}}</textarea></label>
+      <label>HTML <textarea name="html" rows="8">{{.HTML}}</textarea></label>
+      <button type="submit" class="btn btn-primary">Update draft</button>
+    </form>
+    <form method="POST" action="/admin/inbox/{{.InboxID}}/drafts/{{.DraftID}}/send">
+      <button type="submit" class="btn btn-primary">Send draft</button>
+    </form>
+    <form method="POST" action="/admin/inbox/{{.InboxID}}/drafts/{{.DraftID}}/delete">
+      <button type="submit" class="btn btn-secondary">Delete draft</button>
+    </form>
+  </div>
+</section>
+{{end}}

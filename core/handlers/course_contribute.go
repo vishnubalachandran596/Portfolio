@@ -129,6 +129,7 @@ func (a *App) CourseContributeVerify(w http.ResponseWriter, r *http.Request) {
 		a.Telegram.Send(fmt.Sprintf("Course contribution\nCourse: %s\nEmail: %s\nAmount: %s",
 			course.Title, row.Email, models.FormatMoney(row.AmountCents, row.Currency)))
 	}
+	a.emailCourseContribution(ctx, row, course)
 	writeJSON(w, http.StatusOK, map[string]string{"ok": "1", "message": "Thank you for your contribution."})
 }
 

@@ -142,6 +142,7 @@ func (a *App) ArticleContributeVerify(w http.ResponseWriter, r *http.Request) {
 
 	a.Telegram.Send(fmt.Sprintf("☕ Article contribution\nArticle: %s\nEmail: %s\nAmount: %s",
 		article.Title, row.Email, models.FormatMoney(row.AmountCents, row.Currency)))
+	a.emailArticleContribution(ctx, row, article)
 
 	writeJSON(w, http.StatusOK, map[string]string{"ok": "1", "redirect": "/articles/" + slug + "?contributed=1"})
 }

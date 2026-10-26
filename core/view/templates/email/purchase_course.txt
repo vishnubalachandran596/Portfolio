@@ -1,0 +1,11 @@
+Hello {{.BuyerName}},
+
+This confirms your purchase of {{.ItemTitle}}.
+
+Amount paid: {{.Amount}}
+Receipt {{.ReceiptNo}}: {{.ReceiptURL}}
+Open the course: {{.AccessURL}}
+{{if .ClaimCode}}
+Your claim code is {{.ClaimCode}}. Keep it. It attaches this purchase to an account later.
+{{end}}
+Reply to this message to reach {{.SupportReplyTo}}.

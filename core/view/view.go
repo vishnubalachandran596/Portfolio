@@ -3,12 +3,14 @@
 package view
 
 import (
+	"bytes"
 	"embed"
 	"fmt"
 	"html/template"
 	"net/http"
 	"regexp"
 	"strings"
+	texttemplate "text/template"
 	"time"
 
 	"github.com/vishnubalachandran596/portfolio/core/models"
@@ -106,8 +108,16 @@ type renderEntry struct {
 	base string // the layout entrypoint to execute: "base.html" or "admin_base.html"
 }
 
+type emailTpl struct {
+	html    *template.Template
+	text    *texttemplate.Template
+	htmlSrc string
+	textSrc string
+}
+
 type Renderer struct {
-	pages map[string]renderEntry
+	pages  map[string]renderEntry
+	emails map[string]emailTpl
 }
 
 // New parses every page template in web/templates against its layout
@@ -185,6 +195,14 @@ func New() (*Renderer, error) {
 		"templates/pages/admin_booking_reschedule.html",
 		"templates/pages/admin_purchases.html",
 		"templates/pages/admin_payments_list.html",
+		"templates/pages/admin_email_templates.html",
+		"templates/pages/admin_email_template_edit.html",
+		"templates/pages/admin_inbox_list.html",
+		"templates/pages/admin_inbox.html",
+		"templates/pages/admin_inbox_thread.html",
+		"templates/pages/admin_inbox_email.html",
+		"templates/pages/admin_inbox_draft.html",
+		"templates/pages/admin_inbox_received.html",
 		"templates/pages/admin_contact_messages.html",
 		"templates/pages/admin_availability.html",
 		"templates/pages/admin_profile.html",
@@ -214,7 +232,7 @@ func New() (*Renderer, error) {
 		"templates/pages/admin_seo.html",
 	}
 
-	r := &Renderer{pages: map[string]renderEntry{}}
+	r := &Renderer{pages: map[string]renderEntry{}, emails: map[string]emailTpl{}}
 	for _, page := range publicPages {
 		files := append(append([]string{}, publicLayout...), page)
 		t, err := template.New("base.html").Funcs(funcs).ParseFS(templateFS, files...)
@@ -231,7 +249,52 @@ func New() (*Renderer, error) {
 		}
 		r.pages[page] = renderEntry{tmpl: t, base: "admin_base.html"}
 	}
+	for _, kind := range models.EmailKinds {
+		htmlSrc, err := templateFS.ReadFile("templates/email/" + kind + ".html")
+		if err != nil {
+			return nil, fmt.Errorf("email %s html: %w", kind, err)
+		}
+		textSrc, err := templateFS.ReadFile("templates/email/" + kind + ".txt")
+		if err != nil {
+			return nil, fmt.Errorf("email %s text: %w", kind, err)
+		}
+		htmlT, err := template.New(kind).Option("missingkey=error").Parse(string(htmlSrc))
+		if err != nil {
+			return nil, fmt.Errorf("parse email %s html: %w", kind, err)
+		}
+		textT, err := texttemplate.New(kind).Option("missingkey=error").Parse(string(textSrc))
+		if err != nil {
+			return nil, fmt.Errorf("parse email %s text: %w", kind, err)
+		}
+		r.emails[kind] = emailTpl{html: htmlT, text: textT, htmlSrc: string(htmlSrc), textSrc: string(textSrc)}
+	}
 	return r, nil
+}
+
+// RenderEmail renders a built-in transactional template. Amounts in data
+// are already formatted with models.FormatMoney.
+func (r *Renderer) RenderEmail(kind string, data models.EmailData) (string, string, error) {
+	e, ok := r.emails[kind]
+	if !ok {
+		return "", "", fmt.Errorf("unknown email kind %s", kind)
+	}
+	var htmlBuf, textBuf bytes.Buffer
+	if err := e.html.Execute(&htmlBuf, data); err != nil {
+		return "", "", err
+	}
+	if err := e.text.Execute(&textBuf, data); err != nil {
+		return "", "", err
+	}
+	return htmlBuf.String(), textBuf.String(), nil
+}
+
+// EmailSource returns the built-in HTML and plain text for the admin editor.
+func (r *Renderer) EmailSource(kind string) (string, string, bool) {
+	e, ok := r.emails[kind]
+	if !ok {
+		return "", "", false
+	}
+	return e.htmlSrc, e.textSrc, true
 }
 
 // Render writes the named page (e.g. "home") with the given data.

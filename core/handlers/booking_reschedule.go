@@ -138,6 +138,7 @@ func (a *App) AdminBookingRescheduleSubmit(w http.ResponseWriter, r *http.Reques
 	a.Telegram.Send("🔁 Rescheduled a booking\nName: " + booking.Name + "\nEmail: " + booking.Email +
 		"\nWas: " + booking.SlotStart.In(a.Timezone).Format("Mon, Jan 2 · 3:04 PM") +
 		"\nNow: " + newStart.In(a.Timezone).Format("Mon, Jan 2 · 3:04 PM"))
+	a.emailBooking(ctx, models.EmailBookingRescheduled, booking, newStart, newEnd, "")
 
 	http.Redirect(w, r, "/admin/bookings", http.StatusSeeOther)
 }
@@ -268,6 +269,7 @@ func (a *App) AccountRescheduleSubmit(w http.ResponseWriter, r *http.Request) {
 
 	a.Telegram.Send("🔁 Visitor rescheduled their own booking\nEmail: " + booking.Email +
 		"\nNow: " + newStart.In(a.Timezone).Format("Mon, Jan 2 · 3:04 PM"))
+	a.emailBooking(ctx, models.EmailBookingRescheduled, booking, newStart, newStart.Add(duration), "")
 
 	http.Redirect(w, r, "/account", http.StatusSeeOther)
 }

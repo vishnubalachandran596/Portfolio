@@ -22,7 +22,7 @@ Do what the incident needs; each step has side effects (users signed out, downti
 - [ ] Payments: roll Razorpay `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` and any webhook secret. Payment confirmation stays server-side HMAC, so old keys must die.
 - [ ] Google sign-in: rotate the OAuth client secret if it may have leaked.
 - [ ] Licence signing key: generate a new pair at `/admin/licences/keygen`, set a NEW `LICENCE_KID` and `LICENCE_SIGNING_KEY_B64`. Add the new public key and kid to the Temple app's `config/licence_keys.json` and ship it BEFORE or WITH the switch. Keep the old public key listed so already-issued licences verify, unless the old key itself leaked (then licences must be reissued).
-- [ ] Other secrets in the env (chatbot reindex token, storage keys, mail/embed keys): rotate any that could have been exposed.
+- [ ] Other secrets in the env (`CHATBOT_REINDEX_TOKEN`, storage keys, `RESEND_API_KEY`, `BREVO_API_KEY`, embed keys): rotate any that could have been exposed. Clearing a mail key and redeploying stops that provider.
 - [ ] Access: revoke Vercel tokens, Git deploy keys and integrations; check Vercel/Supabase/GitHub team members and 2FA.
 - [ ] Take the affected route or feature offline (firewall rule, redeploy without the route, or pause the project) if exposure continues.
 - [ ] Preserve evidence (logs, a DB snapshot) before cleanup.
@@ -38,8 +38,8 @@ Do what the incident needs; each step has side effects (users signed out, downti
 ## 4. Notify
 
 - [ ] Under India's Digital Personal Data Protection Act 2023 and its Rules, a personal data breach must be reported to the Data Protection Board of India and to each affected Data Principal, without delay, with the prescribed details, followed by a more detailed report within the prescribed time. Check the current Rules for exact timelines, form and contents.
-- [ ] Affected users: plain-language message covering what happened, which data, likely consequences, what we did, what they should do (change reused passwords, watch for phishing), and the privacy contact. The site sends no email, so decide the channel (direct email from a personal mailbox, site banner, post).
-- [ ] Inform Razorpay, Supabase, and Vercel where their systems or accounts are involved, and follow their incident processes.
+- [ ] Affected users: plain-language message covering what happened, which data, likely consequences, what we did, what they should do (change reused passwords, watch for phishing), and the privacy contact. Transactional mail exists for purchase and booking messages. A breach notice is not an automated blast — decide the channel (direct email from a personal mailbox, site banner, post).
+- [ ] Inform Razorpay, Supabase, Vercel, Resend, and Brevo where their systems or accounts are involved, and follow their incident processes.
 - [ ] Consider police or CERT-In reporting where applicable; confirm obligations with counsel.
 - [ ] Keep copies of everything sent and when.
 

@@ -1,0 +1,75 @@
+{{define "content"}}
+<section class="section">
+  <div class="container">
+    <p class="eyebrow"><a href="/admin/inbox/{{.InboxID}}">Inbox</a></p>
+    <h1>{{if .Subject}}{{.Subject}}{{else}}Thread{{end}}</h1>
+    <p class="hero-subtitle">{{.Folder}}{{if .Read}} · read{{else}} · unread{{end}}</p>
+    {{if eq .Notice "updated"}}<p class="alert">Thread updated.</p>{{end}}
+    {{if eq .Notice "labels"}}<p class="alert">Labels updated.</p>{{end}}
+    {{if eq .Notice "sent"}}<p class="alert">Sent.</p>{{end}}
+    {{if .Error}}<p class="alert alert-error">{{.Error}}</p>{{end}}
+
+    {{if .Emails}}
+    <table class="admin-table">
+      <thead><tr><th>From</th><th>To</th><th>Subject</th><th>When</th></tr></thead>
+      <tbody>
+        {{range .Emails}}
+        <tr>
+          <td><a href="/admin/inbox/{{$.InboxID}}/threads/{{$.ThreadID}}/emails/{{.ID}}">{{.From}}</a></td>
+          <td>{{.To}}</td>
+          <td>{{.Direction}}{{if .Subject}} · {{.Subject}}{{end}}</td>
+          <td>{{.When}}</td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+    {{else}}<p class="empty-state">No messages in this thread.</p>{{end}}
+
+    <h2>Thread</h2>
+    <form method="POST" action="/admin/inbox/{{.InboxID}}/threads/{{.ThreadID}}" class="admin-form">
+      <label><input type="checkbox" name="read" value="1" {{if .Read}}checked{{end}}> Mark read</label>
+      <label>Move to
+        <select name="folder">
+          <option value="">Leave</option>
+          <option value="inbox">inbox</option>
+          <option value="archive">archive</option>
+          <option value="spam">spam</option>
+          <option value="trash">trash</option>
+        </select>
+      </label>
+      <button type="submit" class="btn btn-primary">Update thread</button>
+    </form>
+    <form method="POST" action="/admin/inbox/{{.InboxID}}/threads/{{.ThreadID}}/delete">
+      <button type="submit" class="btn btn-secondary">Move to trash</button>
+    </form>
+
+    <h2>Labels on this thread</h2>
+    {{if .Labels}}
+    <ul>
+      {{range .Labels}}
+      <li>{{.Name}}
+        <form method="POST" action="/admin/inbox/{{$.InboxID}}/threads/{{$.ThreadID}}/labels/{{.ID}}/delete">
+          <button type="submit" class="btn btn-secondary btn-sm">Remove</button>
+        </form>
+      </li>
+      {{end}}
+    </ul>
+    {{else}}<p class="empty-state">No labels on this thread.</p>{{end}}
+
+    {{if .AllLabels}}
+    <form method="POST" action="/admin/inbox/{{.InboxID}}/threads/{{.ThreadID}}/labels" class="admin-form">
+      {{range .AllLabels}}
+      <label><input type="checkbox" name="label_id" value="{{.ID}}"> {{.Name}}</label>
+      {{end}}
+      <button type="submit" class="btn btn-secondary">Add selected</button>
+    </form>
+    <form method="POST" action="/admin/inbox/{{.InboxID}}/threads/{{.ThreadID}}/labels/set" class="admin-form">
+      {{range .AllLabels}}
+      <label><input type="checkbox" name="label_id" value="{{.ID}}"> {{.Name}}</label>
+      {{end}}
+      <button type="submit" class="btn btn-secondary">Replace with selected</button>
+    </form>
+    {{end}}
+  </div>
+</section>
+{{end}}

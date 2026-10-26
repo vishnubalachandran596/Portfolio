@@ -145,9 +145,9 @@ func bookingJSONError(w http.ResponseWriter, status int, msg string) {
 // BookingConfirm reserves the chosen slot for anyone (no login). The slot is
 // claimed by the database — a unique index on the live slot start plus a
 // no-overlap exclusion constraint — so two simultaneous requests cannot both
-// win; the loser sees "just booked". The site sends no email: the response
-// carries the booking code and the private manage token, which is shown once
-// and kept only as a hash.
+// win; the loser sees "just booked". A confirmation is also emailed when
+// Brevo is configured. The response still carries the booking code and the
+// private manage token, which is shown once and kept only as a hash.
 func (a *App) BookingConfirm(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
@@ -231,7 +231,7 @@ func (a *App) BookingConfirm(w http.ResponseWriter, r *http.Request) {
 	a.recordFailure(r, throttleBooking, bookingMaxPerIP, ik)
 	a.recordFailure(r, throttleBooking, bookingMaxPerEmail, ek)
 
-	_, code, err := a.Bookings.CreatePublic(ctx, booking, authutil.HashKey(token))
+	id, code, err := a.Bookings.CreatePublic(ctx, booking, authutil.HashKey(token))
 	if err != nil {
 		if err == repo.ErrSlotTaken {
 			bookingJSONError(w, http.StatusConflict, "That time was just booked by someone else, please pick another.")
@@ -247,6 +247,9 @@ func (a *App) BookingConfirm(w http.ResponseWriter, r *http.Request) {
 	}
 	a.Telegram.Send(fmt.Sprintf("📅 Consultancy call booked (%s)\nName: %s\nEmail: %s%s\nWhen: %s",
 		code, name, email, phoneLine, slotStart.In(a.Timezone).Format("Mon, Jan 2 · 3:04 PM MST")))
+	booking.ID = id
+	booking.Code = code
+	a.emailBooking(ctx, models.EmailBookingNew, booking, slotStart, booking.SlotEnd, token)
 
 	writeJSON(w, http.StatusOK, map[string]any{
 		"code":        code,

@@ -1,0 +1,9 @@
+Hello {{.BuyerName}},
+
+Your consultancy call is booked.
+
+When: {{.BookingStart}} ({{.Duration}})
+Booking code: {{.BookingCode}}
+View, reschedule, or cancel: {{.ManageURL}}
+
+Save that link. The booking page shows it once as well. Reply to this message to reach {{.SupportReplyTo}}.

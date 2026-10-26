@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -9,12 +10,10 @@ import (
 )
 
 // NewsletterSubscribe records an email-capture submission from Courses,
-// Articles, or Home (POST /subscribe). There is no transactional email
-// provider wired up anywhere in this codebase, so nothing automated is
-// sent back — this is capture only, same scoping as Contact's own
-// confirmation-email gap (see docs/FUNCTIONALITY.md). The redirect target
-// is a fixed switch on the source label rather than anything client-
-// supplied, so there is no open-redirect surface here.
+// Articles, or Home (POST /subscribe) and sends a confirmation when Brevo
+// is configured. Campaign blasts are not sent from here. The redirect
+// target is a fixed switch on the source label rather than anything
+// client-supplied, so there is no open-redirect surface here.
 func (a *App) NewsletterSubscribe(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
 		http.Redirect(w, r, "/", http.StatusSeeOther)
@@ -47,6 +46,12 @@ func (a *App) NewsletterSubscribe(w http.ResponseWriter, r *http.Request) {
 	}
 	if created {
 		a.Telegram.Send("📬 New subscriber (" + source + "): " + email)
+		sub, serr := a.Subscribers.GetByEmail(r.Context(), email)
+		if serr != nil {
+			log.Printf("newsletter confirm lookup: %v", serr)
+		} else {
+			a.emailNewsletterConfirm(r.Context(), sub.ID, sub.Email)
+		}
 	}
 
 	http.Redirect(w, r, redirectTo+"?subscribed=1", http.StatusSeeOther)

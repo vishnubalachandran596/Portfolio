@@ -2,9 +2,11 @@
 <section class="section">
   <div class="container">
     <h1>Bookings</h1>
+    {{if eq .EmailNotice "queued"}}<p class="alert">The email is back on the queue.</p>{{end}}
+    {{if eq .EmailNotice "failed"}}<p class="alert alert-error">The email could not be sent. It stays in the retry queue when the failure is temporary.</p>{{end}}
     {{if .Bookings}}
     <table class="admin-table">
-      <thead><tr><th>When</th><th>Name</th><th>Email</th><th>Phone</th><th>Amount</th><th>Promo</th><th>Message</th><th>Status</th><th></th></tr></thead>
+      <thead><tr><th>When</th><th>Name</th><th>Email</th><th>Phone</th><th>Amount</th><th>Promo</th><th>Message</th><th>Status</th><th>Mail</th><th></th></tr></thead>
       <tbody>
         {{range .Bookings}}
         <tr>
@@ -16,6 +18,17 @@
           <td>{{if .PromoCode}}{{.PromoCode}} (-{{money .DiscountCents .Currency}}){{else}}—{{end}}</td>
           <td class="booking-message">{{.Message}}</td>
           <td><span class="status-badge status-{{.Status}}">{{.Status}}</span></td>
+          <td>
+            {{if .EmailStatus}}<span class="status-badge status-{{.EmailStatus}}">Email: {{.EmailStatus}}</span>{{else}}<span class="status-badge status-disabled">Email: none</span>{{end}}
+            {{if or (eq .EmailStatus "failed") (eq .EmailStatus "disabled")}}
+            <form method="POST" action="/admin/email/resend">
+              <input type="hidden" name="kind" value="{{.EmailKind}}">
+              <input type="hidden" name="entity_id" value="{{.EmailEntity}}">
+              <input type="hidden" name="next" value="/admin/bookings">
+              <button type="submit" class="link-button">Resend email</button>
+            </form>
+            {{end}}
+          </td>
           <td class="admin-table-actions">
             <form method="POST" action="/admin/bookings/{{.ID}}/status">
               <select name="status" onchange="this.form.submit()">

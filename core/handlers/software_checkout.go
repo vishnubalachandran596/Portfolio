@@ -99,7 +99,11 @@ func (a *App) SoftwareCheckoutOrder(w http.ResponseWriter, r *http.Request) {
 				log.Printf("increment promo redemption: %v", err)
 			}
 		}
+		purchase.ID = pid
+		a.Telegram.Send(fmt.Sprintf("💾 Software purchase\nSoftware: %s %s\nEmail: %s\nAmount: %s",
+			sw.Title, sw.Version, purchase.Email, models.FormatMoney(purchase.AmountCents, purchase.Currency)))
 		a.setAccessCookie(w, softwareAccessCookieName(sw.ID), token)
+		a.emailSoftwarePurchase(r.Context(), purchase, sw)
 		writeJSON(w, http.StatusOK, map[string]any{
 			"free":     true,
 			"redirect": a.softwareLanding(r.Context(), sw, pid, uid),
@@ -202,6 +206,7 @@ func (a *App) SoftwareCheckoutVerify(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	a.setAccessCookie(w, softwareAccessCookieName(sw.ID), rawToken)
+	a.emailSoftwarePurchase(ctx, purchase, sw)
 
 	writeJSON(w, http.StatusOK, map[string]string{"redirect": a.softwareLanding(ctx, sw, purchase.ID, purchase.UserID)})
 }

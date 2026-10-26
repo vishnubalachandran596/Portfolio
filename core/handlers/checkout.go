@@ -102,10 +102,12 @@ func (a *App) CheckoutCreateOrder(w http.ResponseWriter, r *http.Request) {
 	// the visitor gets instant access.
 	if amountCents == 0 {
 		purchase.RazorpayOrderID = "free-" + token
-		if _, err := a.Purchases.Create(r.Context(), purchase); err != nil {
+		id, err := a.Purchases.Create(r.Context(), purchase)
+		if err != nil {
 			a.serverError(w, "record free enrollment", err)
 			return
 		}
+		purchase.ID = id
 		if err := a.Purchases.MarkPaid(r.Context(), purchase.RazorpayOrderID, ""); err != nil {
 			a.serverError(w, "mark free enrollment paid", err)
 			return
@@ -115,7 +117,10 @@ func (a *App) CheckoutCreateOrder(w http.ResponseWriter, r *http.Request) {
 				log.Printf("increment promo redemption: %v", err)
 			}
 		}
+		a.Telegram.Send(fmt.Sprintf("💰 Course purchase%s\nCourse: %s\nEmail: %s\nAmount: %s",
+			guestTag(purchase.UserID), course.Title, purchase.Email, models.FormatMoney(purchase.AmountCents, purchase.Currency)))
 		a.setAccessCookie(w, accessCookieName(course.ID), token)
+		a.emailCoursePurchase(r.Context(), purchase, course)
 		writeJSON(w, http.StatusOK, map[string]any{
 			"free":     true,
 			"redirect": "/courses/" + slug + "/enrolled",
@@ -218,6 +223,7 @@ func (a *App) CheckoutVerify(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	a.setAccessCookie(w, accessCookieName(course.ID), rawToken)
+	a.emailCoursePurchase(ctx, purchase, course)
 
 	writeJSON(w, http.StatusOK, map[string]string{"redirect": "/courses/" + slug + "/enrolled"})
 }

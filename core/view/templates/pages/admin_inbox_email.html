@@ -1,0 +1,60 @@
+{{define "content"}}
+<section class="section">
+  <div class="container">
+    {{if .ThreadID}}
+    <p class="eyebrow"><a href="/admin/inbox/{{.InboxID}}/threads/{{.ThreadID}}">Thread</a></p>
+    {{else}}
+    <p class="eyebrow"><a href="/admin/inbox/received">Received mail</a></p>
+    {{end}}
+    <h1>{{if .Subject}}{{.Subject}}{{else}}Message{{end}}</h1>
+    <p class="hero-subtitle">{{.From}}{{if .To}} → {{.To}}{{end}}{{if .When}} · {{.When}}{{end}}{{if .Direction}} · {{.Direction}}{{end}}</p>
+    {{if .Cc}}<p>Cc {{.Cc}}</p>{{end}}
+    {{if .Bcc}}<p>Bcc {{.Bcc}}</p>{{end}}
+    {{if .Error}}<p class="alert alert-error">{{.Error}}</p>{{end}}
+    {{if .Notice}}<p class="alert">{{.Notice}}</p>{{end}}
+
+    {{if .HTML}}
+    <iframe sandbox srcdoc="{{.HTML}}" width="100%" height="480" title="Message body"></iframe>
+    {{end}}
+    {{if .Text}}
+    <h2>Plain text</h2>
+    <pre>{{.Text}}</pre>
+    {{end}}
+
+    <h2>Attachments</h2>
+    {{if .Attachments}}
+    <ul>
+      {{range .Attachments}}
+      <li><a href="/admin/inbox/received/{{$.EmailID}}/attachments/{{.ID}}">{{if .Filename}}{{.Filename}}{{else}}{{.ID}}{{end}}</a>{{if .ContentType}} · {{.ContentType}}{{end}}</li>
+      {{end}}
+    </ul>
+    {{else}}<p class="empty-state">No attachments.</p>{{end}}
+
+    {{if .CanReply}}
+    <h2>Reply</h2>
+    <form method="POST" action="/admin/inbox/{{.InboxID}}/threads/{{.ThreadID}}/emails/{{.EmailID}}/reply" enctype="multipart/form-data" class="admin-form">
+      <label>Subject <span class="optional">optional</span> <input type="text" name="subject" maxlength="2000"></label>
+      <label>Cc <input type="text" name="cc"></label>
+      <label>Bcc <input type="text" name="bcc"></label>
+      <label><input type="checkbox" name="reply_all" value="1"> Reply all</label>
+      <label>Plain text <textarea name="text" rows="5"></textarea></label>
+      <label>HTML <textarea name="html" rows="5"></textarea></label>
+      <label>Attachment <span class="optional">max 8 MB</span> <input type="file" name="attachment"></label>
+      <button type="submit" class="btn btn-primary">Send reply</button>
+    </form>
+
+    <h2>Forward</h2>
+    <form method="POST" action="/admin/inbox/{{.InboxID}}/threads/{{.ThreadID}}/emails/{{.EmailID}}/forward" enctype="multipart/form-data" class="admin-form">
+      <label>To <input type="text" name="to" required></label>
+      <label>Cc <input type="text" name="cc"></label>
+      <label>Bcc <input type="text" name="bcc"></label>
+      <label>Subject <span class="optional">optional</span> <input type="text" name="subject" maxlength="2000"></label>
+      <label>Note <textarea name="text" rows="4"></textarea></label>
+      <label>HTML note <textarea name="html" rows="4"></textarea></label>
+      <label>Attachment <span class="optional">max 8 MB</span> <input type="file" name="attachment"></label>
+      <button type="submit" class="btn btn-secondary">Forward</button>
+    </form>
+    {{end}}
+  </div>
+</section>
+{{end}}

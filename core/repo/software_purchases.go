@@ -50,6 +50,14 @@ func (r *SoftwarePurchaseRepo) Create(ctx context.Context, p models.SoftwarePurc
 	return id, err
 }
 
+func (r *SoftwarePurchaseRepo) GetByID(ctx context.Context, id int64) (models.SoftwarePurchase, error) {
+	p, err := scanSoftwarePurchase(r.db.QueryRowContext(ctx, `SELECT `+softwarePurchaseColumns+` FROM software_purchases WHERE id = $1`, id))
+	if errors.Is(err, sql.ErrNoRows) {
+		return models.SoftwarePurchase{}, ErrNotFound
+	}
+	return p, err
+}
+
 func (r *SoftwarePurchaseRepo) GetByRazorpayOrderID(ctx context.Context, orderID string) (models.SoftwarePurchase, error) {
 	p, err := scanSoftwarePurchase(r.db.QueryRowContext(ctx, `SELECT `+softwarePurchaseColumns+` FROM software_purchases WHERE razorpay_order_id = $1`, orderID))
 	if errors.Is(err, sql.ErrNoRows) {

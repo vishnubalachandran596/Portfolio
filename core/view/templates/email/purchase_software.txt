@@ -1,0 +1,11 @@
+Hello {{.BuyerName}},
+
+This confirms your purchase of {{.ItemTitle}}.
+
+Amount paid: {{.Amount}}
+Receipt {{.ReceiptNo}}: {{.ReceiptURL}}
+Your licences: {{.AccessURL}}
+{{if .Instructions}}
+{{.Instructions}}
+{{end}}
+Reply to this message to reach {{.SupportReplyTo}}.

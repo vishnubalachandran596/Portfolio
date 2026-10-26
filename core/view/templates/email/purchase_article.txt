@@ -1,0 +1,9 @@
+Hello {{.BuyerName}},
+
+Thank you for supporting {{.ItemTitle}}.
+
+Amount paid: {{.Amount}}
+Receipt {{.ReceiptNo}}: {{.ReceiptURL}}
+The article: {{.AccessURL}}
+
+Reply to this message to reach {{.SupportReplyTo}}.

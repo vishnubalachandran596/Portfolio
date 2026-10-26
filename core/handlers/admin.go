@@ -521,9 +521,17 @@ func (a *App) AdminCourseDelete(w http.ResponseWriter, r *http.Request) {
 
 // --- Bookings ------------------------------------------------------------
 
+type adminBookingRow struct {
+	models.Booking
+	EmailStatus string
+	EmailKind   string
+	EmailEntity string
+}
+
 type AdminBookingsData struct {
 	BaseData
-	Bookings []models.Booking
+	Bookings    []adminBookingRow
+	EmailNotice string
 }
 
 func (a *App) AdminBookingsList(w http.ResponseWriter, r *http.Request) {
@@ -532,9 +540,26 @@ func (a *App) AdminBookingsList(w http.ResponseWriter, r *http.Request) {
 		a.serverError(w, "load bookings", err)
 		return
 	}
+	var outbox []models.EmailOutbox
+	if a.Outbox != nil {
+		outbox, err = a.Outbox.ListAll(r.Context())
+		if err != nil {
+			a.serverError(w, "load email status", err)
+			return
+		}
+	}
+	rows := make([]adminBookingRow, 0, len(bookings))
+	for _, b := range bookings {
+		row := adminBookingRow{Booking: b}
+		if mail := latestBookingEmail(outbox, b.ID); mail.Kind != "" {
+			row.EmailKind, row.EmailEntity, row.EmailStatus = mail.Kind, mail.EntityID, mail.Status
+		}
+		rows = append(rows, row)
+	}
 	a.View.Render(w, http.StatusOK, "admin_bookings", AdminBookingsData{
-		BaseData: a.base(r, "Bookings — Admin", "", "admin"),
-		Bookings: bookings,
+		BaseData:    a.base(r, "Bookings — Admin", "", "admin"),
+		Bookings:    rows,
+		EmailNotice: r.URL.Query().Get("email"),
 	})
 }
 

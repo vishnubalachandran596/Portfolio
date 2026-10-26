@@ -101,7 +101,8 @@ func (r *UserRepo) MarkSignedUp(ctx context.Context, id int64) error {
 }
 
 // CreateWithPassword registers a visitor who chose their own password and
-// security question. The email is not verified (the site sends no email).
+// security question. The email is not verified (signup does not send a
+// verification message; password reset stays the security question).
 func (r *UserRepo) CreateWithPassword(ctx context.Context, email, passwordHash, name, question, answerHash string) (int64, error) {
 	var id int64
 	err := r.db.QueryRowContext(ctx, `

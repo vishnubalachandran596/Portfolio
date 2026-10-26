@@ -5,9 +5,11 @@
       <h1>Payments</h1>
       <p class="hero-subtitle">Total received: <strong>{{.Total}}</strong></p>
     </div>
+    {{if eq .EmailNotice "queued"}}<p class="alert">The email is back on the queue.</p>{{end}}
+    {{if eq .EmailNotice "failed"}}<p class="alert alert-error">The email could not be sent. It stays in the retry queue when the failure is temporary.</p>{{end}}
     {{if .Payments}}
     <table class="admin-table">
-      <thead><tr><th>When</th><th>Type</th><th>Description</th><th>Email</th><th>Amount</th><th>Promo</th><th>Payment ID</th></tr></thead>
+      <thead><tr><th>When</th><th>Type</th><th>Description</th><th>Email</th><th>Amount</th><th>Promo</th><th>Payment ID</th><th>Mail</th></tr></thead>
       <tbody>
         {{range .Payments}}
         <tr>
@@ -18,6 +20,17 @@
           <td>{{.Amount}}</td>
           <td>{{if .PromoCode}}{{.PromoCode}} (-{{.Discount}}){{else}}—{{end}}</td>
           <td>{{.PaymentID}}</td>
+          <td>
+            {{if .EmailStatus}}<span class="status-badge status-{{.EmailStatus}}">Email: {{.EmailStatus}}</span>{{else}}<span class="status-badge status-disabled">Email: none</span>{{end}}
+            {{if or (eq .EmailStatus "failed") (eq .EmailStatus "disabled")}}
+            <form method="POST" action="/admin/email/resend">
+              <input type="hidden" name="kind" value="{{.EmailKind}}">
+              <input type="hidden" name="entity_id" value="{{.EmailEntity}}">
+              <input type="hidden" name="next" value="/admin/payments">
+              <button type="submit" class="link-button">Resend email</button>
+            </form>
+            {{end}}
+          </td>
         </tr>
         {{end}}
       </tbody>

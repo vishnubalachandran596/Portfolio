@@ -1,0 +1,7 @@
+Hello {{.BuyerName}},
+
+Your consultancy call {{.BookingCode}} has been cancelled. It was booked for {{.BookingStart}}.
+
+The manage link: {{.ManageURL}}
+
+Reply to this message to reach {{.SupportReplyTo}}.

@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><title>{{.SiteName}}</title></head>
+<body style="margin:0;padding:0;background:#f4f1ea;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f1ea;">
+<tr><td align="center" style="padding:24px 12px;">
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;">
+<tr><td style="padding:28px 28px 8px;font-family:Georgia,serif;font-size:22px;color:#1c1917;">{{.SiteName}}</td></tr>
+<tr><td style="padding:8px 28px 28px;font-family:Arial,sans-serif;font-size:16px;line-height:1.5;color:#292524;">
+<p>Hello {{.BuyerName}},</p>
+<p>Your consultancy call is booked.</p>
+<p>When: {{.BookingStart}} ({{.Duration}})</p>
+<p>Booking code: {{.BookingCode}}</p>
+<p>View, reschedule, or cancel: <a href="{{.ManageURL}}">{{.ManageURL}}</a></p>
+<p>Save that link. The booking page shows it once as well. Reply to this message to reach {{.SupportReplyTo}}.</p>
+</td></tr>
+</table>
+</td></tr>
+</table>
+</body>
+</html>
