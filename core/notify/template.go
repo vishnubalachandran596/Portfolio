@@ -167,7 +167,7 @@ func requireFields(kind, html, textBody string) error {
 	switch kind {
 	case models.EmailPurchaseCourse, models.EmailPurchaseSoftware, models.EmailPurchaseArticle, models.EmailContribution:
 		needAny = []string{"ReceiptURL", "AccessURL"}
-	case models.EmailBookingNew, models.EmailBookingRescheduled, models.EmailBookingCancelled:
+	case models.EmailBookingNew, models.EmailBookingRescheduled, models.EmailBookingCancelled, models.EmailConnectRequest:
 		needAll = []string{"ManageURL"}
 	case models.EmailNewsletterConfirm:
 		needAll = []string{"UnsubscribeURL"}

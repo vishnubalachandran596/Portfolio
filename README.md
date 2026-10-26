@@ -207,10 +207,11 @@ rows yourself. Everything below is editable from `/admin`:
   two visitors can never hold the same or overlapping slots.
 
 Booking the free consultancy call needs no account. A private manage link is
-shown on screen once, and a confirmation is queued when `BREVO_API_KEY`
-is set. Buying a course can be a guest checkout. The claim code is shown on
-screen, and a receipt is queued when `RESEND_API_KEY` is set. The mail
-worker sends both. An account
+shown on screen once, and a confirmation is queued for every booking. Buying
+a course can be a guest checkout, including a zero amount or a promo. The
+claim code is shown on screen, and a receipt is queued for every completed
+order. The mail worker sends them when `BREVO_API_KEY` or `RESEND_API_KEY`
+is set. An empty key leaves the row pending. An account
 (`/login`, email + password — `core/repo/users.go`) is how a guest attaches
 that purchase later. Logging in with the
 email/password that matches the `admins` table opens the admin dashboard

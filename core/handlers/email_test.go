@@ -417,6 +417,34 @@ func TestEnqueueIsIdempotentAndWorkerSends(t *testing.T) {
 	}
 }
 
+func TestZeroAmountPurchaseStillEnqueues(t *testing.T) {
+	fx := newEmailFixture(t)
+	fx.app.emailCoursePurchase(context.Background(), models.Purchase{
+		ID: 11, Email: "buyer@example.com", AmountCents: 0, Currency: "INR",
+	}, models.Course{Title: "Free course", Slug: "free"})
+	fx.app.emailSoftwarePurchase(context.Background(), models.SoftwarePurchase{
+		ID: 12, Email: "buyer@example.com", AmountCents: 0, Currency: "INR",
+	}, models.Software{Title: "Tool", Version: "1"})
+	fx.app.emailConnectRequest(context.Background(), models.ContactMessage{
+		ID: 13, Name: "Ada", Email: "ada@example.com",
+	})
+	if fx.paid.count() != 0 || fx.brevo.count() != 0 {
+		t.Fatal("enqueue called a provider")
+	}
+	course, err := fx.box.Get(context.Background(), models.EmailPurchaseCourse, "11")
+	if err != nil || course.Status != models.EmailStatusPending || course.Provider != "resend" || course.ToEmail != "buyer@example.com" {
+		t.Fatalf("course %+v %v", course, err)
+	}
+	software, err := fx.box.Get(context.Background(), models.EmailPurchaseSoftware, "12")
+	if err != nil || software.Status != models.EmailStatusPending || software.Provider != "resend" {
+		t.Fatalf("software %+v %v", software, err)
+	}
+	connect, err := fx.box.Get(context.Background(), models.EmailConnectRequest, "13")
+	if err != nil || connect.Status != models.EmailStatusPending || connect.Provider != "brevo" || connect.ToEmail != "ada@example.com" {
+		t.Fatalf("connect %+v %v", connect, err)
+	}
+}
+
 func TestEmailFailureDoesNotFailCheckoutOrBooking(t *testing.T) {
 	fx := newEmailFixture(t)
 	fx.paid.err = errors.New("provider down")

@@ -41,6 +41,11 @@ func SampleData(kind string) models.EmailData {
 		d.ReceiptURL = "https://www.vishnubalachandran.com/courses/sample"
 		d.AccessURL = "https://www.vishnubalachandran.com/courses/sample"
 		d.ClaimCode = ""
+	case models.EmailConnectRequest:
+		d.BuyerName = "Asha Raman"
+		d.ItemTitle = ""
+		d.Amount = ""
+		d.ManageURL = "https://www.vishnubalachandran.com/booking"
 	case models.EmailNewsletterConfirm:
 		d.BuyerName = "there"
 		d.ItemTitle = ""

@@ -46,7 +46,7 @@ core/
   handlers/     ALL HTTP handlers + App struct (the biggest package — see §4)
   middleware/   auth (admin+user sessions), domain/subdomain routing, legacy/trailing-slash redirects, security headers, logging
   models/       every domain struct + business-rule methods (pricing display, status enums, etc.)
-  notify/       Telegram alerts, plus Resend (paid flows) and Brevo (bookings and newsletter confirmations)
+  notify/       Telegram alerts, plus Resend (orders and contributions, including a zero amount) and Brevo (bookings, consultancy connect requests, and newsletter confirmations)
   oauth/        Google OAuth2 client
   payments/     Razorpay client (order creation, signature verification)
   receipt/      PDF payment-receipt generator
@@ -520,7 +520,7 @@ erDiagram
         text message
         bool is_read
         timestamptz created_at
-        note "one /contact form submission — no login, no FK, standalone lead capture"
+        note "one /contact form submission — no login, no FK, standalone lead capture; a confirmation is queued to the submitted address"
     }
     availability_rules {
         serial id PK
@@ -667,7 +667,7 @@ Handler files, by area:
 | `admin_case_studies.go` | Admin CRUD for Case Studies |
 | `newsletter.go` | Public `POST /subscribe` (records the address and sends the confirmation when Brevo is configured) + admin subscribers list/delete |
 | `email_send.go` | Enqueue after commit, worker send, `GET /internal/email/retry` |
-| `email_build.go` | Builds one job per purchase, booking, contribution, and newsletter confirmation |
+| `email_build.go` | Builds one job per purchase, booking, contribution, consultancy connect request, and newsletter confirmation |
 | `admin_email_templates.go` | Admin template list, edit, preview, send-test, reset, restore, and queue resend |
 | `admin_inbox.go` | Admin inbox: Resend Inboxes API (list, view, reply, forward, labels, threads, drafts, agent, attachments). Bodies stay at Resend |
 | `articles.go` | Public article list (incl. subscribe-form data)/detail/thumbs-up + Admin article CRUD |
@@ -694,11 +694,11 @@ Handler files, by area:
 | `promo.go` | `resolvePromoCode()` — the one shared discount-resolution function every checkout flow calls |
 | `chatbot.go` | Public `POST /chat` (RAG answer) + `GET /ai-assistant` (`AIAssistantPage`) + `chatbotSessionID`; admin `/admin/chatbot` page + `/admin/chatbot/reindex` + content-gathering/chunking helpers — see §12 |
 
-**Transactional email** (`core/notify`, `core/handlers/email_send.go`, `email_build.go`). The customer request enqueues one `email_outbox` row after the purchase, booking, contribution, or subscriber row is committed, then returns. It does not call Resend or Brevo, and it does not start a goroutine. `email_outbox` is the queue. `(kind, entity_id)` is unique. `entity_id` is the course purchase id, software purchase id, article contribution id, course contribution id, booking id, or subscriber id. A second verify adds nothing. A second reschedule of the same booking puts that one row back to `pending`. The rendered body is never stored. The private booking manage token is not stored either, so the emailed link is `/account` or `/booking`; the on-screen link remains the only copy of the token.
+**Transactional email** (`core/notify`, `core/handlers/email_send.go`, `email_build.go`). Mail is queued for every completed order, including a zero amount and a promo, every booking, including a free booking, and every consultancy connect request (`POST /contact`, the form the consultancy page links to). The customer request enqueues one `email_outbox` row after the purchase, booking, contribution, contact message, or subscriber row is committed, then returns. It does not call Resend or Brevo, and it does not start a goroutine. `email_outbox` is the queue. `(kind, entity_id)` is unique. `entity_id` is the course purchase id, software purchase id, article contribution id, course contribution id, booking id, contact message id, or subscriber id. A second verify adds nothing. A second reschedule of the same booking puts that one row back to `pending`. The rendered body is never stored. The connect confirmation does not include the message they typed. The private booking manage token is not stored either, so the emailed link is `/account` or `/booking`; the on-screen link remains the only copy of the token. A queue problem does not undo the order, the booking, or the connect request. Password reset stays the security question.
 
-`GET /internal/email/retry` is the worker. It sends `pending` rows and retries `failed` rows with fewer than five attempts. Send-test rows are excluded. The bearer is `CHATBOT_REINDEX_TOKEN` (constant-time compare, 404 when unset). `.github/workflows/email-retry.yml` calls it every 10 minutes with `curl -f`, for the same Hobby-cron reason as the chatbot poller. An empty provider key leaves the row `pending`. A provider error marks it `failed`, raises a Telegram alert, and does not fail the original order. Payments and bookings in the admin console show sent, failed, pending, or none. Admin resend sets the row back to `pending` and does not call the provider. The template send-test is the exception: that admin request sends immediately, and only to `ADMIN_BOOTSTRAP_EMAIL`.
+`GET /internal/email/retry` is the worker. It sends `pending` rows and retries `failed` rows with fewer than five attempts. Send-test rows are excluded. The bearer is `CHATBOT_REINDEX_TOKEN` (constant-time compare, 404 when unset). `.github/workflows/email-retry.yml` calls it every 10 minutes with `curl -f`, for the same Hobby-cron reason as the chatbot poller. An empty provider key leaves the row `pending`. A provider error marks it `failed`, raises a Telegram alert, and does not fail the original order, booking, or connect request. Payments and bookings in the admin console show sent, failed, pending, or none. Admin resend sets the row back to `pending` and does not call the provider. The template send-test is the exception: that admin request sends immediately, and only to `ADMIN_BOOTSTRAP_EMAIL`.
 
-`RESEND_API_KEY` and `BREVO_API_KEY` are the only new mail environment variables. A provider sends only when its key is non-empty. From addresses are constants in `core/notify/mail.go`: Vishnu Balachandran `<orders@vishnubalachandran.com>` for paid flows, `<bookings@vishnubalachandran.com>` for bookings, `<news@vishnubalachandran.com>` for the newsletter confirmation. Reply-To is `admin@vishnubalachandran.com`. BCC and the admin send-test recipient are `ADMIN_BOOTSTRAP_EMAIL`. News stays on the main domain; a later promo subdomain is a one-line change to the news From constant. Keys are never written into the repo, docs, or logs.
+`RESEND_API_KEY` and `BREVO_API_KEY` are the only new mail environment variables. A provider sends only when its key is non-empty. From addresses are constants in `core/notify/mail.go`: Vishnu Balachandran `<orders@vishnubalachandran.com>` for course, software, article, and contribution mail, including a zero amount, `<bookings@vishnubalachandran.com>` for bookings and consultancy connect requests, `<news@vishnubalachandran.com>` for the newsletter confirmation. Reply-To is `admin@vishnubalachandran.com`. BCC and the admin send-test recipient are `ADMIN_BOOTSTRAP_EMAIL`. News stays on the main domain; a later promo subdomain is a one-line change to the news From constant. Keys are never written into the repo, docs, or logs.
 
 The admin inbox (`/admin/inbox`, `core/handlers/admin_inbox.go`, `core/notify/resendinbox.go`) reads and replies through the Resend Inboxes API with the same `RESEND_API_KEY`. It does not add an environment variable and it does not store message bodies in Postgres. Mail shows up only after the domain's receiving is pointed at Resend. Receiving DNS is the owner's; the app does not change it. An empty key leaves the inbox pages explaining that Resend is off.
 

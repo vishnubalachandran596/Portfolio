@@ -177,6 +177,20 @@ func (a *App) bookingEmailJob(kind string, b models.Booking, start, end time.Tim
 	return emailJob{Kind: kind, EntityID: entity, To: b.Email, Data: d}
 }
 
+func (a *App) emailConnectRequest(ctx context.Context, m models.ContactMessage) {
+	if m.ID == 0 {
+		return
+	}
+	a.enqueueEmail(ctx, a.connectEmailJob(m))
+}
+
+func (a *App) connectEmailJob(m models.ContactMessage) emailJob {
+	d := a.baseEmailData()
+	d.BuyerName = buyerName(m.Name, m.Email)
+	d.ManageURL = a.absURL("/booking")
+	return emailJob{Kind: models.EmailConnectRequest, EntityID: strconv.FormatInt(m.ID, 10), To: m.Email, Data: d}
+}
+
 func (a *App) emailNewsletterConfirm(ctx context.Context, id int64, email string) {
 	if id == 0 {
 		return
@@ -276,6 +290,16 @@ func (a *App) rebuildEmail(ctx context.Context, kind, entity string) (emailJob, 
 			end = start.Add(dur)
 		}
 		return a.bookingEmailJob(kind, b, start, end, ""), nil
+	case models.EmailConnectRequest:
+		id, err := strconv.ParseInt(entity, 10, 64)
+		if err != nil || a.ContactMessages == nil {
+			return emailJob{}, fmt.Errorf("connect request %s", entity)
+		}
+		m, err := a.ContactMessages.GetByID(ctx, id)
+		if err != nil {
+			return emailJob{}, err
+		}
+		return a.connectEmailJob(m), nil
 	case models.EmailNewsletterConfirm:
 		id, err := strconv.ParseInt(entity, 10, 64)
 		if err != nil || a.Subscribers == nil {

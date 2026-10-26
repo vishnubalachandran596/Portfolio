@@ -12,6 +12,7 @@ const (
 	EmailBookingNew         = "booking_new"
 	EmailBookingRescheduled = "booking_rescheduled"
 	EmailBookingCancelled   = "booking_cancelled"
+	EmailConnectRequest     = "connect_request"
 	EmailNewsletterConfirm  = "newsletter_confirm"
 	EmailSendTest           = "send_test"
 )
@@ -33,6 +34,7 @@ var EmailKinds = []string{
 	EmailBookingNew,
 	EmailBookingRescheduled,
 	EmailBookingCancelled,
+	EmailConnectRequest,
 	EmailNewsletterConfirm,
 }
 
@@ -53,6 +55,8 @@ func EmailKindLabel(kind string) string {
 		return "Booking rescheduled"
 	case EmailBookingCancelled:
 		return "Booking cancelled"
+	case EmailConnectRequest:
+		return "Consultancy connect"
 	case EmailNewsletterConfirm:
 		return "Newsletter confirmation"
 	default:
@@ -60,8 +64,10 @@ func EmailKindLabel(kind string) string {
 	}
 }
 
-// EmailUsesResend reports whether paid-flow mail (Resend) sends this kind.
-// Booking and newsletter confirmation use Brevo.
+// EmailUsesResend reports whether Resend sends this kind. Course, software,
+// article, and contribution mail use Resend, including a zero amount.
+// Bookings, consultancy connect requests, and the newsletter confirmation
+// use Brevo.
 func EmailUsesResend(kind string) bool {
 	switch kind {
 	case EmailPurchaseCourse, EmailPurchaseSoftware, EmailPurchaseArticle, EmailContribution:
@@ -88,6 +94,8 @@ func SubjectFor(kind string) string {
 		return "Your booking was rescheduled"
 	case EmailBookingCancelled:
 		return "Your booking was cancelled"
+	case EmailConnectRequest:
+		return "We received your message"
 	case EmailNewsletterConfirm:
 		return "You are subscribed"
 	default:
@@ -104,6 +112,8 @@ func EmailFields(kind string) []string {
 		return append([]string{"BuyerName", "ItemTitle", "Amount", "ReceiptNo", "ReceiptURL", "AccessURL", "ClaimCode", "Instructions"}, support...)
 	case EmailBookingNew, EmailBookingRescheduled, EmailBookingCancelled:
 		return append([]string{"BuyerName", "ItemTitle", "BookingStart", "BookingCode", "Duration", "ManageURL"}, support...)
+	case EmailConnectRequest:
+		return append([]string{"BuyerName", "ManageURL"}, support...)
 	case EmailNewsletterConfirm:
 		return append([]string{"BuyerName", "UnsubscribeURL"}, support...)
 	default:

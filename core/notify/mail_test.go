@@ -38,6 +38,9 @@ func TestFromFor(t *testing.T) {
 	if !strings.Contains(FromFor("booking_new"), "bookings@") {
 		t.Fatal(FromFor("booking_new"))
 	}
+	if !strings.Contains(FromFor("connect_request"), "bookings@") {
+		t.Fatal(FromFor("connect_request"))
+	}
 	if !strings.Contains(FromFor("newsletter_confirm"), "news@") {
 		t.Fatal(FromFor("newsletter_confirm"))
 	}

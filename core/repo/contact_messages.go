@@ -3,6 +3,7 @@ package repo
 import (
 	"context"
 	"database/sql"
+	"errors"
 
 	"github.com/vishnubalachandran596/portfolio/core/models"
 )
@@ -27,6 +28,16 @@ func (r *ContactMessageRepo) Create(ctx context.Context, m models.ContactMessage
 		m.Name, m.Email, m.Phone, m.Message,
 	).Scan(&id)
 	return id, err
+}
+
+// GetByID loads one submission so a queued confirmation can be rebuilt
+// without storing the rendered email.
+func (r *ContactMessageRepo) GetByID(ctx context.Context, id int64) (models.ContactMessage, error) {
+	m, err := scanContactMessage(r.db.QueryRowContext(ctx, `SELECT `+contactMessageColumns+` FROM contact_messages WHERE id = $1`, id))
+	if errors.Is(err, sql.ErrNoRows) {
+		return models.ContactMessage{}, ErrNotFound
+	}
+	return m, err
 }
 
 // ListAll returns every contact message, newest first, for the admin inbox.

@@ -55,9 +55,10 @@ type Config struct {
 	// the same bearer. Those routes are 404 until this is set.
 	ChatbotReindexToken string
 
-	// ResendAPIKey sends paid-flow mail (course, software, article,
-	// contribution). BrevoAPIKey sends booking mail and the newsletter
-	// confirmation. Empty means that provider stays disabled (log only).
+	// ResendAPIKey sends course, software, article, and contribution mail,
+	// including a zero amount. BrevoAPIKey sends booking mail, consultancy
+	// connect requests, and the newsletter confirmation. Empty means that
+	// provider stays disabled (log only).
 	// From addresses are code constants, not environment variables.
 	ResendAPIKey string
 	BrevoAPIKey  string

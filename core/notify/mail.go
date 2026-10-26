@@ -1,5 +1,6 @@
 // Package notify sends best-effort owner alerts (Telegram) and
-// transactional email (Resend for paid flows, Brevo for bookings and
+// transactional email (Resend for orders and contributions, including a
+// zero amount; Brevo for bookings, consultancy connect requests, and
 // newsletter confirmations).
 package notify
 
@@ -33,7 +34,7 @@ const (
 // moving promos later is a change to FromNews only.
 func FromFor(kind string) string {
 	switch kind {
-	case models.EmailBookingNew, models.EmailBookingRescheduled, models.EmailBookingCancelled:
+	case models.EmailBookingNew, models.EmailBookingRescheduled, models.EmailBookingCancelled, models.EmailConnectRequest:
 		return FromBooking
 	case models.EmailNewsletterConfirm:
 		return FromNews
@@ -98,7 +99,8 @@ func WithAdminBCC(m Message, adminEmail string) Message {
 	return m
 }
 
-// ResendMailer sends paid-flow mail. The key is the client constructor
+// ResendMailer sends order and contribution mail, including a zero amount.
+// The key is the client constructor
 // argument, never a source literal. Method names match resend-go v4:
 // Client.Emails.SendWithOptions and SendEmailOptions.IdempotencyKey.
 type ResendMailer struct {

@@ -61,7 +61,7 @@ func (j emailJob) templateKind() string {
 // enqueueEmail records one pending outbox row after the caller has
 // committed. It does not call a provider. A duplicate (kind, entity_id)
 // leaves the existing row alone. Enqueue trouble is logged and does not
-// fail the purchase, booking, or subscription.
+// fail the purchase, booking, connect request, or subscription.
 func (a *App) enqueueEmail(parent context.Context, job emailJob) string {
 	if parent == nil {
 		parent = context.Background()

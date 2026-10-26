@@ -145,8 +145,8 @@ func bookingJSONError(w http.ResponseWriter, status int, msg string) {
 // BookingConfirm reserves the chosen slot for anyone (no login). The slot is
 // claimed by the database — a unique index on the live slot start plus a
 // no-overlap exclusion constraint — so two simultaneous requests cannot both
-// win; the loser sees "just booked". A confirmation is also emailed when
-// Brevo is configured. The response still carries the booking code and the
+// win; the loser sees "just booked". Every booking, including a free one,
+// queues a confirmation. The response still carries the booking code and the
 // private manage token, which is shown once and kept only as a hash.
 func (a *App) BookingConfirm(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
@@ -280,10 +280,12 @@ func (a *App) ContactPage(w http.ResponseWriter, r *http.Request) {
 }
 
 // ContactSubmit records a /contact form submission (name, email, phone,
-// message — phone optional) and notifies the admin over Telegram, the
-// same notification mechanism every other lead/event on this site uses.
-// No login required — this is the one way a visitor who isn't ready to
-// book a call yet can still reach out.
+// message — phone optional) and notifies the admin over Telegram.
+// The consultancy page's "Discuss a review" and "Discuss a retainer"
+// links land here. A confirmation is queued to the address they
+// submitted. No login required — this is the one way a visitor who isn't
+// ready to book a call yet can still reach out. A queue problem does not
+// undo the saved message.
 func (a *App) ContactSubmit(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
 		http.Redirect(w, r, "/contact?error=1", http.StatusSeeOther)
@@ -298,12 +300,14 @@ func (a *App) ContactSubmit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if _, err := a.ContactMessages.Create(r.Context(), models.ContactMessage{
+	id, err := a.ContactMessages.Create(r.Context(), models.ContactMessage{
 		Name: name, Email: email, Phone: phone, Message: message,
-	}); err != nil {
+	})
+	if err != nil {
 		a.serverError(w, "record contact message", err)
 		return
 	}
+	a.emailConnectRequest(r.Context(), models.ContactMessage{ID: id, Name: name, Email: email})
 
 	phoneLine := ""
 	if phone != "" {

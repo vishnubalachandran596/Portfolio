@@ -26,7 +26,7 @@ func TestBuiltinEmailTemplatesRender(t *testing.T) {
 			t.Fatalf("%s: unsafe html", kind)
 		}
 		switch kind {
-		case models.EmailBookingNew, models.EmailBookingRescheduled, models.EmailBookingCancelled:
+		case models.EmailBookingNew, models.EmailBookingRescheduled, models.EmailBookingCancelled, models.EmailConnectRequest:
 			if !strings.Contains(html, data.ManageURL) || !strings.Contains(text, data.ManageURL) {
 				t.Fatalf("%s: manage url missing", kind)
 			}

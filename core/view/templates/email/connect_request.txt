@@ -1,0 +1,7 @@
+Hello {{.BuyerName}},
+
+We received your consultancy enquiry. This confirms it.
+
+Book a free call: {{.ManageURL}}
+
+Reply to this message to reach {{.SupportReplyTo}}.
