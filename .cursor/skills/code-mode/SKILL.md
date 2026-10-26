@@ -41,6 +41,18 @@ The Cursor harness is the supervisor. MCP tools are not importable from a shell 
 4. Return the value the user asked for. Do not narrate rows the program already discarded.
 5. Read credentials from the environment the host already has. Never print a key, token, or connection string, and never write one into code, docs, or a commit.
 
+## Use the connected catalog
+
+Follow `mcp-purpose-routing` for which namespace handles a purpose. That list is the ready set for this Cursor account (2026-10-26). A namespace in `needsAuth` or `error` is not a tool you can call.
+
+1. Discover one namespace before the first call. Do not load the full catalog. It is hundreds of kilobytes.
+2. Large ready namespaces stay closed until you need one tool: `plugin-vercel-vercel` (239), `user-higgsfield` (186), `plugin-elevenlabs-elevenlabs` (164), `user-neon` (120), `user-fal` (65). Fetch that tool's schema, then call it.
+3. One direct call when the operation is known and the result is small.
+4. When several ready calls are independent, send them in one turn. When the next call needs a field from the previous result, keep only that field. Do not paste the raw payload into the next prompt.
+5. A page or PDF goes through `user-jina` `read_url` or `extract_pdf`, or the next ready extract peer, then `user-sqz` `compress` if the markdown is still bulky.
+6. Before multi-step work, `user-mem0-mcp` `search_memories`. After a decision, `add_memory`. Stored user ids on this account are `vishnu`, `vishnubalachandran`, `vishnubalachandran596`, and `mem0-mcp`.
+7. Do not call `mcp_auth` while doing the task.
+
 Do not add a Workers runtime to an existing app just to follow this skill. Use the loop above unless the user is building an agent.
 
 ## When you are building the agent
