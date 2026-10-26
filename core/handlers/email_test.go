@@ -374,17 +374,17 @@ func userCookie(t *testing.T, auth *middleware.Auth) *http.Cookie {
 	return nil
 }
 
-func TestEnqueueIsIdempotentAndWorkerSends(t *testing.T) {
+func TestDispatchSendsOnceAndWorkerSkipsSent(t *testing.T) {
 	fx := newEmailFixture(t)
 	p := models.Purchase{ID: 42, Email: "buyer@example.com", AmountCents: 149900, Currency: "INR", ClaimCode: "abc"}
 	course := models.Course{Title: "Sample course", Slug: "sample"}
 	fx.app.emailCoursePurchase(context.Background(), p, course)
 	fx.app.emailCoursePurchase(context.Background(), p, course)
-	if fx.paid.count() != 0 {
-		t.Fatalf("checkout called the provider %d times", fx.paid.count())
+	if fx.paid.count() != 1 {
+		t.Fatalf("checkout sends once, got %d", fx.paid.count())
 	}
 	row, err := fx.box.Get(context.Background(), models.EmailPurchaseCourse, "42")
-	if err != nil || row.Status != models.EmailStatusPending {
+	if err != nil || row.Status != models.EmailStatusSent {
 		t.Fatalf("row %+v err %v", row, err)
 	}
 	fx.app.emailRebuild = func(context.Context, string, string) (emailJob, error) {
@@ -428,19 +428,19 @@ func TestZeroAmountPurchaseStillEnqueues(t *testing.T) {
 	fx.app.emailConnectRequest(context.Background(), models.ContactMessage{
 		ID: 13, Name: "Ada", Email: "ada@example.com",
 	})
-	if fx.paid.count() != 0 || fx.brevo.count() != 0 {
-		t.Fatal("enqueue called a provider")
+	if fx.paid.count() != 2 || fx.brevo.count() != 1 {
+		t.Fatalf("providers resend %d brevo %d", fx.paid.count(), fx.brevo.count())
 	}
 	course, err := fx.box.Get(context.Background(), models.EmailPurchaseCourse, "11")
-	if err != nil || course.Status != models.EmailStatusPending || course.Provider != "resend" || course.ToEmail != "buyer@example.com" {
+	if err != nil || course.Status != models.EmailStatusSent || course.Provider != "resend" || course.ToEmail != "buyer@example.com" {
 		t.Fatalf("course %+v %v", course, err)
 	}
 	software, err := fx.box.Get(context.Background(), models.EmailPurchaseSoftware, "12")
-	if err != nil || software.Status != models.EmailStatusPending || software.Provider != "resend" {
+	if err != nil || software.Status != models.EmailStatusSent || software.Provider != "resend" {
 		t.Fatalf("software %+v %v", software, err)
 	}
 	connect, err := fx.box.Get(context.Background(), models.EmailConnectRequest, "13")
-	if err != nil || connect.Status != models.EmailStatusPending || connect.Provider != "brevo" || connect.ToEmail != "ada@example.com" {
+	if err != nil || connect.Status != models.EmailStatusSent || connect.Provider != "brevo" || connect.ToEmail != "ada@example.com" {
 		t.Fatalf("connect %+v %v", connect, err)
 	}
 }
@@ -463,15 +463,15 @@ func TestEmailFailureDoesNotFailCheckoutOrBooking(t *testing.T) {
 	if !paid || !booked {
 		t.Fatal("caller stopped after email")
 	}
-	if fx.paid.count() != 0 || fx.brevo.count() != 0 {
-		t.Fatal("checkout waited on a provider")
+	if fx.paid.count() != 1 || fx.brevo.count() != 1 {
+		t.Fatalf("checkout tries resend %d brevo %d", fx.paid.count(), fx.brevo.count())
 	}
 	course, err := fx.box.Get(context.Background(), models.EmailPurchaseCourse, "7")
-	if err != nil || course.Status != models.EmailStatusPending {
+	if err != nil || course.Status != models.EmailStatusFailed || course.Attempts != 1 {
 		t.Fatalf("course %+v %v", course, err)
 	}
 	booking, err := fx.box.Get(context.Background(), models.EmailBookingNew, "3")
-	if err != nil || booking.Status != models.EmailStatusPending {
+	if err != nil || booking.Status != models.EmailStatusFailed || booking.Attempts != 1 {
 		t.Fatalf("booking %+v %v", booking, err)
 	}
 	fx.app.emailRebuild = func(_ context.Context, kind, entity string) (emailJob, error) {
@@ -485,7 +485,7 @@ func TestEmailFailureDoesNotFailCheckoutOrBooking(t *testing.T) {
 	req.Header.Set("Authorization", "Bearer retry-secret")
 	fx.app.Routes().ServeHTTP(rec, req)
 	course, err = fx.box.Get(context.Background(), models.EmailPurchaseCourse, "7")
-	if err != nil || course.Status != models.EmailStatusFailed || course.Attempts != 1 {
+	if err != nil || course.Status != models.EmailStatusFailed || course.Attempts != 2 {
 		t.Fatalf("course %+v %v", course, err)
 	}
 	booking, err = fx.box.Get(context.Background(), models.EmailBookingNew, "3")

@@ -58,6 +58,24 @@ func (j emailJob) templateKind() string {
 	return j.Kind
 }
 
+// dispatchEmail records the outbox row and sends it before the handler
+// returns. A goroutine after the response does not run: the Go runtime
+// on Vercel freezes the process when the handler returns. The caller
+// still succeeds when the provider fails. A duplicate (kind, entity_id)
+// does not send again.
+func (a *App) dispatchEmail(parent context.Context, job emailJob) string {
+	switch a.enqueueEmail(parent, job) {
+	case "queued":
+		return a.sendQueued(parent, job)
+	case "duplicate":
+		return "duplicate"
+	case "failed":
+		return "failed"
+	default:
+		return "skipped"
+	}
+}
+
 // enqueueEmail records one pending outbox row after the caller has
 // committed. It does not call a provider. A duplicate (kind, entity_id)
 // leaves the existing row alone. Enqueue trouble is logged and does not
@@ -88,9 +106,10 @@ func (a *App) enqueueEmail(parent context.Context, job emailJob) string {
 	return "queued"
 }
 
-// sendQueued delivers one outbox row. The customer request never calls
-// this. The retry worker does, and the admin send-test does. An empty
-// provider key leaves the row pending so a later worker run can send it.
+// sendQueued delivers one outbox row. The customer request calls it
+// immediately after enqueue. The daily cron and the admin resend call
+// it again for anything still pending or failed. An empty provider key
+// leaves the row pending.
 func (a *App) sendQueued(parent context.Context, job emailJob) string {
 	if parent == nil {
 		parent = context.Background()
@@ -228,10 +247,11 @@ func knownCustomerKind(kind string) bool {
 	return false
 }
 
-// EmailRetry is the queue worker. It sends pending rows and retries
-// failed rows. The bearer is the existing CHATBOT_REINDEX_TOKEN. It is
-// 404 when that token is unset. The send stays in this request; there
-// is no background goroutine.
+// EmailRetry is the daily fallback. Vercel Hobby cron calls it once a
+// day. It sends pending rows and retries failed rows. The bearer is
+// CHATBOT_REINDEX_TOKEN, which Vercel sends when CRON_SECRET is that
+// same value. It is 404 when that token is unset. The send stays in
+// this request; there is no background goroutine.
 func (a *App) EmailRetry(w http.ResponseWriter, r *http.Request) {
 	token := ""
 	if a.Cfg != nil {

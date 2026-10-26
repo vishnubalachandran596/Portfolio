@@ -210,7 +210,7 @@ Booking the free consultancy call needs no account. A private manage link is
 shown on screen once, and a confirmation is queued for every booking. Buying
 a course can be a guest checkout, including a zero amount or a promo. The
 claim code is shown on screen, and a receipt is queued for every completed
-order. The mail worker sends them when `BREVO_API_KEY` or `RESEND_API_KEY`
+order. The request sends them when `BREVO_API_KEY` or `RESEND_API_KEY`
 is set. An empty key leaves the row pending. An account
 (`/login`, email + password — `core/repo/users.go`) is how a guest attaches
 that purchase later. Logging in with the
@@ -309,7 +309,7 @@ claimed by the database (a unique index on the live slot start plus a
 no-overlap exclusion constraint, migration `089`), so two simultaneous
 requests cannot both win. The confirmation shows a
 `BK-XXXXXX` code and a private manage link (`/booking/manage/{token}`, stored
-only as a hash). A confirmation is queued when `BREVO_API_KEY` is set and sent by the mail worker.
+only as a hash). A confirmation is queued when `BREVO_API_KEY` is set and sent in that request.
 The on-screen link is still shown only once. Abuse protection is a
 honeypot field plus database throttling (`auth_throttle`, kind `booking`).
 Details in `docs/FUNCTIONALITY.md` (Booking) and `docs/ARCHITECTURE.md` (§6).
@@ -365,7 +365,7 @@ Explicitly **not** implemented (each needs an infrastructure/account
 decision this repo can't make on its own):
 - **Newsletter campaigns** — email capture exists (`POST
   /subscribe` on Home/Courses/Articles, `subscribers` table, admin list at
-  `/admin/subscribers`). A confirmation is queued when `BREVO_API_KEY` is set and sent by the mail worker.
+  `/admin/subscribers`). A confirmation is queued when `BREVO_API_KEY` is set and sent in that request.
   Campaign blasts are not implemented. There is no stored unsubscribe token;
   the confirmation points at `/contact`.
 - **UTM tracking** — added when you share links externally, not something

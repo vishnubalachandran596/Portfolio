@@ -71,7 +71,7 @@ func (a *App) emailCoursePurchase(ctx context.Context, p models.Purchase, course
 	if p.ID == 0 {
 		return
 	}
-	a.enqueueEmail(ctx, a.courseEmailJob(p, course))
+	a.dispatchEmail(ctx, a.courseEmailJob(p, course))
 }
 
 func (a *App) courseEmailJob(p models.Purchase, course models.Course) emailJob {
@@ -96,7 +96,7 @@ func (a *App) emailSoftwarePurchase(ctx context.Context, p models.SoftwarePurcha
 	if p.ID == 0 {
 		return
 	}
-	a.enqueueEmail(ctx, a.softwareEmailJob(p, sw))
+	a.dispatchEmail(ctx, a.softwareEmailJob(p, sw))
 }
 
 func (a *App) softwareEmailJob(p models.SoftwarePurchase, sw models.Software) emailJob {
@@ -115,7 +115,7 @@ func (a *App) emailArticleContribution(ctx context.Context, c models.ArticleCont
 	if c.ID == 0 {
 		return
 	}
-	a.enqueueEmail(ctx, a.articleEmailJob(c, article))
+	a.dispatchEmail(ctx, a.articleEmailJob(c, article))
 }
 
 func (a *App) articleEmailJob(c models.ArticleContribution, article models.Article) emailJob {
@@ -137,7 +137,7 @@ func (a *App) emailCourseContribution(ctx context.Context, c models.CourseContri
 	if c.ID == 0 {
 		return
 	}
-	a.enqueueEmail(ctx, a.contributionEmailJob(c, course))
+	a.dispatchEmail(ctx, a.contributionEmailJob(c, course))
 }
 
 func (a *App) contributionEmailJob(c models.CourseContribution, course models.Course) emailJob {
@@ -156,8 +156,10 @@ func (a *App) emailBooking(ctx context.Context, kind string, b models.Booking, s
 		return
 	}
 	job := a.bookingEmailJob(kind, b, start, end, token)
-	if a.enqueueEmail(ctx, job) == "duplicate" && kind == models.EmailBookingRescheduled && a.Outbox != nil {
-		_, _ = a.Outbox.Requeue(ctx, job.Kind, job.EntityID)
+	if a.dispatchEmail(ctx, job) == "duplicate" && kind == models.EmailBookingRescheduled && a.Outbox != nil {
+		if ok, err := a.Outbox.Requeue(ctx, job.Kind, job.EntityID); err == nil && ok {
+			a.sendQueued(ctx, job)
+		}
 	}
 }
 
@@ -181,7 +183,7 @@ func (a *App) emailConnectRequest(ctx context.Context, m models.ContactMessage) 
 	if m.ID == 0 {
 		return
 	}
-	a.enqueueEmail(ctx, a.connectEmailJob(m))
+	a.dispatchEmail(ctx, a.connectEmailJob(m))
 }
 
 func (a *App) connectEmailJob(m models.ContactMessage) emailJob {
@@ -197,7 +199,7 @@ func (a *App) emailNewsletterConfirm(ctx context.Context, id int64, email string
 	}
 	d := a.baseEmailData()
 	d.UnsubscribeURL = a.absURL("/contact")
-	a.enqueueEmail(ctx, emailJob{
+	a.dispatchEmail(ctx, emailJob{
 		Kind:     models.EmailNewsletterConfirm,
 		EntityID: strconv.FormatInt(id, 10),
 		To:       email,
