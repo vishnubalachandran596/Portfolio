@@ -644,27 +644,68 @@ func TestSendTestGoesToAdminOnly(t *testing.T) {
 	}
 }
 
-func TestAdminResendRequeues(t *testing.T) {
+func TestAdminResendSendsPendingAndFailed(t *testing.T) {
 	fx := newEmailFixture(t)
+	fx.app.emailRebuild = func(_ context.Context, kind, entity string) (emailJob, error) {
+		return emailJob{
+			Kind: kind, EntityID: entity, To: "buyer@example.com",
+			Data: notify.SampleData(kind),
+		}, nil
+	}
+	now := time.Now()
 	fx.box.put(models.EmailOutbox{
 		Kind: models.EmailPurchaseCourse, EntityID: "15", ToEmail: "buyer@example.com",
-		Status: models.EmailStatusFailed, Attempts: 5, CreatedAt: time.Now(), UpdatedAt: time.Now(),
+		Status: models.EmailStatusFailed, Attempts: 5, CreatedAt: now, UpdatedAt: now,
 	})
-	form := url.Values{"kind": {models.EmailPurchaseCourse}, "entity_id": {"15"}, "next": {"/admin/payments"}}
-	req := httptest.NewRequest(http.MethodPost, "/admin/email/resend", strings.NewReader(form.Encode()))
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	req.AddCookie(adminCookie(t, fx.app.Auth))
-	rec := httptest.NewRecorder()
-	fx.app.Routes().ServeHTTP(rec, req)
-	if rec.Code != http.StatusSeeOther || !strings.Contains(rec.Header().Get("Location"), "email=queued") {
+	fx.box.put(models.EmailOutbox{
+		Kind: models.EmailBookingNew, EntityID: "4", ToEmail: "guest@example.com",
+		Status: models.EmailStatusPending, Attempts: 0, CreatedAt: now, UpdatedAt: now,
+	})
+	post := func(kind, entity, next string) *httptest.ResponseRecorder {
+		t.Helper()
+		form := url.Values{"kind": {kind}, "entity_id": {entity}, "next": {next}}
+		req := httptest.NewRequest(http.MethodPost, "/admin/email/resend", strings.NewReader(form.Encode()))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		req.AddCookie(adminCookie(t, fx.app.Auth))
+		rec := httptest.NewRecorder()
+		fx.app.Routes().ServeHTTP(rec, req)
+		return rec
+	}
+	rec := post(models.EmailPurchaseCourse, "15", "/admin/payments")
+	if rec.Code != http.StatusSeeOther || !strings.Contains(rec.Header().Get("Location"), "email=sent") {
 		t.Fatalf("resend %d %s", rec.Code, rec.Header().Get("Location"))
 	}
-	if fx.paid.count() != 0 {
-		t.Fatal("admin resend called the provider")
+	if fx.paid.count() != 1 {
+		t.Fatalf("course resend sends %d", fx.paid.count())
 	}
 	row, err := fx.box.Get(context.Background(), models.EmailPurchaseCourse, "15")
-	if err != nil || row.Status != models.EmailStatusPending || row.Attempts != 0 {
-		t.Fatalf("requeued %+v %v", row, err)
+	if err != nil || row.Status != models.EmailStatusSent || row.Attempts != 0 {
+		t.Fatalf("sent %+v %v", row, err)
+	}
+	rec = post(models.EmailBookingNew, "4", "/admin/bookings")
+	if rec.Code != http.StatusSeeOther || !strings.Contains(rec.Header().Get("Location"), "email=sent") {
+		t.Fatalf("pending resend %d %s", rec.Code, rec.Header().Get("Location"))
+	}
+	if fx.brevo.count() != 1 {
+		t.Fatalf("booking resend sends %d", fx.brevo.count())
+	}
+	row, err = fx.box.Get(context.Background(), models.EmailBookingNew, "4")
+	if err != nil || row.Status != models.EmailStatusSent {
+		t.Fatalf("booking %+v %v", row, err)
+	}
+
+	fx.app.PaidMail = notify.Disabled{}
+	fx.box.put(models.EmailOutbox{
+		Kind: models.EmailPurchaseSoftware, EntityID: "9", ToEmail: "buyer@example.com",
+		Status: models.EmailStatusPending, CreatedAt: now, UpdatedAt: now,
+	})
+	rec = post(models.EmailPurchaseSoftware, "9", "/admin/payments")
+	if rec.Code != http.StatusSeeOther || !strings.Contains(rec.Header().Get("Location"), "email=queued") {
+		t.Fatalf("disabled %d %s", rec.Code, rec.Header().Get("Location"))
+	}
+	row, err = fx.box.Get(context.Background(), models.EmailPurchaseSoftware, "9")
+	if err != nil || row.Status != models.EmailStatusPending {
+		t.Fatalf("stays pending %+v %v", row, err)
 	}
 }
 

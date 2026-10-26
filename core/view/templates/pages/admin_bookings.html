@@ -2,6 +2,7 @@
 <section class="section">
   <div class="container">
     <h1>Bookings</h1>
+    {{if eq .EmailNotice "sent"}}<p class="alert">The email was sent.</p>{{end}}
     {{if eq .EmailNotice "queued"}}<p class="alert">The email is back on the queue.</p>{{end}}
     {{if eq .EmailNotice "failed"}}<p class="alert alert-error">The email could not be sent. It stays in the retry queue when the failure is temporary.</p>{{end}}
     {{if .Bookings}}
@@ -20,7 +21,7 @@
           <td><span class="status-badge status-{{.Status}}">{{.Status}}</span></td>
           <td>
             {{if .EmailStatus}}<span class="status-badge status-{{.EmailStatus}}">Email: {{.EmailStatus}}</span>{{else}}<span class="status-badge status-disabled">Email: none</span>{{end}}
-            {{if or (eq .EmailStatus "failed") (eq .EmailStatus "disabled")}}
+            {{if or (eq .EmailStatus "pending") (eq .EmailStatus "failed") (eq .EmailStatus "disabled")}}
             <form method="POST" action="/admin/email/resend">
               <input type="hidden" name="kind" value="{{.EmailKind}}">
               <input type="hidden" name="entity_id" value="{{.EmailEntity}}">

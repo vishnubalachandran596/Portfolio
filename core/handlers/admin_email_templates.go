@@ -3,6 +3,7 @@ package handlers
 import (
 	"html"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -363,7 +364,24 @@ func (a *App) AdminEmailResend(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	http.Redirect(w, r, next+"?email=queued", http.StatusSeeOther)
+	// Requeue only puts the row back to pending. The scheduled worker is
+	// what used to send it, and a pending row is already in that state, so
+	// this request sends as well. An empty provider key leaves it pending.
+	job, rerr := a.rebuildEmailJob(r.Context(), kind, entity)
+	if rerr != nil {
+		log.Printf("email resend rebuild %s %s: %v", kind, entity, rerr)
+		_ = a.Outbox.MarkFailed(r.Context(), kind, entity, clipEmailErr(rerr))
+		http.Redirect(w, r, next+"?email=failed", http.StatusSeeOther)
+		return
+	}
+	switch a.sendQueued(r.Context(), job) {
+	case "sent":
+		http.Redirect(w, r, next+"?email=sent", http.StatusSeeOther)
+	case "pending":
+		http.Redirect(w, r, next+"?email=queued", http.StatusSeeOther)
+	default:
+		http.Redirect(w, r, next+"?email=failed", http.StatusSeeOther)
+	}
 }
 
 func safeEmailNext(next string) string {
