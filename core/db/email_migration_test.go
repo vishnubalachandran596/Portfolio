@@ -25,6 +25,15 @@ func TestEmailMigrationsAreIdempotentSchema(t *testing.T) {
 		if !strings.Contains(sqlText, "ENABLE ROW LEVEL SECURITY") || !strings.Contains(sqlText, "to_regclass") {
 			t.Fatalf("%s: RLS guard missing", name)
 		}
+		if !strings.Contains(sqlText, "unique_violation") || !strings.Contains(sqlText, "relkind") {
+			t.Fatalf("%s: pg_type guard missing", name)
+		}
+		if strings.Contains(sqlText, "DROP TABLE") {
+			t.Fatalf("%s: must not drop a table", name)
+		}
+		if strings.Contains(sqlText, "DROP TYPE") && !strings.Contains(sqlText, "rel_kind = 'c'") {
+			t.Fatalf("%s: type drop is not limited to a non-table composite", name)
+		}
 		stripped := stripSQLComments(sqlText)
 		if stmt := sqlDML.FindString(stripped); stmt != "" {
 			t.Fatalf("%s: content statement %q", name, stmt)
