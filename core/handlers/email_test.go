@@ -784,3 +784,33 @@ func TestCustomTemplateFallbackAndVersions(t *testing.T) {
 		t.Fatalf("restore %d %s", rec.Code, rec.Header().Get("Location"))
 	}
 }
+
+func TestAdminPurchasesShowsEmailResend(t *testing.T) {
+	fx := newEmailFixture(t)
+	now := time.Now()
+	rec := httptest.NewRecorder()
+	fx.app.View.Render(rec, http.StatusOK, "admin_purchases", AdminPurchasesData{
+		BaseData: BaseData{SiteName: "Vishnu Balachandran", Title: "Purchases — Admin"},
+		Courses:  map[int64]models.Course{3: {ID: 3, Title: "Python"}},
+		Purchases: []adminPurchaseRow{{
+			Purchase: models.Purchase{
+				ID: 26, CourseID: 3, Email: "buyer@example.com",
+				AmountCents: 0, Currency: "INR", Status: models.PurchaseStatusPaid,
+				PromoCode: "SAVE", CreatedAt: now,
+			},
+			EmailStatus: models.EmailStatusPending,
+			EmailKind:   models.EmailPurchaseCourse,
+			EmailEntity: "26",
+		}},
+	})
+	body := rec.Body.String()
+	if strings.Contains(body, "<!-- render error:") {
+		t.Fatal(body)
+	}
+	if !strings.Contains(body, "Email: pending") || !strings.Contains(body, "Resend email") || !strings.Contains(body, `value="/admin/purchases"`) {
+		t.Fatal("purchases mail controls missing")
+	}
+	if safeEmailNext("/admin/purchases") != "/admin/purchases" {
+		t.Fatal(safeEmailNext("/admin/purchases"))
+	}
+}

@@ -386,7 +386,7 @@ func (a *App) AdminEmailResend(w http.ResponseWriter, r *http.Request) {
 
 func safeEmailNext(next string) string {
 	switch next {
-	case "/admin/payments", "/admin/bookings":
+	case "/admin/payments", "/admin/bookings", "/admin/purchases":
 		return next
 	default:
 		return "/admin/payments"

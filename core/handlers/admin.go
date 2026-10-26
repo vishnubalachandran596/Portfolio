@@ -585,10 +585,18 @@ func (a *App) AdminBookingStatus(w http.ResponseWriter, r *http.Request) {
 
 // --- Purchases -------------------------------------------------------------
 
+type adminPurchaseRow struct {
+	models.Purchase
+	EmailStatus string
+	EmailKind   string
+	EmailEntity string
+}
+
 type AdminPurchasesData struct {
 	BaseData
-	Purchases []models.Purchase
-	Courses   map[int64]models.Course
+	Purchases   []adminPurchaseRow
+	Courses     map[int64]models.Course
+	EmailNotice string
 }
 
 func (a *App) AdminPurchasesList(w http.ResponseWriter, r *http.Request) {
@@ -607,11 +615,26 @@ func (a *App) AdminPurchasesList(w http.ResponseWriter, r *http.Request) {
 	for _, c := range courses {
 		byID[c.ID] = c
 	}
+	var outbox []models.EmailOutbox
+	if a.Outbox != nil {
+		outbox, err = a.Outbox.ListAll(ctx)
+		if err != nil {
+			a.serverError(w, "load email status", err)
+			return
+		}
+	}
+	rows := make([]adminPurchaseRow, 0, len(purchases))
+	for _, p := range purchases {
+		row := adminPurchaseRow{Purchase: p}
+		row.EmailKind, row.EmailEntity, row.EmailStatus = emailStatusFor(outbox, models.EmailPurchaseCourse, strconv.FormatInt(p.ID, 10))
+		rows = append(rows, row)
+	}
 
 	a.View.Render(w, http.StatusOK, "admin_purchases", AdminPurchasesData{
-		BaseData:  a.base(r, "Purchases — Admin", "", "admin"),
-		Purchases: purchases,
-		Courses:   byID,
+		BaseData:    a.base(r, "Purchases — Admin", "", "admin"),
+		Purchases:   rows,
+		Courses:     byID,
+		EmailNotice: r.URL.Query().Get("email"),
 	})
 }
 

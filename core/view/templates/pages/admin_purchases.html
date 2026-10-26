@@ -2,9 +2,12 @@
 <section class="section">
   <div class="container">
     <h1>Purchases</h1>
+    {{if eq .EmailNotice "sent"}}<p class="alert">The email was sent.</p>{{end}}
+    {{if eq .EmailNotice "queued"}}<p class="alert">The email is back on the queue.</p>{{end}}
+    {{if eq .EmailNotice "failed"}}<p class="alert alert-error">The email could not be sent. It stays in the retry queue when the failure is temporary.</p>{{end}}
     {{if .Purchases}}
     <table class="admin-table">
-      <thead><tr><th>When</th><th>Course</th><th>Email</th><th>Amount</th><th>Promo</th><th>Status</th></tr></thead>
+      <thead><tr><th>When</th><th>Course</th><th>Email</th><th>Amount</th><th>Promo</th><th>Status</th><th>Mail</th></tr></thead>
       <tbody>
         {{range .Purchases}}
         <tr>
@@ -14,6 +17,17 @@
           <td>{{money .AmountCents .Currency}}</td>
           <td>{{if .PromoCode}}{{.PromoCode}} (-{{money .DiscountCents .Currency}}){{else}}—{{end}}</td>
           <td><span class="status-badge status-{{if eq .Status "paid"}}confirmed{{else if eq .Status "failed"}}cancelled{{else}}pending{{end}}">{{.Status}}</span></td>
+          <td>
+            {{if .EmailStatus}}<span class="status-badge status-{{.EmailStatus}}">Email: {{.EmailStatus}}</span>{{else}}<span class="status-badge status-disabled">Email: none</span>{{end}}
+            {{if or (eq .EmailStatus "pending") (eq .EmailStatus "failed") (eq .EmailStatus "disabled")}}
+            <form method="POST" action="/admin/email/resend">
+              <input type="hidden" name="kind" value="{{.EmailKind}}">
+              <input type="hidden" name="entity_id" value="{{.EmailEntity}}">
+              <input type="hidden" name="next" value="/admin/purchases">
+              <button type="submit" class="link-button">Resend email</button>
+            </form>
+            {{end}}
+          </td>
         </tr>
         {{end}}
       </tbody>
