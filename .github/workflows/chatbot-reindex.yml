@@ -8,6 +8,10 @@ name: Chatbot reindex
 # workflow is that something, calling the app's own
 # GET /internal/chatbot/cron-reindex, which no-ops immediately (no
 # NVIDIA call) whenever nothing is pending.
+#
+# CI rule (also in CLAUDE.md rule 13): Actions run from `main` only. Scheduled
+# workflows only ever run on the default branch, and the job guard below
+# makes a manual dispatch from any other branch a no-op.
 on:
   schedule:
     - cron: "*/5 * * * *"
@@ -15,6 +19,7 @@ on:
 
 jobs:
   reindex:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
       - name: Trigger reindex if pending
