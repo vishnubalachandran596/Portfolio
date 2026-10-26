@@ -25,10 +25,21 @@ const (
 	FromPaid    = DisplayName + " <orders@vishnubalachandran.com>"
 	FromBooking = DisplayName + " <bookings@vishnubalachandran.com>"
 	FromNews    = DisplayName + " <news@vishnubalachandran.com>"
-	ReplyTo     = "admin@vishnubalachandran.com"
+	ReplyTo       = "admin@vishnubalachandran.com"
+	OrdersReplyTo = "orders@vishnubalachandran.com"
 
 	brevoSendURL = "https://api.brevo.com/v3/smtp/email"
 )
+
+// ReplyToFor is the Reply-To header for a kind. Order mail replies to
+// orders@ so it lands in that Resend inbox. Bookings, connect requests,
+// and the newsletter confirmation reply to admin@.
+func ReplyToFor(kind string) string {
+	if models.EmailUsesResend(kind) {
+		return OrdersReplyTo
+	}
+	return ReplyTo
+}
 
 // FromFor is the From header for a kind. News stays on the main domain;
 // moving promos later is a change to FromNews only.

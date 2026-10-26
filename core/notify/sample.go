@@ -14,7 +14,7 @@ func SampleData(kind string) models.EmailData {
 		AccessURL:      "https://www.vishnubalachandran.com/courses/sample/learn",
 		ClaimCode:      "AB12C-D34EF-56AB7-89012",
 		SiteName:       "Vishnu Balachandran",
-		SupportReplyTo: ReplyTo,
+		SupportReplyTo: ReplyToFor(kind),
 		BookingStart:   "Mon, Jan 2 2026 · 3:04 PM IST",
 		BookingCode:    "BK-SAMPLE",
 		Duration:       "60 minutes",

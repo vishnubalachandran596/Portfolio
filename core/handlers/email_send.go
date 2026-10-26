@@ -116,6 +116,7 @@ func (a *App) sendQueued(parent context.Context, job emailJob) string {
 	}
 	ctx := context.WithoutCancel(parent)
 	kind := job.templateKind()
+	job.Data.SupportReplyTo = notify.ReplyToFor(kind)
 	to := strings.TrimSpace(job.To)
 	if to == "" || !strings.Contains(to, "@") || a.Outbox == nil {
 		return "skipped"
@@ -140,7 +141,7 @@ func (a *App) sendQueued(parent context.Context, job emailJob) string {
 		Subject:        subject,
 		HTML:           htmlBody,
 		Text:           textBody,
-		ReplyTo:        notify.ReplyTo,
+		ReplyTo:        notify.ReplyToFor(kind),
 		IdempotencyKey: job.Kind + ":" + job.EntityID,
 	}, admin)
 

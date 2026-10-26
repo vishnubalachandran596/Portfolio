@@ -50,4 +50,10 @@ func TestFromFor(t *testing.T) {
 	if ReplyTo != "admin@vishnubalachandran.com" {
 		t.Fatal(ReplyTo)
 	}
+	if ReplyToFor("purchase_course") != "orders@vishnubalachandran.com" || ReplyToFor("purchase_software") != OrdersReplyTo {
+		t.Fatal(ReplyToFor("purchase_course"))
+	}
+	if ReplyToFor("booking_new") != ReplyTo || ReplyToFor("connect_request") != ReplyTo || ReplyToFor("newsletter_confirm") != ReplyTo {
+		t.Fatal(ReplyToFor("booking_new"))
+	}
 }

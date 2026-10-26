@@ -404,6 +404,9 @@ func TestDispatchSendsOnceAndWorkerSkipsSent(t *testing.T) {
 	if msg.IdempotencyKey != "purchase_course:42" {
 		t.Fatal(msg.IdempotencyKey)
 	}
+	if msg.ReplyTo != "orders@vishnubalachandran.com" || !strings.Contains(msg.HTML, msg.ReplyTo) {
+		t.Fatalf("order reply-to %q", msg.ReplyTo)
+	}
 	if !strings.Contains(msg.HTML, "₹1,499") {
 		t.Fatalf("formatted amount missing: %s", msg.HTML)
 	}
@@ -638,6 +641,9 @@ func TestSendTestGoesToAdminOnly(t *testing.T) {
 	}
 	if len(msg.Bcc) != 0 {
 		t.Fatalf("admin recipient was also bcc: %#v", msg.Bcc)
+	}
+	if msg.ReplyTo != "admin@vishnubalachandran.com" {
+		t.Fatalf("booking reply-to %q", msg.ReplyTo)
 	}
 	if fx.paid.count() != 0 {
 		t.Fatal("booking test used Resend")
