@@ -12,7 +12,7 @@
     <form method="POST" action="/admin/chatbot/reindex">
       <button type="submit" class="btn btn-primary">Rebuild Index</button>
     </form>
-    <p class="empty-state">This button waits for the rebuild to finish (usually under a minute) before confirming, since clicking it means you want the index current right now. Saving or deleting a course or article doesn't wait -- it just flags that something changed, and a background job picks that up within about 5 minutes and rebuilds then, so routine saves stay fast. Use this button for a first build, right after swapping the underlying AI model, after editing your profile/skills/experience/education (which don't have a save hook to set that flag), or whenever 5 minutes isn't fast enough.</p>
+    <p class="empty-state">This button waits for the rebuild to finish (usually under a minute) before confirming, since clicking it means you want the index current right now. Saving or deleting profile, skills, experience, education, courses, articles, and the other indexed sections doesn't wait -- it just flags that something changed, and a background job picks that up within about 5 minutes and rebuilds then, so routine saves stay fast. Use this button for a first build, right after swapping the underlying AI model, or whenever 5 minutes isn't fast enough.</p>
     <p class="empty-state">A coding agent that edits content directly in Supabase can trigger the same rebuild via <code>POST /api/chatbot/reindex</code> with an <code>Authorization: Bearer &lt;CHATBOT_REINDEX_TOKEN&gt;</code> header, without an admin login.</p>
     {{end}}
   </div>

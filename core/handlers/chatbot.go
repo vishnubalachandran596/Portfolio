@@ -720,7 +720,15 @@ func (a *App) gatherChatbotChunks(ctx context.Context) []models.ChatbotChunk {
 
 	if edu, err := a.Education.List(ctx); err == nil {
 		for _, e := range edu {
-			text := e.Degree + " in " + e.Field + ", " + e.Institution + " (" + strconv.Itoa(e.StartYear) + "-" + strconv.Itoa(e.EndYear) + "). " + e.Details
+			text := e.Degree
+			if e.Field != "" {
+				text += " in " + e.Field
+			}
+			text += ", " + e.Institution
+			if e.StartYear > 0 || e.EndYear > 0 {
+				text += " (" + strconv.Itoa(e.StartYear) + "-" + strconv.Itoa(e.EndYear) + ")"
+			}
+			text += ". " + e.Details
 			chunks = append(chunks, models.ChatbotChunk{SourceType: "education", SourceID: e.ID, Title: e.Degree + ", " + e.Institution, URL: "/about#education", ChunkText: text})
 		}
 	}

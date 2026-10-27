@@ -173,10 +173,10 @@ type EducationRepo struct{ db *sql.DB }
 
 func NewEducationRepo(db *sql.DB) *EducationRepo { return &EducationRepo{db: db} }
 
+const educationColumns = `id, institution, degree, field, COALESCE(start_year,0), COALESCE(end_year,0), details, sort_order`
+
 func (r *EducationRepo) List(ctx context.Context) ([]models.Education, error) {
-	rows, err := r.db.QueryContext(ctx, `
-		SELECT id, institution, degree, field, COALESCE(start_year,0), COALESCE(end_year,0), details, sort_order
-		FROM education ORDER BY sort_order, id`)
+	rows, err := r.db.QueryContext(ctx, `SELECT `+educationColumns+` FROM education ORDER BY sort_order, id`)
 	if err != nil {
 		return nil, err
 	}
@@ -184,13 +184,63 @@ func (r *EducationRepo) List(ctx context.Context) ([]models.Education, error) {
 
 	var out []models.Education
 	for rows.Next() {
-		var e models.Education
-		if err := rows.Scan(&e.ID, &e.Institution, &e.Degree, &e.Field, &e.StartYear, &e.EndYear, &e.Details, &e.SortOrder); err != nil {
+		e, err := scanEducation(rows)
+		if err != nil {
 			return nil, err
 		}
 		out = append(out, e)
 	}
 	return out, rows.Err()
+}
+
+func (r *EducationRepo) GetByID(ctx context.Context, id int64) (models.Education, error) {
+	e, err := scanEducation(r.db.QueryRowContext(ctx, `SELECT `+educationColumns+` FROM education WHERE id = $1`, id))
+	if errors.Is(err, sql.ErrNoRows) {
+		return models.Education{}, ErrNotFound
+	}
+	return e, err
+}
+
+func (r *EducationRepo) Create(ctx context.Context, e models.Education) (int64, error) {
+	var id int64
+	err := r.db.QueryRowContext(ctx, `
+		INSERT INTO education (institution, degree, field, start_year, end_year, details, sort_order)
+		VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id`,
+		e.Institution, e.Degree, e.Field, nullYear(e.StartYear), nullYear(e.EndYear), e.Details, e.SortOrder,
+	).Scan(&id)
+	return id, err
+}
+
+func (r *EducationRepo) Update(ctx context.Context, e models.Education) error {
+	_, err := r.db.ExecContext(ctx, `
+		UPDATE education SET institution=$1, degree=$2, field=$3, start_year=$4, end_year=$5, details=$6, sort_order=$7
+		WHERE id=$8`,
+		e.Institution, e.Degree, e.Field, nullYear(e.StartYear), nullYear(e.EndYear), e.Details, e.SortOrder, e.ID,
+	)
+	return err
+}
+
+func (r *EducationRepo) Delete(ctx context.Context, id int64) error {
+	_, err := r.db.ExecContext(ctx, `DELETE FROM education WHERE id = $1`, id)
+	return err
+}
+
+// nullYear stores a blank year as NULL. List and GetByID read that back as 0.
+func nullYear(y int) any {
+	if y <= 0 {
+		return nil
+	}
+	return y
+}
+
+type educationScanner interface {
+	Scan(dest ...any) error
+}
+
+func scanEducation(s educationScanner) (models.Education, error) {
+	var e models.Education
+	err := s.Scan(&e.ID, &e.Institution, &e.Degree, &e.Field, &e.StartYear, &e.EndYear, &e.Details, &e.SortOrder)
+	return e, err
 }
 
 type HomeFeatureRepo struct{ db *sql.DB }

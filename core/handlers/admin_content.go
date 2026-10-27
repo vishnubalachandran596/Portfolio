@@ -1,7 +1,5 @@
-// admin_content.go covers the admin CRUD for About Me content that only
-// had migration-file seeding before: skill categories and work
-// experience entries. Education stays migration-only for now — it
-// changes far less often than skills/experience.
+// admin_content.go covers the admin CRUD for About Me content: skill
+// categories, work experience, education, and testimonials.
 package handlers
 
 import (
@@ -513,6 +511,169 @@ func (a *App) experienceUsesRoleKey(ctx context.Context, key string, exceptID in
 		}
 	}
 	return false, nil
+}
+
+// --- Education -------------------------------------------------------------
+
+type AdminEducationListData struct {
+	BaseData
+	Education []models.Education
+}
+
+func (a *App) AdminEducationList(w http.ResponseWriter, r *http.Request) {
+	list, err := a.Education.List(r.Context())
+	if err != nil {
+		a.serverError(w, "load education", err)
+		return
+	}
+	a.View.Render(w, http.StatusOK, "admin_education_list", AdminEducationListData{
+		BaseData:  a.base(r, "Education — Admin", "", "admin"),
+		Education: list,
+	})
+}
+
+type AdminEducationFormData struct {
+	BaseData
+	Education models.Education
+	IsNew     bool
+	Error     string
+}
+
+func (a *App) AdminEducationNewPage(w http.ResponseWriter, r *http.Request) {
+	a.View.Render(w, http.StatusOK, "admin_education_form", AdminEducationFormData{
+		BaseData: a.base(r, "New Education — Admin", "", "admin"),
+		IsNew:    true,
+	})
+}
+
+func (a *App) AdminEducationEditPage(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	if err != nil {
+		a.NotFound(w, r)
+		return
+	}
+	edu, err := a.Education.GetByID(r.Context(), id)
+	if err != nil {
+		if err == repo.ErrNotFound {
+			a.NotFound(w, r)
+			return
+		}
+		a.serverError(w, "load education", err)
+		return
+	}
+	a.View.Render(w, http.StatusOK, "admin_education_form", AdminEducationFormData{
+		BaseData:  a.base(r, "Edit Education — Admin", "", "admin"),
+		Education: edu,
+	})
+}
+
+func (a *App) AdminEducationSave(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "invalid form", http.StatusBadRequest)
+		return
+	}
+	var id int64
+	if idStr := r.PathValue("id"); idStr != "" {
+		var err error
+		id, err = strconv.ParseInt(idStr, 10, 64)
+		if err != nil {
+			a.NotFound(w, r)
+			return
+		}
+	}
+	sortOrder, _ := strconv.Atoi(r.FormValue("sort_order"))
+	startYear, startOK := parseOptionalYear(r.FormValue("start_year"))
+	endYear, endOK := parseOptionalYear(r.FormValue("end_year"))
+	edu := models.Education{
+		ID:          id,
+		Institution: strings.TrimSpace(r.FormValue("institution")),
+		Degree:      strings.TrimSpace(r.FormValue("degree")),
+		Field:       strings.TrimSpace(r.FormValue("field")),
+		StartYear:   startYear,
+		EndYear:     endYear,
+		Details:     strings.TrimSpace(r.FormValue("details")),
+		SortOrder:   sortOrder,
+	}
+	if msg := educationFormError(edu, startOK, endOK); msg != "" {
+		a.renderEducationForm(w, r, edu, id == 0, msg)
+		return
+	}
+
+	ctx := r.Context()
+	var err error
+	if id == 0 {
+		_, err = a.Education.Create(ctx, edu)
+	} else {
+		err = a.Education.Update(ctx, edu)
+	}
+	if err != nil {
+		if isDuplicateEducation(err) {
+			a.renderEducationForm(w, r, edu, id == 0, "An entry with this institution, degree, and field already exists.")
+			return
+		}
+		a.serverError(w, "save education", err)
+		return
+	}
+	a.markChatbotReindexPending(ctx)
+	http.Redirect(w, r, "/admin/education", http.StatusSeeOther)
+}
+
+func (a *App) renderEducationForm(w http.ResponseWriter, r *http.Request, edu models.Education, isNew bool, msg string) {
+	a.View.Render(w, http.StatusUnprocessableEntity, "admin_education_form", AdminEducationFormData{
+		BaseData:  a.base(r, "Education — Admin", "", "admin"),
+		Education: edu,
+		IsNew:     isNew,
+		Error:     msg,
+	})
+}
+
+func (a *App) AdminEducationDelete(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	if err != nil {
+		a.NotFound(w, r)
+		return
+	}
+	if err := a.Education.Delete(r.Context(), id); err != nil {
+		a.serverError(w, "delete education", err)
+		return
+	}
+	a.markChatbotReindexPending(r.Context())
+	http.Redirect(w, r, "/admin/education", http.StatusSeeOther)
+}
+
+// parseOptionalYear accepts a blank year or a four-digit year. A blank
+// year is stored as NULL (see repo.nullYear) and rendered as omitted.
+func parseOptionalYear(raw string) (int, bool) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return 0, true
+	}
+	n, err := strconv.Atoi(raw)
+	if err != nil || n < 1900 || n > 2100 {
+		return 0, false
+	}
+	return n, true
+}
+
+func educationFormError(edu models.Education, startOK, endOK bool) string {
+	if edu.Institution == "" || edu.Degree == "" {
+		return "Institution and degree are required."
+	}
+	if !startOK || !endOK {
+		return "Start and end years must be blank or a year from 1900 to 2100."
+	}
+	if edu.StartYear > 0 && edu.EndYear > 0 && edu.EndYear < edu.StartYear {
+		return "End year cannot be earlier than the start year."
+	}
+	return ""
+}
+
+func isDuplicateEducation(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := err.Error()
+	return strings.Contains(msg, "education_institution_degree_field_uk") || strings.Contains(msg, "SQLSTATE 23505")
 }
 
 type AdminTestimonialsListData struct {

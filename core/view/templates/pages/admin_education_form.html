@@ -1,0 +1,35 @@
+{{define "content"}}
+<section class="section">
+  <div class="container">
+    <h1>{{if .IsNew}}Add Education{{else}}Edit Education{{end}}</h1>
+    {{if .Error}}<div class="alert alert-error">{{.Error}}</div>{{end}}
+    <form method="POST" action="{{if .IsNew}}/admin/education/new{{else}}/admin/education/{{.Education.ID}}/edit{{end}}" class="admin-form">
+      <label>Institution
+        <input type="text" name="institution" value="{{.Education.Institution}}" required>
+      </label>
+      <label>Degree
+        <input type="text" name="degree" value="{{.Education.Degree}}" required>
+      </label>
+      <label>Field <span class="optional">optional, e.g. "Computer Science"</span>
+        <input type="text" name="field" value="{{.Education.Field}}">
+      </label>
+      <label>Start year <span class="optional">optional</span>
+        <input type="number" name="start_year" value="{{if gt .Education.StartYear 0}}{{.Education.StartYear}}{{end}}" min="1900" max="2100">
+      </label>
+      <label>End year <span class="optional">optional</span>
+        <input type="number" name="end_year" value="{{if gt .Education.EndYear 0}}{{.Education.EndYear}}{{end}}" min="1900" max="2100">
+      </label>
+      <label>Details <span class="optional">optional — supports **bold** and *italic*</span>
+        <textarea name="details" rows="3">{{.Education.Details}}</textarea>
+      </label>
+      <label>Sort order
+        <input type="number" name="sort_order" value="{{.Education.SortOrder}}">
+      </label>
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary" data-loading-text="Saving…">Save Education</button>
+        <a class="btn btn-secondary" href="/admin/education">Cancel</a>
+      </div>
+    </form>
+  </div>
+</section>
+{{end}}

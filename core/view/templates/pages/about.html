@@ -140,7 +140,9 @@
       <div class="education-item">
         <h3>{{.Institution}}</h3>
         <p>{{.Degree}}{{if .Field}}, {{.Field}}{{end}}</p>
-        <p class="education-years">{{.StartYear}} – {{.EndYear}}{{if .Details}} · {{rich .Details}}{{end}}</p>
+        {{if or (gt .StartYear 0) (gt .EndYear 0) .Details}}
+        <p class="education-years">{{if gt .StartYear 0}}{{.StartYear}}{{end}}{{if and (gt .StartYear 0) (gt .EndYear 0)}} – {{end}}{{if gt .EndYear 0}}{{.EndYear}}{{end}}{{if and (or (gt .StartYear 0) (gt .EndYear 0)) .Details}} · {{end}}{{if .Details}}{{rich .Details}}{{end}}</p>
+        {{end}}
       </div>
       {{end}}
     </div>

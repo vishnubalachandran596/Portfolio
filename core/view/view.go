@@ -214,6 +214,8 @@ func New() (*Renderer, error) {
 		"templates/pages/admin_skill_form.html",
 		"templates/pages/admin_experience_list.html",
 		"templates/pages/admin_experience_form.html",
+		"templates/pages/admin_education_list.html",
+		"templates/pages/admin_education_form.html",
 		"templates/pages/admin_testimonials_list.html",
 		"templates/pages/admin_testimonial_form.html",
 		"templates/pages/admin_certifications_list.html",

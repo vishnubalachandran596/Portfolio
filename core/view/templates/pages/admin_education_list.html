@@ -1,0 +1,33 @@
+{{define "content"}}
+<section class="section">
+  <div class="container">
+    <div class="section-header-row">
+      <h1>Education</h1>
+      <a class="btn btn-primary" href="/admin/education/new">Add Education</a>
+    </div>
+    {{if .Education}}
+    <table class="admin-table">
+      <thead><tr><th>Institution</th><th>Degree</th><th>Years</th><th>Sort</th><th></th></tr></thead>
+      <tbody>
+        {{range .Education}}
+        <tr>
+          <td>{{.Institution}}</td>
+          <td>{{.Degree}}{{if .Field}}, {{.Field}}{{end}}</td>
+          <td>{{if gt .StartYear 0}}{{.StartYear}}{{end}}{{if and (gt .StartYear 0) (gt .EndYear 0)}} – {{end}}{{if gt .EndYear 0}}{{.EndYear}}{{end}}</td>
+          <td>{{.SortOrder}}</td>
+          <td class="admin-table-actions">
+            <a class="link-button" href="/admin/education/{{.ID}}/edit">Edit</a>
+            <form method="POST" action="/admin/education/{{.ID}}/delete" onsubmit="return confirm('Delete this education entry?');">
+              <button type="submit" class="link-button danger">Delete</button>
+            </form>
+          </td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+    {{else}}
+    <p class="empty-state">No education entries yet.</p>
+    {{end}}
+  </div>
+</section>
+{{end}}

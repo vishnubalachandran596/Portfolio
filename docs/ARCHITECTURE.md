@@ -685,7 +685,7 @@ Handler files, by area:
 | `schema.go` | JSON-LD builders, all fed from DB rows (Person/Website/Service on Home; ProfessionalService + FAQPage on Consultancy; BlogPosting; Course + Offer; SoftwareApplication + Offer; BreadcrumbList) |
 | `admin.go` | Admin login, dashboard, course CRUD, bookings, purchases, availability, profile, preview-as-visitor |
 | `media.go` | Image-upload validation (`readImageUpload`, `sniffImageExt`) shared by the profile photo and logo; public `GET /media/profile-photo` and `GET /media/logo` streaming handlers |
-| `admin_content.go` | Admin CRUD for skills, experience, testimonials |
+| `admin_content.go` | Admin CRUD for skills, experience, education, testimonials |
 | `admin_users.go` | Admin user list/detail/promote/demote/message |
 | `admin_quiz.go` | Admin CRUD for quiz questions + list page |
 | `admin_quiz_bank.go` | Quiz bulk JSON import, auto-assign sets, per-user attempt grants |
