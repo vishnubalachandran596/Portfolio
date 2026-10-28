@@ -178,6 +178,7 @@ func New() (*Renderer, error) {
 		"templates/pages/search.html",
 		"templates/pages/legal.html",
 		"templates/pages/not_found.html",
+		"templates/pages/server_error.html",
 		"templates/pages/admin_login.html",
 	}
 	adminPages := []string{

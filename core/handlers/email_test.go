@@ -820,3 +820,32 @@ func TestAdminPurchasesShowsEmailResend(t *testing.T) {
 		t.Fatal(safeEmailNext("/admin/purchases"))
 	}
 }
+
+func TestSentEmailIsCopiedToTelegram(t *testing.T) {
+	fx := newEmailFixture(t)
+	p := models.Purchase{ID: 77, Email: "buyer@example.com", AmountCents: 149900, Currency: "INR", ClaimCode: "SECRETCLAIM1"}
+	fx.app.emailCoursePurchase(context.Background(), p, models.Course{Title: "Sample course", Slug: "sample"})
+	got := fx.tg.joined()
+	for _, want := range []string{"Email sent", "From: ", "To: buyer@example.com", "Subject: "} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("telegram copy missing %q:\n%s", want, got)
+		}
+	}
+	if strings.Contains(got, "SECRETCLAIM1") {
+		t.Fatalf("claim code leaked to telegram:\n%s", got)
+	}
+}
+
+func TestEmailTelegramCopyHidesLinksAndClips(t *testing.T) {
+	d := models.EmailData{AccessURL: "https://x.test/access/tok", ManageURL: "https://x.test/manage/tok", ClaimCode: "CLAIM9"}
+	body := "open https://x.test/access/tok or https://x.test/manage/tok code CLAIM9 " + strings.Repeat("a", 5000)
+	out := emailTelegramCopy(notify.Message{From: "a@x.test", To: "b@x.test", Subject: "S"}, "k", "resend", body, d)
+	for _, bad := range []string{"access/tok", "manage/tok", "CLAIM9"} {
+		if strings.Contains(out, bad) {
+			t.Fatalf("leaked %q", bad)
+		}
+	}
+	if len([]rune(out)) > 4096 {
+		t.Fatalf("too long: %d", len([]rune(out)))
+	}
+}

@@ -6,7 +6,7 @@
 package handler
 
 import (
-	"fmt"
+	"log"
 	"net/http"
 	"sync"
 
@@ -32,7 +32,11 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		routes = a.Routes()
 	})
 	if initErr != nil {
-		http.Error(w, fmt.Sprintf("service unavailable: %v", initErr), http.StatusInternalServerError)
+		// The real reason (a migration or config problem) goes to the logs only;
+		// it must never reach a visitor.
+		log.Printf("bootstrap failed: %v", initErr)
+		w.Header().Set("Retry-After", "30")
+		http.Error(w, "The site is temporarily unavailable. Please try again in a minute.", http.StatusServiceUnavailable)
 		return
 	}
 	routes.ServeHTTP(w, r)

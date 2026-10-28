@@ -161,7 +161,41 @@ func (a *App) sendQueued(parent context.Context, job emailJob) string {
 	if err := a.Outbox.MarkSent(ctx, job.Kind, job.EntityID, providerID); err != nil {
 		log.Printf("email mark sent %s %s: %v", job.Kind, job.EntityID, err)
 	}
+	a.alert(emailTelegramCopy(msg, job.Kind, emailProviderName(kind), textBody, job.Data))
 	return "sent"
+}
+
+// telegramMaxRunes keeps a copy under Telegram's 4096-character message cap.
+const telegramMaxRunes = 3900
+
+// emailTelegramCopy is the owner's Telegram copy of one sent email: the
+// From, To, Bcc, Reply-To and Subject lines, then the plain-text body. Links
+// and codes that grant access (course access link, private booking manage
+// link, guest claim code, unsubscribe link) are replaced with a note, because
+// Telegram chats are not end-to-end encrypted; the full email is in the
+// admin BCC copy.
+func emailTelegramCopy(msg notify.Message, kind, provider, textBody string, d models.EmailData) string {
+	body := textBody
+	for _, secret := range []string{d.AccessURL, d.ManageURL, d.ClaimCode, d.UnsubscribeURL} {
+		if strings.TrimSpace(secret) != "" {
+			body = strings.ReplaceAll(body, secret, "[hidden here, see the BCC copy]")
+		}
+	}
+	var b strings.Builder
+	fmt.Fprintf(&b, "📧 Email sent: %s (%s)\n", kind, provider)
+	fmt.Fprintf(&b, "From: %s\nTo: %s\n", msg.From, msg.To)
+	if len(msg.Bcc) > 0 {
+		fmt.Fprintf(&b, "Bcc: %s\n", strings.Join(msg.Bcc, ", "))
+	}
+	if msg.ReplyTo != "" {
+		fmt.Fprintf(&b, "Reply-To: %s\n", msg.ReplyTo)
+	}
+	fmt.Fprintf(&b, "Subject: %s\n\n%s", msg.Subject, strings.TrimSpace(body))
+	out := []rune(b.String())
+	if len(out) > telegramMaxRunes {
+		return string(out[:telegramMaxRunes]) + "\n[clipped]"
+	}
+	return string(out)
 }
 
 func emailProviderName(kind string) string {

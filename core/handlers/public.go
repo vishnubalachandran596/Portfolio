@@ -666,6 +666,7 @@ func (a *App) NotFound(w http.ResponseWriter, r *http.Request) {
 
 func (a *App) serverError(w http.ResponseWriter, action string, err error) {
 	log.Printf("%s: %v", action, err)
+	a.alert("🚨 Server error: " + action + "\n" + clipEmailErr(err))
 	http.Error(w, "Something went wrong. Please try again.", http.StatusInternalServerError)
 }
 
