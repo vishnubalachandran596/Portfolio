@@ -70,3 +70,63 @@ func TestSubscribeRejectsBeforeStore(t *testing.T) {
 		t.Fatalf("bad email location %q", rec.Header().Get("Location"))
 	}
 }
+
+func TestValidPersonName(t *testing.T) {
+	for _, ok := range []string{"Vishnu", "Asha Nair", "Anne-Marie D'Souza", "A. K. Nair", "John Ronald Tolkien", "Li"} {
+		if !validPersonName(ok) {
+			t.Fatalf("%q should be accepted", ok)
+		}
+	}
+	for _, bad := range []string{
+		"", "A", "Перечисление Руб", "Asha  Nair", "Asha Nair Kumar Menon", "Asha123", "Asha_Nair",
+		"https://x.buzz", "Asha@x.com", "Ашa Nair", strings.Repeat("a", 31),
+	} {
+		if validPersonName(bad) {
+			t.Fatalf("%q should be rejected", bad)
+		}
+	}
+}
+
+func TestEnglishText(t *testing.T) {
+	for _, ok := range []string{"Hello, I need a review of our system design. Thanks!", "Café meeting at 5pm", "Budget ₹5,000 / month", "line\nbreak"} {
+		if !englishText(ok) {
+			t.Fatalf("%q should be accepted", ok)
+		}
+	}
+	for _, bad := range []string{"Привет, приз ждёт вас", "你好", "مرحبا", "hello \u0000"} {
+		if englishText(bad) {
+			t.Fatalf("%q should be rejected", bad)
+		}
+	}
+}
+
+func TestValidPhone(t *testing.T) {
+	if !validPhone("") || !validPhone("+91 98765-43210") || !validPhone("(044) 2345.6789") {
+		t.Fatal("valid phones rejected")
+	}
+	if validPhone("call me") || validPhone(strings.Repeat("1", 31)) {
+		t.Fatal("invalid phone accepted")
+	}
+}
+
+func TestContactSubmitErrorCodes(t *testing.T) {
+	fx := newEmailFixture(t)
+	good := func() url.Values {
+		return url.Values{"name": {"Asha Nair"}, "email": {"a@b.test"}, "message": {"Hello there"}}
+	}
+	cases := []struct {
+		field, value, want string
+	}{
+		{"name", "Привет приз", "/contact?error=name"},
+		{"message", "Привет, приз ждёт вас", "/contact?error=english"},
+		{"phone", "call me", "/contact?error=phone"},
+		{"email", "пользователь@пример.рф", "/contact?error=1"},
+	}
+	for _, c := range cases {
+		v := good()
+		v.Set(c.field, c.value)
+		if got := postForm(fx.app.ContactSubmit, "/contact", v).Header().Get("Location"); got != c.want {
+			t.Fatalf("%s=%q: got %q want %q", c.field, c.value, got, c.want)
+		}
+	}
+}

@@ -49,7 +49,7 @@ func (a *App) NewsletterSubscribe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	email = strings.ToLower(email)
-	if addr, err := mail.ParseAddress(email); err != nil || addr.Address != email || len(email) > 254 {
+	if addr, err := mail.ParseAddress(email); err != nil || addr.Address != email || len(email) > 254 || !asciiOnly(email) {
 		http.Redirect(w, r, redirectTo, http.StatusSeeOther)
 		return
 	}

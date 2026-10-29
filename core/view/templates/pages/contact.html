@@ -17,12 +17,12 @@
       <div class="alert alert-success">Thanks — your message is saved and I'll reply to the email you gave. Want to talk sooner? <a href="{{.Nav.Booking}}">Book a free call</a> and pick a slot yourself.</div>
       {{end}}
       {{if .Error}}
-      <div class="alert alert-error">Please fill in your name, a valid email, and a message.</div>
+      <div class="alert alert-error">{{.ErrorText}}</div>
       {{end}}
       <form method="POST" action="/contact" class="admin-form">
         <div class="form-row">
           <label>Your name
-            <input type="text" name="name" required minlength="2" maxlength="100" autocomplete="name">
+            <input type="text" name="name" required minlength="2" maxlength="60" pattern="[A-Za-z][A-Za-z\x27.\-]*( [A-Za-z][A-Za-z\x27.\-]*){0,2}" title="First name, or first and last name, in English letters" autocomplete="name">
           </label>
           <label>Your email
             <input type="email" name="email" required autocomplete="email">

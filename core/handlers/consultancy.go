@@ -184,11 +184,19 @@ func (a *App) BookingConfirm(w http.ResponseWriter, r *http.Request) {
 	email := strings.ToLower(strings.TrimSpace(r.FormValue("email")))
 	phone := strings.TrimSpace(r.FormValue("phone"))
 	message := strings.TrimSpace(r.FormValue("message"))
-	if n := len([]rune(name)); n < 2 || n > 100 {
-		bookingJSONError(w, http.StatusBadRequest, "Please enter your name.")
+	if spammyName(name) {
+		writeJSON(w, http.StatusOK, map[string]any{"redirect": "/booking"}) // bot: answer as if it worked
 		return
 	}
-	if addr, err := mail.ParseAddress(email); err != nil || addr.Address != email || len(email) > 254 {
+	if !validPersonName(name) {
+		bookingJSONError(w, http.StatusBadRequest, "Please enter your real name: first name, or first and last name (English letters only).")
+		return
+	}
+	if !englishText(message) || !validPhone(phone) {
+		bookingJSONError(w, http.StatusBadRequest, "Please use English for the topic, and a valid phone number or leave it empty.")
+		return
+	}
+	if addr, err := mail.ParseAddress(email); err != nil || addr.Address != email || len(email) > 254 || !asciiOnly(email) {
 		bookingJSONError(w, http.StatusBadRequest, "Please enter a valid email address.")
 		return
 	}
@@ -276,9 +284,10 @@ func (a *App) BookingConfirm(w http.ResponseWriter, r *http.Request) {
 
 type ContactData struct {
 	BaseData
-	Profile models.Profile
-	Success bool
-	Error   bool
+	Profile   models.Profile
+	Success   bool
+	Error     bool
+	ErrorText string
 }
 
 func (a *App) ContactPage(w http.ResponseWriter, r *http.Request) {
@@ -288,11 +297,25 @@ func (a *App) ContactPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	a.View.Render(w, http.StatusOK, "contact", ContactData{
-		BaseData: a.base(r, "Contact — "+a.Cfg.SiteName, "Get in touch, or book a consultancy session directly.", "contact"),
-		Profile:  profile,
-		Success:  r.URL.Query().Get("sent") == "1",
-		Error:    r.URL.Query().Get("error") == "1",
+		BaseData:  a.base(r, "Contact — "+a.Cfg.SiteName, "Get in touch, or book a consultancy session directly.", "contact"),
+		Profile:   profile,
+		Success:   r.URL.Query().Get("sent") == "1",
+		Error:     r.URL.Query().Get("error") != "",
+		ErrorText: contactErrorText(r.URL.Query().Get("error")),
 	})
+}
+
+// contactErrorText is the banner for each /contact?error= code.
+func contactErrorText(code string) string {
+	switch code {
+	case "name":
+		return "Please enter your real name: a first name, or first and last name (English letters only)."
+	case "english":
+		return "Please write your message in English (Latin letters)."
+	case "phone":
+		return "Please enter a valid phone number, or leave it empty."
+	}
+	return "Please fill in your name, a valid email, and a message."
 }
 
 // ContactSubmit records a /contact form submission (name, email, phone,
@@ -323,11 +346,21 @@ func (a *App) ContactSubmit(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/contact?sent=1", http.StatusSeeOther)
 		return
 	}
-	if n := len([]rune(name)); n < 2 || n > 100 || len(phone) > 30 || len([]rune(message)) > contactMaxMessageLength || message == "" {
+	switch {
+	case !validPersonName(name):
+		http.Redirect(w, r, "/contact?error=name", http.StatusSeeOther)
+		return
+	case !validPhone(phone):
+		http.Redirect(w, r, "/contact?error=phone", http.StatusSeeOther)
+		return
+	case message == "" || len([]rune(message)) > contactMaxMessageLength:
 		http.Redirect(w, r, "/contact?error=1", http.StatusSeeOther)
 		return
+	case !englishText(message):
+		http.Redirect(w, r, "/contact?error=english", http.StatusSeeOther)
+		return
 	}
-	if addr, err := mail.ParseAddress(email); err != nil || addr.Address != email || len(email) > 254 {
+	if addr, err := mail.ParseAddress(email); err != nil || addr.Address != email || len(email) > 254 || !asciiOnly(email) {
 		http.Redirect(w, r, "/contact?error=1", http.StatusSeeOther)
 		return
 	}
