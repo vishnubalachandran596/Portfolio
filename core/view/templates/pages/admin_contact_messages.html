@@ -3,11 +3,16 @@
   <div class="container">
     <h1>Contact Messages</h1>
     {{if .Messages}}
+    <form id="bulk-delete" method="POST" action="/admin/contact-messages/delete" onsubmit="return confirm('Delete the ticked messages? This cannot be undone.');">
+      <label><input type="checkbox" onclick="document.querySelectorAll('.pick').forEach(function(c){c.checked=this.checked}.bind(this))"> Select all</label>
+      <button type="submit" class="btn btn-secondary btn-sm">Delete ticked</button>
+    </form>
     <table class="admin-table">
-      <thead><tr><th>When</th><th>Name</th><th>Email</th><th>Phone</th><th>Message</th><th>Status</th></tr></thead>
+      <thead><tr><th><span class="sr-only">Select</span></th><th>When</th><th>Name</th><th>Email</th><th>Phone</th><th>Message</th><th>Status</th></tr></thead>
       <tbody>
         {{range .Messages}}
         <tr>
+          <td><input type="checkbox" class="pick" name="id" value="{{.ID}}" form="bulk-delete" aria-label="Select message {{.ID}}"></td>
           <td>{{formatDateTime .CreatedAt}}</td>
           <td>{{.Name}}</td>
           <td>{{.Email}}</td>

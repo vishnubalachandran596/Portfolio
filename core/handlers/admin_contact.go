@@ -54,3 +54,27 @@ func (a *App) AdminContactMessageDelete(w http.ResponseWriter, r *http.Request) 
 	}
 	http.Redirect(w, r, "/admin/contact-messages", http.StatusSeeOther)
 }
+
+// AdminContactMessagesBulkDelete removes every ticked message (spam
+// clean-up). The admin ticks and confirms; nothing runs automatically.
+func (a *App) AdminContactMessagesBulkDelete(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "invalid form", http.StatusBadRequest)
+		return
+	}
+	var ids []int64
+	for _, v := range r.Form["id"] {
+		if id, err := strconv.ParseInt(v, 10, 64); err == nil && id > 0 {
+			ids = append(ids, id)
+		}
+	}
+	if len(ids) > 500 {
+		http.Error(w, "too many messages selected", http.StatusBadRequest)
+		return
+	}
+	if _, err := a.ContactMessages.DeleteMany(r.Context(), ids); err != nil {
+		a.serverError(w, "bulk delete contact messages", err)
+		return
+	}
+	http.Redirect(w, r, "/admin/contact-messages", http.StatusSeeOther)
+}

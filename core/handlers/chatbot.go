@@ -244,11 +244,25 @@ type chatResponseBody struct {
 // question, retrieve the closest indexed chunks of site content, and ask
 // NVIDIA's free-tier LLM to answer grounded in only that context. The
 // widget that calls this stays hidden until a.Nvidia.Enabled().
+const (
+	throttleChat   = "chat"
+	chatMaxPerHour = 40
+)
+
 func (a *App) Chat(w http.ResponseWriter, r *http.Request) {
 	if !a.Nvidia.Enabled() {
 		writeJSON(w, http.StatusServiceUnavailable, chatResponseBody{Error: "The chatbot isn't configured yet."})
 		return
 	}
+
+	// Each question costs an embedding and a model call, so one address
+	// gets a bounded number per hour (Postgres-backed, shared by every instance).
+	ik := authutil.HashKey(authutil.ClientIP(r))
+	if _, locked := a.throttled(r, throttleChat, ik); locked {
+		writeJSON(w, http.StatusTooManyRequests, chatResponseBody{Error: "You've asked a lot of questions. Please try again in a little while."})
+		return
+	}
+	a.recordFailure(r, throttleChat, chatMaxPerHour, ik)
 
 	// 16KB, not 4KB: a full chatbotMaxHistoryTurns-turn history at
 	// chatbotMaxHistoryChars each is already ~3KB before JSON overhead,

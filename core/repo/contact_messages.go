@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"errors"
 
+	"github.com/lib/pq"
+
 	"github.com/vishnubalachandran596/portfolio/core/models"
 )
 
@@ -68,4 +70,17 @@ func (r *ContactMessageRepo) MarkRead(ctx context.Context, id int64) error {
 func (r *ContactMessageRepo) Delete(ctx context.Context, id int64) error {
 	_, err := r.db.ExecContext(ctx, `DELETE FROM contact_messages WHERE id = $1`, id)
 	return err
+}
+
+// DeleteMany removes the given messages in one statement (admin bulk
+// clean-up) and returns how many rows went.
+func (r *ContactMessageRepo) DeleteMany(ctx context.Context, ids []int64) (int64, error) {
+	if len(ids) == 0 {
+		return 0, nil
+	}
+	res, err := r.db.ExecContext(ctx, `DELETE FROM contact_messages WHERE id = ANY($1)`, pq.Array(ids))
+	if err != nil {
+		return 0, err
+	}
+	return res.RowsAffected()
 }

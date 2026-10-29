@@ -154,3 +154,15 @@ func TestCheckFieldRules(t *testing.T) {
 		t.Error("validEmail must be ASCII only")
 	}
 }
+
+func TestSafeNextValueBlocksOffSiteTargets(t *testing.T) {
+	bad := []string{"//evil.com", "/\\evil.com", "/\t/evil.com", "https://evil.com", "evil.com", "/a\nb", ""}
+	for _, b := range bad {
+		if got := safeNextValue(b); got != "/" {
+			t.Errorf("safeNextValue(%q) = %q, want /", b, got)
+		}
+	}
+	if got := safeNextValue("/courses/x?a=1"); got != "/courses/x?a=1" {
+		t.Errorf("good path changed: %q", got)
+	}
+}

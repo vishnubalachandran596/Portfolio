@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/vishnubalachandran596/portfolio/core/authutil"
 	"github.com/vishnubalachandran596/portfolio/core/repo"
@@ -26,7 +27,11 @@ type LoginData struct {
 }
 
 func safeNextValue(next string) string {
-	if next == "" || !strings.HasPrefix(next, "/") || strings.HasPrefix(next, "//") {
+	// Only a plain same-site path is allowed. Browsers read "\" as "/" and
+	// ignore tabs and line breaks inside a URL, so "/\\evil.com" and "/\t/evil.com"
+	// would both leave the site; reject those along with absolute URLs.
+	if next == "" || !strings.HasPrefix(next, "/") || strings.HasPrefix(next, "//") ||
+		strings.ContainsAny(next, "\\\t\r\n") || strings.ContainsFunc(next, unicode.IsControl) {
 		return "/"
 	}
 	return next
