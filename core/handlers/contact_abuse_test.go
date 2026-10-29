@@ -41,7 +41,7 @@ func TestContactSubmitRejectsBeforeStore(t *testing.T) {
 	cases := map[string]url.Values{
 		"link name": {"name": {"Ура! Приз ждёт вас! https://x.buzz/abc"}, "email": {"a@b.test"}, "message": {"hi"}},
 		"honeypot":  {"name": {"Asha"}, "email": {"a@b.test"}, "message": {"hi"}, "website": {"x"}},
-		"bad email": {"name": {"Asha"}, "email": {"not-an-email"}, "message": {"hi"}},
+		"no login":  {"name": {"Asha"}, "email": {"a@b.test"}, "message": {"hi"}},
 		"short":     {"name": {"A"}, "email": {"a@b.test"}, "message": {"hi"}},
 		"too long":  {"name": {"Asha"}, "email": {"a@b.test"}, "message": {strings.Repeat("x", 5001)}},
 	}
@@ -54,8 +54,9 @@ func TestContactSubmitRejectsBeforeStore(t *testing.T) {
 	if got := postForm(fx.app.ContactSubmit, "/contact", cases["honeypot"]).Header().Get("Location"); got != "/contact?sent=1" {
 		t.Fatalf("honeypot should look successful, got %q", got)
 	}
-	if got := postForm(fx.app.ContactSubmit, "/contact", cases["bad email"]).Header().Get("Location"); got != "/contact?error=1" {
-		t.Fatalf("bad email: %q", got)
+	// A valid message from a visitor who is not logged in is sent to log in.
+	if got := postForm(fx.app.ContactSubmit, "/contact", cases["no login"]).Header().Get("Location"); got != "/login?next=%2Fcontact" {
+		t.Fatalf("logged-out contact: %q", got)
 	}
 }
 
@@ -137,7 +138,6 @@ func TestContactSubmitErrorCodes(t *testing.T) {
 		{"name", "Привет приз", "/contact?error=name"},
 		{"message", "Привет, приз ждёт вас", "/contact?error=english"},
 		{"phone", "call me", "/contact?error=phone"},
-		{"email", "пользователь@пример.рф", "/contact?error=1"},
 	}
 	for _, c := range cases {
 		v := good()

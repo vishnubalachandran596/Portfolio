@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
-	"net/mail"
 	"strings"
 	"time"
 
@@ -308,6 +307,11 @@ type ContactData struct {
 	Success   bool
 	Error     bool
 	ErrorText string
+	// LoggedIn is true for a signed-in visitor with a verified email. The
+	// form needs an account; anyone else sees a log-in prompt instead.
+	LoggedIn bool
+	Name     string
+	Email    string
 }
 
 func (a *App) ContactPage(w http.ResponseWriter, r *http.Request) {
@@ -316,13 +320,19 @@ func (a *App) ContactPage(w http.ResponseWriter, r *http.Request) {
 		a.serverError(w, "load profile", err)
 		return
 	}
-	a.View.Render(w, http.StatusOK, "contact", ContactData{
+	d := ContactData{
 		BaseData:  a.base(r, "Contact — "+a.Cfg.SiteName, "Get in touch, or book a consultancy session directly.", "contact"),
 		Profile:   profile,
 		Success:   r.URL.Query().Get("sent") == "1",
 		Error:     r.URL.Query().Get("error") != "",
 		ErrorText: contactErrorText(r.URL.Query().Get("error")),
-	})
+	}
+	if uid, ok := a.Auth.UserID(r); ok {
+		if u, uerr := a.Users.GetByID(r.Context(), uid); uerr == nil && u.EmailVerified {
+			d.LoggedIn, d.Name, d.Email = true, u.Name, u.Email
+		}
+	}
+	a.View.Render(w, http.StatusOK, "contact", d)
 }
 
 // contactErrorText is the banner for each /contact?error= code.
@@ -344,8 +354,9 @@ func contactErrorText(code string) string {
 // message — phone optional) and notifies the admin over Telegram.
 // The consultancy page's "Discuss a review" and "Discuss a retainer"
 // links land here. A confirmation is queued to the address they
-// submitted. No login required — this is the one way a visitor who isn't
-// ready to book a call yet can still reach out. A queue problem does not
+// submitted. A signed-in, email-verified account is required (the message
+// uses the account's address): this is the way a visitor who isn't ready
+// to book a call yet can still reach out. A queue problem does not
 // undo the saved message.
 func (a *App) ContactSubmit(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
@@ -359,7 +370,6 @@ func (a *App) ContactSubmit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	name := strings.TrimSpace(r.FormValue("name"))
-	email := strings.ToLower(strings.TrimSpace(r.FormValue("email")))
 	phone := strings.TrimSpace(r.FormValue("phone"))
 	message := strings.TrimSpace(r.FormValue("message"))
 	// A name that carries a link or an address is a bot: drop it quietly (not
@@ -382,10 +392,19 @@ func (a *App) ContactSubmit(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/contact?error=english", http.StatusSeeOther)
 		return
 	}
-	if addr, err := mail.ParseAddress(email); err != nil || addr.Address != email || len(email) > 254 || !asciiOnly(email) {
+	// The message needs a signed-in account with a verified email, and is
+	// sent from that address: whatever email the form carries is ignored.
+	uid, signedIn := a.Auth.UserID(r)
+	if !signedIn {
+		http.Redirect(w, r, "/login?next="+urlQuery("/contact"), http.StatusSeeOther)
+		return
+	}
+	account, aerr := a.Users.GetByID(r.Context(), uid)
+	if aerr != nil || !account.EmailVerified {
 		http.Redirect(w, r, "/contact?error=1", http.StatusSeeOther)
 		return
 	}
+	email := strings.ToLower(account.Email)
 	// Per-IP and per-address limit, counted in Postgres so it holds across
 	// serverless instances. Every submission that gets this far counts.
 	ik := authutil.HashKey(authutil.ClientIP(r))

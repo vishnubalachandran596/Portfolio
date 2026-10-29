@@ -34,6 +34,8 @@ func TestPublicBookingTemplatesRender(t *testing.T) {
 		{"booking", BookingData{BaseData: base, Days: days, LoggedIn: true, UserEmail: "a@b.test", UserName: "Ada"}},
 		{"booking", BookingData{BaseData: base, Days: days}}, // logged out: login prompt, no picker
 		{"booking", BookingData{BaseData: base}},
+		{"contact", ContactData{BaseData: base}},
+		{"contact", ContactData{BaseData: base, LoggedIn: true, Name: "Ada", Email: "a@b.test"}},
 		{"booking_manage", manage},
 		{"booking_manage_reschedule", manage},
 	}

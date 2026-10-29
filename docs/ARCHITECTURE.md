@@ -673,7 +673,7 @@ Handler files, by area:
 | `software.go` | Public Software list/detail |
 | `software_checkout.go` | Software purchase order/verify (fixed price), `softwareAccess()` gate |
 | `admin_software.go` | Admin CRUD for Software |
-| `consultancy.go` | Consultancy page (tiers, FAQ, case studies, JSON-LD), Booking page/confirm (login required, free, no payment gateway; honeypot + `auth_throttle` kind `booking`), Contact page/submit |
+| `consultancy.go` | Consultancy page (tiers, FAQ, case studies, JSON-LD), Booking page/confirm (login required, free, no payment gateway; honeypot + `auth_throttle` kind `booking`), Contact page/submit (login required; email from the account) |
 | `admin_contact.go` | Admin contact-messages list + mark-read |
 | `admin_credentials.go` | Admin CRUD for Certifications and Speaking & Publications |
 | `admin_case_studies.go` | Admin CRUD for Case Studies |

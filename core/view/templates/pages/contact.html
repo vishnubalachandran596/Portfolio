@@ -19,13 +19,19 @@
       {{if .Error}}
       <div class="alert alert-error">{{.ErrorText}}</div>
       {{end}}
+      {{if not .LoggedIn}}
+      <div id="contact-login">
+        <p>Sending a message needs an account, so every message comes from a real, verified email. Log in, or create an account (we email you a link to activate it). Google sign-in works too.</p>
+        <p><a class="btn btn-primary" href="/login?next=%2Fcontact">Log in</a> <a class="btn btn-secondary" href="/signup?next=%2Fcontact">Create an account</a></p>
+      </div>
+      {{else}}
       <form method="POST" action="/contact" class="admin-form">
         <div class="form-row">
           <label>Your name
-            <input type="text" name="name" required minlength="2" maxlength="60" pattern="[A-Za-z][A-Za-z\x27.\-]*( [A-Za-z][A-Za-z\x27.\-]*){0,2}" title="First name, or first and last name, in English letters" autocomplete="name">
+            <input type="text" name="name" value="{{.Name}}" required minlength="2" maxlength="60" pattern="[A-Za-z][A-Za-z\x27.\-]*( [A-Za-z][A-Za-z\x27.\-]*){0,2}" title="First name, or first and last name, in English letters" autocomplete="name">
           </label>
-          <label>Your email
-            <input type="email" name="email" required autocomplete="email">
+          <label>Your email <span class="optional">(your account email)</span>
+            <input type="email" name="email" value="{{.Email}}" readonly autocomplete="email">
           </label>
         </div>
         <label>Contact number <span class="optional">(optional)</span>
@@ -43,6 +49,7 @@
           <button type="submit" class="btn btn-primary btn-lg" data-loading-text="Sending…">Send message</button>
         </div>
       </form>
+      {{end}}
     </div>
     <aside class="contact-grid" aria-label="Other ways to reach me">
       <div class="contact-card">
