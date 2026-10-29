@@ -65,9 +65,26 @@ func TestSubscribeRejectsBeforeStore(t *testing.T) {
 	if rec.Code != http.StatusSeeOther {
 		t.Fatalf("honeypot status %d", rec.Code)
 	}
-	rec = postForm(fx.app.NewsletterSubscribe, "/subscribe", url.Values{"email": {"nope"}, "source": {"home"}})
-	if rec.Header().Get("Location") != "/" {
-		t.Fatalf("bad email location %q", rec.Header().Get("Location"))
+	// Subscribing needs an account: a visitor who is not logged in is sent
+	// to log in, whatever email the form carries, and nothing is stored.
+	rec = postForm(fx.app.NewsletterSubscribe, "/subscribe", url.Values{"email": {"a@b.test"}, "source": {"courses"}})
+	if rec.Header().Get("Location") != "/login?next=%2Fcourses" {
+		t.Fatalf("logged-out subscribe location %q", rec.Header().Get("Location"))
+	}
+}
+
+// Booking needs an account too: a logged-out POST is refused with the login
+// path before anything is read or stored.
+func TestBookingConfirmRequiresLogin(t *testing.T) {
+	fx := newEmailFixture(t)
+	rec := postForm(fx.app.BookingConfirm, "/booking/confirm", url.Values{
+		"name": {"Asha"}, "email": {"a@b.test"}, "slot": {"2030-01-01T10:00:00+05:30"},
+	})
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("status %d, want 401", rec.Code)
+	}
+	if !strings.Contains(rec.Body.String(), "/login?next=%2Fbooking") {
+		t.Fatalf("body %q should carry the login path", rec.Body.String())
 	}
 }
 

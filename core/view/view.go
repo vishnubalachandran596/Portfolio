@@ -169,6 +169,8 @@ func New() (*Renderer, error) {
 		"templates/pages/login.html",
 		"templates/pages/signup.html",
 		"templates/pages/forgot.html",
+		"templates/pages/reset_password.html",
+		"templates/pages/auth_message.html",
 		"templates/pages/account_security.html",
 		"templates/pages/account_delete.html",
 		"templates/pages/account_licences.html",

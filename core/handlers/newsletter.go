@@ -3,7 +3,6 @@ package handlers
 import (
 	"log"
 	"net/http"
-	"net/mail"
 	"strconv"
 	"strings"
 
@@ -29,8 +28,6 @@ func (a *App) NewsletterSubscribe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	source := r.FormValue("source")
-	email := strings.TrimSpace(r.FormValue("email"))
-
 	redirectTo := "/"
 	switch source {
 	case "courses":
@@ -48,11 +45,19 @@ func (a *App) NewsletterSubscribe(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, redirectTo+"?subscribed=1", http.StatusSeeOther)
 		return
 	}
-	email = strings.ToLower(email)
-	if addr, err := mail.ParseAddress(email); err != nil || addr.Address != email || len(email) > 254 || !asciiOnly(email) {
+	// Subscribing needs a signed-in account, and uses its verified address:
+	// whatever email the form carries is ignored.
+	uid, ok := a.Auth.UserID(r)
+	if !ok {
+		http.Redirect(w, r, "/login?next="+urlQuery(redirectTo), http.StatusSeeOther)
+		return
+	}
+	user, err := a.Users.GetByID(r.Context(), uid)
+	if err != nil || !user.EmailVerified {
 		http.Redirect(w, r, redirectTo, http.StatusSeeOther)
 		return
 	}
+	email := strings.ToLower(user.Email)
 	ik := authutil.HashKey(authutil.ClientIP(r))
 	if _, locked := a.throttled(r, throttleSubscribe, ik); locked {
 		http.Redirect(w, r, redirectTo, http.StatusSeeOther)

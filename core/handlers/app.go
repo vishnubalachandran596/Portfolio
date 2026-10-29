@@ -50,6 +50,7 @@ type App struct {
 	Purchases           *repo.PurchaseRepo
 	Users               *repo.UserRepo
 	AuthThrottle        *repo.AuthThrottleRepo
+	AuthTokens          *repo.AuthTokenRepo
 	Licences            *repo.LicenceRepo
 	SEO                 *repo.SEORepo
 	Claims              *repo.ClaimRepo
@@ -178,6 +179,23 @@ type SubscribeFormData struct {
 	Subscribed bool
 	// TurnstileSiteKey is set only when the CAPTCHA is configured.
 	TurnstileSiteKey string
+	// LoggedIn is true for a signed-in visitor. Subscribing needs an
+	// account, so the partial renders nothing for anyone else. Email is the
+	// account address the subscription will use.
+	LoggedIn bool
+	Email    string
+}
+
+// subscribeForm builds the data for the shared subscribe partial. Only a
+// signed-in visitor gets a form; for everyone else the option is absent.
+func (a *App) subscribeForm(r *http.Request, source string, subscribed bool) SubscribeFormData {
+	d := SubscribeFormData{Source: source, Subscribed: subscribed, TurnstileSiteKey: a.turnstileSiteKey()}
+	if uid, ok := a.Auth.UserID(r); ok {
+		if u, err := a.Users.GetByID(r.Context(), uid); err == nil && u.EmailVerified {
+			d.LoggedIn, d.Email = true, u.Email
+		}
+	}
+	return d
 }
 
 // NotificationItem is one entry in the header's notification menu —
@@ -245,6 +263,7 @@ func New(cfg *config.Config, db *sql.DB, renderer *view.Renderer) *App {
 		View:                 renderer,
 		Auth:                 auth,
 		AuthThrottle:         repo.NewAuthThrottleRepo(db),
+		AuthTokens:           repo.NewAuthTokenRepo(db),
 		Licences:             repo.NewLicenceRepo(db),
 		SEO:                  repo.NewSEORepo(db),
 		Claims:               repo.NewClaimRepo(db),

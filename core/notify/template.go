@@ -171,6 +171,8 @@ func requireFields(kind, html, textBody string) error {
 		needAll = []string{"ManageURL"}
 	case models.EmailNewsletterConfirm:
 		needAll = []string{"UnsubscribeURL"}
+	case models.EmailVerifyEmail, models.EmailPasswordReset:
+		needAll = []string{"ActionURL"}
 	}
 	if len(needAny) > 0 && !hasAny(html, needAny) {
 		return fmt.Errorf("include {{.ReceiptURL}} or {{.AccessURL}}")
@@ -346,6 +348,8 @@ func fieldMap(kind string, data models.EmailData) map[string]any {
 		"Duration":       data.Duration,
 		"ManageURL":      data.ManageURL,
 		"UnsubscribeURL": data.UnsubscribeURL,
+		"ActionURL":      data.ActionURL,
+		"ExpiresIn":      data.ExpiresIn,
 		"SiteName":       data.SiteName,
 		"SupportReplyTo": data.SupportReplyTo,
 	}

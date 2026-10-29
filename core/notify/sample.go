@@ -20,6 +20,8 @@ func SampleData(kind string) models.EmailData {
 		Duration:       "60 minutes",
 		ManageURL:      "https://www.vishnubalachandran.com/booking/manage/sample-token",
 		UnsubscribeURL: "https://www.vishnubalachandran.com/contact",
+		ActionURL:      "https://www.vishnubalachandran.com/signup/verify?token=sample-token",
+		ExpiresIn:      "1 hour",
 	}
 	switch kind {
 	case models.EmailPurchaseSoftware:
@@ -49,6 +51,12 @@ func SampleData(kind string) models.EmailData {
 	case models.EmailNewsletterConfirm:
 		d.BuyerName = "there"
 		d.ItemTitle = ""
+	case models.EmailVerifyEmail, models.EmailPasswordReset:
+		d.ItemTitle = ""
+		d.Amount = ""
+		if kind == models.EmailPasswordReset {
+			d.ActionURL = "https://www.vishnubalachandran.com/forgot/reset?token=sample-token"
+		}
 	}
 	return d
 }

@@ -659,9 +659,11 @@ type User struct {
 	// PasswordUsable is true only for accounts with a user-chosen password.
 	PasswordUsable bool
 	// GoogleVerified is true once Google has confirmed the email.
-	GoogleVerified     bool
-	SecurityQuestion   string
-	SecurityAnswerHash string
+	GoogleVerified bool
+	// EmailVerified is true once the owner of the address has proved it,
+	// by Google sign-in or by clicking an emailed link. Password login
+	// requires it.
+	EmailVerified bool
 }
 
 // Article is one of Vishnu's own blog posts, written and hosted here.

@@ -133,7 +133,7 @@ func (a *App) ArticlesPage(w http.ResponseWriter, r *http.Request) {
 		HasNext:    page < totalPages,
 		PrevPage:   page - 1,
 		NextPage:   page + 1,
-		Subscribe:  SubscribeFormData{Source: "articles", Subscribed: q.Get("subscribed") == "1", TurnstileSiteKey: a.turnstileSiteKey()},
+		Subscribe:  a.subscribeForm(r, "articles", q.Get("subscribed") == "1"),
 	})
 }
 

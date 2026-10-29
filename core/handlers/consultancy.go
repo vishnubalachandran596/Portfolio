@@ -96,6 +96,10 @@ type BookingData struct {
 	Error     string
 	UserEmail string
 	UserName  string
+	// LoggedIn is true for a signed-in visitor with a verified email.
+	// Booking needs an account, so anyone else sees a log-in prompt in
+	// place of the slot picker.
+	LoggedIn bool
 }
 
 // Throttle limits for public booking. Every attempt that reaches the insert
@@ -135,13 +139,14 @@ func (a *App) BookingPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	base := a.base(r, "Book a Free Consultancy Call — "+a.Cfg.SiteName, "Book a free 1:1 consultancy call. No account needed: pick an hourly slot in the next 30 days.", "consultancy")
+	base := a.base(r, "Book a Free Consultancy Call — "+a.Cfg.SiteName, "Book a free 1:1 consultancy call. Log in, then pick an hourly slot in the next 30 days.", "consultancy")
 
-	userEmail, userNameVal := "", ""
+	userEmail, userNameVal, loggedIn := "", "", false
 	if uid, ok := a.Auth.UserID(r); ok {
-		if u, err := a.Users.GetByID(ctx, uid); err == nil {
+		if u, err := a.Users.GetByID(ctx, uid); err == nil && u.EmailVerified {
 			userEmail = u.Email
 			userNameVal = u.Name
+			loggedIn = true
 		}
 	}
 
@@ -151,6 +156,7 @@ func (a *App) BookingPage(w http.ResponseWriter, r *http.Request) {
 		Error:     r.URL.Query().Get("error"),
 		UserEmail: userEmail,
 		UserName:  userNameVal,
+		LoggedIn:  loggedIn,
 	})
 }
 
@@ -158,7 +164,7 @@ func bookingJSONError(w http.ResponseWriter, status int, msg string) {
 	writeJSON(w, status, map[string]string{"error": msg})
 }
 
-// BookingConfirm reserves the chosen slot for anyone (no login). The slot is
+// BookingConfirm reserves the chosen slot for a signed-in visitor. The slot is
 // claimed by the database — a unique index on the live slot start plus a
 // no-overlap exclusion constraint — so two simultaneous requests cannot both
 // win; the loser sees "just booked". Every booking, including a free one,
@@ -180,8 +186,24 @@ func (a *App) BookingConfirm(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Booking needs an account with a verified email, and the booking uses
+	// that address: whatever email the form carries is ignored.
+	uid, signedIn := a.Auth.UserID(r)
+	if !signedIn {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{
+			"error": "Please log in to book a call.",
+			"login": "/login?next=" + urlQuery("/booking"),
+		})
+		return
+	}
+	account, aerr := a.Users.GetByID(ctx, uid)
+	if aerr != nil || !account.EmailVerified {
+		bookingJSONError(w, http.StatusForbidden, "Your account email is not verified yet, so it cannot be used to book.")
+		return
+	}
+
 	name := strings.TrimSpace(r.FormValue("name"))
-	email := strings.ToLower(strings.TrimSpace(r.FormValue("email")))
+	email := strings.ToLower(account.Email)
 	phone := strings.TrimSpace(r.FormValue("phone"))
 	message := strings.TrimSpace(r.FormValue("message"))
 	if spammyName(name) {
@@ -194,10 +216,6 @@ func (a *App) BookingConfirm(w http.ResponseWriter, r *http.Request) {
 	}
 	if !englishText(message) || !validPhone(phone) {
 		bookingJSONError(w, http.StatusBadRequest, "Please use English for the topic, and a valid phone number or leave it empty.")
-		return
-	}
-	if addr, err := mail.ParseAddress(email); err != nil || addr.Address != email || len(email) > 254 || !asciiOnly(email) {
-		bookingJSONError(w, http.StatusBadRequest, "Please enter a valid email address.")
 		return
 	}
 	if len(phone) > 30 || len([]rune(message)) > bookingMaxFieldLength {
@@ -248,9 +266,7 @@ func (a *App) BookingConfirm(w http.ResponseWriter, r *http.Request) {
 		SlotStart: slotStart,
 		SlotEnd:   slotStart.Add(time.Duration(slotMinutes) * time.Minute),
 	}
-	if uid, ok := a.Auth.UserID(r); ok {
-		booking.UserID = uid // links the booking to /account for signed-in users
-	}
+	booking.UserID = uid // links the booking to /account
 
 	a.recordFailure(r, throttleBooking, bookingMaxPerIP, ik)
 	a.recordFailure(r, throttleBooking, bookingMaxPerEmail, ek)

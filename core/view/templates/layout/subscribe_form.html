@@ -5,19 +5,19 @@
   one copy per page, same reasoning as skills_grid.html: there is exactly
   one place this markup can drift from itself.
 
-  Capture only — there is no transactional email provider anywhere in this
-  codebase (see Contact's own note), so nothing is sent back beyond this
-  page's own "thanks" banner after the redirect from POST /subscribe.
+  Subscribing needs a signed-in account: the partial renders nothing for a
+  visitor who is not logged in, and POST /subscribe refuses them too. The
+  subscription uses the account's own verified address.
 */}}
 {{define "subscribe_form"}}
+{{if .LoggedIn}}
 <div class="subscribe-box">
   {{if .Subscribed}}
   <p class="subscribe-thanks">Thanks — you're on the list.</p>
   {{else}}
   <form method="POST" action="/subscribe" class="subscribe-form">
     <input type="hidden" name="source" value="{{.Source}}">
-    <label class="sr-only" for="subscribe-email-{{.Source}}">Email</label>
-    <input type="email" id="subscribe-email-{{.Source}}" name="email" placeholder="you@example.com" required>
+    <p class="subscribe-as">Subscribe as <strong>{{.Email}}</strong></p>
     <div class="hp-field" aria-hidden="true"><input type="text" name="website" tabindex="-1" autocomplete="off"></div>
     {{if .TurnstileSiteKey}}<div class="cf-turnstile" data-sitekey="{{.TurnstileSiteKey}}" data-appearance="interaction-only"></div>
       <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>{{end}}
@@ -25,4 +25,5 @@
   </form>
   {{end}}
 </div>
+{{end}}
 {{end}}

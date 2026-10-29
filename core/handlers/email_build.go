@@ -315,6 +315,9 @@ func (a *App) rebuildEmail(ctx context.Context, kind, entity string) (emailJob, 
 			return emailJob{}, err
 		}
 		return a.connectEmailJob(m), nil
+	case models.EmailVerifyEmail, models.EmailPasswordReset:
+		// The raw token is never stored, so the link cannot be rebuilt.
+		return emailJob{}, errEmailNotRebuildable
 	case models.EmailNewsletterConfirm:
 		id, err := strconv.ParseInt(entity, 10, 64)
 		if err != nil || a.Subscribers == nil {

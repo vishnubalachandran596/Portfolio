@@ -863,6 +863,10 @@
       fetch("/booking/confirm", { method: "POST", body: form })
         .then(function (res) {
           return res.json().then(function (data) {
+            if (res.status === 401 && data.login) {
+              window.location.href = data.login;
+              throw new Error("Redirecting you to log in…");
+            }
             if (!res.ok) throw new Error(data.error || "Could not confirm the booking.");
             return data;
           });

@@ -3,7 +3,7 @@
   <div class="container">
     <p class="eyebrow"><a href="{{.Nav.Consultancy}}">← Consultancy</a></p>
     <h1>Book a free consultancy call</h1>
-    <p class="hero-subtitle">One hour of 1:1 consultancy, discussion, or brainstorming — <strong>free</strong>, and <strong>no account needed</strong>. Pick an open hourly slot in the next 30 days (10:00 to 20:00 India Standard Time) and your call is confirmed instantly.</p>
+    <p class="hero-subtitle">One hour of 1:1 consultancy, discussion, or brainstorming — <strong>free</strong>. Log in (or create an account) to book, then pick an open hourly slot in the next 30 days (10:00 to 20:00 India Standard Time) and your call is confirmed instantly.</p>
   </div>
 </section>
 
@@ -23,7 +23,13 @@
       <button type="button" class="btn btn-secondary" id="done-copy">Copy link</button>
     </div>
 
-    {{if .Days}}
+    {{if not .LoggedIn}}
+    <div class="booking-contact" id="booking-login">
+      <h2>Log in to book</h2>
+      <p>Booking needs an account, so each call is tied to a real, verified email. Log in, or create an account (we email you a link to activate it). Google sign-in works too.</p>
+      <p><a class="btn btn-primary" href="/login?next=%2Fbooking">Log in</a> <a class="btn btn-secondary" href="/signup?next=%2Fbooking">Create an account</a></p>
+    </div>
+    {{else if .Days}}
     <div id="booking-picker">
     <div class="days-scroller">
       {{range .Days}}
@@ -48,8 +54,8 @@
       <label>Your name
         <input type="text" id="booking-name" autocomplete="name" maxlength="100" value="{{.UserName}}" required>
       </label>
-      <label>Email address
-        <input type="email" id="booking-email" autocomplete="email" maxlength="254" value="{{.UserEmail}}" required>
+      <label>Email address <span class="optional">(your account email)</span>
+        <input type="email" id="booking-email" autocomplete="email" maxlength="254" value="{{.UserEmail}}" readonly required>
       </label>
       <label>Phone <span class="optional">(optional)</span>
         <input type="tel" id="booking-phone" autocomplete="tel" maxlength="30">

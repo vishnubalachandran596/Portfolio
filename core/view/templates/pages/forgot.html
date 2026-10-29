@@ -3,40 +3,23 @@
   <div class="container">
     <p class="eyebrow">Account</p>
     <h1>Reset your password</h1>
-    <p class="hero-subtitle">Answer the security question you chose when you signed up.</p>
+    <p class="hero-subtitle">Enter your email and we will send you a link to choose a new password.</p>
   </div>
 </section>
 
 <section class="section">
   <div class="container auth-container"><div class="auth-card">
     {{if .Error}}<div class="alert alert-error" role="alert">{{.Error}}</div>{{end}}
-    {{if .Question}}
-    <form method="POST" action="/forgot/reset" class="auth-form">
-      <input type="hidden" name="email" value="{{.Email}}">
-      <p><strong>{{.Question}}</strong></p>
-      <label>Your answer
-        <input type="text" name="answer" autocomplete="off" required>
-      </label>
-      <label>New password <span class="field-help">At least 10 characters.</span>
-        <span class="password-field">
-          <input type="password" name="password" id="reset-password" autocomplete="new-password" minlength="10" maxlength="72" required>
-          <button type="button" class="password-toggle" data-target="reset-password" aria-label="Show password">Show</button>
-        </span>
-      </label>
-      <label>Confirm new password
-        <input type="password" name="confirm" autocomplete="new-password" minlength="10" maxlength="72" required>
-      </label>
-      <button type="submit" class="btn btn-primary" data-loading-text="Saving…">Reset password</button>
-    </form>
-    {{else}}
     <form method="POST" action="/forgot" class="auth-form">
+      <div hidden aria-hidden="true"><label>Website <input type="text" name="website" tabindex="-1" autocomplete="off"></label></div>
       <label>Email
-        <input type="email" name="email" autocomplete="username" required autofocus>
+        <input type="email" name="email" value="{{.Email}}" autocomplete="username" required autofocus>
       </label>
-      <button type="submit" class="btn btn-primary">Continue</button>
+      {{if .TurnstileSiteKey}}<div class="cf-turnstile" data-sitekey="{{.TurnstileSiteKey}}" data-appearance="interaction-only"></div>
+      <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>{{end}}
+      <button type="submit" class="btn btn-primary" data-loading-text="Sending…">Email me a reset link</button>
     </form>
-    {{end}}
-    <p class="auth-fineprint">If you signed up with Google, log in with Google instead. <a href="/login">Back to log in</a></p>
+    <p class="auth-fineprint">If you log in with Google, use Google instead: there is no password to reset. <a href="/login">Back to log in</a></p>
   </div></div>
 </section>
 {{end}}

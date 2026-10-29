@@ -2,8 +2,8 @@
 <section class="page-hero page-hero-narrow">
   <div class="container">
     <p class="eyebrow">Account</p>
-    <h1>Password and security question</h1>
-    <p class="hero-subtitle">{{if .HasPassword}}Change your password or security question.{{else}}Add a password and a security question so you can also log in without Google.{{end}}</p>
+    <h1>Password</h1>
+    <p class="hero-subtitle">{{if .HasPassword}}Change your password.{{else}}Add a password so you can also log in without Google.{{end}}</p>
   </div>
 </section>
 
@@ -25,15 +25,6 @@
       </label>
       <label>Confirm new password
         <input type="password" name="confirm" autocomplete="new-password" minlength="10" maxlength="72" required>
-      </label>
-      <label>Security question
-        <select name="question" required>
-          <option value="">Choose a question</option>
-          {{range .Questions}}<option value="{{.}}"{{if eq . $.Selected}} selected{{end}}>{{.}}</option>{{end}}
-        </select>
-      </label>
-      <label>Your answer <span class="field-help">Pick something other people can't guess or look up.</span>
-        <input type="text" name="answer" autocomplete="off" minlength="3" maxlength="100" required>
       </label>
       <button type="submit" class="btn btn-primary" data-loading-text="Saving…">Save</button>
     </form>

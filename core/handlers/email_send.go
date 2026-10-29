@@ -171,12 +171,12 @@ const telegramMaxRunes = 3900
 // emailTelegramCopy is the owner's Telegram copy of one sent email: the
 // From, To, Bcc, Reply-To and Subject lines, then the plain-text body. Links
 // and codes that grant access (course access link, private booking manage
-// link, guest claim code, unsubscribe link) are replaced with a note, because
+// link, guest claim code, unsubscribe link, activation and reset links) are replaced with a note, because
 // Telegram chats are not end-to-end encrypted; the full email is in the
 // admin BCC copy.
 func emailTelegramCopy(msg notify.Message, kind, provider, textBody string, d models.EmailData) string {
 	body := textBody
-	for _, secret := range []string{d.AccessURL, d.ManageURL, d.ClaimCode, d.UnsubscribeURL} {
+	for _, secret := range []string{d.AccessURL, d.ManageURL, d.ClaimCode, d.UnsubscribeURL, d.ActionURL} {
 		if strings.TrimSpace(secret) != "" {
 			body = strings.ReplaceAll(body, secret, "[hidden here, see the BCC copy]")
 		}
@@ -316,6 +316,11 @@ func (a *App) EmailRetry(w http.ResponseWriter, r *http.Request) {
 		job, rerr := a.rebuildEmailJob(r.Context(), row.Kind, row.EntityID)
 		if rerr != nil {
 			log.Printf("email retry rebuild %s %s: %v", row.Kind, row.EntityID, rerr)
+			if errors.Is(rerr, errEmailNotRebuildable) {
+				// Account links are never resent: the visitor asks again.
+				_ = a.Outbox.MarkDisabled(r.Context(), row.Kind, row.EntityID)
+				continue
+			}
 			_ = a.Outbox.MarkFailed(r.Context(), row.Kind, row.EntityID, clipEmailErr(rerr))
 			continue
 		}

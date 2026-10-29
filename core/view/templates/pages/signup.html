@@ -3,7 +3,7 @@
   <div class="container">
     <p class="eyebrow">Account</p>
     <h1>Create your account</h1>
-    <p class="hero-subtitle">Use a password, or sign in with Google instead. You only need an account to open your courses later; buying doesn't require one.</p>
+    <p class="hero-subtitle">An account is needed to book a consultancy call or subscribe. We email you a link to activate it; the account is created when you open that link. Already use Google here? Sign up with the same email to add a password, and either way of logging in will work.</p>
   </div>
 </section>
 
@@ -28,18 +28,9 @@
       <label>Confirm password
         <input type="password" name="confirm" autocomplete="new-password" minlength="10" maxlength="72" required>
       </label>
-      <label>Security question <span class="field-help">Used to reset your password if you forget it. The site does not send email.</span>
-        <select name="question" required>
-          <option value="">Choose a question</option>
-          {{range .Questions}}<option value="{{.}}"{{if eq . $.Selected}} selected{{end}}>{{.}}</option>{{end}}
-        </select>
-      </label>
-      <label>Your answer <span class="field-help">Pick something other people can't guess or look up. Spacing and capital letters don't matter.</span>
-        <input type="text" name="answer" autocomplete="off" minlength="3" maxlength="100" required>
-      </label>
       {{if .TurnstileSiteKey}}<div class="cf-turnstile" data-sitekey="{{.TurnstileSiteKey}}" data-appearance="interaction-only"></div>
       <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>{{end}}
-      <button type="submit" class="btn btn-primary" data-loading-text="Creating…">Create account</button>
+      <button type="submit" class="btn btn-primary" data-loading-text="Sending link…">Email me an activation link</button>
     </form>
     <p class="auth-fineprint">Already have an account? <a href="/login?next={{.Next}}">Log in</a></p>
     {{if .GoogleEnabled}}

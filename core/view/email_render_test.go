@@ -34,6 +34,13 @@ func TestBuiltinEmailTemplatesRender(t *testing.T) {
 			if !strings.Contains(html, data.UnsubscribeURL) || !strings.Contains(text, data.UnsubscribeURL) {
 				t.Fatalf("%s: unsubscribe url missing", kind)
 			}
+		case models.EmailVerifyEmail, models.EmailPasswordReset:
+			if !strings.Contains(html, data.ActionURL) || !strings.Contains(text, data.ActionURL) {
+				t.Fatalf("%s: action url missing", kind)
+			}
+			if !strings.Contains(text, data.ExpiresIn) {
+				t.Fatalf("%s: expiry missing", kind)
+			}
 		default:
 			if !strings.Contains(html, data.ReceiptURL) && !strings.Contains(html, data.AccessURL) {
 				t.Fatalf("%s: receipt or access url missing", kind)

@@ -14,6 +14,8 @@ const (
 	EmailBookingCancelled   = "booking_cancelled"
 	EmailConnectRequest     = "connect_request"
 	EmailNewsletterConfirm  = "newsletter_confirm"
+	EmailVerifyEmail        = "verify_email"
+	EmailPasswordReset      = "password_reset"
 	EmailSendTest           = "send_test"
 )
 
@@ -36,6 +38,8 @@ var EmailKinds = []string{
 	EmailBookingCancelled,
 	EmailConnectRequest,
 	EmailNewsletterConfirm,
+	EmailVerifyEmail,
+	EmailPasswordReset,
 }
 
 // EmailKindLabel is the admin console name for a kind.
@@ -59,6 +63,10 @@ func EmailKindLabel(kind string) string {
 		return "Consultancy connect"
 	case EmailNewsletterConfirm:
 		return "Newsletter confirmation"
+	case EmailVerifyEmail:
+		return "Activate account"
+	case EmailPasswordReset:
+		return "Password reset"
 	default:
 		return kind
 	}
@@ -98,6 +106,10 @@ func SubjectFor(kind string) string {
 		return "We received your message"
 	case EmailNewsletterConfirm:
 		return "You are subscribed"
+	case EmailVerifyEmail:
+		return "Confirm your email to activate your account"
+	case EmailPasswordReset:
+		return "Reset your password"
 	default:
 		return "Message from Vishnu Balachandran"
 	}
@@ -116,6 +128,8 @@ func EmailFields(kind string) []string {
 		return append([]string{"BuyerName", "ManageURL"}, support...)
 	case EmailNewsletterConfirm:
 		return append([]string{"BuyerName", "UnsubscribeURL"}, support...)
+	case EmailVerifyEmail, EmailPasswordReset:
+		return append([]string{"BuyerName", "ActionURL", "ExpiresIn"}, support...)
 	default:
 		return nil
 	}
@@ -137,6 +151,10 @@ type EmailData struct {
 	Duration       string
 	ManageURL      string
 	UnsubscribeURL string
+	// ActionURL is the one-time link in an account email (activate or
+	// reset); ExpiresIn says how long it works ("1 hour").
+	ActionURL      string
+	ExpiresIn      string
 	SiteName       string
 	SupportReplyTo string
 }

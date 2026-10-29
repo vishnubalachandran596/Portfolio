@@ -1,0 +1,15 @@
+{{define "content"}}
+<section class="page-hero page-hero-narrow">
+  <div class="container">
+    <p class="eyebrow">Account</p>
+    <h1>{{.Heading}}</h1>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container auth-container"><div class="auth-card">
+    <p role="status">{{.Message}}</p>
+    {{range .Links}}<p><a class="btn {{if .Primary}}btn-primary{{else}}btn-secondary{{end}}" href="{{.Href}}">{{.Label}}</a></p>{{end}}
+  </div></div>
+</section>
+{{end}}

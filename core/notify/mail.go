@@ -21,10 +21,10 @@ import (
 )
 
 const (
-	DisplayName = "Vishnu Balachandran"
-	FromPaid    = DisplayName + " <orders@vishnubalachandran.com>"
-	FromBooking = DisplayName + " <bookings@vishnubalachandran.com>"
-	FromNews    = DisplayName + " <news@vishnubalachandran.com>"
+	DisplayName   = "Vishnu Balachandran"
+	FromPaid      = DisplayName + " <orders@vishnubalachandran.com>"
+	FromBooking   = DisplayName + " <bookings@vishnubalachandran.com>"
+	FromNews      = DisplayName + " <news@vishnubalachandran.com>"
 	ReplyTo       = "admin@vishnubalachandran.com"
 	OrdersReplyTo = "orders@vishnubalachandran.com"
 
@@ -45,7 +45,8 @@ func ReplyToFor(kind string) string {
 // moving promos later is a change to FromNews only.
 func FromFor(kind string) string {
 	switch kind {
-	case models.EmailBookingNew, models.EmailBookingRescheduled, models.EmailBookingCancelled, models.EmailConnectRequest:
+	case models.EmailBookingNew, models.EmailBookingRescheduled, models.EmailBookingCancelled, models.EmailConnectRequest,
+		models.EmailVerifyEmail, models.EmailPasswordReset:
 		return FromBooking
 	case models.EmailNewsletterConfirm:
 		return FromNews

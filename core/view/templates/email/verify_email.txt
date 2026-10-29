@@ -1,0 +1,9 @@
+Hello {{.BuyerName}},
+
+Use the link below to confirm this email address and activate your account on {{.SiteName}}. Until you do, no account exists.
+
+{{.ActionURL}}
+
+This link works once and expires in {{.ExpiresIn}}. If you did not ask for this, ignore this message and nothing will be created.
+
+Reply to this message to reach {{.SupportReplyTo}}.
