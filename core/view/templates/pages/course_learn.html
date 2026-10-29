@@ -67,7 +67,7 @@
 {{end}}
 
 {{define "scripts"}}
-<script>
+<script nonce="{{$.Nonce}}">
 (function () {
   var frame = document.getElementById("lesson-frame");
   if (!frame) return;

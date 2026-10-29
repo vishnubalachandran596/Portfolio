@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"html/template"
 	"net/http"
 	"strconv"
 	"strings"
@@ -63,7 +62,7 @@ func (a *App) AdminArticlePreview(w http.ResponseWriter, r *http.Request) {
 	a.View.Render(w, http.StatusOK, "article_detail", ArticleDetailData{
 		BaseData:  base,
 		Article:   article,
-		Watermark: template.HTML(storage.WatermarkScript(storage.WatermarkLabel, "Admin preview")),
+		Watermark: withScriptNonce(storage.WatermarkScript(storage.WatermarkLabel, "Admin preview"), base.Nonce),
 		JSONLD:    articleJSONLD(article, base.CanonicalURL, a.Cfg.SiteName, article.Summary, base.OGImageURL),
 	})
 }

@@ -19,7 +19,7 @@
           <td class="admin-table-actions">
             <a class="link-button" href="/software/{{.Slug}}">View</a>
             <a class="link-button" href="/admin/software/{{.ID}}/edit">Edit</a>
-            <form method="POST" action="/admin/software/{{.ID}}/delete" onsubmit="return confirm('Delete this software item?');">
+            <form method="POST" action="/admin/software/{{.ID}}/delete" data-confirm="Delete this software item?">
               <button type="submit" class="link-button danger">Delete</button>
             </form>
           </td>

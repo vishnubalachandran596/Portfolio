@@ -19,6 +19,8 @@
     <label class="sr-only" for="subscribe-email-{{.Source}}">Email</label>
     <input type="email" id="subscribe-email-{{.Source}}" name="email" placeholder="you@example.com" required>
     <div class="hp-field" aria-hidden="true"><input type="text" name="website" tabindex="-1" autocomplete="off"></div>
+    {{if .TurnstileSiteKey}}<div class="cf-turnstile" data-sitekey="{{.TurnstileSiteKey}}" data-appearance="interaction-only"></div>
+      <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>{{end}}
     <button type="submit" class="btn btn-primary" data-loading-text="Adding…">Subscribe</button>
   </form>
   {{end}}

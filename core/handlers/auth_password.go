@@ -210,6 +210,10 @@ func (a *App) SignupSubmit(w http.ResponseWriter, r *http.Request) {
 		fail("Your security answer must be between 3 and 100 characters.")
 		return
 	}
+	if !a.humanVerified(r) {
+		fail("We could not confirm you are human. Please complete the check and try again.")
+		return
+	}
 
 	pwHash, err := authutil.HashPassword(password)
 	if err != nil {

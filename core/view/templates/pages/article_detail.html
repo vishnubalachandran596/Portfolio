@@ -78,7 +78,7 @@
 </article>
 {{.Watermark}}
 
-<script>
+<script nonce="{{$.Nonce}}">
 (function () {
   // Top and bottom widgets share one vote — both point at the same
   // article, so an action on either one has to update both together.

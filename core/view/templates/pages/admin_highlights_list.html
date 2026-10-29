@@ -19,7 +19,7 @@
           <td>{{.SortOrder}}</td>
           <td class="admin-table-actions">
             <a class="link-button" href="/admin/highlights/{{.ID}}/edit">Edit</a>
-            <form method="POST" action="/admin/highlights/{{.ID}}/delete" onsubmit="return confirm('Delete this highlight?');">
+            <form method="POST" action="/admin/highlights/{{.ID}}/delete" data-confirm="Delete this highlight?">
               <button type="submit" class="link-button danger">Delete</button>
             </form>
           </td>

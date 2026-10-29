@@ -38,6 +38,8 @@
           <label>Leave this empty <input type="text" name="website" tabindex="-1" autocomplete="off"></label>
         </div>
         <div class="form-actions">
+          {{if .TurnstileSiteKey}}<div class="cf-turnstile" data-sitekey="{{.TurnstileSiteKey}}" data-appearance="interaction-only"></div>
+      <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>{{end}}
           <button type="submit" class="btn btn-primary btn-lg" data-loading-text="Sending…">Send message</button>
         </div>
       </form>

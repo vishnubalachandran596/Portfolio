@@ -21,7 +21,7 @@
             </form>
           </td>
           <td>
-            <form method="POST" action="/admin/availability/{{.ID}}/delete" onsubmit="return confirm('Delete this rule?');">
+            <form method="POST" action="/admin/availability/{{.ID}}/delete" data-confirm="Delete this rule?">
               <button type="submit" class="link-button danger">Delete</button>
             </form>
           </td>

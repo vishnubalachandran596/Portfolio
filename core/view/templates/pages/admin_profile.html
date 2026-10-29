@@ -81,7 +81,7 @@
     </form>
   </div>
 </section>
-<script>
+<script nonce="{{$.Nonce}}">
 (function () {
   document.querySelectorAll('input[type="file"][data-preview]').forEach(function (input) {
     var preview = document.getElementById(input.dataset.preview);

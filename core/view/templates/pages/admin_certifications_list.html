@@ -22,7 +22,7 @@
           <td>{{.SortOrder}}</td>
           <td class="admin-table-actions">
             <a class="link-button" href="/admin/certifications/{{.ID}}/edit">Edit</a>
-            <form method="POST" action="/admin/certifications/{{.ID}}/delete" onsubmit="return confirm('Delete this certification?');">
+            <form method="POST" action="/admin/certifications/{{.ID}}/delete" data-confirm="Delete this certification?">
               <button type="submit" class="link-button danger">Delete</button>
             </form>
           </td>

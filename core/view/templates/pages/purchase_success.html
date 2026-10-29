@@ -21,7 +21,7 @@
       <div class="claim-box">
         <h2>Your claim code</h2>
         <p>We do not send emails, so this page is your only copy. <strong>Save it now</strong> (write it down, screenshot it, or print this page). You need it to attach this purchase to your account.</p>
-        <input type="text" readonly class="claim-code mono" value="{{.ClaimCode}}" onclick="this.select()" aria-label="Claim code">
+        <input type="text" readonly class="claim-code mono" value="{{.ClaimCode}}" data-select-on-click aria-label="Claim code">
         <ol class="claim-steps">
           <li>Sign up or log in on this site.</li>
           <li>Open <a href="/account/claim">Claim a purchase</a> and enter the code. It works once.</li>

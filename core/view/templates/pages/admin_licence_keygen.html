@@ -18,19 +18,19 @@
     </ol>
 
     <label>Private key (base64) &mdash; secret
-      <textarea readonly rows="2" class="mono" id="kg-priv" onclick="this.select()">{{.PrivateKey}}</textarea>
+      <textarea readonly rows="2" class="mono" id="kg-priv" data-select-on-click>{{.PrivateKey}}</textarea>
     </label>
     <label>Key id
-      <input type="text" readonly class="mono" value="{{.KID}}" onclick="this.select()">
+      <input type="text" readonly class="mono" value="{{.KID}}" data-select-on-click>
     </label>
     <label>Public key (base64, raw 32 bytes)
-      <textarea readonly rows="2" class="mono" onclick="this.select()">{{.PublicKey}}</textarea>
+      <textarea readonly rows="2" class="mono" data-select-on-click>{{.PublicKey}}</textarea>
     </label>
     <label>config/licence_keys.json
-      <textarea readonly rows="6" class="mono" onclick="this.select()">{{.ConfigJSON}}</textarea>
+      <textarea readonly rows="6" class="mono" data-select-on-click>{{.ConfigJSON}}</textarea>
     </label>
     <p><button type="button" class="btn btn-secondary" id="kg-clear">Hide the private key now</button></p>
-    <script>
+    <script nonce="{{$.Nonce}}">
       document.getElementById('kg-clear').addEventListener('click', function () {
         document.getElementById('kg-priv').value = '';
         this.textContent = 'Hidden';

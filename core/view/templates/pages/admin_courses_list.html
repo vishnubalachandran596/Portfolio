@@ -24,7 +24,7 @@
             <a href="/admin/courses/{{.ID}}/edit">Edit</a>
             <a class="link-button" href="/admin/courses/{{.ID}}/quiz">Quiz</a>
             <a class="link-button" href="/admin/courses/{{.ID}}/reviews">Reviews</a>
-            <form method="POST" action="/admin/courses/{{.ID}}/delete" onsubmit="return confirm('Delete this course?');">
+            <form method="POST" action="/admin/courses/{{.ID}}/delete" data-confirm="Delete this course?">
               <button type="submit" class="link-button danger">Delete</button>
             </form>
           </td>

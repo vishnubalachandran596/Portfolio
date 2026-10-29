@@ -41,7 +41,7 @@
               </form>
             </details>
             {{if not .Revoked}}
-            <form method="POST" action="/admin/licences/{{.ID}}/revoke" onsubmit="return confirm('Revoke this licence? The app cannot check this offline; reissue is the only way to replace a key.');">
+            <form method="POST" action="/admin/licences/{{.ID}}/revoke" data-confirm="Revoke this licence? The app cannot check this offline; reissue is the only way to replace a key.">
               <input type="hidden" name="reason" value="revoked by admin">
               <button type="submit" class="link-button danger">Revoke</button>
             </form>

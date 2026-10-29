@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/vishnubalachandran596/portfolio/core/ai"
+	"github.com/vishnubalachandran596/portfolio/core/authutil"
 	"github.com/vishnubalachandran596/portfolio/core/config"
 	"github.com/vishnubalachandran596/portfolio/core/licence"
 	"github.com/vishnubalachandran596/portfolio/core/middleware"
@@ -21,6 +22,7 @@ import (
 	"github.com/vishnubalachandran596/portfolio/core/payments"
 	"github.com/vishnubalachandran596/portfolio/core/repo"
 	"github.com/vishnubalachandran596/portfolio/core/storage"
+	"github.com/vishnubalachandran596/portfolio/core/turnstile"
 	"github.com/vishnubalachandran596/portfolio/core/view"
 	"github.com/vishnubalachandran596/portfolio/web"
 )
@@ -81,6 +83,10 @@ type App struct {
 	// Telegram is best-effort. The field is an interface so tests can
 	// record alerts without calling Telegram.
 	Telegram interface{ Send(string) }
+
+	// Turnstile verifies the Cloudflare CAPTCHA token on public forms; it is
+	// disabled (always passes) until TURNSTILE_SECRET_KEY is set.
+	Turnstile *turnstile.Client
 	// PaidMail is Resend when RESEND_API_KEY is set, otherwise disabled.
 	// BrevoMail is Brevo when BREVO_API_KEY is set, otherwise disabled.
 	PaidMail       notify.Mailer
@@ -132,6 +138,13 @@ type BaseData struct {
 	// ChatbotEnabled gates the floating chat widget's markup/JS -- hidden
 	// entirely until NVIDIA_API_KEY is configured (core/ai.Client.Enabled()).
 	ChatbotEnabled bool
+	// TurnstileSiteKey is non-empty only when the CAPTCHA is configured;
+	// forms render the widget only then.
+	TurnstileSiteKey string
+	// Nonce is this request's script nonce; every inline <script> tag in a
+	// template carries it (nonce="{{$.Nonce}}"), because the page policy has
+	// no 'unsafe-inline' for scripts.
+	Nonce string
 	// ChatbotFullPage is true only for AIAssistantPage's own render. It
 	// switches chatbot_widget.html (templates/layout) between its two
 	// shells -- a floating bubble everywhere else, or this page's entire
@@ -163,6 +176,8 @@ type BaseData struct {
 type SubscribeFormData struct {
 	Source     string
 	Subscribed bool
+	// TurnstileSiteKey is set only when the CAPTCHA is configured.
+	TurnstileSiteKey string
 }
 
 // NotificationItem is one entry in the header's notification menu —
@@ -273,6 +288,7 @@ func New(cfg *config.Config, db *sql.DB, renderer *view.Renderer) *App {
 		CourseStorage:        storage.New(cfg),
 		Razorpay:             payments.NewRazorpay(cfg.RazorpayKeyID, cfg.RazorpayKeySecret),
 		Telegram:             notify.NewTelegram(cfg.TelegramBotToken, cfg.TelegramChatID),
+		Turnstile:            turnstile.New(cfg.TurnstileSecretKey),
 		PaidMail:             paid,
 		BrevoMail:            brevo,
 		Outbox:               repo.NewEmailOutboxRepo(db),
@@ -497,6 +513,8 @@ func (a *App) baseFrom(r *http.Request, pf *basePrefetch, title, metaDescription
 		AssetVersion:        web.AssetVersion,
 		PromoCodes:          pf.promoCodes,
 		ChatbotEnabled:      a.Nvidia.Enabled(),
+		TurnstileSiteKey:    a.turnstileSiteKey(),
+		Nonce:               middleware.Nonce(r),
 	}
 }
 
@@ -551,4 +569,26 @@ func truncate(s string, n int) string {
 		return s
 	}
 	return s[:n] + "…"
+}
+
+// turnstileSiteKey is the public widget key, or "" while the CAPTCHA is off.
+func (a *App) turnstileSiteKey() string {
+	if a.Turnstile.Enabled() {
+		return a.Cfg.TurnstileSiteKey
+	}
+	return ""
+}
+
+// humanVerified confirms the Turnstile token posted with a public form. It
+// passes while the CAPTCHA is not configured. Call it after the cheap field
+// checks and just before storing or sending anything, because a token can
+// be checked only once.
+func (a *App) humanVerified(r *http.Request) bool {
+	return a.Turnstile.Verify(r.Context(), r.FormValue("cf-turnstile-response"), authutil.ClientIP(r))
+}
+
+// withScriptNonce adds the request's nonce to the <script> tags in a block of
+// server-built HTML (the article watermark), so it passes the page policy.
+func withScriptNonce(html, nonce string) template.HTML {
+	return template.HTML(strings.ReplaceAll(html, "<script", `<script nonce="`+nonce+`"`))
 }

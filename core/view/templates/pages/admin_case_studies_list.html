@@ -17,7 +17,7 @@
           <td>{{.SortOrder}}</td>
           <td class="admin-table-actions">
             <a class="link-button" href="/admin/case-studies/{{.ID}}/edit">Edit</a>
-            <form method="POST" action="/admin/case-studies/{{.ID}}/delete" onsubmit="return confirm('Delete this case study?');">
+            <form method="POST" action="/admin/case-studies/{{.ID}}/delete" data-confirm="Delete this case study?">
               <button type="submit" class="link-button danger">Delete</button>
             </form>
           </td>

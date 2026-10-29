@@ -857,6 +857,8 @@
       form.append("phone", val("booking-phone"));
       form.append("message", val("booking-message"));
       form.append("website", val("booking-website")); // honeypot
+      var tsField = document.querySelector('[name="cf-turnstile-response"]');
+      if (tsField) form.append("cf-turnstile-response", tsField.value);
 
       fetch("/booking/confirm", { method: "POST", body: form })
         .then(function (res) {
@@ -902,6 +904,7 @@
         })
         .catch(function (err) {
           showError(err.message || "Could not confirm the booking.");
+          if (window.turnstile) { try { window.turnstile.reset(); } catch (e) {} } // tokens are single-use
           confirmBtn.disabled = false;
           confirmBtn.textContent = originalText;
         });

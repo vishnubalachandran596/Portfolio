@@ -23,7 +23,7 @@
             </form>
             {{end}}
             <a class="link-button" href="/admin/testimonials/{{.ID}}/edit">Edit</a>
-            <form method="POST" action="/admin/testimonials/{{.ID}}/delete" onsubmit="return confirm('Delete this testimonial?');">
+            <form method="POST" action="/admin/testimonials/{{.ID}}/delete" data-confirm="Delete this testimonial?">
               <button type="submit" class="link-button danger">Delete</button>
             </form>
           </td>

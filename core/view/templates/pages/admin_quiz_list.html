@@ -37,7 +37,7 @@
           <td>{{.SortOrder}}</td>
           <td class="admin-table-actions">
             <a class="link-button" href="/admin/courses/{{.CourseID}}/quiz/{{.ID}}/edit">Edit</a>
-            <form method="POST" action="/admin/courses/{{.CourseID}}/quiz/{{.ID}}/delete" onsubmit="return confirm('Delete this question?');">
+            <form method="POST" action="/admin/courses/{{.CourseID}}/quiz/{{.ID}}/delete" data-confirm="Delete this question?">
               <button type="submit" class="link-button danger">Delete</button>
             </form>
           </td>

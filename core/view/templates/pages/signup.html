@@ -37,6 +37,8 @@
       <label>Your answer <span class="field-help">Pick something other people can't guess or look up. Spacing and capital letters don't matter.</span>
         <input type="text" name="answer" autocomplete="off" minlength="3" maxlength="100" required>
       </label>
+      {{if .TurnstileSiteKey}}<div class="cf-turnstile" data-sitekey="{{.TurnstileSiteKey}}" data-appearance="interaction-only"></div>
+      <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>{{end}}
       <button type="submit" class="btn btn-primary" data-loading-text="Creating…">Create account</button>
     </form>
     <p class="auth-fineprint">Already have an account? <a href="/login?next={{.Next}}">Log in</a></p>

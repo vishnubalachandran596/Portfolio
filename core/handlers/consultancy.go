@@ -254,6 +254,10 @@ func (a *App) BookingConfirm(w http.ResponseWriter, r *http.Request) {
 
 	a.recordFailure(r, throttleBooking, bookingMaxPerIP, ik)
 	a.recordFailure(r, throttleBooking, bookingMaxPerEmail, ek)
+	if !a.humanVerified(r) {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "We could not confirm you are human. Please complete the check and try again."})
+		return
+	}
 
 	id, code, err := a.Bookings.CreatePublic(ctx, booking, authutil.HashKey(token))
 	if err != nil {
@@ -314,6 +318,8 @@ func contactErrorText(code string) string {
 		return "Please write your message in English (Latin letters)."
 	case "phone":
 		return "Please enter a valid phone number, or leave it empty."
+	case "human":
+		return "We could not confirm you are human. Please complete the check below and send again."
 	}
 	return "Please fill in your name, a valid email, and a message."
 }
@@ -374,6 +380,10 @@ func (a *App) ContactSubmit(w http.ResponseWriter, r *http.Request) {
 	}
 	a.recordFailure(r, throttleContact, contactMaxPerIP, ik)
 	a.recordFailure(r, throttleContact, contactMaxPerEmail, ek)
+	if !a.humanVerified(r) {
+		http.Redirect(w, r, "/contact?error=human", http.StatusSeeOther)
+		return
+	}
 
 	id, err := a.ContactMessages.Create(r.Context(), models.ContactMessage{
 		Name: name, Email: email, Phone: phone, Message: message,

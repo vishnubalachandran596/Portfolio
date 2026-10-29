@@ -26,6 +26,10 @@ type Config struct {
 	TelegramBotToken string
 	TelegramChatID   string
 
+	// Cloudflare Turnstile (CAPTCHA). Both empty = no challenge.
+	TurnstileSiteKey   string
+	TurnstileSecretKey string
+
 	GoogleClientID     string
 	GoogleClientSecret string
 	GoogleRedirectURL  string
@@ -138,6 +142,9 @@ func Load() (*Config, error) {
 
 		TelegramBotToken: getenv("TELEGRAM_BOT_TOKEN"),
 		TelegramChatID:   getenv("TELEGRAM_CHAT_ID"),
+
+		TurnstileSiteKey:   getenv("TURNSTILE_SITE_KEY"),
+		TurnstileSecretKey: getenv("TURNSTILE_SECRET_KEY"),
 
 		GoogleClientID:     getenv("GOOGLE_CLIENT_ID"),
 		GoogleClientSecret: getenv("GOOGLE_CLIENT_SECRET"),

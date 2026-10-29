@@ -28,7 +28,7 @@
         {{else}}
           {{if .Issued}}
           <label>Your licence key
-            <textarea readonly rows="5" class="mono licence-key" onclick="this.select()" aria-label="Licence key">{{.Key}}</textarea>
+            <textarea readonly rows="5" class="mono licence-key" data-select-on-click aria-label="Licence key">{{.Key}}</textarea>
           </label>
           <p>
             <a class="btn btn-primary" href="/account/licences/{{.ID}}/download">Download .lic file</a>
@@ -54,7 +54,7 @@
       </article>
       {{end}}
     </div>
-    <script>
+    <script nonce="{{$.Nonce}}">
       document.querySelectorAll('[data-copy-target]').forEach(function (b) {
         b.addEventListener('click', function () {
           var t = document.querySelector('#' + b.dataset.copyTarget + ' textarea');

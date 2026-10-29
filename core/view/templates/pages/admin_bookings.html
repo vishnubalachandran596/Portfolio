@@ -32,7 +32,7 @@
           </td>
           <td class="admin-table-actions">
             <form method="POST" action="/admin/bookings/{{.ID}}/status">
-              <select name="status" onchange="this.form.submit()">
+              <select name="status" data-autosubmit>
                 <option value="pending_payment" {{if eq .Status "pending_payment"}}selected{{end}}>Pending payment</option>
                 <option value="confirmed" {{if eq .Status "confirmed"}}selected{{end}}>Confirmed</option>
                 <option value="cancelled" {{if eq .Status "cancelled"}}selected{{end}}>Cancelled</option>

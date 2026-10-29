@@ -3,8 +3,8 @@
   <div class="container">
     <h1>Contact Messages</h1>
     {{if .Messages}}
-    <form id="bulk-delete" method="POST" action="/admin/contact-messages/delete" onsubmit="return confirm('Delete the ticked messages? This cannot be undone.');">
-      <label><input type="checkbox" onclick="document.querySelectorAll('.pick').forEach(function(c){c.checked=this.checked}.bind(this))"> Select all</label>
+    <form id="bulk-delete" method="POST" action="/admin/contact-messages/delete" data-confirm="Delete the ticked messages? This cannot be undone.">
+      <label><input type="checkbox" data-select-all=".pick"> Select all</label>
       <button type="submit" class="btn btn-secondary btn-sm">Delete ticked</button>
     </form>
     <table class="admin-table">
@@ -25,7 +25,7 @@
               <button type="submit" class="btn btn-secondary btn-sm">Mark read</button>
             </form>
             {{end}}
-            <form method="POST" action="/admin/contact-messages/{{.ID}}/delete" onsubmit="return confirm('Delete this message?');">
+            <form method="POST" action="/admin/contact-messages/{{.ID}}/delete" data-confirm="Delete this message?">
               <button type="submit" class="btn btn-secondary btn-sm">Delete</button>
             </form>
           </td>

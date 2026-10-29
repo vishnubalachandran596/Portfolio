@@ -118,7 +118,7 @@ func (a *App) Home(w http.ResponseWriter, r *http.Request) {
 		Software:    software,
 		Highlights:  homeHighlights(highlights, profile, len(companies), len(courses)),
 		CourseCount: len(courses),
-		Subscribe:   SubscribeFormData{Source: "home", Subscribed: r.URL.Query().Get("subscribed") == "1"},
+		Subscribe:   SubscribeFormData{Source: "home", Subscribed: r.URL.Query().Get("subscribed") == "1", TurnstileSiteKey: a.turnstileSiteKey()},
 		JSONLD:      personAndWebsiteJSONLD(profile, base.CanonicalURL, imageURL, sameAs, skills),
 	})
 }
@@ -453,7 +453,7 @@ func (a *App) CoursesList(w http.ResponseWriter, r *http.Request) {
 		HasNext:    page < totalPages,
 		PrevPage:   page - 1,
 		NextPage:   page + 1,
-		Subscribe:  SubscribeFormData{Source: "courses", Subscribed: q.Get("subscribed") == "1"},
+		Subscribe:  SubscribeFormData{Source: "courses", Subscribed: q.Get("subscribed") == "1", TurnstileSiteKey: a.turnstileSiteKey()},
 	}
 	data.BreadcrumbJSONLD = breadcrumbJSONLD(a.trail(r, crumb{"Courses", a.pageURL(r, "/courses")}))
 	for _, c := range allSrc {

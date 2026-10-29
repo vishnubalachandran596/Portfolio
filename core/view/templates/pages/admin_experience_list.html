@@ -18,7 +18,7 @@
           <td class="admin-table-actions">
             {{if .ResumeKey}}<a class="link-button" href="/admin/resumes/{{.ResumeKey}}" target="_blank" rel="noopener">Preview resume</a>{{end}}
             <a class="link-button" href="/admin/experience/{{.ID}}/edit">Edit</a>
-            <form method="POST" action="/admin/experience/{{.ID}}/delete" onsubmit="return confirm('Delete this experience entry?');">
+            <form method="POST" action="/admin/experience/{{.ID}}/delete" data-confirm="Delete this experience entry?">
               <button type="submit" class="link-button danger">Delete</button>
             </form>
           </td>

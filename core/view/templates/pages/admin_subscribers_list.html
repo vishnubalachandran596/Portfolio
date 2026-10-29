@@ -12,7 +12,7 @@
           <td>{{.SourcePage}}</td>
           <td>{{formatDateTime .CreatedAt}}</td>
           <td class="admin-table-actions">
-            <form method="POST" action="/admin/subscribers/{{.ID}}/delete" onsubmit="return confirm('Remove this subscriber?');">
+            <form method="POST" action="/admin/subscribers/{{.ID}}/delete" data-confirm="Remove this subscriber?">
               <button type="submit" class="link-button danger">Delete</button>
             </form>
           </td>

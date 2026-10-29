@@ -59,6 +59,10 @@ func (a *App) NewsletterSubscribe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	a.recordFailure(r, throttleSubscribe, subscribeMaxPerIP, ik)
+	if !a.humanVerified(r) {
+		http.Redirect(w, r, redirectTo, http.StatusSeeOther)
+		return
+	}
 
 	created, err := a.Subscribers.Create(r.Context(), email, source)
 	if err != nil {

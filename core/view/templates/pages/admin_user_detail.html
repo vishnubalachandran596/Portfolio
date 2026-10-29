@@ -5,7 +5,7 @@
     <div class="section-header-row">
       <h1>{{.User.Name}}</h1>
       {{if .IsAdmin}}
-      <form method="POST" action="/admin/users/{{.User.ID}}/demote" onsubmit="return confirm('Remove admin access for this user?');">
+      <form method="POST" action="/admin/users/{{.User.ID}}/demote" data-confirm="Remove admin access for this user?">
         <button type="submit" class="btn btn-secondary" {{if not .CanDemote}}disabled title="Can't remove the last admin"{{end}}>Remove admin access</button>
       </form>
       {{else}}

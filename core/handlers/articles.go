@@ -133,7 +133,7 @@ func (a *App) ArticlesPage(w http.ResponseWriter, r *http.Request) {
 		HasNext:    page < totalPages,
 		PrevPage:   page - 1,
 		NextPage:   page + 1,
-		Subscribe:  SubscribeFormData{Source: "articles", Subscribed: q.Get("subscribed") == "1"},
+		Subscribe:  SubscribeFormData{Source: "articles", Subscribed: q.Get("subscribed") == "1", TurnstileSiteKey: a.turnstileSiteKey()},
 	})
 }
 
@@ -192,7 +192,7 @@ func (a *App) ArticleDetailPage(w http.ResponseWriter, r *http.Request) {
 	a.View.Render(w, http.StatusOK, "article_detail", ArticleDetailData{
 		BaseData:           base,
 		Article:            article,
-		Watermark:          template.HTML(storage.WatermarkScript(storage.WatermarkLabel, "")),
+		Watermark:          withScriptNonce(storage.WatermarkScript(storage.WatermarkLabel, ""), base.Nonce),
 		Voted:              voted,
 		JSONLD:             articleJSONLD(article, base.CanonicalURL, a.Cfg.SiteName, description, base.OGImageURL),
 		PaymentsEnabled:    a.Razorpay.Enabled(),
