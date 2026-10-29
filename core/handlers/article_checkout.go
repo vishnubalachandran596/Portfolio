@@ -40,7 +40,7 @@ func (a *App) ArticleContributeOrder(w http.ResponseWriter, r *http.Request) {
 			email = u.Email
 		}
 	}
-	if email == "" || !strings.Contains(email, "@") {
+	if !validEmail(strings.ToLower(email)) {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "A valid email is required."})
 		return
 	}

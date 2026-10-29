@@ -108,7 +108,7 @@ func cleanEmail(s string) string { return strings.ToLower(strings.TrimSpace(s)) 
 
 func validEmail(s string) bool {
 	at := strings.LastIndex(s, "@")
-	return at > 0 && at < len(s)-3 && strings.Contains(s[at:], ".") && !strings.ContainsAny(s, " \t\r\n,;<>") && len(s) <= 254
+	return asciiOnly(s) && at > 0 && at < len(s)-3 && strings.Contains(s[at:], ".") && !strings.ContainsAny(s, " \t\r\n,;<>") && len(s) <= 254
 }
 
 func (a *App) authPage(r *http.Request, title string, d PasswordAuthData) PasswordAuthData {
@@ -194,8 +194,8 @@ func (a *App) SignupSubmit(w http.ResponseWriter, r *http.Request) {
 	case !validEmail(d.Email):
 		fail("Enter a valid email address.")
 		return
-	case len(d.Name) > 100:
-		fail("Keep your name under 100 characters.")
+	case firstFieldError(fieldSpec{"Your name", fieldName, 0, true}, d.Name, fieldSpec{"Your security answer", fieldLine, 100, true}, r.FormValue("answer")) != "":
+		fail(firstFieldError(fieldSpec{"Your name", fieldName, 0, true}, d.Name, fieldSpec{"Your security answer", fieldLine, 100, true}, r.FormValue("answer")))
 		return
 	case password != confirm:
 		fail("The two passwords don't match.")

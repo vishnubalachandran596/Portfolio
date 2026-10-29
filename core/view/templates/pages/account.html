@@ -146,14 +146,14 @@
     <form method="POST" action="/account/testimonials" class="admin-form">
       <div class="form-row">
         <label>Your name
-          <input type="text" name="author_name" value="{{.Testimonial.AuthorName}}" required>
+          <input type="text" name="author_name" value="{{.Testimonial.AuthorName}}" required minlength="2" maxlength="60">
         </label>
         <label>Title / how you know me <span class="optional">e.g. "Engineering Manager, Acme Bank"</span>
-          <input type="text" name="author_title" value="{{.Testimonial.AuthorTitle}}">
+          <input type="text" name="author_title" value="{{.Testimonial.AuthorTitle}}" maxlength="100">
         </label>
       </div>
       <label>Your testimonial
-        <textarea name="body" rows="4" required>{{.Testimonial.Body}}</textarea>
+        <textarea name="body" rows="4" required maxlength="2000">{{.Testimonial.Body}}</textarea>
       </label>
       <div class="form-actions">
         <button type="submit" class="btn btn-primary" data-loading-text="Submitting…">Submit for Review</button>

@@ -230,6 +230,14 @@ func (a *App) ArticleThumbsUp(w http.ResponseWriter, r *http.Request) {
 	}
 	email := strings.ToLower(strings.TrimSpace(r.FormValue("email")))
 	name := strings.TrimSpace(r.FormValue("name"))
+	if msg := firstFieldError(fieldSpec{"Your name", fieldName, 0, false}, name); msg != "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": msg})
+		return
+	}
+	if email != "" && !validEmail(email) {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Enter a valid email address, using English letters and digits only."})
+		return
+	}
 
 	if email == "" {
 		if err := a.ArticleVotes.CreateGuest(r.Context(), article.ID, name); err != nil {

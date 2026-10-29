@@ -130,3 +130,27 @@ func TestContactSubmitErrorCodes(t *testing.T) {
 		}
 	}
 }
+
+func TestCheckFieldRules(t *testing.T) {
+	name := fieldSpec{"Your name", fieldName, 0, true}
+	line := fieldSpec{"Title", fieldLine, 100, false}
+	text := fieldSpec{"Message", fieldText, 20, true}
+	cases := []struct {
+		spec fieldSpec
+		in   string
+		ok   bool
+	}{
+		{name, "Anne-Marie D'Souza", true}, {name, "", false}, {name, "Привет Мир", false},
+		{name, "Win $1000 now http://x", false}, {name, "A B C D", false},
+		{line, "", true}, {line, "Senior Engineer", true}, {line, "a\nb", false}, {line, "工程师", false},
+		{text, "Hello there", true}, {text, "", false}, {text, "你好", false}, {text, strings.Repeat("a", 21), false},
+	}
+	for _, c := range cases {
+		if got := checkField(c.spec, c.in) == ""; got != c.ok {
+			t.Errorf("checkField(%q, %q) ok=%v, want %v", c.spec.Label, c.in, got, c.ok)
+		}
+	}
+	if validEmail("josé@example.com") || !validEmail("jo@example.com") {
+		t.Error("validEmail must be ASCII only")
+	}
+}

@@ -551,11 +551,15 @@ func (a *App) AccountTestimonialSubmit(w http.ResponseWriter, r *http.Request) {
 	authorName := strings.TrimSpace(r.FormValue("author_name"))
 	authorTitle := strings.TrimSpace(r.FormValue("author_title"))
 	body := strings.TrimSpace(r.FormValue("body"))
-	if authorName == "" || body == "" {
+	fieldErr := firstFieldError(
+		fieldSpec{"Your name", fieldName, 0, true}, authorName,
+		fieldSpec{"Your title", fieldLine, 100, false}, authorTitle,
+		fieldSpec{"The testimonial", fieldText, 2000, true}, body)
+	if fieldErr != "" {
 		data := AccountData{
 			BaseData:    a.base(r, "My Account — "+a.Cfg.SiteName, "Your consultancy bookings and purchased courses.", "account"),
 			Testimonial: AccountTestimonial{Status: "none", AuthorName: authorName, AuthorTitle: authorTitle, Body: body},
-			Error:       "Name and testimonial text are both required.",
+			Error:       fieldErr,
 		}
 		a.View.Render(w, http.StatusUnprocessableEntity, "account", data)
 		return

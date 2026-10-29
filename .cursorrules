@@ -26,3 +26,6 @@ Core rules:
 Full detail lives in CLAUDE.md and .cursor/rules/architecture.mdc — read those for the complete rules and rationale.
 
 Also read `docs/DESIGN.md` (design tokens, motion rules, components) before touching anything visual.
+
+### 14. Every visitor-facing text field uses `checkField` — no hand-rolled checks
+Any field a visitor (not the admin) can type into must be declared with `fieldSpec`/`checkField` (`core/handlers/formcheck.go`) and its kind: `fieldName` (one to three words of English letters), `fieldLine` / `fieldText` (English only, length-capped), `fieldPhone`, `fieldEmail` (ASCII). Use `firstFieldError(spec, value, ...)` to check several at once, put a matching `maxlength` on the input, and add the field to the table in `docs/FUNCTIONALITY.md` (Form field rules). Public forms also get a honeypot and a per-IP `a.throttled`/`a.recordFailure` limit. New kinds or tighter rules go into `checkField`, never a second copy in a handler. Admin-only forms and Google-supplied names are exempt.

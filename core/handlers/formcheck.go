@@ -82,3 +82,77 @@ func validPhone(p string) bool {
 	}
 	return true
 }
+
+// fieldKind names the rule a visitor-supplied field must follow. Every public
+// form (anything a visitor, not the admin, can type into) declares its fields
+// with checkField, so a new field gets the same English-only, real-name rules
+// by choosing a kind instead of writing its own checks.
+type fieldKind int
+
+const (
+	fieldName  fieldKind = iota // 1-3 words of English letters (validPersonName)
+	fieldLine                   // short single-line English text (titles, topics)
+	fieldText                   // multi-line English text (messages, comments)
+	fieldPhone                  // digits and + - ( ) .
+	fieldEmail                  // ASCII e-mail address
+)
+
+// fieldSpec describes one field: Label is used in the message ("Your name"),
+// Max is the rune limit for line/text kinds (0 = a default for the kind).
+type fieldSpec struct {
+	Label    string
+	Kind     fieldKind
+	Max      int
+	Required bool
+}
+
+// checkField returns "" when value is acceptable, else a message for the visitor.
+func checkField(spec fieldSpec, value string) string {
+	v := strings.TrimSpace(value)
+	if v == "" {
+		if spec.Required {
+			return spec.Label + " is required."
+		}
+		return ""
+	}
+	max := spec.Max
+	switch spec.Kind {
+	case fieldName:
+		if !validPersonName(v) {
+			return spec.Label + " must be a real name in English letters: first name, first and last name, or first, middle and last name."
+		}
+	case fieldPhone:
+		if !validPhone(v) {
+			return spec.Label + " may contain only digits and + - ( ) ."
+		}
+	case fieldEmail:
+		if !validEmail(strings.ToLower(v)) {
+			return "Enter a valid email address, using English letters and digits only."
+		}
+	case fieldLine, fieldText:
+		if max == 0 {
+			max = 200
+			if spec.Kind == fieldText {
+				max = 5000
+			}
+		}
+		if len([]rune(v)) > max {
+			return spec.Label + " is too long."
+		}
+		if !englishText(v) || (spec.Kind == fieldLine && strings.ContainsAny(v, "\r\n")) {
+			return spec.Label + " must be written in English."
+		}
+	}
+	return ""
+}
+
+// firstFieldError runs checkField over (spec, value) pairs and returns the
+// first message, or "".
+func firstFieldError(pairs ...any) string {
+	for i := 0; i+1 < len(pairs); i += 2 {
+		if msg := checkField(pairs[i].(fieldSpec), pairs[i+1].(string)); msg != "" {
+			return msg
+		}
+	}
+	return ""
+}

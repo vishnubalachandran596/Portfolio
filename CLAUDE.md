@@ -124,6 +124,10 @@ Standing product rules (Oct 2026). Auth is stateless signed cookies (password + 
 
 ### 13. **CI minutes are free here, so Actions are not restricted.** This repo is public, so GitHub Actions minutes are free and unlimited: workflows may run on any branch, PR or schedule. (GitHub itself only runs `schedule` triggers from the default branch, so the reindex poller runs from `main` regardless.) Deploys are Vercel's own Git integration, not Actions. If this repo ever becomes private, restore a main-only guard (`if: github.ref == 'refs/heads/main'` on each job) and a minutes budget, as the private Temple repo has.
 
+### 14. Every visitor-facing text field uses `checkField` — no hand-rolled checks
+
+Any field a visitor (not the admin) can type into must be declared with `fieldSpec`/`checkField` (`core/handlers/formcheck.go`) and its kind: `fieldName` (one to three words of English letters), `fieldLine` / `fieldText` (English only, length-capped), `fieldPhone`, `fieldEmail` (ASCII). Use `firstFieldError(spec, value, ...)` to check several at once, put a matching `maxlength` on the input, and add the field to the table in `docs/FUNCTIONALITY.md` (Form field rules). Public forms also get a honeypot and a per-IP `a.throttled`/`a.recordFailure` limit. New kinds or tighter rules go into `checkField`, never a second copy in a handler. Admin-only forms and Google-supplied names are exempt.
+
 ---
 
 ## Before every push (checklist)

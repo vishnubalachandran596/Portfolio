@@ -14,7 +14,7 @@
       <input type="hidden" name="next" value="{{.Next}}">
       <div hidden aria-hidden="true"><label>Website <input type="text" name="website" tabindex="-1" autocomplete="off"></label></div>
       <label>Name
-        <input type="text" name="name" value="{{.Name}}" autocomplete="name" maxlength="100">
+        <input type="text" name="name" value="{{.Name}}" autocomplete="name" required minlength="2" maxlength="60">
       </label>
       <label>Email
         <input type="email" name="email" value="{{.Email}}" autocomplete="username" required>

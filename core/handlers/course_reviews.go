@@ -84,6 +84,10 @@ func (a *App) CourseReviewSubmit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	comment := strings.TrimSpace(r.FormValue("comment"))
+	if firstFieldError(fieldSpec{"Your review", fieldText, 2000, false}, comment) != "" {
+		http.Redirect(w, r, "/courses/"+slug+"?review_error=1", http.StatusSeeOther)
+		return
+	}
 
 	if err := a.CourseReviews.Upsert(ctx, course.ID, uid, rating, comment); err != nil {
 		a.serverError(w, "save course review", err)
