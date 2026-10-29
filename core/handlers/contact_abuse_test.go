@@ -39,6 +39,7 @@ func postForm(h http.HandlerFunc, path string, v url.Values) *httptest.ResponseR
 func TestContactSubmitRejectsBeforeStore(t *testing.T) {
 	fx := newEmailFixture(t)
 	cases := map[string]url.Values{
+		"link name": {"name": {"Ура! Приз ждёт вас! https://x.buzz/abc"}, "email": {"a@b.test"}, "message": {"hi"}},
 		"honeypot":  {"name": {"Asha"}, "email": {"a@b.test"}, "message": {"hi"}, "website": {"x"}},
 		"bad email": {"name": {"Asha"}, "email": {"not-an-email"}, "message": {"hi"}},
 		"short":     {"name": {"A"}, "email": {"a@b.test"}, "message": {"hi"}},

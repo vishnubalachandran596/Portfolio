@@ -317,6 +317,12 @@ func (a *App) ContactSubmit(w http.ResponseWriter, r *http.Request) {
 	email := strings.ToLower(strings.TrimSpace(r.FormValue("email")))
 	phone := strings.TrimSpace(r.FormValue("phone"))
 	message := strings.TrimSpace(r.FormValue("message"))
+	// A name that carries a link or an address is a bot: drop it quietly (not
+	// stored, not emailed, no alert) and answer as if it worked.
+	if spammyName(name) {
+		http.Redirect(w, r, "/contact?sent=1", http.StatusSeeOther)
+		return
+	}
 	if n := len([]rune(name)); n < 2 || n > 100 || len(phone) > 30 || len([]rune(message)) > contactMaxMessageLength || message == "" {
 		http.Redirect(w, r, "/contact?error=1", http.StatusSeeOther)
 		return

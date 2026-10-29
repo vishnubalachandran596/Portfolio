@@ -39,3 +39,18 @@ func (a *App) AdminContactMessageMarkRead(w http.ResponseWriter, r *http.Request
 	}
 	http.Redirect(w, r, "/admin/contact-messages", http.StatusSeeOther)
 }
+
+// AdminContactMessageDelete removes a message (spam clean-up). The admin
+// clicks it; nothing deletes messages automatically.
+func (a *App) AdminContactMessageDelete(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	if err != nil {
+		a.NotFound(w, r)
+		return
+	}
+	if err := a.ContactMessages.Delete(r.Context(), id); err != nil {
+		a.serverError(w, "delete contact message", err)
+		return
+	}
+	http.Redirect(w, r, "/admin/contact-messages", http.StatusSeeOther)
+}

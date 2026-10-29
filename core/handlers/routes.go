@@ -205,6 +205,7 @@ func (a *App) Routes() http.Handler {
 	protected.HandleFunc("POST /admin/inbox/{id}/drafts/{draft}/send", a.AdminInboxDraftSend)
 	protected.HandleFunc("GET /admin/contact-messages", a.AdminContactMessagesList)
 	protected.HandleFunc("POST /admin/contact-messages/{id}/read", a.AdminContactMessageMarkRead)
+	protected.HandleFunc("POST /admin/contact-messages/{id}/delete", a.AdminContactMessageDelete)
 	protected.HandleFunc("GET /admin/users", a.AdminUsersList)
 	protected.HandleFunc("GET /admin/users/{id}", a.AdminUserDetail)
 	protected.HandleFunc("POST /admin/users/{id}/promote", a.AdminUserPromote)

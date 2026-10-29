@@ -20,6 +20,9 @@
               <button type="submit" class="btn btn-secondary btn-sm">Mark read</button>
             </form>
             {{end}}
+            <form method="POST" action="/admin/contact-messages/{{.ID}}/delete" onsubmit="return confirm('Delete this message?');">
+              <button type="submit" class="btn btn-secondary btn-sm">Delete</button>
+            </form>
           </td>
         </tr>
         {{end}}

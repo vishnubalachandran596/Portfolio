@@ -63,3 +63,9 @@ func (r *ContactMessageRepo) MarkRead(ctx context.Context, id int64) error {
 	_, err := r.db.ExecContext(ctx, `UPDATE contact_messages SET is_read = true WHERE id = $1`, id)
 	return err
 }
+
+// Delete removes one message. Used by the admin console to clear spam.
+func (r *ContactMessageRepo) Delete(ctx context.Context, id int64) error {
+	_, err := r.db.ExecContext(ctx, `DELETE FROM contact_messages WHERE id = $1`, id)
+	return err
+}
