@@ -50,11 +50,18 @@ func (a *App) baseEmailData() models.EmailData {
 	return models.EmailData{BuyerName: "there", SiteName: a.siteName(), SupportReplyTo: notify.ReplyTo}
 }
 
+// buyerName is the name echoed into an outgoing email. The contact and
+// newsletter forms are public, so a bot can type anything into the name box;
+// a name that looks like a link, an address or a long pitch is never echoed
+// into mail from this domain.
 func buyerName(name, email string) string {
-	if n := strings.TrimSpace(name); n != "" {
-		return n
+	n := strings.TrimSpace(name)
+	low := strings.ToLower(n)
+	if n == "" || len([]rune(n)) > 60 || strings.ContainsAny(n, "@\r\n<>") ||
+		strings.Contains(low, "http") || strings.Contains(low, "www.") {
+		return "there"
 	}
-	return "there"
+	return n
 }
 
 func (a *App) bookingManageURL(token string, userID int64) string {

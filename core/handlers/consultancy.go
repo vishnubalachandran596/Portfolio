@@ -108,6 +108,22 @@ const (
 	bookingMaxFieldLength = 1000
 )
 
+// Throttle limits for the public contact form, same mechanism as booking.
+const (
+	throttleContact         = "contact"
+	contactMaxPerIP         = 5
+	contactMaxPerEmail      = 3
+	contactMaxMessageLength = 5000
+)
+
+// clipRunes shortens s to at most n runes.
+func clipRunes(s string, n int) string {
+	if r := []rune(s); len(r) > n {
+		return string(r[:n]) + "…"
+	}
+	return s
+}
+
 // BookingPage is open to everyone: no login is needed to book. The hourly
 // session is a free scheduled call — no price, no payment step. A signed-in
 // visitor just gets their name and email pre-filled.
@@ -291,14 +307,34 @@ func (a *App) ContactSubmit(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/contact?error=1", http.StatusSeeOther)
 		return
 	}
+	// Honeypot: real visitors never fill this hidden field. Answer as if it
+	// worked so a bot learns nothing.
+	if r.FormValue("website") != "" {
+		http.Redirect(w, r, "/contact?sent=1", http.StatusSeeOther)
+		return
+	}
 	name := strings.TrimSpace(r.FormValue("name"))
-	email := strings.TrimSpace(r.FormValue("email"))
+	email := strings.ToLower(strings.TrimSpace(r.FormValue("email")))
 	phone := strings.TrimSpace(r.FormValue("phone"))
 	message := strings.TrimSpace(r.FormValue("message"))
-	if name == "" || email == "" || !strings.Contains(email, "@") || message == "" {
+	if n := len([]rune(name)); n < 2 || n > 100 || len(phone) > 30 || len([]rune(message)) > contactMaxMessageLength || message == "" {
 		http.Redirect(w, r, "/contact?error=1", http.StatusSeeOther)
 		return
 	}
+	if addr, err := mail.ParseAddress(email); err != nil || addr.Address != email || len(email) > 254 {
+		http.Redirect(w, r, "/contact?error=1", http.StatusSeeOther)
+		return
+	}
+	// Per-IP and per-address limit, counted in Postgres so it holds across
+	// serverless instances. Every submission that gets this far counts.
+	ik := authutil.HashKey(authutil.ClientIP(r))
+	ek := authutil.HashKey(email)
+	if _, locked := a.throttled(r, throttleContact, ik, ek); locked {
+		http.Redirect(w, r, "/contact?error=1", http.StatusSeeOther)
+		return
+	}
+	a.recordFailure(r, throttleContact, contactMaxPerIP, ik)
+	a.recordFailure(r, throttleContact, contactMaxPerEmail, ek)
 
 	id, err := a.ContactMessages.Create(r.Context(), models.ContactMessage{
 		Name: name, Email: email, Phone: phone, Message: message,
@@ -313,7 +349,7 @@ func (a *App) ContactSubmit(w http.ResponseWriter, r *http.Request) {
 	if phone != "" {
 		phoneLine = "\nPhone: " + phone
 	}
-	a.Telegram.Send(fmt.Sprintf("✉️ Contact form message\nName: %s\nEmail: %s%s\n%s", name, email, phoneLine, message))
+	a.Telegram.Send(fmt.Sprintf("✉️ Contact form message\nName: %s\nEmail: %s%s\n%s", name, email, phoneLine, clipRunes(message, 1500)))
 
 	http.Redirect(w, r, "/contact?sent=1", http.StatusSeeOther)
 }

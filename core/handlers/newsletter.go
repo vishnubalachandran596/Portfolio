@@ -3,10 +3,19 @@ package handlers
 import (
 	"log"
 	"net/http"
+	"net/mail"
 	"strconv"
 	"strings"
 
+	"github.com/vishnubalachandran596/portfolio/core/authutil"
 	"github.com/vishnubalachandran596/portfolio/core/models"
+)
+
+// Throttle for POST /subscribe: a confirmation email goes to whatever address
+// is typed, so one IP must not be able to send it to many addresses.
+const (
+	throttleSubscribe = "subscribe"
+	subscribeMaxPerIP = 5
 )
 
 // NewsletterSubscribe records an email-capture submission from Courses,
@@ -34,10 +43,22 @@ func (a *App) NewsletterSubscribe(w http.ResponseWriter, r *http.Request) {
 		source = "other"
 	}
 
-	if email == "" || !strings.Contains(email, "@") {
+	// Honeypot: real visitors never fill this hidden field.
+	if r.FormValue("website") != "" {
+		http.Redirect(w, r, redirectTo+"?subscribed=1", http.StatusSeeOther)
+		return
+	}
+	email = strings.ToLower(email)
+	if addr, err := mail.ParseAddress(email); err != nil || addr.Address != email || len(email) > 254 {
 		http.Redirect(w, r, redirectTo, http.StatusSeeOther)
 		return
 	}
+	ik := authutil.HashKey(authutil.ClientIP(r))
+	if _, locked := a.throttled(r, throttleSubscribe, ik); locked {
+		http.Redirect(w, r, redirectTo, http.StatusSeeOther)
+		return
+	}
+	a.recordFailure(r, throttleSubscribe, subscribeMaxPerIP, ik)
 
 	created, err := a.Subscribers.Create(r.Context(), email, source)
 	if err != nil {
