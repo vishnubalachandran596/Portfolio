@@ -10,6 +10,8 @@ Read `docs/FUNCTIONALITY.md` and `docs/ARCHITECTURE.md` before making any change
 
 **Update `docs/FUNCTIONALITY.md` / `docs/ARCHITECTURE.md` in the same commit as any change that makes them inaccurate.** Not a follow-up task — part of finishing the change.
 
+**On every change or update request** (before editing): Mem0 `search_memories` (Mem0 MCP) for task-relevant context; if Mem0 is not connected, note it and use chat plus agent store. Git: `git fetch origin main`, then pull `main` or merge/rebase `origin/main` on the feature branch before new work.
+
 ## Core rules
 
 1. **Reuse existing utilities — search before writing a new one.** This repo had a real bug from skipping this: a duplicate currency-formatting function in a template FuncMap silently disagreed with the canonical `models.FormatMoney`. Deleted, replaced with a direct reference. The same pass also found `crypto/rand`+`hex.EncodeToString` token generation duplicated across four handler files — consolidated into `authutil.RandomHex(n)`. One canonical implementation per concern, always.
