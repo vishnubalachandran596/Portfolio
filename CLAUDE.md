@@ -2,6 +2,15 @@
 
 This file is the entry point for Claude Code. Codex reads `AGENTS.md` and Cursor reads `.cursor/rules/architecture.mdc`/`.cursorrules` — all three carry the same rules, kept in sync on every push. Read this file, and the two docs it points to, **before making any change** — not after something breaks. If you're an AI agent and you're reading this mid-task having already edited files, stop, read `docs/FUNCTIONALITY.md` and `docs/ARCHITECTURE.md` now, then continue.
 
+## On every change or update request
+
+When the user (or a follow-up) asks for a change or update — before you edit code or docs:
+
+1. **Mem0** — call `search_memories` through the Mem0 MCP server with queries tied to the task (feature area, prior decisions, traps). If the connector is missing, say so once and lean on this chat plus any agent store until Mem0 is available again.
+2. **Latest `main`** — `git fetch origin main`, then on `main` run `git pull origin main`; on a feature branch, merge or rebase `origin/main` before new work so the branch is not built on stale trunk.
+
+Then continue with the doc reads below and the architecture rules.
+
 ## Read these two docs first, always
 
 - **`docs/FUNCTIONALITY.md`** — every feature, who can use it, the business rules behind each flow. Read this to understand *what the product does* before touching anything user-facing.
