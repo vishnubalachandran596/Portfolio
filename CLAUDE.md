@@ -7,7 +7,9 @@ This file is the entry point for Claude Code. Codex reads `AGENTS.md` and Cursor
 When the user (or a follow-up) asks for a change or update — before you edit code or docs:
 
 1. **Mem0** — call `search_memories` through the Mem0 MCP server with queries tied to the task (feature area, prior decisions, traps). If the connector is missing, say so once and lean on this chat plus any agent store until Mem0 is available again.
-2. **Latest `main`** — `git fetch origin main`, then on `main` run `git pull origin main`; on a feature branch, merge or rebase `origin/main` before new work so the branch is not built on stale trunk.
+2. **Latest `main`** — `git fetch origin main`, then `git pull origin main` on `main` before new work.
+
+**Git workflow (owner default):** Commit on `main` and `git push origin main` directly. Do not open pull requests or create feature branches unless the user explicitly asks for a branch or PR.
 
 Then continue with the doc reads below and the architecture rules.
 

@@ -4,7 +4,9 @@ This file exists for Codex and any other AGENTS.md-reading tool. Claude Code rea
 
 Before any change: read `docs/FUNCTIONALITY.md` (what the product does) and `docs/ARCHITECTURE.md` (how it's built). Update whichever doc your change affects, in the same commit — not a follow-up.
 
-**On every change or update request** (before editing): check Mem0 (`search_memories` via the Mem0 MCP server, scoped to the task); if Mem0 is unavailable, note it and use this chat plus the agent store. Sync git with latest `main`: `git fetch origin main`, then `git pull origin main` on `main`, or merge/rebase `origin/main` into the feature branch before starting new work.
+**On every change or update request** (before editing): check Mem0 (`search_memories` via the Mem0 MCP server, scoped to the task); if Mem0 is unavailable, note it and use this chat plus the agent store. Sync git: `git fetch origin main`, then `git pull origin main` on `main`.
+
+**Git workflow (owner default):** Work on `main` only; commit and `git push origin main`. No pull requests or feature branches unless the user explicitly asks.
 
 ## Core rules
 

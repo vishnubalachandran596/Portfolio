@@ -2,7 +2,7 @@
 
 Before any change: read docs/FUNCTIONALITY.md (what the product does) and docs/ARCHITECTURE.md (how it's built). Update whichever doc your change affects, in the same commit — not a follow-up.
 
-On every change or update request (before editing code or docs): check Mem0 — run `search_memories` via the Mem0 MCP server for terms tied to the task; if Mem0 is not connected, say so and use this chat plus the agent store until it is. Sync with latest `main`: `git fetch origin main`, then `git pull origin main` on `main`, or merge/rebase `origin/main` into the feature branch before new work.
+On every change or update request (before editing code or docs): check Mem0 — run `search_memories` via the Mem0 MCP server for terms tied to the task; if Mem0 is not connected, say so and use this chat plus the agent store until it is. Sync with latest `main`: `git fetch origin main`, then `git pull origin main` on `main`. Git workflow: commit on `main` and push directly (`git push origin main`); no PRs or feature branches unless the user explicitly asks.
 
 Core rules:
 1. Reuse existing utilities (e.g. models.FormatMoney, slugify(), resolvePromoCode()) — search before writing a near-duplicate. A duplicate money-formatting function once silently disagreed with the real one; that's the bug class this rule prevents.
