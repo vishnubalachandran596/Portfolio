@@ -15,3 +15,5 @@ CREATE TABLE IF NOT EXISTS chatbot_reindex_pending (
 INSERT INTO chatbot_reindex_pending (id, requested_at)
 VALUES (true, NULL)
 ON CONFLICT (id) DO NOTHING;
+
+ALTER TABLE chatbot_reindex_pending ENABLE ROW LEVEL SECURITY;

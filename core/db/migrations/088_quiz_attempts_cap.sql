@@ -40,6 +40,8 @@ CREATE TABLE IF NOT EXISTS quiz_attempt_grants (
     PRIMARY KEY (user_id, course_id)
 );
 
+ALTER TABLE quiz_attempt_grants ENABLE ROW LEVEL SECURITY;
+
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'quiz_questions_set_no_chk') THEN
