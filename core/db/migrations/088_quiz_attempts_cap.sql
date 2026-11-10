@@ -66,7 +66,11 @@ BEGIN
     END IF;
 END $$;
 
-CREATE OR REPLACE FUNCTION quiz_attempt_cap_guard() RETURNS trigger AS $$
+CREATE OR REPLACE FUNCTION public.quiz_attempt_cap_guard()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = public, pg_temp
+AS $function$
 DECLARE
     granted INT;
 BEGIN
@@ -74,14 +78,14 @@ BEGIN
         RETURN NEW;
     END IF;
     PERFORM pg_advisory_xact_lock(hashtextextended('quiz_attempt:' || NEW.user_id || ':' || NEW.course_id, 0));
-    SELECT g.extra INTO granted FROM quiz_attempt_grants g
+    SELECT g.extra INTO granted FROM public.quiz_attempt_grants g
      WHERE g.user_id = NEW.user_id AND g.course_id = NEW.course_id;
     IF NEW.attempt_no > 5 + COALESCE(granted, 0) THEN
         RAISE EXCEPTION 'quiz attempt limit reached' USING ERRCODE = 'check_violation';
     END IF;
     RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$function$;
 
 DROP TRIGGER IF EXISTS quiz_attempt_cap_trg ON quiz_attempts;
 CREATE TRIGGER quiz_attempt_cap_trg BEFORE INSERT ON quiz_attempts

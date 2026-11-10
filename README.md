@@ -159,7 +159,15 @@ gofmt -l .   # should print nothing
    [Securing your API → Disable the Data API](https://supabase.com/docs/guides/api/securing-your-api#disable-the-data-api).
    Keep migration RLS (migrations `003`, `051`, `098`) as defense in depth if
    the Data API is ever re-enabled.
-3. In **Project Settings → Database → Connection string**, copy the
+3. **Security Advisor leftovers (optional but recommended).** After deploy,
+   migration `099` pins `quiz_attempt_cap_guard` search_path and moves
+   `vector` / `http` extensions to the `extensions` schema. **Leaked password
+   protection** is a Supabase **Auth** dashboard toggle (Authentication →
+   Attack protection → prevent sign-ups with leaked passwords). Visitor
+   passwords live in this app's `users` table, not Supabase Auth, except the
+   optional storage-reader login — enable the toggle if that Auth user can sign
+   in with a password.
+4. In **Project Settings → Database → Connection string**, copy the
    **Connection pooling** string (port `6543`, mode `transaction`) — not
    the direct connection. The app runs as a Vercel serverless function, so
    many short-lived instances may connect concurrently; the pooler avoids
