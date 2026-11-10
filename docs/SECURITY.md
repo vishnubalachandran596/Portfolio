@@ -18,7 +18,7 @@ Do what the incident needs; each step has side effects (users signed out, downti
 
 - [ ] Sessions: rotate `JWT_SECRET` in Vercel env and redeploy. Every signed cookie stops verifying. For targeted revocation, bump `token_version` in SQL for the affected users (`UPDATE users SET token_version = token_version + 1 WHERE ...`, or without the WHERE for everyone); the cookie carries it, so a bump signs them out everywhere. There is no admin button for a bulk bump.
 - [ ] Admin: rotate `ADMIN_BOOTSTRAP_PASSWORD` and redeploy (the only admin password; nothing is stored in the DB). Review the `admins` table for unknown emails.
-- [ ] Database: reset the Supabase DB password, update `DATABASE_URL` (Transaction pooler string) in Vercel, redeploy. Review roles and RLS.
+- [ ] Database: reset the Supabase DB password, update `DATABASE_URL` (Transaction pooler string) in Vercel, redeploy. Confirm **Enable Data API** is still off (this app uses SQL + Storage only). Review roles and RLS.
 - [ ] Payments: roll Razorpay `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` and any webhook secret. Payment confirmation stays server-side HMAC, so old keys must die.
 - [ ] Google sign-in: rotate the OAuth client secret if it may have leaked.
 - [ ] Licence signing key: generate a new pair at `/admin/licences/keygen`, set a NEW `LICENCE_KID` and `LICENCE_SIGNING_KEY_B64`. Add the new public key and kid to the Temple app's `config/licence_keys.json` and ship it BEFORE or WITH the switch. Keep the old public key listed so already-issued licences verify, unless the old key itself leaked (then licences must be reissued).

@@ -150,7 +150,16 @@ gofmt -l .   # should print nothing
 ### 1. Create a Supabase Postgres database
 
 1. Create a project at [supabase.com](https://supabase.com).
-2. In **Project Settings → Database → Connection string**, copy the
+2. **Turn off the Data API (PostgREST).** This app never calls `/rest/v1`
+   or the Supabase JS client for table access — only `DATABASE_URL` (SQL)
+   and **Storage** for private objects. In the Dashboard open
+   [Data API → Overview](https://supabase.com/dashboard/project/_/integrations/data_api/overview)
+   (replace `_` with your project ref) and set **Enable Data API** to **off**.
+   Storage and the connection pooler keep working. See
+   [Securing your API → Disable the Data API](https://supabase.com/docs/guides/api/securing-your-api#disable-the-data-api).
+   Keep migration RLS (migrations `003`, `051`, `098`) as defense in depth if
+   the Data API is ever re-enabled.
+3. In **Project Settings → Database → Connection string**, copy the
    **Connection pooling** string (port `6543`, mode `transaction`) — not
    the direct connection. The app runs as a Vercel serverless function, so
    many short-lived instances may connect concurrently; the pooler avoids
