@@ -29,7 +29,9 @@ BEGIN
     IF EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'vector') THEN
         ALTER EXTENSION vector SET SCHEMA extensions;
     END IF;
-    IF EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'http') THEN
-        ALTER EXTENSION http SET SCHEMA extensions;
-    END IF;
 END $$;
+
+-- The optional Supabase "http" extension cannot be relocated
+-- (ALTER EXTENSION … SET SCHEMA raises SQLSTATE 0A000). This app does not
+-- use it; leaving it in public may keep a Security Advisor warning unless
+-- you drop it manually in the SQL editor: DROP EXTENSION IF EXISTS http;

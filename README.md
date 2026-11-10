@@ -161,7 +161,8 @@ gofmt -l .   # should print nothing
    the Data API is ever re-enabled.
 3. **Security Advisor leftovers (optional but recommended).** After deploy,
    migration `099` pins `quiz_attempt_cap_guard` search_path and moves
-   `vector` / `http` extensions to the `extensions` schema. **Leaked password
+   `vector` into the `extensions` schema (`http` cannot be moved — drop it in
+   the SQL editor if unused). **Leaked password
    protection** is a Supabase **Auth** dashboard toggle (Authentication →
    Attack protection → prevent sign-ups with leaked passwords). Visitor
    passwords live in this app's `users` table, not Supabase Auth, except the
