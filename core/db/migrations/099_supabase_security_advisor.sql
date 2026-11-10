@@ -26,9 +26,18 @@ CREATE SCHEMA IF NOT EXISTS extensions;
 
 DO $$
 BEGIN
+    -- Concurrent serverless cold starts may race on catalog updates.
+    PERFORM pg_advisory_xact_lock(hashtext('portfolio:migration:099:vector'));
     IF EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'vector') THEN
         ALTER EXTENSION vector SET SCHEMA extensions;
     END IF;
+EXCEPTION
+    WHEN OTHERS THEN
+        IF SQLSTATE = 'XX000' THEN
+            NULL; -- another instance moved vector in the same window
+        ELSE
+            RAISE;
+        END IF;
 END $$;
 
 -- The optional Supabase "http" extension cannot be relocated
